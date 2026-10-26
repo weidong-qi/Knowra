@@ -111,6 +111,7 @@ test('desktop runtime bundle includes migrated TS through legacy JS entries', as
     'modules/knowledge/application/command-note-search.ts',
     'modules/ai/outbound-payload.ts',
     'modules/ai/usage-export.ts',
+    'modules/ai/catalog-tool.ts',
     'modules/ai/agent-knowledge-provenance.ts',
     'modules/sync/rollout-policy.ts',
     'infrastructure/migration/migration-report.ts',
