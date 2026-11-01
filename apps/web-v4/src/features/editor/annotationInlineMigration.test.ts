@@ -178,6 +178,21 @@ describe('旧重点迁移为正文标记', () => {
         )
     );
   });
+  it('标题兜底的章节重点写入标记后可以续跑：标题后的标记注释不影响按标题对应', async () => {
+    // 真实笔记里的情况：章节锚点在编辑器里定位失败，首次按标题兜底写入"### 原理 <!--k ...-->"；
+    // 续跑时投影标题带上注释前的空格，编辑器节点文字没有，两边需按去空白后的标题和序号对应。
+    const markdown = '### 原理\n\n第一段\n\n$$\na\n=\nb\n$$\n\n### 原理\n\n第二段\n';
+    const projection = projectMarkdown(markdown);
+    const old = annotation('sec2', anchorForSection(projection, projection.headings.length - 1));
+    const first = planNoteMigration({ markdown, annotations: [old] }, codec);
+    expect(first.issues).toEqual([]);
+    expect(first.outcomes[0]).toMatchObject({ status: 'migrated', method: 'headingTitle' });
+    const resumed = planNoteMigration({ markdown: first.markdown, annotations: [old] }, codec);
+    expect(resumed.issues).toEqual([]);
+    expect(resumed.outcomes[0]).toMatchObject({ status: 'migrated', markId: first.outcomes[0].markId });
+    expect(resumed.markdown).toBe(first.markdown);
+  });
+
   it('短哈希碰撞后续跑仍使用各自的实际标记 ID，不会把两个重点合并', () => {
     const markdown = 'alpha beta\n';
     const projection = projectMarkdown(markdown);
