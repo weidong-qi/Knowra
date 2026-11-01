@@ -108,8 +108,10 @@ function markData(annotation: Annotation) {
 function resolveSectionByTitle(doc: ProseNode, annotation: Annotation, storedMarkdown: string) {
   const section = annotation.anchor?.section;
   if (!section || annotation.scopeType !== 'section') return null;
+  // 标题末尾的空格在编辑器节点文字里会被去掉（例如"### 原理 <!--k ...-->"），两边都按去空白比较。
+  const title = String(section.title).trim();
   const same = projectMarkdown(storedMarkdown).headings.filter(
-    heading => heading.title === section.title && heading.level === section.headingLevel
+    heading => heading.title.trim() === title && heading.level === section.headingLevel
   );
   const start = section.sourceStart ?? annotation.anchor!.sourceStart;
   const ordinal = same.findIndex(heading => heading.sourceStart === start);
@@ -119,7 +121,7 @@ function resolveSectionByTitle(doc: ProseNode, annotation: Annotation, storedMar
     if (
       node.type.name === 'heading' &&
       Number(node.attrs.level) === section.headingLevel &&
-      node.textContent.trim() === section.title
+      node.textContent.trim() === title
     )
       candidates.push(position);
   });
