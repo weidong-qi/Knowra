@@ -30,7 +30,52 @@ export interface ExtractionOutput {
     citations: { sourceId: string; start: number; end: number; quote: string }[];
   }[];
 }
+export interface ExtractionSource {
+  sourceId: string;
+  noteId: string;
+  noteVersionId: string;
+  contentHash: string;
+  start: number;
+  end: number;
+  markdown: string;
+  annotationRevisions: { annotationId: string; revision: number }[];
+}
+export interface ExtractionRequest {
+  contractVersion: 1;
+  requestId: string;
+  scopeId: string;
+  spaceId: string;
+  inputHash: string;
+  sources: ExtractionSource[];
+}
+export interface ExtractionCandidatePlan {
+  reviewStatus: 'candidate';
+  provenance: (Omit<ExtractionSource, 'markdown'> & { quoteText: string })[];
+  candidateInput: {
+    id: string;
+    title: string;
+    canonicalStatement: string;
+    knowledgeType: string;
+    sourceMode: 'ai';
+    userExplanation: '';
+    evidence: {
+      id: string;
+      sourceType: 'noteVersion';
+      noteId: string;
+      noteVersionId: string;
+      quoteText: string;
+      headingPath: string[];
+    }[];
+  };
+}
+export interface ExtractionPlan {
+  requestId: string;
+  scopeId: string;
+  inputHash: string;
+  outputHash: string;
+  candidates: ExtractionCandidatePlan[];
+}
 export interface ValidateExtractionInput {
-  request?: ReturnType<typeof import('./knowledge-extraction-contract.js').prepareKnowledgeExtraction>;
+  request?: Omit<ExtractionRequest, 'contractVersion'> & { contractVersion: number };
   result?: unknown;
 }

@@ -43,6 +43,12 @@ const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value
 export const knowledgeExtractionCommitKey = value => JSON.stringify([value.ownerId, value.datasetId, value.jobId]);
 
 /** 独立核心提交记录 v1；完整结果与精确来源保留在执行宿主，尚不进入普通同步/快照。 */
+/**
+ * @overload
+ * @param {unknown} input
+ * @returns {import('./knowledge-extraction-commit-types.ts').KnowledgeExtractionCommitReceipt}
+ */
+/** @returns {import('./knowledge-extraction-commit-types.ts').KnowledgeExtractionCommitReceipt} */
 export function validateKnowledgeExtractionCommit(input) {
   if (
     !input ||

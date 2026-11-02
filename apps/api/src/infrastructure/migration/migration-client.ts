@@ -1,5 +1,6 @@
 import type { PostgresTransactionHost } from '../postgres-transaction-port.ts';
 import type * as rows from './db-mappers.js';
+import type { KnowledgeArtifactProvenance } from '@prisma/client';
 
 type Awaitable<Value> = Value | PromiseLike<Value>;
 interface MigrationModel<Row> {
@@ -36,10 +37,11 @@ export type MigrationTransaction = {
     (Name extends 'user' | 'noteTag'
       ? object
       : {
-          findMany(): Awaitable<MigrationRows[Name][]>;
           findMany(options: { select: { id: true } }): Awaitable<{ id: string }[]>;
         });
 } & {
+  // createMany 使用 mapper 的写入形状；读取仍是 Prisma 原生 JSON 列。
+  knowledgeArtifactProvenance: { findMany(): Awaitable<KnowledgeArtifactProvenance[]> };
   syncJournal?: {
     findMany(): Awaitable<{ ownerId: string; payload: unknown }[]>;
     deleteMany(): Awaitable<{ count: number }>;

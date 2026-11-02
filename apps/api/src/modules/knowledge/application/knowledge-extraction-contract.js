@@ -67,7 +67,10 @@ export const KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA = {
  * 只提供明确选中的片段；contextSegments、排除内容、遗漏内容不会作为可引用来源发送。
  * 不调用模型、不写数据库，也不代表当前提炼服务已经开放。
  */
-/** @param {import('./knowledge-extraction-types.ts').PrepareExtractionInput} input */
+/**
+ * @param {import('./knowledge-extraction-types.ts').PrepareExtractionInput} input
+ * @returns {import('./knowledge-extraction-types.ts').ExtractionRequest}
+ */
 export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey } = {}) {
   if (
     !isObject(scope) ||
@@ -92,6 +95,7 @@ export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey
   const revisions = new Map((scope.annotationRevisions ?? []).map(entry => [entry.annotationId, entry.revision]));
   const used = new Set();
   let characters = 0;
+  /** @type {import('./knowledge-extraction-types.ts').ExtractionSource[]} */
   const sources = scope.segments.map(segment => {
     if (!isObject(segment)) fail('KNOWLEDGE_EXTRACTION_SCOPE_INVALID', '分析片段无效。');
     const version = versions.get(segment.noteVersionId);
@@ -131,7 +135,7 @@ export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey
       markdown: segment.markdown,
       annotationRevisions: [...new Set(segment.annotationIds)]
         .sort()
-        .map(annotationId => ({ annotationId, revision: revisions.get(annotationId) }))
+        .map(annotationId => ({ annotationId, revision: /** @type {number} */ (revisions.get(annotationId)) }))
     };
   });
   const inputHash = hash([KNOWLEDGE_EXTRACTION_CONTRACT_VERSION, scope.id, scope.spaceId, scope.inputHash, sources]);
@@ -149,7 +153,10 @@ export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey
  * 校验不可信结果并生成候选创建计划。request 只接受服务端保留的原始请求，不能采用模型回传的来源表。
  * 返回内容仍需用户审核；引文匹配不代表生成陈述在语义上正确。
  */
-/** @param {import('./knowledge-extraction-types.ts').ValidateExtractionInput} input */
+/**
+ * @param {import('./knowledge-extraction-types.ts').ValidateExtractionInput} input
+ * @returns {import('./knowledge-extraction-types.ts').ExtractionPlan}
+ */
 export function validateKnowledgeExtractionResult({ request, result } = {}) {
   if (
     !isObject(request) ||
@@ -177,6 +184,7 @@ export function validateKnowledgeExtractionResult({ request, result } = {}) {
     fail('KNOWLEDGE_EXTRACTION_RESULT_INVALID', '提炼候选数量无效。');
   }
   const byId = new Map(request.sources.map(source => [source.sourceId, source]));
+  /** @type {import('./knowledge-extraction-types.ts').ExtractionCandidatePlan[]} */
   const candidates = Array.from(output.candidates, (candidate, index) => {
     assertKeys(candidate, ['title', 'canonicalStatement', 'knowledgeType', 'citations']);
     if (

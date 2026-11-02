@@ -1,34 +1,46 @@
+import type { Prisma } from '@prisma/client';
+
 export interface MigrationReportOptions {
-  readonly sourceFile?: unknown;
-  readonly storageRootDir?: unknown;
-  readonly generatedAt?: unknown;
+  readonly sourceFile?: string | null;
+  readonly storageRootDir?: string | null;
+  readonly generatedAt?: string;
 }
 export interface MigrationReportEntry {
-  [key: PropertyKey]: unknown;
-  code: unknown;
-  message: unknown;
+  [key: string]: Prisma.JsonValue | undefined;
+  code: string;
+  message: string;
+}
+interface MigrationAttachmentFile {
+  attachmentId: string;
+  filePath: string | null;
+  exists: boolean;
+  size: number;
+  contentSha256: string | null;
 }
 export interface MigrationReport {
   phase: string;
   migration: string;
-  generatedAt: unknown;
-  sourceFile: unknown;
-  storageRootDir: unknown;
-  status: unknown;
-  counts: Record<PropertyKey, unknown>;
+  generatedAt: string;
+  sourceFile: string | null;
+  storageRootDir: string | null;
+  status: 'ready' | 'blocked' | 'applied';
+  counts: Record<string, number>;
   repairs: MigrationReportEntry[];
   warnings: MigrationReportEntry[];
   errors: MigrationReportEntry[];
-  attachmentFiles: unknown[];
-  checksum: unknown;
+  attachmentFiles: MigrationAttachmentFile[];
+  checksum: string | null;
+  appliedAt?: string;
+  sourceBackupFile?: string;
 }
+type ReportDetails = Record<string, Prisma.JsonValue | undefined>;
 export interface MigrationReportTools {
   report: MigrationReport;
-  count(collection: PropertyKey, value: unknown): void;
-  repair(code: unknown, message: unknown, details?: object | null | undefined): void;
-  warn(code: unknown, message: unknown, details?: object | null | undefined): void;
-  error(code: unknown, message: unknown, details?: object | null | undefined): void;
-  finish(status?: unknown): MigrationReport;
+  count(collection: string, value: number): void;
+  repair(code: string, message: string, details?: ReportDetails | null): void;
+  warn(code: string, message: string, details?: ReportDetails | null): void;
+  error(code: string, message: string, details?: ReportDetails | null): void;
+  finish(status?: MigrationReport['status']): MigrationReport;
 }
 
 export function createMigrationReport({
@@ -53,20 +65,20 @@ export function createMigrationReport({
 
   return {
     report,
-    count(collection: PropertyKey, value: unknown) {
+    count(collection: string, value: number) {
       report.counts[collection] = value;
     },
-    repair(code: unknown, message: unknown, details: object | null | undefined = {}) {
+    repair(code: string, message: string, details: ReportDetails | null | undefined = {}) {
       report.repairs.push({ code, message, ...details });
     },
-    warn(code: unknown, message: unknown, details: object | null | undefined = {}) {
+    warn(code: string, message: string, details: ReportDetails | null | undefined = {}) {
       report.warnings.push({ code, message, ...details });
     },
-    error(code: unknown, message: unknown, details: object | null | undefined = {}) {
+    error(code: string, message: string, details: ReportDetails | null | undefined = {}) {
       report.errors.push({ code, message, ...details });
       report.status = 'blocked';
     },
-    finish(status: unknown = report.errors.length ? 'blocked' : 'ready') {
+    finish(status: MigrationReport['status'] = report.errors.length ? 'blocked' : 'ready') {
       report.status = status;
       return report;
     }

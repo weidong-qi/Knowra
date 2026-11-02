@@ -64,6 +64,7 @@ export function transformTag(tag, fallbackTimestamp) {
   };
 }
 
+/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
 export function transformNote(note, fallbackTimestamp, reportTools) {
   const createdAt = normalizeTimestamp(note.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   const expectedHash = sha256(String(note.rawMarkdown ?? ''));
@@ -105,6 +106,7 @@ export function transformNote(note, fallbackTimestamp, reportTools) {
   };
 }
 
+/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
 export function transformAnnotation(annotation, fallbackTimestamp, reportTools) {
   const createdAt = normalizeTimestamp(annotation.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   const schemaVersion = Number(annotation.schemaVersion ?? 1);
@@ -195,6 +197,7 @@ export function transformNoteVersion(version, fallbackTimestamp, reportTools) {
   };
 }
 
+/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
 export function transformKnowledgeItem(item, fallbackTimestamp, reportTools) {
   const createdAt = normalizeTimestamp(item.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
@@ -409,6 +412,7 @@ export function checksumPlan(plan) {
   return sha256(JSON.stringify(plan, (_, value) => (value === undefined ? null : value)));
 }
 
+/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
 export function validateDatabaseConstraints(plan, reportTools) {
   try {
     validateKnowledgeArtifactProvenanceRelations(plan);
