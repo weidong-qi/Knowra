@@ -1,7 +1,7 @@
 import type { FolderRepositoryOptions, FolderWriteInput, FolderListOptions } from './navigation-repository-types.ts';
 import { mapFolder, toDate } from './mappers.ts';
 import { Prisma } from '@prisma/client';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresFolderRepository({ db }: FolderRepositoryOptions) {
   if (!db?.folder) throw new TypeError('PostgreSQL folder repository requires db.folder');

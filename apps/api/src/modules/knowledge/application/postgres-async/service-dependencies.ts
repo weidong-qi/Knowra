@@ -8,7 +8,7 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/folder-repository.ts').createPostgresFolderRepository
   >;
   knowledgeArtifactProvenanceRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/knowledge-artifact-provenance-repository.js').createPostgresKnowledgeArtifactProvenanceRepository
+    typeof import('../../infrastructure/postgres/knowledge-artifact-provenance-repository.ts').createPostgresKnowledgeArtifactProvenanceRepository
   >;
   questionObjectiveRepository: ReturnType<
     typeof import('../../infrastructure/postgres/question-objective-repository.ts').createPostgresQuestionObjectiveRepository
@@ -41,13 +41,13 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/annotation-support-repositories.js').createPostgresAnalysisScopeRepository
   >;
   knowledgeEvidenceRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/knowledge-evidence-repository.js').createPostgresKnowledgeEvidenceRepository
+    typeof import('../../infrastructure/postgres/knowledge-evidence-repository.ts').createPostgresKnowledgeEvidenceRepository
   >;
   examProfileRepository: ReturnType<
     typeof import('../../infrastructure/postgres/exam-profile-repository.ts').createPostgresExamProfileRepository
   >;
   knowledgeItemRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/knowledge-item-repository.js').createPostgresKnowledgeItemRepository
+    typeof import('../../infrastructure/postgres/knowledge-item-repository.ts').createPostgresKnowledgeItemRepository
   >;
   noteRepository: ReturnType<
     typeof import('../../infrastructure/postgres/note-repository.js').createPostgresNoteRepository
@@ -59,7 +59,7 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/knowledge-space-repository.ts').createPostgresKnowledgeSpaceRepository
   >;
   questionRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/question-repository.js').createPostgresQuestionRepository
+    typeof import('../../infrastructure/postgres/question-repository.ts').createPostgresQuestionRepository
   >;
 }
 type AwaitablePort<Port> = {
@@ -198,7 +198,11 @@ export interface PostgresModuleDependencies extends Partial<PostgresRepositories
       import('../../infrastructure/postgres/assessment-repository-types.ts').ProfileRepositoryOptions['db'] &
       import('../../infrastructure/postgres/assessment-repository-types.ts').FocusRepositoryOptions['db'] &
       import('../../infrastructure/postgres/assessment-repository-types.ts').ObjectiveRelationRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/assessment-repository-types.ts').SourceRepositoryOptions['db']
+      import('../../infrastructure/postgres/assessment-repository-types.ts').SourceRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ItemRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').EvidenceRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ProvenanceRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').QuestionRepositoryOptions['db']
   >;
   getPurgeTombstone?: TransactionDependencies['getTombstone'];
   readPurgeTaskState?: ReturnType<

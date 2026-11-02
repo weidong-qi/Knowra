@@ -4,7 +4,7 @@ import { createAsyncNoteService } from '../src/modules/knowledge/application/pos
 import { createAsyncSearchService } from '../src/modules/knowledge/application/postgres-async/search-service.js';
 import { createAsyncKnowledgeSpaceService } from '../src/modules/knowledge/application/postgres-async/space-service.js';
 import { createPostgresTagGroupRepository } from '../src/modules/knowledge/infrastructure/postgres/tag-group-repository.ts';
-import { buildNoteWhere } from '../src/modules/knowledge/infrastructure/postgres/repository-utils.js';
+import { buildNoteWhere } from '../src/modules/knowledge/infrastructure/postgres/repository-utils.ts';
 
 export const batch3ConsistencyTests = [
   {

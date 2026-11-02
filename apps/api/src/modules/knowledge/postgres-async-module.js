@@ -28,14 +28,14 @@ import { createPostgresNoteRepository } from './infrastructure/postgres/note-rep
 import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.ts';
 import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.js';
 import { createPostgresNoteVersionRepository } from './infrastructure/postgres/note-version-repository.js';
-import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres/knowledge-item-repository.js';
+import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres/knowledge-item-repository.ts';
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
-import { createPostgresKnowledgeArtifactProvenanceRepository } from './infrastructure/postgres/knowledge-artifact-provenance-repository.js';
-import { createPostgresKnowledgeEvidenceRepository } from './infrastructure/postgres/knowledge-evidence-repository.js';
+import { createPostgresKnowledgeArtifactProvenanceRepository } from './infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
+import { createPostgresKnowledgeEvidenceRepository } from './infrastructure/postgres/knowledge-evidence-repository.ts';
 import { createPostgresLearningObjectiveRepository } from './infrastructure/postgres/learning-objective-repository.ts';
 import { createPostgresExamProfileRepository } from './infrastructure/postgres/exam-profile-repository.ts';
 import { createPostgresExamFocusRepository } from './infrastructure/postgres/exam-focus-repository.ts';
-import { createPostgresQuestionRepository } from './infrastructure/postgres/question-repository.js';
+import { createPostgresQuestionRepository } from './infrastructure/postgres/question-repository.ts';
 import { createPostgresQuestionObjectiveRepository } from './infrastructure/postgres/question-objective-repository.ts';
 import { createPostgresQuestionSourceRepository } from './infrastructure/postgres/question-source-repository.ts';
 import {

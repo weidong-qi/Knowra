@@ -87,19 +87,19 @@ export interface SnapshotRepositories {
   >;
   knowledgeItemRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-item-repository.js').createPostgresKnowledgeItemRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts').createPostgresKnowledgeItemRepository
     >,
     'list'
   >;
   knowledgeEvidenceRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-evidence-repository.js').createPostgresKnowledgeEvidenceRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-evidence-repository.ts').createPostgresKnowledgeEvidenceRepository
     >,
     'list'
   >;
   knowledgeArtifactProvenanceRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.js').createPostgresKnowledgeArtifactProvenanceRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.ts').createPostgresKnowledgeArtifactProvenanceRepository
     >,
     'list'
   >;
@@ -123,7 +123,7 @@ export interface SnapshotRepositories {
   >;
   questionRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/question-repository.js').createPostgresQuestionRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/question-repository.ts').createPostgresQuestionRepository
     >,
     'list'
   >;

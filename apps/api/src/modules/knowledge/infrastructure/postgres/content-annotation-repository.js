@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { mapAnnotation, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresContentAnnotationRepository({ db }) {
   if (!db?.contentAnnotation) {

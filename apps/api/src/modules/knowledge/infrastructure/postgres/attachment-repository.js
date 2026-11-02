@@ -1,5 +1,5 @@
 import { mapAttachment, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresAttachmentRepository({ db }) {
   if (!db?.attachment) {

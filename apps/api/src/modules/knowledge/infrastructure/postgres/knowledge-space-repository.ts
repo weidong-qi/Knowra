@@ -1,6 +1,6 @@
 import type { SpaceRepositoryOptions, SpaceWriteInput, SpaceListOptions } from './navigation-repository-types.ts';
 import { mapSpace, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresKnowledgeSpaceRepository({ db }: SpaceRepositoryOptions) {
   if (!db?.knowledgeSpace) {

@@ -1,10 +1,13 @@
 import { createAppError } from '../../../../errors/app-error.js';
 import { mapKnowledgeItem, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
+import type { ItemRepositoryOptions, ItemWriteInput, ItemListOptions } from './knowledge-graph-repository-types.ts';
+import type { Prisma } from '@prisma/client';
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
 
-export function createPostgresKnowledgeItemRepository({ db }) {
+export function createPostgresKnowledgeItemRepository({ db }: ItemRepositoryOptions) {
   if (!db?.knowledgeItem) throw new TypeError('PostgreSQL KnowledgeItem repository requires db.knowledgeItem');
-  function toData(item) {
+  function toData(item: ItemWriteInput) {
     return {
       id: item.id,
       title: item.title,
@@ -20,12 +23,12 @@ export function createPostgresKnowledgeItemRepository({ db }) {
     };
   }
   return {
-    async lockById(id) {
+    async lockById(id: unknown) {
       await withRepositoryErrors(() =>
         db.$queryRawUnsafe('SELECT id FROM "KnowledgeItem" WHERE id = $1 FOR UPDATE', id)
       );
     },
-    async create(item) {
+    async create(item: ItemWriteInput) {
       return withRepositoryErrors(() =>
         db.knowledgeItem
           .create({
@@ -34,9 +37,7 @@ export function createPostgresKnowledgeItemRepository({ db }) {
           .then(mapKnowledgeItem)
       );
     },
-    /** @param {import("../../domain/knowledge-item.ts").KnowledgeItem} item
-     * @param {{ expectedUpdatedAt?: string }} options */
-    async save(item, { expectedUpdatedAt } = {}) {
+    async save(item: ItemWriteInput, { expectedUpdatedAt }: { expectedUpdatedAt?: unknown } = {}) {
       const data = toData(item);
       if (expectedUpdatedAt) {
         return withRepositoryErrors(async () => {
@@ -63,19 +64,21 @@ export function createPostgresKnowledgeItemRepository({ db }) {
           .then(mapKnowledgeItem)
       );
     },
-    async findById(id) {
-      return withRepositoryErrors(() => db.knowledgeItem.findUnique({ where: { id } }).then(mapKnowledgeItem));
+    async findById(id: unknown) {
+      return withRepositoryErrors(() =>
+        db.knowledgeItem
+          .findUnique({ where: { id } })
+          .then<SyncMappedEntityMap['knowledgeItems'] | null>(mapKnowledgeItem)
+      );
     },
-    async delete(id) {
+    async delete(id: unknown) {
       return withRepositoryErrors(() => db.knowledgeItem.delete({ where: { id } }).then(mapKnowledgeItem));
     },
-    /** @param {{ reviewStatus?: string, query?: string, includeArchived?: boolean | string, includeDeleted?: boolean | string }} options */
-    list({ reviewStatus, query = '', includeArchived = false, includeDeleted = false } = {}) {
+    list({ reviewStatus, query = '', includeArchived = false, includeDeleted = false }: ItemListOptions = {}) {
       const search = String(query).trim();
       const showArchived = includeArchived === true || includeArchived === 'true';
       const showDeleted = includeDeleted === true || includeDeleted === 'true';
-      /** @type {import("@prisma/client").Prisma.KnowledgeItemWhereInput} */
-      const where = {
+      const where: Prisma.KnowledgeItemWhereInput = {
         ...(showDeleted ? {} : { deletedAt: null }),
         ...(search
           ? {

@@ -1,5 +1,5 @@
 import { mapNoteVersion, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 import { versionPage } from '../../domain/note-version-page.js';
 
 export function createPostgresNoteVersionRepository({ db }) {

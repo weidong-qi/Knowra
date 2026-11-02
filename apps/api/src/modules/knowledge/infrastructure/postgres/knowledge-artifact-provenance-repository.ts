@@ -1,20 +1,26 @@
 import { assertProvenanceWrite } from '../knowledge-artifact-provenance-repository.js';
 import { mapKnowledgeArtifactProvenance } from './mappers.ts';
 import { dbKnowledgeArtifactProvenance } from '../../../../infrastructure/migration/db-mappers.js';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 import { createAppError } from '../../../../errors/app-error.js';
+import type { KnowledgeArtifactProvenance } from '../../domain/knowledge-artifact-provenance-contract.ts';
+import type { ProvenanceRepositoryOptions } from './knowledge-graph-repository-types.ts';
 
-export function createPostgresKnowledgeArtifactProvenanceRepository({ db }) {
+type RawProvenanceIdentity = Partial<Record<'id' | 'artifactId' | 'provenanceHash', unknown>>;
+
+export function createPostgresKnowledgeArtifactProvenanceRepository({ db }: ProvenanceRepositoryOptions) {
   if (!db?.knowledgeArtifactProvenance)
     throw new TypeError('PostgreSQL provenance repository requires db.knowledgeArtifactProvenance');
-  const write = (record, upgradeLegacy = false) =>
+  const write = (record: unknown, upgradeLegacy = false) =>
     withRepositoryErrors(async () => {
       const data = dbKnowledgeArtifactProvenance(record);
       const existing = mapKnowledgeArtifactProvenance(
-        await db.knowledgeArtifactProvenance.findUnique({ where: { artifactId: record.artifactId } })
+        await db.knowledgeArtifactProvenance.findUnique({
+          where: { artifactId: (record as RawProvenanceIdentity).artifactId }
+        })
       );
       assertProvenanceWrite(existing, record, { upgradeLegacy });
-      if (existing?.provenanceHash === record.provenanceHash) return existing;
+      if (existing?.provenanceHash === (record as RawProvenanceIdentity).provenanceHash) return existing;
       if (!existing) return mapKnowledgeArtifactProvenance(await db.knowledgeArtifactProvenance.create({ data }));
       // Compare-and-swap prevents a second writer from replacing a concurrent recorded upgrade.
       const result = await db.knowledgeArtifactProvenance.updateMany({
@@ -23,7 +29,7 @@ export function createPostgresKnowledgeArtifactProvenanceRepository({ db }) {
       });
       if (result.count !== 1) {
         const current = mapKnowledgeArtifactProvenance(
-          await db.knowledgeArtifactProvenance.findUnique({ where: { id: record.id } })
+          await db.knowledgeArtifactProvenance.findUnique({ where: { id: (record as RawProvenanceIdentity).id } })
         );
         if (!current) throw createAppError('KNOWLEDGE_ARTIFACT_PROVENANCE_CONFLICT', '来源记录已被并发删除。', 409);
         assertProvenanceWrite(current, record);
@@ -32,18 +38,21 @@ export function createPostgresKnowledgeArtifactProvenanceRepository({ db }) {
     });
   return {
     supportsAsync: true,
-    create: record => write(record),
-    upgradeLegacy: record => write(record, true),
-    findById: id =>
+    create: (record: unknown) => write(record),
+    upgradeLegacy: (record: unknown) => write(record, true),
+    findById: (id: unknown) =>
       withRepositoryErrors(() =>
-        db.knowledgeArtifactProvenance.findUnique({ where: { id } }).then(mapKnowledgeArtifactProvenance)
+        db.knowledgeArtifactProvenance
+          .findUnique({ where: { id } })
+          .then<KnowledgeArtifactProvenance | null>(mapKnowledgeArtifactProvenance)
       ),
-    findByArtifactId: artifactId =>
+    findByArtifactId: (artifactId: unknown) =>
       withRepositoryErrors(() =>
-        db.knowledgeArtifactProvenance.findUnique({ where: { artifactId } }).then(mapKnowledgeArtifactProvenance)
+        db.knowledgeArtifactProvenance
+          .findUnique({ where: { artifactId } })
+          .then<KnowledgeArtifactProvenance | null>(mapKnowledgeArtifactProvenance)
       ),
-    /** @param {{ artifactId?: string }} options */
-    list: ({ artifactId } = {}) =>
+    list: ({ artifactId }: { artifactId?: string } = {}) =>
       withRepositoryErrors(() =>
         db.knowledgeArtifactProvenance
           .findMany({
@@ -52,7 +61,7 @@ export function createPostgresKnowledgeArtifactProvenanceRepository({ db }) {
           })
           .then(rows => rows.map(mapKnowledgeArtifactProvenance))
       ),
-    deleteByKnowledgeItemId: artifactId =>
+    deleteByKnowledgeItemId: (artifactId: unknown) =>
       withRepositoryErrors(async () => {
         const rows = await db.knowledgeArtifactProvenance.findMany({ where: { artifactId } });
         if (rows.length) await db.knowledgeArtifactProvenance.deleteMany({ where: { artifactId } });
