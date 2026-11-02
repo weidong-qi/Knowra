@@ -119,17 +119,22 @@ export type AccessCallbackContractChecks = [
   Assert<Equal<IsAny<ReturnType<Skip>>, false>>,
   Assert<Equal<Parameters<typeof wrapHandlersWithMaintenanceGate>['length'], 2 | 3>>,
   Assert<Equal<Parameters<typeof wrapHandlersWithPostgresAdvisoryLock>['length'], 2 | 3>>,
-  Assert<Equal<IsAny<Parameters<typeof wrapHandlersWithMaintenanceGate>[0]>, true>>,
-  Assert<Equal<IsAny<Parameters<typeof wrapHandlersWithMaintenanceGate>[1]>, true>>,
+  Assert<Equal<Parameters<typeof wrapHandlersWithMaintenanceGate>[0], object>>,
+  Assert<Equal<Parameters<typeof wrapHandlersWithMaintenanceGate>[1], ReturnType<typeof createMaintenanceGate>>>,
   Assert<Equal<IsAny<Parameters<typeof wrapHandlersWithPostgresAdvisoryLock>[0]>, true>>,
   Assert<Equal<IsAny<Parameters<typeof wrapHandlersWithPostgresAdvisoryLock>[1]>, true>>,
-  Assert<Equal<IsAny<(typeof _defaultGate)['createNote']>, true>>,
+  Assert<Equal<(typeof _defaultGate)['createNote'], () => Promise<number>>>,
   Assert<Equal<IsAny<(typeof _defaultLock)['createNote']>, true>>,
-  Assert<Equal<IsAny<(typeof _opaqueGate)['createNote']>, true>>,
+  Assert<Equal<(typeof _opaqueGate)['createNote'], () => Promise<number>>>,
   Assert<Equal<IsAny<(typeof _opaqueLock)['createNote']>, true>>,
   Assert<Equal<IsAny<LocalContext['dataStore']>, true>>,
   Assert<Equal<IsAny<PostgresContext['http']['knowledge'][string]>, true>>,
-  Assert<Equal<IsAny<NonNullable<AiRuntime['actions']>['resumeForTurn']>, true>>,
+  Assert<
+    Equal<
+      NonNullable<AiRuntime['actions']>['resumeForTurn'],
+      ReturnType<typeof import('../src/modules/ai/action-service.js').createNoteActionService>['resumeForTurn']
+    >
+  >,
   Assert<Equal<Parameters<typeof getKnowledgeOperationAccess>, [name: unknown]>>,
   Assert<Equal<ReturnType<typeof getKnowledgeOperationAccess>, 'mutation' | 'read'>>
 ];

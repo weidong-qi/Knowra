@@ -115,8 +115,8 @@ export type MetadataPolicyContractChecks = [
   Assert<Equal<IsAny<Awaited<ReturnType<typeof _pgStore.getAttachment>>>, true>>,
   Assert<Equal<IsAny<typeof _localContext.dataStore>, true>>,
   Assert<Equal<IsAny<typeof _pgContext>, false>>,
-  // 旧 upload JS 声明仍推断初始 pending，即使运行中会更新；本批不伪称此端口已修复。
-  Assert<Equal<typeof _uploaded.status, 'pending'>>,
+  // 上传过程可进入所有已声明的附件状态。
+  Assert<Equal<typeof _uploaded.status, AttachmentStatus>>,
   // 原 JS 在严格源码推断下的该输入为 never，发射声明却为 any；两种边界均另行核对。
   Assert<Equal<Parameters<typeof transformAttachment>[0], never>>
 ];

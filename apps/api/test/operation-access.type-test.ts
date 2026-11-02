@@ -95,8 +95,8 @@ export type OperationAccessContractChecks = [
       { getAccess?: ((name: string) => unknown) | undefined; skip?: ((name: string) => unknown) | undefined }
     >
   >,
-  // 旧 JS wrapper、装配和 AI 联合仍有未类型端口，不伪称端到端静态安全。
-  Assert<Equal<IsAny<(typeof _defaultGate)['createNote']>, true>>,
+  // 维护门保留参数并显式返回异步结果；其余旧 JS 端口仍保留原断言。
+  Assert<Equal<(typeof _defaultGate)['createNote'], () => Promise<number>>>,
   Assert<Equal<IsAny<(typeof _defaultLock)['listNotes']>, true>>,
   Assert<Equal<IsAny<typeof _local.dataStore>, true>>,
   Assert<Equal<IsAny<typeof _pg>, false>>,

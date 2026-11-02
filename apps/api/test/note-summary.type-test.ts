@@ -196,5 +196,5 @@ const _missingListRawMarkdown = _localRows[0].rawMarkdown;
 // @ts-expect-error 摘要不满足需要正文的真实本地仓库保存契约。
 local.save(_domain);
 
-// @ts-expect-error 旧 JS 默认解构已漏掉 repository 参数；仅记录旧边界，不把接线称为完全类型安全。
+// 显式依赖契约已补齐 repository；验证无可选依赖时仍可装配。
 createAsyncNoteService({ repository: postgres });

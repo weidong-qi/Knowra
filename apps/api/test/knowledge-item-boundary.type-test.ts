@@ -209,9 +209,15 @@ const _projection = toKnowledgeItemWorkspaceDto(_saved);
 // PG 和服务仍为 JS；这里只验证实际工厂连接，不以 any 返回值代替上述宽链检查。
 declare const pg: ReturnType<typeof createPostgresKnowledgeItemRepository>;
 pg.create(_updated);
-pg.save(_updated);
+pg.save(new KnowledgeItem({ id: 'k', title: 'Known model' }));
 const _transaction = <Value>(operation: () => Value): Value => operation();
-const _ports = { repository: _wide, evidenceRepository: createInMemoryKnowledgeEvidenceRepository() };
+const _ports = {
+  repository: repository<KnowledgeItem>(),
+  evidenceRepository:
+    createInMemoryKnowledgeEvidenceRepository<
+      import('../src/modules/knowledge/domain/knowledge-evidence.ts').KnowledgeEvidence
+    >()
+};
 createKnowledgeItemService({ ..._ports, runTransaction: _transaction }).createCandidate(createInput);
 createKnowledgeItemService({ ..._ports, runTransaction: _transaction }).updateItem('k', updateInput);
 const _asyncPorts = { ..._ports, repository: pg };
