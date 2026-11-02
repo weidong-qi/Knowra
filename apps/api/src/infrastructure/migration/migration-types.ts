@@ -3,6 +3,27 @@ import type { buildJsonMigrationPlan } from './json-to-postgres.js';
 import type { MigrationReport } from './migration-report.ts';
 
 export interface JsonMigrationInput {
+  spaces?: unknown[];
+  folders?: unknown[];
+  tags?: unknown[];
+  tagGroups?: unknown[];
+  notes?: unknown[];
+  noteVersions?: unknown[];
+  knowledgeItems?: unknown[];
+  knowledgeEvidence?: unknown[];
+  knowledgeArtifactProvenance?: unknown[];
+  learningObjectives?: unknown[];
+  examProfiles?: unknown[];
+  examFocuses?: unknown[];
+  questions?: unknown[];
+  questionObjectives?: unknown[];
+  questionSources?: unknown[];
+  attachments?: unknown[];
+  contentAnnotations?: unknown[];
+  annotationExclusions?: unknown[];
+  annotationRevisions?: unknown[];
+  analysisScopeSnapshots?: unknown[];
+
   schemaVersion?: number;
   data?: ReturnType<typeof import('../local-data-schema.js').createEmptyLocalState>;
   knowledgeExtractionCommits?: unknown;

@@ -21,7 +21,7 @@ export interface PostgresSnapshotOptions {
   storageRootDir?: string;
   ownerId?: string;
   maintenanceGate?: ReturnType<typeof createMaintenanceGate>;
-  aiRepository?: { rotateEpoch: () => Promise<void> };
+  aiRepository?: { rotateEpoch: () => Promise<string> };
 }
 
 export interface SnapshotRepositories {
