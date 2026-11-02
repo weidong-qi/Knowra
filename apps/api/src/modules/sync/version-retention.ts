@@ -1,18 +1,22 @@
 import { planHistoryRetention, applyHistoryRetentionPlan } from '../knowledge/domain/history-retention.js';
-import type { SyncReferenceChange, SyncReferenceState } from './entity-contract.ts';
+import type { SyncReferenceChange } from './entity-contract.ts';
+
+interface SyncRetentionState {
+  contentAnnotations: Array<{ id: string; noteId?: string | null }>;
+}
 
 /** 云端是已同步历史的淘汰权威；删除与批次一起提交，设备经普通拉取收到墓碑。 */
-export function pruneTouchedNoteVersions<State extends SyncReferenceState>(
+export function pruneTouchedNoteVersions<State extends SyncRetentionState>(
   state: State,
   changes: SyncReferenceChange[],
   now = Date.now(),
   aliases: Record<string, string> = {},
-  externalReferences: object[] | null = []
+  externalReferences: unknown[] | null = []
 ): State {
   // 私有来源不能读取时只停用自动淘汰，不影响核心保存。
   if (externalReferences === null) return state;
   const noteIds = new Set<string | null | undefined>();
-  const annotations = new Map<string | null | undefined, SyncReferenceState[string][number]>(
+  const annotations = new Map<string | null | undefined, SyncRetentionState['contentAnnotations'][number]>(
     state.contentAnnotations.map(item => [item.id, item])
   );
   for (const entry of changes) {

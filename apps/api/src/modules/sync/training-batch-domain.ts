@@ -1,6 +1,8 @@
 import type {
   SyncCollection,
-  SyncDomainState,
+  SyncStoredState,
+  SyncStoredEntity,
+  SyncWorkingRecord,
   SyncEntity,
   SyncEntityMap,
   SyncChange,
@@ -36,19 +38,19 @@ const find = <Collection extends SyncCollection>(
   state: SyncWorkingState,
   collection: Collection,
   id: string | null | undefined
-): SyncWorkingEntity<Collection> | undefined => state[collection].find(item => item.id === id);
+): SyncWorkingRecord<Collection> | undefined => state[collection].find(item => item.id === id);
 const fail = (code: string, message: string): never => {
   throw syncError(code, message, 422);
 };
 
 export function normalizeTrainingChange<Collection extends SyncCollection>(
   change: SyncWorkingMutation<Collection>,
-  previous: SyncEntity<Collection> | undefined,
+  previous: SyncStoredEntity<Collection> | undefined,
   changes: SyncChange[]
 ): SyncWorkingEntity<Collection> | null;
 export function normalizeTrainingChange(
   change: SyncWorkingMutation,
-  previous: SyncEntity | undefined,
+  previous: SyncStoredEntity | undefined,
   changes: SyncChange[]
 ): SyncWorkingEntity | null {
   const { collection, value, lifecycleAction } = change;
@@ -94,7 +96,7 @@ export function normalizeTrainingChange(
     fail('QUESTION_SOURCE_MODE_UNSUPPORTED', '当前只支持人工创建试题。');
   if (collection === 'questions' && previous) {
     if (value.version! < previous.version!) fail('QUESTION_VERSION_CONFLICT', '试题版本不能倒退。');
-    const content = (question: SyncWorkingEntity) =>
+    const content = (question: SyncWorkingRecord) =>
       Object.fromEntries(
         Object.entries(question).filter(
           ([field]) => !['reviewStatus', 'deletedAt', 'createdAt', 'updatedAt', 'version'].includes(field)
@@ -144,7 +146,7 @@ export function normalizeTrainingChange(
 
 /** 未在本机出现的已确认下游也必须随内容变化失效；显式提交的最终确认可包含离线重新核对。 */
 export function reconcileTrainingChanges(
-  before: SyncDomainState,
+  before: SyncStoredState,
   state: SyncWorkingState,
   changes: SyncChange[]
 ): SyncWorkingState {
@@ -161,7 +163,7 @@ export function reconcileTrainingChanges(
       .map(entry => entry.id)
   );
   const affected = new Set<string>();
-  const downgrade = (value: SyncWorkingEntity<'learningObjectives' | 'questions'>) => {
+  const downgrade = (value: SyncWorkingRecord<'learningObjectives' | 'questions'>) => {
     if (value.reviewStatus === 'confirmed') {
       value.reviewStatus = 'candidate';
       value.updatedAt = new Date(Math.max(Date.now(), Date.parse(value.updatedAt) + 1 || 0)).toISOString();
@@ -185,7 +187,7 @@ export function reconcileTrainingChanges(
   return state;
 }
 
-export function validateTrainingBatch(before: SyncDomainState, state: SyncWorkingState, changes: SyncChange[]): void {
+export function validateTrainingBatch(before: SyncStoredState, state: SyncWorkingState, changes: SyncChange[]): void {
   for (const change of changes.filter(entry => TRAINING_COLLECTIONS.includes(entry.collection) && entry.value)) {
     const value = find(state, change.collection, change.id)!;
     const previous = find(before, change.collection, change.id);

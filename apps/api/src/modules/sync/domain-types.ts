@@ -1,4 +1,5 @@
-import type { ContentAnchor } from '@study-accelerator/content-anchor';
+import type { ContentAnchor, AnnotationStructure } from '@study-accelerator/content-anchor';
+import type { Prisma } from '@prisma/client';
 import type { KnowledgeSpace } from '../knowledge/domain/knowledge-space.ts';
 import type { Folder } from '../knowledge/domain/folder.ts';
 import type { Tag } from '../knowledge/domain/tag.ts';
@@ -18,6 +19,7 @@ import type { AnalysisScopeSnapshot } from '../../http/storage-route-types.ts';
 import type { AttachmentStatus } from '../../infrastructure/attachment-status.ts';
 import type { SyncEntry, SyncJournal, SyncNoteContent, SyncReceiptResult, SyncSnapshot } from './journal.ts';
 import type { SyncContract } from './protocol-contract.ts';
+import type { SyncMappedEntityMap } from './postgres-state-types.ts';
 
 export type SyncJsonValue =
   string | number | boolean | null | SyncJsonValue[] | { [field: string]: SyncJsonValue | undefined };
@@ -100,17 +102,35 @@ type Mutable<Value> = { -readonly [Key in keyof Value]: Value[Key] };
 type ConcreteEntityMap = { [Collection in SyncCollection]: Mutable<SyncEntityMap[Collection]> & EntityFields };
 export type SyncEntity<Collection extends SyncCollection = SyncCollection> = ConcreteEntityMap[Collection];
 export type SyncDomainState = { [Collection in SyncCollection]: SyncEntity<Collection>[] };
-// DTO 的原始 ID 列表在既有依赖/快照校验前不保证元素类型。
+type SyncDerivedNote = Omit<SyncEntity<'notes'>, 'annotationStructure'> & {
+  annotationStructure: AnnotationStructure | Prisma.JsonValue;
+};
+type StoredEntityUnion = SyncEntity | SyncMappedEntityMap[SyncCollection] | SyncDerivedNote;
+type StoredFields = { [Key in EntityKeys<StoredEntityUnion>]?: EntityField<StoredEntityUnion, Key> };
+export type SyncStoredEntity<Collection extends SyncCollection = SyncCollection> =
+  | SyncEntity<Collection>
+  | ((SyncMappedEntityMap[Collection] | (Collection extends 'notes' ? SyncDerivedNote : never)) & StoredFields);
+export type SyncStoredState = { [Collection in SyncCollection]: SyncStoredEntity<Collection>[] };
+export type SyncBackend = 'local' | 'postgres';
+export type SyncProviderState<Backend extends SyncBackend> = Backend extends 'local'
+  ? SyncDomainState
+  : SyncStoredState;
+// DTO 的 ID 列表与从 PG 继承的结构 JSON 尚未保证完整领域结构。
 type WorkingEntityMap = Omit<SyncEntityMap, 'notes'> & {
-  notes: Omit<SyncEntityMap['notes'], 'tagIds'> & { tagIds: unknown[] };
+  notes: Omit<SyncEntityMap['notes'], 'tagIds' | 'annotationStructure'> & {
+    tagIds: unknown[];
+    annotationStructure: AnnotationStructure | Prisma.JsonValue;
+  };
 };
 type ConcreteWorkingMap = {
   [Collection in SyncCollection]: Collection extends 'notes'
-    ? Mutable<WorkingEntityMap['notes']> & Omit<EntityFields, 'tagIds'>
+    ? Mutable<WorkingEntityMap['notes']> & Omit<EntityFields, 'tagIds' | 'annotationStructure'>
     : SyncEntity<Collection>;
 };
 export type SyncWorkingEntity<Collection extends SyncCollection = SyncCollection> = ConcreteWorkingMap[Collection];
-export type SyncWorkingState = { [Collection in SyncCollection]: SyncWorkingEntity<Collection>[] };
+export type SyncWorkingRecord<Collection extends SyncCollection = SyncCollection> =
+  SyncWorkingEntity<Collection> | SyncStoredEntity<Collection>;
+export type SyncWorkingState = { [Collection in SyncCollection]: SyncWorkingRecord<Collection>[] };
 export type SyncWorkingConstructors = Partial<{
   [Collection in SyncCollection]: new (input: SyncWorkingEntity<Collection>) => WorkingEntityMap[Collection];
 }>;
@@ -122,15 +142,46 @@ export type SyncWorkingMutation<Collection extends SyncCollection = SyncCollecti
   'value'
 > & { value: SyncWorkingEntity<Collection> | null };
 export type SyncAnnotationNoteFactory = (input: {
-  records: SyncWorkingEntity<'notes'>[];
+  records: SyncWorkingRecord<'notes'>[];
 }) => NonNullable<
   import('../knowledge/application/service-dependencies.ts').ContentAnnotationDependencies['noteRepository']
 >;
-export type SyncBatchValidator = (input: SyncWorkingState & { schemaVersion: number }) => SyncDomainState;
+export type SyncBatchValidator = (input: SyncWorkingState & { schemaVersion: number }) => SyncStoredState;
 export type SyncRawNoteReferences = (
   collection: 'notes',
-  note: SyncWorkingEntity<'notes'>
+  note: SyncWorkingRecord<'notes'>
 ) => { collection: string; id: unknown }[];
+export type SyncRawChangeReferences = (
+  change: SyncChange,
+  before: SyncStoredState,
+  after: SyncStoredState
+) => { collection: SyncCollection; id: unknown }[];
+/** 仅供原始数据库 JSON 的属性读取，不表示其通过结构校验。 */
+export type SyncRawObject = Record<string, SyncJsonValue | undefined>;
+export type SyncRawStructureUpdate = (
+  before: string,
+  after: string,
+  previous: SyncWorkingRecord<'notes'>['annotationStructure'] | undefined
+) => Prisma.JsonObject;
+export type SyncRawAnchorResolution = (
+  markdown: string,
+  anchor: SyncWorkingRecord<'contentAnnotations' | 'annotationExclusions'>['anchor']
+) => Pick<ReturnType<typeof import('@study-accelerator/content-anchor').resolveAnchor>, 'status' | 'quoteText'>;
+interface SyncAnnotationReconcileDependencies {
+  repository: ReturnType<
+    typeof import('../knowledge/infrastructure/content-annotation-repository.ts').createInMemoryContentAnnotationRepository
+  >;
+  noteRepository: ReturnType<SyncAnnotationNoteFactory>;
+  noteVersionRepository: ReturnType<
+    typeof import('../knowledge/infrastructure/note-version-repository.ts').createInMemoryNoteVersionRepository
+  >;
+  revisionRepository: import('../knowledge/infrastructure/annotation-support-repositories.ts').AnnotationRevisionRepository<
+    SyncWorkingRecord<'annotationRevisions'>
+  >;
+}
+export type SyncAnnotationReconcileFactory = (dependencies: SyncAnnotationReconcileDependencies) => {
+  reconcileForNote(noteId: string, contentHash: string): void;
+};
 export interface SyncMutation<Collection extends SyncCollection = SyncCollection> {
   collection: Collection;
   id: string;
@@ -179,18 +230,20 @@ export interface SyncAttachmentTransfer {
   put(input: SyncBlobInput): PreparedSyncAttachment;
 }
 export type SyncAwaitable<Value> = Value | PromiseLike<Value>;
-export interface SyncPreview {
-  state: SyncDomainState;
+export interface SyncPreview<Backend extends SyncBackend = 'local'> {
+  state: SyncProviderState<Backend>;
   journal: SyncJournal;
 }
-export interface SyncBatchProvider {
-  read<Result>(callback: (state: SyncDomainState | null, journal: SyncJournal) => Result): SyncAwaitable<Result>;
-  mutate<Result>(callback: (state: SyncDomainState, journal: SyncJournal) => Result): SyncAwaitable<Result>;
-  mutateBatch?: SyncBatchProvider['mutate'];
-  mutateJournal?: SyncBatchProvider['mutate'];
-  historyReferences?: () => SyncAwaitable<object[] | null>;
-  applyState(state: SyncDomainState): SyncAwaitable<void>;
-  preview(): SyncAwaitable<SyncPreview>;
+export interface SyncBatchProvider<Backend extends SyncBackend = 'local'> {
+  read<Result>(
+    callback: (state: SyncProviderState<Backend> | null, journal: SyncJournal) => Result
+  ): SyncAwaitable<Result>;
+  mutate<Result>(callback: (state: SyncProviderState<Backend>, journal: SyncJournal) => Result): SyncAwaitable<Result>;
+  mutateBatch?: SyncBatchProvider<Backend>['mutate'];
+  mutateJournal?: SyncBatchProvider<Backend>['mutate'];
+  historyReferences?: () => SyncAwaitable<unknown[] | null>;
+  applyState(state: SyncProviderState<Backend>): SyncAwaitable<void>;
+  preview(): SyncAwaitable<SyncPreview<Backend>>;
 }
 export interface SyncNoteOperation {
   noteId: string;
@@ -214,9 +267,9 @@ export interface LocalSyncDataStore {
   runSyncTransaction<Result>(operation: () => Result): Result;
   runSyncJournalTransaction?: LocalSyncDataStore['runSyncTransaction'];
   runSyncBatchTransaction?: LocalSyncDataStore['runSyncTransaction'];
-  getHistoryRetentionReferences?: () => object[] | null;
+  getHistoryRetentionReferences?: () => unknown[] | null;
 }
-export interface LocalSyncProvider extends SyncBatchProvider {
+export interface LocalSyncProvider extends SyncBatchProvider<'local'> {
   snapshotEntries(
     state: SyncDomainState,
     journal: SyncJournal
