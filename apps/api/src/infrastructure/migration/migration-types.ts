@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { MigrationClient } from './migration-client.ts';
 import type { buildJsonMigrationPlan } from './json-to-postgres.js';
 import type { MigrationReport } from './migration-report.ts';
 
@@ -44,7 +44,7 @@ export interface JsonMigrationOptions {
   ownerId?: string;
 }
 export interface ApplyJsonMigrationOptions {
-  client?: PrismaClient;
+  client?: MigrationClient;
   plan?: ReturnType<typeof buildJsonMigrationPlan>['plan'];
   report?: MigrationReport & { appliedAt?: string };
   requireEmptyTarget?: boolean;

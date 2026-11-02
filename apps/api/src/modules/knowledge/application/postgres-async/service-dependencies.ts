@@ -189,7 +189,7 @@ export interface NoteDependencies extends TransactionDependencies {
   onBeforePermanentDelete?: NoteTransactionContext['onBeforePermanentDelete'];
 }
 export interface PostgresModuleDependencies extends Partial<PostgresRepositories> {
-  client?: Pick<import('@prisma/client').PrismaClient, '$transaction'>;
+  client?: import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost;
   getPurgeTombstone?: TransactionDependencies['getTombstone'];
   readPurgeTaskState?: ReturnType<
     typeof import('../../../../infrastructure/asset-purge-task-state.js').createPostgresPurgeTaskReader

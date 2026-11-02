@@ -333,7 +333,7 @@ export function createAppContext(options = {}) {
   };
 }
 
-/** @param {{storageRootDir?: string, dataFilePath?: string, uploadsDir?: string, persistenceDriver?: 'postgres' | 'local-json', databaseUrl?: string, client?: import('@prisma/client').PrismaClient, ownerId?: string}} options */
+/** @param {{storageRootDir?: string, dataFilePath?: string, uploadsDir?: string, persistenceDriver?: 'postgres' | 'local-json', databaseUrl?: string, client?: import('./infrastructure/postgres-transaction-port.ts').PostgresTransactionHost, ownerId?: string}} options */
 export function createPersistentAppContext({
   storageRootDir = workspaceRoot,
   dataFilePath = resolveStoragePath('storage/data/knowledge-base.json', storageRootDir),

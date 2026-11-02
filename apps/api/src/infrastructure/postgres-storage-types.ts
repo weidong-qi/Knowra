@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { PostgresTransactionHost } from './postgres-transaction-port.ts';
 import type { createMaintenanceGate } from './maintenance-gate.js';
 import type { createPostgresAttachmentStore } from './postgres-attachment-store.js';
 import type { createPostgresAttachmentRepository } from '../modules/knowledge/infrastructure/postgres/attachment-repository.js';
@@ -15,7 +15,7 @@ export interface PostgresAttachmentStoreOptions {
 }
 
 export interface PostgresSnapshotOptions {
-  client?: PrismaClient;
+  client?: PostgresTransactionHost<import('./migration/migration-client.ts').MigrationTransaction>;
   repositories?: SnapshotRepositories;
   attachmentStore?: ReturnType<typeof createPostgresAttachmentStore>;
   storageRootDir?: string;
