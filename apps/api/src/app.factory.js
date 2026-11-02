@@ -1,4 +1,4 @@
-import { createTaskWorkspaceService } from './modules/task-workspaces/service.js';
+import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createTaskWorkspaceFiles } from './infrastructure/task-workspace-files.js';
 import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-state.js';
 import { createAttachmentTransfer } from './modules/sync/attachment-transfer.js';

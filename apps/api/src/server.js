@@ -1,5 +1,5 @@
-import { createTaskWorkspaceService } from './modules/task-workspaces/service.js';
-import { handleTaskWorkspaceRoute } from './modules/task-workspaces/routes.js';
+import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
+import { handleTaskWorkspaceRoute } from './modules/task-workspaces/routes.ts';
 import { handleActionRoute } from './modules/ai/action-routes.js';
 import { URL } from 'node:url';
 import http from 'node:http';

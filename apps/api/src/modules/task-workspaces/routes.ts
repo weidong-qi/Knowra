@@ -1,12 +1,24 @@
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { fail } from './contract.js';
+import { fail } from './contract.ts';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { AppError } from '../../errors/app-error.ts';
+import type { createTaskWorkspaceService } from './service.ts';
+import type { TaskWorkspaceContext, TaskWorkspaceQuery } from './repository-port.ts';
 
-async function multipart(request) {
+export interface TaskWorkspaceRouteDependencies {
+  request: IncomingMessage;
+  response: ServerResponse;
+  url: URL;
+  service: ReturnType<typeof createTaskWorkspaceService>;
+  context: TaskWorkspaceContext | ((request: IncomingMessage, response: ServerResponse) => TaskWorkspaceContext);
+}
+
+async function multipart(request: IncomingMessage) {
   const contentType = request.headers['content-type'];
   if (typeof contentType !== 'string' || !/^multipart\/form-data;\s*boundary=/i.test(contentType)) fail();
   let size = 0;
-  const chunks = [];
+  const chunks: Buffer[] = [];
   for await (const chunk of request) {
     size += chunk.length;
     if (size > 5 * 1024 * 1024 + 16384) fail('LIMIT');
@@ -33,18 +45,24 @@ async function multipart(request) {
     typeof file === 'string' ||
     typeof file.arrayBuffer !== 'function' ||
     typeof form.get('operationId') !== 'string' ||
-    !/^\d+$/.test(form.get('expectedRevision'))
+    !/^\d+$/.test(form.get('expectedRevision') as string)
   )
     fail();
   return {
-    operationId: form.get('operationId'),
+    operationId: form.get('operationId') as string,
     expectedRevision: Number(form.get('expectedRevision')),
     fileName: file.name,
     mimeType: file.type,
     bytes: Buffer.from(await file.arrayBuffer())
   };
 }
-export async function handleTaskWorkspaceRoute({ request, response, url, service, context }) {
+export async function handleTaskWorkspaceRoute({
+  request,
+  response,
+  url,
+  service,
+  context
+}: TaskWorkspaceRouteDependencies) {
   const root = '/api/task-workspaces';
   if (url.pathname !== root && !url.pathname.startsWith(`${root}/`)) return false;
   response.setHeader('Cache-Control', 'no-store');
@@ -64,7 +82,7 @@ export async function handleTaskWorkspaceRoute({ request, response, url, service
       fail();
     const [workspaceId, collection, entityId, action, attachmentId, content] = parts;
     const base = { workspaceId };
-    const query = {};
+    const query: TaskWorkspaceQuery = {};
     for (const key of url.searchParams.keys()) {
       if (
         !['limit', 'cursor', 'status', 'versionId', 'start', 'afterSequence'].includes(key) ||
@@ -73,9 +91,9 @@ export async function handleTaskWorkspaceRoute({ request, response, url, service
         fail();
       const value = url.searchParams.get(key);
       if (['limit', 'start', 'afterSequence'].includes(key)) {
-        if (!/^\d+$/.test(value)) fail();
-        query[key] = Number(value);
-      } else query[key] = value;
+        if (!/^\d+$/.test(value!)) fail();
+        (query as Record<string, string | number | null>)[key] = Number(value);
+      } else (query as Record<string, string | number | null>)[key] = value;
     }
     let data;
     if (request.method === 'GET') {
@@ -123,7 +141,7 @@ export async function handleTaskWorkspaceRoute({ request, response, url, service
           ...query
         });
       else fail();
-    } else if (['POST', 'PATCH'].includes(request.method)) {
+    } else if (['POST', 'PATCH'].includes(request.method!)) {
       if (request.headers['x-task-workspace-epoch'] !== ctx.datasetEpoch) fail('CONFLICT');
       if (url.search) fail();
       if (request.method === 'POST' && collection === 'documents' && action === 'attachments' && parts.length === 4)
@@ -176,21 +194,22 @@ export async function handleTaskWorkspaceRoute({ request, response, url, service
               publish: 'publishTask',
               cancel: 'cancelTask',
               review: 'reviewSubmission'
-            }[action]
+            }[action] as 'publishTask' | 'cancelTask' | 'reviewSubmission'
           ](ctx, { ...body, ...base, taskId: entityId });
         else fail();
       }
     } else fail();
-    if (ctx.guard() === false) fail('FORBIDDEN');
+    if (ctx.guard!() === false) fail('FORBIDDEN');
     service.capabilities(ctx);
     sendJson(response, 200, { data });
     return true;
   } catch (error) {
-    const safe = error?.code?.startsWith('TASK_WORKSPACE_');
-    sendJson(response, safe ? error.statusCode : 422, {
+    const failure = error as AppError;
+    const safe = failure?.code?.startsWith('TASK_WORKSPACE_');
+    sendJson(response, safe ? failure.statusCode : 422, {
       error: {
-        code: safe ? error.code : 'TASK_WORKSPACE_INVALID',
-        message: safe ? error.message : '任务工作区请求无效。'
+        code: safe ? failure.code : 'TASK_WORKSPACE_INVALID',
+        message: safe ? failure.message : '任务工作区请求无效。'
       }
     });
     return true;

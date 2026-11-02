@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { crc32 } from 'node:zlib';
 import sharp from 'sharp';
-import { fail } from '../modules/task-workspaces/contract.js';
+import { fail } from '../modules/task-workspaces/contract.ts';
 
 export const TASK_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const TASK_IMAGE_MAX_PIXELS = 16_000_000;

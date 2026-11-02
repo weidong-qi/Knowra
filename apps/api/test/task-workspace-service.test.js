@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { createTaskWorkspaceService } from '../src/modules/task-workspaces/service.js';
+import { createTaskWorkspaceService } from '../src/modules/task-workspaces/service.ts';
 import {
   createJsonTaskWorkspaceStore,
-  createEmptyTaskWorkspaceSnapshot,
+  createEmptyTaskWorkspaceSnapshot
 } from '../src/infrastructure/task-workspace-json-store.js';
 
 export function fixture() {
@@ -12,10 +12,10 @@ export function fixture() {
     allowed = true;
   const store = createJsonTaskWorkspaceStore({
     readState: () => state,
-    writeState: (s) => {
+    writeState: s => {
       state = s;
     },
-    transaction: (fn) => {
+    transaction: fn => {
       const before = structuredClone(state);
       try {
         return fn();
@@ -23,30 +23,28 @@ export function fixture() {
         state = before;
         throw e;
       }
-    },
+    }
   });
   const service = createTaskWorkspaceService({
     store,
     clock: () => now,
-    authorize: () => allowed,
+    authorize: () => allowed
   });
-  const context = (actor) => ({
-    ...store.readSnapshot((tx) => tx.identity()),
+  const context = actor => ({
+    ...store.readSnapshot(tx => tx.identity()),
     actor,
-    guard: () => true,
+    guard: () => true
   });
   const user = context({ kind: 'user', id: 'user' }),
     agent = context({ kind: 'mcp', id: 'synthetic' });
-  const call = (kind, input = {}, ctx = user) =>
-    service[kind](ctx, { operationId: randomUUID(), ...input });
+  const call = (kind, input = {}, ctx = user) => service[kind](ctx, { operationId: randomUUID(), ...input });
   const w = call('createWorkspace', { name: '合成工作区' }).data.workspace;
   const doc = call('createDocument', {
     workspaceId: w.id,
     title: '需求',
-    markdown: '实现合成测试',
+    markdown: '实现合成测试'
   }).data.document;
-  const task = call('createTask', { workspaceId: w.id, title: '实现任务' }).data
-    .task;
+  const task = call('createTask', { workspaceId: w.id, title: '实现任务' }).data.task;
   const published = call('publishTask', {
     workspaceId: w.id,
     taskId: task.id,
@@ -54,7 +52,7 @@ export function fixture() {
     description: { documentId: doc.id, versionId: doc.version.id },
     acceptanceCriteria: ['测试通过'],
     inScope: '合成内容',
-    outOfScope: '真实资料',
+    outOfScope: '真实资料'
   }).data.task;
   return {
     service,
@@ -65,14 +63,14 @@ export function fixture() {
     doc,
     task: published,
     call,
-    setTime: (v) => {
+    setTime: v => {
       now = v;
     },
     now: () => now,
     revoke: () => {
       allowed = false;
     },
-    state: () => state,
+    state: () => state
   };
 }
 export const taskWorkspaceServiceTests = [
@@ -84,26 +82,25 @@ export const taskWorkspaceServiceTests = [
           operationId: randomUUID(),
           workspaceId: f.w.id,
           taskId: f.task.id,
-          expectedRevision: f.task.revision,
+          expectedRevision: f.task.revision
         };
       const claimed = f.service.claimTask(f.agent, input);
       assert.equal(claimed.data.task.status, 'running');
       assert.deepEqual(f.service.claimTask(f.agent, input), {
         ...claimed,
-        reused: true,
+        reused: true
       });
-      assert.throws(
-        () => f.service.claimTask(f.agent, { ...input, expectedRevision: 99 }),
-        { code: 'TASK_WORKSPACE_CONFLICT' },
-      );
+      assert.throws(() => f.service.claimTask(f.agent, { ...input, expectedRevision: 99 }), {
+        code: 'TASK_WORKSPACE_CONFLICT'
+      });
       assert.throws(
         () =>
           f.call(
             'claimTask',
             { ...input, operationId: randomUUID() },
-            { ...f.agent, actor: { kind: 'mcp', id: 'other' } },
+            { ...f.agent, actor: { kind: 'mcp', id: 'other' } }
           ),
-        { code: 'TASK_WORKSPACE_CONFLICT' },
+        { code: 'TASK_WORKSPACE_CONFLICT' }
       );
       const a = claimed.data.attempt;
       const submitted = f.call(
@@ -114,9 +111,9 @@ export const taskWorkspaceServiceTests = [
           attemptId: a.id,
           generation: a.generation,
           summary: '完成',
-          artifacts: [{ documentId: f.doc.id, versionId: f.doc.version.id }],
+          artifacts: [{ documentId: f.doc.id, versionId: f.doc.version.id }]
         },
-        f.agent,
+        f.agent
       );
       assert.equal(submitted.data.task.status, 'review');
       const accepted = f.call('reviewSubmission', {
@@ -124,11 +121,11 @@ export const taskWorkspaceServiceTests = [
         taskId: f.task.id,
         expectedRevision: submitted.data.task.revision,
         submissionId: submitted.data.attempt.submission.id,
-        decision: 'accepted',
+        decision: 'accepted'
       });
       assert.equal(accepted.data.task.status, 'accepted');
       assert.equal(f.state().attempts[0].leaseExpiresAt, null);
-    },
+    }
   },
   {
     name: 'task workspace stale lease epoch authorization and actor rejection',
@@ -141,20 +138,20 @@ export const taskWorkspaceServiceTests = [
             {
               workspaceId: f.w.id,
               taskId: f.task.id,
-              expectedRevision: f.task.revision,
+              expectedRevision: f.task.revision
             },
-            f.agent,
+            f.agent
           ),
-        { code: 'TASK_WORKSPACE_FORBIDDEN' },
+        { code: 'TASK_WORKSPACE_FORBIDDEN' }
       );
       const a = f.call(
         'claimTask',
         {
           workspaceId: f.w.id,
           taskId: f.task.id,
-          expectedRevision: f.task.revision,
+          expectedRevision: f.task.revision
         },
-        f.agent,
+        f.agent
       ).data.attempt;
       f.setTime(f.now() + 300001);
       assert.throws(
@@ -165,26 +162,20 @@ export const taskWorkspaceServiceTests = [
               workspaceId: f.w.id,
               taskId: f.task.id,
               attemptId: a.id,
-              generation: a.generation,
+              generation: a.generation
             },
-            f.agent,
+            f.agent
           ),
-        { code: 'TASK_WORKSPACE_LEASE_EXPIRED' },
+        { code: 'TASK_WORKSPACE_LEASE_EXPIRED' }
       );
-      assert.throws(
-        () =>
-          f.service.getWorkspace(
-            { ...f.user, datasetEpoch: randomUUID() },
-            { workspaceId: f.w.id },
-          ),
-        { code: 'TASK_WORKSPACE_FORBIDDEN' },
-      );
+      assert.throws(() => f.service.getWorkspace({ ...f.user, datasetEpoch: randomUUID() }, { workspaceId: f.w.id }), {
+        code: 'TASK_WORKSPACE_FORBIDDEN'
+      });
       f.revoke();
-      assert.throws(
-        () => f.service.getWorkspace(f.user, { workspaceId: f.w.id }),
-        { code: 'TASK_WORKSPACE_FORBIDDEN' },
-      );
-    },
+      assert.throws(() => f.service.getWorkspace(f.user, { workspaceId: f.w.id }), {
+        code: 'TASK_WORKSPACE_FORBIDDEN'
+      });
+    }
   },
   {
     name: 'task workspace CAS cross-workspace references and remote images rejected',
@@ -196,9 +187,9 @@ export const taskWorkspaceServiceTests = [
             workspaceId: f.w.id,
             documentId: f.doc.id,
             expectedRevision: 2,
-            markdown: 'x',
+            markdown: 'x'
           }),
-        { code: 'TASK_WORKSPACE_CONFLICT' },
+        { code: 'TASK_WORKSPACE_CONFLICT' }
       );
       assert.throws(
         () =>
@@ -206,21 +197,20 @@ export const taskWorkspaceServiceTests = [
             workspaceId: f.w.id,
             documentId: f.doc.id,
             expectedRevision: 1,
-            markdown: '![x](https://example.com/image.png)',
+            markdown: '![x](https://example.com/image.png)'
           }),
-        { code: 'TASK_WORKSPACE_INVALID' },
+        { code: 'TASK_WORKSPACE_INVALID' }
       );
-      const w = f.call('createWorkspace', { name: '另一工作区' }).data
-        .workspace;
+      const w = f.call('createWorkspace', { name: '另一工作区' }).data.workspace;
       assert.throws(
         () =>
           f.service.getDocument(f.user, {
             workspaceId: w.id,
-            documentId: f.doc.id,
+            documentId: f.doc.id
           }),
-        { code: 'TASK_WORKSPACE_FORBIDDEN' },
+        { code: 'TASK_WORKSPACE_FORBIDDEN' }
       );
-    },
+    }
   },
   {
     name: 'task workspace returned submission cannot be accepted and superseded cannot submit',
@@ -231,9 +221,9 @@ export const taskWorkspaceServiceTests = [
         {
           workspaceId: f.w.id,
           taskId: f.task.id,
-          expectedRevision: f.task.revision,
+          expectedRevision: f.task.revision
         },
-        f.agent,
+        f.agent
       ).data.attempt;
       const submitted = f.call(
         'submitTask',
@@ -243,16 +233,16 @@ export const taskWorkspaceServiceTests = [
           attemptId: a.id,
           generation: a.generation,
           summary: '完成',
-          artifacts: [],
+          artifacts: []
         },
-        f.agent,
+        f.agent
       );
       const returned = f.call('reviewSubmission', {
         workspaceId: f.w.id,
         taskId: f.task.id,
         expectedRevision: submitted.data.task.revision,
         submissionId: submitted.data.attempt.submission.id,
-        decision: 'returned',
+        decision: 'returned'
       });
       assert.equal(returned.data.task.status, 'ready');
       assert.equal(f.state().attempts[0].status, 'submitted');
@@ -263,11 +253,11 @@ export const taskWorkspaceServiceTests = [
             taskId: f.task.id,
             expectedRevision: returned.data.task.revision,
             submissionId: submitted.data.attempt.submission.id,
-            decision: 'accepted',
+            decision: 'accepted'
           }),
-        { code: 'TASK_WORKSPACE_CONFLICT' },
+        { code: 'TASK_WORKSPACE_CONFLICT' }
       );
-    },
+    }
   },
   {
     name: 'task workspace commit guard rolls back all records',
@@ -282,12 +272,12 @@ export const taskWorkspaceServiceTests = [
             {
               operationId: randomUUID(),
               workspaceId: f.w.id,
-              title: '不得落库',
-            },
+              title: '不得落库'
+            }
           ),
-        { code: 'TASK_WORKSPACE_FORBIDDEN' },
+        { code: 'TASK_WORKSPACE_FORBIDDEN' }
       );
       assert.deepEqual(f.state(), before);
-    },
-  },
+    }
+  }
 ];

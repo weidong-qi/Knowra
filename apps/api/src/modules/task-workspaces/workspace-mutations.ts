@@ -1,17 +1,20 @@
-import {
-  fail,
-  text,
-  revision,
-  uuid,
-  hash,
-  imageReferences,
-  safeWorkspace,
-  safeDocument,
-  LIMITS,
-} from './contract.js';
+import { fail, text, revision, uuid, hash, imageReferences, safeWorkspace, safeDocument, LIMITS } from './contract.ts';
+import type {
+  DocumentRecord,
+  TaskWorkspaceContext,
+  TaskWorkspaceMutation,
+  TaskWorkspaceTransaction,
+  TransactionHelpers
+} from './repository-port.ts';
 
 /** 工作区与不可变协作文档写入；任务执行状态在 task-lifecycle 中唯一维护。 */
-export function applyWorkspaceMutation(kind, tx, ctx, input, h) {
+export function applyWorkspaceMutation(
+  kind: string,
+  tx: TaskWorkspaceTransaction,
+  ctx: TaskWorkspaceContext,
+  input: TaskWorkspaceMutation,
+  h: TransactionHelpers
+) {
   const { iso, id, bound, entity, event, save, liveWorkspace } = h;
   const user = () => {
     if (ctx.actor.kind !== 'user') fail('FORBIDDEN');
@@ -26,7 +29,7 @@ export function applyWorkspaceMutation(kind, tx, ctx, input, h) {
       archivedAt: null,
       revision: 1,
       createdAt: iso,
-      updatedAt: iso,
+      updatedAt: iso
     };
     tx.insert('workspaces', w);
     return { workspace: safeWorkspace(w) };
@@ -40,11 +43,7 @@ export function applyWorkspaceMutation(kind, tx, ctx, input, h) {
     save('workspaces', workspace);
     for (const t of tx
       .list('tasks')
-      .filter(
-        (t) =>
-          t.workspaceId === workspace.id &&
-          ['running', 'ready', 'review', 'draft'].includes(t.status),
-      )) {
+      .filter(t => t.workspaceId === workspace.id && ['running', 'ready', 'review', 'draft'].includes(t.status))) {
       if (t.activeAttemptId) {
         const a = entity('attempts', t.activeAttemptId);
         if (a.status === 'running') {
@@ -70,9 +69,9 @@ export function applyWorkspaceMutation(kind, tx, ctx, input, h) {
       markdown,
       contentHash: hash(markdown),
       createdAt: iso,
-      actor: ctx.actor,
+      actor: ctx.actor
     };
-    const d = {
+    const d: DocumentRecord = {
       ...bound(),
       id: documentId,
       workspaceId: workspace.id,
@@ -82,7 +81,7 @@ export function applyWorkspaceMutation(kind, tx, ctx, input, h) {
       versions: [v],
       attachments: [],
       createdAt: iso,
-      updatedAt: iso,
+      updatedAt: iso
     };
     tx.insert('documents', d);
     return { document: safeDocument(d) };
@@ -102,7 +101,7 @@ export function applyWorkspaceMutation(kind, tx, ctx, input, h) {
         markdown,
         contentHash: hash(markdown),
         createdAt: iso,
-        actor: ctx.actor,
+        actor: ctx.actor
       };
       d.versions.push(v);
       d.currentVersionId = v.id;

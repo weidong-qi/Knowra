@@ -1,37 +1,38 @@
-import {
-  fail,
-  uuid,
-  text,
-  revision,
-  safeAttempt,
-  taskSummary,
-  LIMITS,
-} from './contract.js';
+import { fail, uuid, text, revision, safeAttempt, taskSummary, LIMITS } from './contract.ts';
+import type {
+  DocumentReference,
+  RequirementRevision,
+  Review
+} from '../../../../../packages/web-core/src/task-workspaces/types.ts';
+import type {
+  AttemptRecord,
+  TaskRecord,
+  TaskWorkspaceContext,
+  TaskWorkspaceMutation,
+  TaskWorkspaceTransaction,
+  TransactionHelpers
+} from './repository-port.ts';
 
 /** 任务发布、领取、续租、提交与人工验收的唯一状态机。 */
-export function applyTaskMutation(kind, tx, ctx, input, h) {
-  const {
-    now,
-    iso,
-    id,
-    bound,
-    entity,
-    event,
-    save,
-    versionRef,
-    liveWorkspace,
-  } = h;
+export function applyTaskMutation(
+  kind: string,
+  tx: TaskWorkspaceTransaction,
+  ctx: TaskWorkspaceContext,
+  input: TaskWorkspaceMutation,
+  h: TransactionHelpers
+) {
+  const { now, iso, id, bound, entity, event, save, versionRef, liveWorkspace } = h;
   const user = () => {
     if (ctx.actor.kind !== 'user') fail('FORBIDDEN');
   };
   const agent = () => {
     if (ctx.actor.kind !== 'mcp') fail('FORBIDDEN');
   };
-  const taskDTO = (t) => taskSummary(t, tx, now, ctx.actor.kind === 'mcp');
+  const taskDTO = (t: TaskRecord) => taskSummary(t, tx, now, ctx.actor.kind === 'mcp');
   const workspace = liveWorkspace(input.workspaceId);
   if (kind === 'createTask') {
     user();
-    const t = {
+    const t: TaskRecord = {
       ...bound(),
       id: id(),
       workspaceId: workspace.id,
@@ -44,22 +45,18 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
       reviews: [],
       events: [],
       createdAt: iso,
-      updatedAt: iso,
+      updatedAt: iso
     };
     event(t, 'created');
     tx.insert('tasks', t);
     return { task: taskDTO(t) };
   }
   const t = entity('tasks', uuid(input.taskId), workspace.id);
-  if (
-    ['publishTask', 'cancelTask', 'reviewSubmission', 'claimTask'].includes(
-      kind,
-    )
-  ) {
+  if (['publishTask', 'cancelTask', 'reviewSubmission', 'claimTask'].includes(kind)) {
     revision(input.expectedRevision);
     if (t.revision !== input.expectedRevision) fail('CONFLICT');
   }
-  const finishActive = (status) => {
+  const finishActive = (status: AttemptRecord['status']) => {
     if (!t.activeAttemptId) return;
     const a = entity('attempts', t.activeAttemptId, workspace.id);
     if (a.status === 'running' || a.status === 'submitted') {
@@ -71,8 +68,7 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
   };
   if (kind === 'publishTask') {
     user();
-    if (!['draft', 'ready', 'running', 'review'].includes(t.status))
-      fail('CONFLICT');
+    if (!['draft', 'ready', 'running', 'review'].includes(t.status)) fail('CONFLICT');
     versionRef(input.description, workspace.id);
     if (
       !Array.isArray(input.acceptanceCriteria) ||
@@ -80,15 +76,15 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
       input.acceptanceCriteria.length > 50
     )
       fail();
-    const r = {
+    const r: RequirementRevision = {
       id: id(),
       ordinal: t.requirements.length + 1,
-      description: input.description,
-      acceptanceCriteria: input.acceptanceCriteria.map((c) => text(c, 4096)),
+      description: input.description as DocumentReference,
+      acceptanceCriteria: input.acceptanceCriteria.map(c => text(c, 4096)),
       inScope: text(input.inScope, 16384, true),
       outOfScope: text(input.outOfScope, 16384, true),
       createdAt: iso,
-      actor: ctx.actor,
+      actor: ctx.actor
     };
     finishActive('superseded');
     t.requirements.push(r);
@@ -117,25 +113,25 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
       a.status !== 'submitted' ||
       a.requirementId !== t.currentRequirementId ||
       a.submission?.id !== input.submissionId ||
-      a.submission.requirementId !== t.currentRequirementId
+      a.submission!.requirementId !== t.currentRequirementId
     )
       fail('CONFLICT');
-    if (!['accepted', 'returned'].includes(input.decision)) fail();
-    const review = {
+    if (!['accepted', 'returned'].includes(input.decision!)) fail();
+    const review: Review = {
       id: id(),
-      submissionId: a.submission.id,
-      requirementId: t.currentRequirementId,
-      decision: input.decision,
+      submissionId: a.submission!.id,
+      requirementId: t.currentRequirementId!,
+      decision: input.decision as Review['decision'],
       comment: text(input.comment ?? '', 16384, true),
       createdAt: iso,
-      actor: ctx.actor,
+      actor: ctx.actor
     };
     t.reviews.push(review);
     t.status = input.decision === 'accepted' ? 'accepted' : 'ready';
     if (t.status === 'ready') t.activeAttemptId = null;
-    event(t, input.decision, {
+    event(t, input.decision!, {
       reviewId: review.id,
-      submissionId: review.submissionId,
+      submissionId: review.submissionId
     });
     save('tasks', t);
     return { task: taskDTO(t), review };
@@ -144,8 +140,7 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
   if (kind === 'claimTask') {
     if (t.status === 'running') {
       const old = entity('attempts', t.activeAttemptId, workspace.id);
-      if (old.status !== 'running' || Date.parse(old.leaseExpiresAt) > now)
-        fail('CONFLICT');
+      if (old.status !== 'running' || Date.parse(old.leaseExpiresAt!) > now) fail('CONFLICT');
       old.status = 'expired';
       old.leaseExpiresAt = null;
       old.finishedAt = iso;
@@ -156,15 +151,15 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
         0,
         ...tx
           .list('attempts')
-          .filter((a) => a.taskId === t.id)
-          .map((a) => a.generation),
+          .filter(a => a.taskId === t.id)
+          .map(a => a.generation)
       ) + 1;
-    const a = {
+    const a: AttemptRecord = {
       ...bound(),
       id: id(),
       taskId: t.id,
       workspaceId: workspace.id,
-      requirementId: t.currentRequirementId,
+      requirementId: t.currentRequirementId!,
       generation,
       actor: ctx.actor,
       status: 'running',
@@ -172,7 +167,7 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
       progress: null,
       submission: null,
       startedAt: iso,
-      finishedAt: null,
+      finishedAt: null
     };
     tx.insert('attempts', a);
     t.activeAttemptId = a.id;
@@ -204,7 +199,7 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
   if (kind === 'reportProgress') {
     a.progress = {
       message: text(input.message, LIMITS.progress),
-      updatedAt: iso,
+      updatedAt: iso
     };
     event(t, 'progress', { attemptId: a.id });
   }
@@ -218,18 +213,14 @@ export function applyTaskMutation(kind, tx, ctx, input, h) {
     event(t, 'released', { attemptId: a.id });
   }
   if (kind === 'submitTask') {
-    if (
-      !Array.isArray(input.artifacts) ||
-      input.artifacts.length > LIMITS.artifacts
-    )
-      fail();
+    if (!Array.isArray(input.artifacts) || input.artifacts.length > LIMITS.artifacts) fail();
     for (const ref of input.artifacts) versionRef(ref, workspace.id);
     a.submission = {
       id: id(),
-      requirementId: t.currentRequirementId,
+      requirementId: t.currentRequirementId!,
       summary: text(input.summary, LIMITS.summary),
       artifacts: input.artifacts,
-      createdAt: iso,
+      createdAt: iso
     };
     a.status = 'submitted';
     a.leaseExpiresAt = null;
