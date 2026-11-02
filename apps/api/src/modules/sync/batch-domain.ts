@@ -51,7 +51,7 @@ import { createInMemoryAnnotationRevisionRepository } from '../knowledge/infrast
 import { validateSyncBatchState, LOCAL_DATA_SCHEMA_VERSION } from '../../infrastructure/local-data-schema.js';
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertNoInsecureImageUrls } from '../knowledge/application/note-content-policy.js';
-import { inspectAttachmentDeletion } from '../../infrastructure/attachment-deletion-preflight.js';
+import { inspectAttachmentDeletion } from '../../infrastructure/attachment-deletion-preflight.ts';
 import { calculateContentHash, resolveAnchor } from '@study-accelerator/content-anchor';
 import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contract.ts';
 import { syncError } from './journal.ts';

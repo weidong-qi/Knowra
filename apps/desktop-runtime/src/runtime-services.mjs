@@ -1,5 +1,5 @@
 import { authorizeTaskMcpContext } from './mcp/task-access.mjs';
-import { inspectAttachmentDeletion } from '../../api/src/infrastructure/attachment-deletion-preflight.js';
+import { inspectAttachmentDeletion } from '../../api/src/infrastructure/attachment-deletion-preflight.ts';
 import { createAppError } from '../../api/src/errors/app-error.js';
 import path from 'node:path';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';

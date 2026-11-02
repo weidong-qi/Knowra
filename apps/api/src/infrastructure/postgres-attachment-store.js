@@ -13,8 +13,8 @@ import path from 'node:path';
 import { createAppError } from '../errors/app-error.js';
 import { createLocalAttachmentFileManager } from './local-attachment-file-manager.ts';
 import { ATTACHMENT_STATUS } from './attachment-status.ts';
-import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.js';
-import { inspectAttachmentDeletion } from './attachment-deletion-preflight.js';
+import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.ts';
+import { inspectAttachmentDeletion } from './attachment-deletion-preflight.ts';
 import {
   createAttachmentId,
   moveFileSafely,

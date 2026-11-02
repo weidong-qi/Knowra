@@ -1,10 +1,27 @@
 import fs from 'node:fs';
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { cloneValue } from './local-attachment-store-utils.ts';
 import { createAttachmentDirectorySwap, stageAttachmentFiles } from './attachment-directory-swap.ts';
-import { validateAttachmentSnapshotItems } from './local-attachment-snapshot-validator.js';
+import { validateAttachmentSnapshotItems } from './local-attachment-snapshot-validator.ts';
+import type { AttachmentFileManager, AttachmentFileMetadata } from './local-attachment-types.ts';
+import type { AttachmentSnapshotValidationOptions } from './local-attachment-snapshot-validator.ts';
 
-export function createLocalAttachmentSnapshotStore({ dataStore, flush, fileManager, listAttachments }) {
+export interface LocalAttachmentSnapshotStoreDependencies {
+  dataStore: { readonly state: { attachments: AttachmentFileMetadata[] } };
+  flush(): void;
+  fileManager: Pick<
+    AttachmentFileManager,
+    'resolveReadableAttachmentPath' | 'getManagedUploadsDirectory' | 'buildStoragePath'
+  >;
+  listAttachments(): (AttachmentFileMetadata & { id: string })[];
+}
+
+export function createLocalAttachmentSnapshotStore({
+  dataStore,
+  flush,
+  fileManager,
+  listAttachments
+}: LocalAttachmentSnapshotStoreDependencies) {
   function exportAttachmentsSnapshot() {
     return listAttachments().map(attachment => {
       const readablePath = fileManager.resolveReadableAttachmentPath(attachment);
@@ -19,7 +36,7 @@ export function createLocalAttachmentSnapshotStore({ dataStore, flush, fileManag
     });
   }
 
-  function prepareAttachmentsSnapshot(items = [], options = {}) {
+  function prepareAttachmentsSnapshot(items: unknown = [], options: AttachmentSnapshotValidationOptions = {}) {
     const preparedItems = validateAttachmentSnapshotItems(items, fileManager, options);
     const uploadsDirectory = fileManager.getManagedUploadsDirectory();
     const stagingDirectory = stageAttachmentFiles({
@@ -34,7 +51,7 @@ export function createLocalAttachmentSnapshotStore({ dataStore, flush, fileManag
     });
   }
 
-  function importAttachmentsSnapshot(items = []) {
+  function importAttachmentsSnapshot(items: unknown = []) {
     const previousRecords = cloneValue(dataStore.state.attachments);
     const transaction = prepareAttachmentsSnapshot(items);
 
@@ -51,7 +68,7 @@ export function createLocalAttachmentSnapshotStore({ dataStore, flush, fileManag
     }
   }
 
-  function replaceAttachments(records) {
+  function replaceAttachments(records: AttachmentFileMetadata[]) {
     dataStore.state.attachments.splice(0, dataStore.state.attachments.length, ...cloneValue(records));
   }
 
@@ -62,7 +79,7 @@ export function createLocalAttachmentSnapshotStore({ dataStore, flush, fileManag
   };
 }
 
-function rollbackOrThrow(transaction) {
+function rollbackOrThrow(transaction: { rollback(): void }) {
   try {
     transaction.rollback();
   } catch (rollbackError) {

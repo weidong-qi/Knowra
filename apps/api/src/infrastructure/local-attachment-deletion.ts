@@ -1,5 +1,5 @@
 import { createAppError } from '../errors/app-error.ts';
-import { inspectAttachmentDeletion } from './attachment-deletion-preflight.js';
+import { inspectAttachmentDeletion } from './attachment-deletion-preflight.ts';
 import type { LocalAttachmentDataStore, LocalAttachmentRecord } from './local-attachment-types.ts';
 
 export interface LocalAttachmentDeletionDependencies {

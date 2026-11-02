@@ -1,21 +1,39 @@
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { ATTACHMENT_STATUS } from './attachment-status.ts';
 import { sanitizeFileName, sha256Buffer } from './local-attachment-store-utils.ts';
+import type { AttachmentFileManager } from './local-attachment-types.ts';
+
+interface RawSnapshotItem {
+  id?: unknown;
+  noteId?: unknown;
+  fileName?: unknown;
+  contentBase64?: unknown;
+  sha256?: unknown;
+  mimeType?: unknown;
+  verifiedAt?: unknown;
+  createdAt?: unknown;
+}
+export interface AttachmentSnapshotValidationOptions {
+  expectedMetadata?: unknown;
+  noteIds?: Pick<ReadonlySet<string>, 'has'>;
+}
+type SnapshotFileManager = Pick<AttachmentFileManager, 'buildStoragePath'>;
+export type PreparedAttachmentSnapshotItem = ReturnType<typeof prepareSnapshotItem>;
 
 const SAFE_ATTACHMENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-/**
- * @param items
- * @param fileManager
- * @param {{expectedMetadata?: {id: string, noteId: string, fileName: string}[], noteIds?: Set<string>}} options */
-export function validateAttachmentSnapshotItems(items, fileManager, { expectedMetadata, noteIds } = {}) {
+export function validateAttachmentSnapshotItems(
+  items: unknown,
+  fileManager: SnapshotFileManager,
+  { expectedMetadata, noteIds }: AttachmentSnapshotValidationOptions = {}
+) {
   if (!Array.isArray(items)) {
     invalidAttachmentSnapshot('Attachment snapshot must be an array');
   }
 
-  const ids = new Set();
-  const preparedItems = items.map((item, index) => {
-    const prepared = prepareSnapshotItem(item, index, fileManager);
+  const ids = new Set<string>();
+  const preparedItems = (items as unknown[]).map((item, index) => {
+    const prepared = prepareSnapshotItem(item as RawSnapshotItem | null | undefined, index, fileManager);
     if (ids.has(prepared.id)) {
       invalidAttachmentSnapshot(`Attachment snapshot contains duplicate id: ${prepared.id}`);
     }
@@ -32,7 +50,11 @@ export function validateAttachmentSnapshotItems(items, fileManager, { expectedMe
   return preparedItems;
 }
 
-function prepareSnapshotItem(item, index, fileManager) {
+function prepareSnapshotItem(
+  item: RawSnapshotItem | null | undefined,
+  index: number,
+  fileManager: SnapshotFileManager
+) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) {
     invalidAttachmentSnapshot(`attachmentFiles[${index}] must be an object`);
   }
@@ -49,7 +71,7 @@ function prepareSnapshotItem(item, index, fileManager) {
   const content = decodeBase64(item.contentBase64, index);
   const fileName = sanitizeFileName(item.fileName);
   const contentSha256 = sha256Buffer(content);
-  if (item.sha256 && item.sha256.toLowerCase() !== contentSha256) {
+  if (item.sha256 && (item.sha256 as string).toLowerCase() !== contentSha256) {
     invalidAttachmentSnapshot(`attachmentFiles[${index}].sha256 does not match content`);
   }
   return {
@@ -68,12 +90,14 @@ function prepareSnapshotItem(item, index, fileManager) {
   };
 }
 
-function validateExpectedMetadata(preparedItems, expectedMetadata) {
+function validateExpectedMetadata(preparedItems: PreparedAttachmentSnapshotItem[], expectedMetadata: unknown) {
   if (!Array.isArray(expectedMetadata)) {
     invalidAttachmentSnapshot('attachments metadata must be an array');
   }
 
-  const expectedById = new Map(expectedMetadata.map(item => [item?.id, item]));
+  const expectedById = new Map(
+    (expectedMetadata as (RawSnapshotItem | null | undefined)[]).map(item => [item?.id, item] as const)
+  );
   if (expectedById.size !== preparedItems.length) {
     invalidAttachmentSnapshot('attachments metadata and attachmentFiles must contain the same ids');
   }
@@ -86,7 +110,7 @@ function validateExpectedMetadata(preparedItems, expectedMetadata) {
   }
 }
 
-function decodeBase64(value, index) {
+function decodeBase64(value: unknown, index: number) {
   if (
     typeof value !== 'string' ||
     value.length % 4 !== 0 ||
@@ -102,6 +126,6 @@ function decodeBase64(value, index) {
   return content;
 }
 
-function invalidAttachmentSnapshot(message) {
+function invalidAttachmentSnapshot(message: string): never {
   throw createAppError('STORAGE_ATTACHMENT_SNAPSHOT_INVALID', message, 422);
 }

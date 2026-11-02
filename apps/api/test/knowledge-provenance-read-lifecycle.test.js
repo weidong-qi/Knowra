@@ -10,7 +10,7 @@ import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.
 import {
   inspectAttachmentDeletion,
   loadPostgresAttachmentReferenceState
-} from '../src/infrastructure/attachment-deletion-preflight.js';
+} from '../src/infrastructure/attachment-deletion-preflight.ts';
 import { createKnowledgeArtifactProvenanceReader } from '../src/modules/knowledge/application/knowledge-artifact-provenance-read.js';
 import { hashKnowledgeArtifactProvenance } from '../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
 import { buildNoteVersionPrunePreview } from '../src/modules/knowledge/application/note-version-prune-preview.js';

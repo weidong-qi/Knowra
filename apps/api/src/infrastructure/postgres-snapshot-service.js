@@ -1,6 +1,6 @@
 import { createAppError } from '../errors/app-error.js';
 import { validateLocalSnapshot, LOCAL_DATA_SCHEMA_VERSION, LOCAL_SNAPSHOT_VERSION } from './local-data-schema.js';
-import { validateAttachmentSnapshotItems } from './local-attachment-snapshot-validator.js';
+import { validateAttachmentSnapshotItems } from './local-attachment-snapshot-validator.ts';
 import { stageAttachmentFiles, createAttachmentDirectorySwap } from './attachment-directory-swap.ts';
 import { assertNoInsecureImageUrls } from '../modules/knowledge/application/note-content-policy.js';
 import { buildJsonMigrationPlan, applyJsonMigration } from './migration/json-to-postgres.js';

@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createLocalAttachmentStore } from '../src/infrastructure/local-attachment-store.js';
-import { createAttachmentCleanupQueue } from '../src/infrastructure/attachment-cleanup-queue.js';
+import { createAttachmentCleanupQueue } from '../src/infrastructure/attachment-cleanup-queue.ts';
 import { createLocalAttachmentFileManager } from '../src/infrastructure/local-attachment-file-manager.ts';
 import { prepareAttachmentRestore } from '../src/infrastructure/attachment-recovery.ts';
-import { inspectAttachmentDeletion } from '../src/infrastructure/attachment-deletion-preflight.js';
+import { inspectAttachmentDeletion } from '../src/infrastructure/attachment-deletion-preflight.ts';
 import { createHash } from 'node:crypto';
 
 export const attachmentRecoveryTests = [

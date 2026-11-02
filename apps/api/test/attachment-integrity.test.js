@@ -10,7 +10,7 @@ export const attachmentIntegrityTests = [
       const { createLocalAttachmentFileManager } =
         await import('../src/infrastructure/local-attachment-file-manager.ts');
       const { buildAttachmentRepairRecord, inspectAttachmentIntegrity } =
-        await import('../src/infrastructure/attachment-integrity.js');
+        await import('../src/infrastructure/attachment-integrity.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-integrity-ready-'));
       try {
         const fileManager = createLocalAttachmentFileManager({
@@ -47,7 +47,7 @@ export const attachmentIntegrityTests = [
     async run() {
       const { createLocalAttachmentFileManager } =
         await import('../src/infrastructure/local-attachment-file-manager.ts');
-      const { inspectAttachmentIntegrity } = await import('../src/infrastructure/attachment-integrity.js');
+      const { inspectAttachmentIntegrity } = await import('../src/infrastructure/attachment-integrity.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-integrity-corrupt-'));
       try {
         const fileManager = createLocalAttachmentFileManager({
@@ -82,7 +82,7 @@ export const attachmentIntegrityTests = [
     async run() {
       const { createLocalAttachmentFileManager } =
         await import('../src/infrastructure/local-attachment-file-manager.ts');
-      const { inspectAttachmentIntegrity } = await import('../src/infrastructure/attachment-integrity.js');
+      const { inspectAttachmentIntegrity } = await import('../src/infrastructure/attachment-integrity.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-integrity-missing-'));
       try {
         const uploadsDir = path.join(tempRoot, 'uploads');
