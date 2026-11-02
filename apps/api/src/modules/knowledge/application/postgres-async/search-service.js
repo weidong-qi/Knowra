@@ -13,21 +13,39 @@ export function createAsyncSearchService({ listNotes, findKnowledgeSpace }) {
       const notes = await service.searchNotes({ ...scoped, includeDeleted: false, deletedOnly: false });
       return commandSearchResults(notes, scoped);
     },
-    async searchNotes({ query, spaceId, folderId = null, tagId = null, tagIds = [], tagMatch, match, sortBy, order, limit, offset, includeDeleted, deletedOnly, favoriteOnly }) {
+    /** @param {import("../../infrastructure/note-repository.ts").NoteListOptions & { query?: string }} options */
+    async searchNotes({
+      query,
+      spaceId,
+      folderId = null,
+      tagId = null,
+      tagIds = [],
+      tagMatch,
+      match,
+      sortBy,
+      order,
+      limit,
+      offset,
+      includeDeleted,
+      deletedOnly,
+      favoriteOnly
+    }) {
       const normalizedQuery = normalizeQuery(query);
       if (!normalizedQuery) return [];
-      const results = (await listNotes({
-        spaceId,
-        folderId,
-        tagId,
-        tagIds,
-        tagMatch: tagMatch ?? match,
-        sortBy,
-        order,
-        includeDeleted,
-        deletedOnly,
-        favoriteOnly
-      })).filter((note) => `${note.title} ${note.plainText}`.toLowerCase().includes(normalizedQuery));
+      const results = (
+        await listNotes({
+          spaceId,
+          folderId,
+          tagId,
+          tagIds,
+          tagMatch: tagMatch ?? match,
+          sortBy,
+          order,
+          includeDeleted,
+          deletedOnly,
+          favoriteOnly
+        })
+      ).filter(note => `${note.title} ${note.plainText}`.toLowerCase().includes(normalizedQuery));
       const start = offset ? Number(offset) : 0;
       if (limit) return results.slice(start, start + Number(limit));
       return start > 0 ? results.slice(start) : results;

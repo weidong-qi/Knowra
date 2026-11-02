@@ -2,6 +2,7 @@ import { Folder } from '../../domain/folder.js';
 import { buildCreateFolderDto, buildUpdateFolderDto } from '../dto/folder.dto.js';
 import { conflictError, notFoundError } from '../knowledge-errors.js';
 
+/** @param {import('./service-dependencies.ts').FolderDependencies} dependencies */
 export function createAsyncFolderService({
   repository,
   validateSiblingNameConflict = null,
@@ -21,8 +22,13 @@ export function createAsyncFolderService({
   }
 
   function normalizeSegment(name) {
-    return String(name ?? '').trim().toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'folder';
+    return (
+      String(name ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'folder'
+    );
   }
 
   function buildPathCache({ name, parentFolder }) {
@@ -53,8 +59,9 @@ export function createAsyncFolderService({
   }
 
   async function reindexDescendants(parentFolder) {
-    const descendants = (await repository.list({ spaceId: parentFolder.spaceId }))
-      .filter((folder) => folder.parentId === parentFolder.id);
+    const descendants = (await repository.list({ spaceId: parentFolder.spaceId })).filter(
+      folder => folder.parentId === parentFolder.id
+    );
     for (const folder of descendants) {
       const updatedFolder = new Folder({
         ...folder,
@@ -71,12 +78,14 @@ export function createAsyncFolderService({
     const queue = [folderId];
     while (queue.length) {
       const currentId = queue.shift();
-      allFolders.filter((folder) => folder.parentId === currentId).forEach((folder) => {
-        if (!ids.has(folder.id)) {
-          ids.add(folder.id);
-          queue.push(folder.id);
-        }
-      });
+      allFolders
+        .filter(folder => folder.parentId === currentId)
+        .forEach(folder => {
+          if (!ids.has(folder.id)) {
+            ids.add(folder.id);
+            queue.push(folder.id);
+          }
+        });
     }
     return [...ids];
   }
@@ -95,10 +104,12 @@ export function createAsyncFolderService({
         currentFolderId: null
       });
       const parentFolder = await validateParent(dto.spaceId, dto.parentId);
-      return repository.save(new Folder({
-        ...dto,
-        pathCache: buildPathCache({ name: dto.name, parentFolder })
-      }));
+      return repository.save(
+        new Folder({
+          ...dto,
+          pathCache: buildPathCache({ name: dto.name, parentFolder })
+        })
+      );
     },
     async updateFolder(folderId, updates) {
       const currentFolder = await requireActiveFolder(folderId);
@@ -111,16 +122,18 @@ export function createAsyncFolderService({
         currentFolderId: currentFolder.id
       });
       const parentFolder = await validateParent(currentFolder.spaceId, nextParentId, currentFolder.id);
-      const updatedFolder = await repository.save(new Folder({
-        ...currentFolder,
-        ...dto,
-        id: currentFolder.id,
-        spaceId: currentFolder.spaceId,
-        pathCache: buildPathCache({
-          name: dto.name ?? currentFolder.name,
-          parentFolder
+      const updatedFolder = await repository.save(
+        new Folder({
+          ...currentFolder,
+          ...dto,
+          id: currentFolder.id,
+          spaceId: currentFolder.spaceId,
+          pathCache: buildPathCache({
+            name: dto.name ?? currentFolder.name,
+            parentFolder
+          })
         })
-      }));
+      );
       await reindexDescendants(updatedFolder);
       return updatedFolder;
     },
@@ -129,23 +142,46 @@ export function createAsyncFolderService({
       const deletedIds = await collectSubtreeIds(folderId);
       const deletedAt = new Date().toISOString();
       const result = [];
-      for (const id of deletedIds) result.push(await repository.save(new Folder({ ...await requireActiveFolder(id), deletedAt, deletionPackage: id === folderId ? deletionPackage : null, updatedAt: deletedAt })));
+      for (const id of deletedIds)
+        result.push(
+          await repository.save(
+            new Folder({
+              ...(await requireActiveFolder(id)),
+              deletedAt,
+              deletionPackage: id === folderId ? deletionPackage : null,
+              updatedAt: deletedAt
+            })
+          )
+        );
       return result;
     },
     async restoreDeletedFolder(folderId) {
       const root = await requireFolder(folderId);
       if (!root.deletedAt || !root.deletionPackage) throw conflictError('FOLDER_NOT_IN_TRASH', '文件夹不在回收站中');
       const folders = await Promise.all(root.deletionPackage.folderIds.map(id => requireFolder(id)));
-      for (const folder of folders) await validateSiblingNameConflict?.({ spaceId: folder.spaceId, parentId: folder.parentId, name: folder.name, currentFolderId: folder.id });
+      for (const folder of folders)
+        await validateSiblingNameConflict?.({
+          spaceId: folder.spaceId,
+          parentId: folder.parentId,
+          name: folder.name,
+          currentFolderId: folder.id
+        });
       const result = [];
-      for (const folder of folders) result.push(await repository.save(new Folder({ ...folder, deletedAt: null, deletionPackage: null, updatedAt: new Date().toISOString() })));
+      for (const folder of folders)
+        result.push(
+          await repository.save(
+            new Folder({ ...folder, deletedAt: null, deletionPackage: null, updatedAt: new Date().toISOString() })
+          )
+        );
       return result;
     },
-    listFolders(options = {}) { return repository.list(options); },
+    listFolders(options = {}) {
+      return repository.list(options);
+    },
     async listFolderTree(options = {}) {
       const folders = await repository.list(options);
       const byParent = new Map();
-      folders.forEach((folder) => {
+      folders.forEach(folder => {
         const key = folder.parentId ?? '__root__';
         const list = byParent.get(key) ?? [];
         list.push(folder);
@@ -153,8 +189,9 @@ export function createAsyncFolderService({
       });
       function buildNodes(parentId = null) {
         const key = parentId ?? '__root__';
-        return (byParent.get(key) ?? []).sort((left, right) => left.name.localeCompare(right.name))
-          .map((folder) => ({ ...folder, children: buildNodes(folder.id) }));
+        return (byParent.get(key) ?? [])
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .map(folder => ({ ...folder, children: buildNodes(folder.id) }));
       }
       return buildNodes();
     },
