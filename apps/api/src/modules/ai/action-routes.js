@@ -1,5 +1,5 @@
-import { parseBody } from '../../http/request.js';
-import { sendJson } from '../../http/response.js';
+import { parseBody } from '../../http/request.ts';
+import { sendJson } from '../../http/response.ts';
 import { createAppError } from '../../errors/app-error.js';
 
 export async function handleActionRoute({ request, response, url, actions }) {
@@ -15,11 +15,18 @@ export async function handleActionRoute({ request, response, url, actions }) {
   response.setHeader('Cache-Control', 'no-store');
   const parts = url.pathname.slice(root.length).split('/').filter(Boolean).map(decodeURIComponent);
   if (request.method === 'GET') {
-    if (!parts.length) { sendJson(response, 200, { data: await actions.list(url.searchParams.get('spaceId')) }); return true; }
-    if (parts.length === 1) { sendJson(response, 200, { data: await actions.get(parts[0]) }); return true; }
+    if (!parts.length) {
+      sendJson(response, 200, { data: await actions.list(url.searchParams.get('spaceId')) });
+      return true;
+    }
+    if (parts.length === 1) {
+      sendJson(response, 200, { data: await actions.get(parts[0]) });
+      return true;
+    }
   }
   if (request.method === 'POST') {
-    if (request.headers['x-knowra-ai-action'] !== '1') throw createAppError('AI_REQUEST_REJECTED', '需要受信用户写入请求。', 403);
+    if (request.headers['x-knowra-ai-action'] !== '1')
+      throw createAppError('AI_REQUEST_REJECTED', '需要受信用户写入请求。', 403);
     const input = await parseBody(request, { limitBytes: 500000 });
     let result;
     if (!parts.length) result = await actions.plan(input);
@@ -28,12 +35,16 @@ export async function handleActionRoute({ request, response, url, actions }) {
       const [id, operation] = parts;
       if (operation === 'approve') result = await actions.approve(id, input);
       else if (operation === 'apply') result = await actions.apply(id);
-      else if (operation === 'cancel' || operation === 'reject') result = await actions.cancel(id, operation === 'reject');
+      else if (operation === 'cancel' || operation === 'reject')
+        result = await actions.cancel(id, operation === 'reject');
       else if (operation === 'repreview') result = await actions.repreview(id, input);
       else if (operation === 'revise') result = await actions.revise(id, input);
       else if (operation === 'undo-preview') result = await actions.undoPreview(id, input);
     }
-    if (result) { sendJson(response, 200, { data: result }); return true; }
+    if (result) {
+      sendJson(response, 200, { data: result });
+      return true;
+    }
   }
   return false;
 }

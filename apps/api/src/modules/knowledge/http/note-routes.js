@@ -1,24 +1,18 @@
-import { parseBody, toQueryObject } from '../../../http/request.js';
-import { sendJson } from '../../../http/response.js';
+import { parseBody, toQueryObject } from '../../../http/request.ts';
+import { sendJson } from '../../../http/response.ts';
 import { createAppError } from '../../../errors/app-error.js';
 
 function decodeRouteId(value) {
   try {
     return decodeURIComponent(value);
   } catch {
-    throw createAppError(
-      'ROUTE_PARAMETER_INVALID',
-      'Route parameter is invalid',
-      400
-    );
+    throw createAppError('ROUTE_PARAMETER_INVALID', 'Route parameter is invalid', 400);
   }
 }
 
 function matchNotePath(pathname, suffix = '') {
   const escapedSuffix = suffix.replaceAll('/', '\\/');
-  return pathname.match(
-    new RegExp(`^\\/api\\/knowledge\\/notes\\/([^/]+)${escapedSuffix}$`)
-  );
+  return pathname.match(new RegExp(`^\\/api\\/knowledge\\/notes\\/([^/]+)${escapedSuffix}$`));
 }
 
 export async function handleNoteRoute({ request, response, url, knowledge }) {
@@ -109,17 +103,17 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
   const noteMatch = matchNotePath(url.pathname);
   if (request.method === 'GET' && noteMatch) {
     sendJson(response, 200, {
-      data: await knowledge.getNote(
-        { id: decodeRouteId(noteMatch[1]) },
-        toQueryObject(url)
-      )
+      data: await knowledge.getNote({ id: decodeRouteId(noteMatch[1]) }, toQueryObject(url))
     });
     return true;
   }
 
   if (request.method === 'PATCH' && noteMatch) {
     const body = await parseBody(request);
-    if (Object.hasOwn(body ?? {}, 'rawMarkdown') && !body.expectedUpdatedAt) {
+    if (
+      Object.hasOwn(/** @type {object} */ (body ?? {}), 'rawMarkdown') &&
+      !(/** @type {{ expectedUpdatedAt?: unknown }} */ (body).expectedUpdatedAt)
+    ) {
       throw createAppError('NOTE_VERSION_REQUIRED', '正文保存需要加载时的版本，请刷新客户端后重试。', 428);
     }
     sendJson(response, 200, {
@@ -169,10 +163,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
   if (request.method === 'POST' && tagsMatch) {
     const body = await parseBody(request);
     sendJson(response, 200, {
-      data: await knowledge.assignTagToNote(
-        { id: decodeRouteId(tagsMatch[1]) },
-        body
-      )
+      data: await knowledge.assignTagToNote({ id: decodeRouteId(tagsMatch[1]) }, body)
     });
     return true;
   }
@@ -180,9 +171,12 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
   if (request.method === 'PUT' && tagsMatch) {
     const body = await parseBody(request);
     sendJson(response, 200, {
-      data: await knowledge.setNoteTags({
-        id: decodeRouteId(tagsMatch[1])
-      }, body)
+      data: await knowledge.setNoteTags(
+        {
+          id: decodeRouteId(tagsMatch[1])
+        },
+        body
+      )
     });
     return true;
   }

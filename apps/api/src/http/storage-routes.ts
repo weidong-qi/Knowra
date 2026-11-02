@@ -1,8 +1,18 @@
-import { parseBody, toQueryObject } from './request.js';
-import { sendBinary, sendJson } from './response.js';
+import type { IncomingMessage } from 'node:http';
+import { parseBody, toQueryObject } from './request.ts';
+import { sendBinary, sendJson } from './response.ts';
+import type { ResponseWriter } from './response.ts';
+import type { StorageRouteServices } from './storage-route-types.ts';
 import { requestBodyLimit } from '@study-accelerator/shared/http-limits';
 
-export async function handleStorageRoute({ request, response, url, storage }) {
+export interface StorageRouteOptions {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  storage: StorageRouteServices;
+}
+
+export async function handleStorageRoute({ request, response, url, storage }: StorageRouteOptions): Promise<boolean> {
   if (request.method === 'GET' && url.pathname === '/api/storage/export') {
     sendJson(response, 200, {
       data: await storage.exportKnowledgeBase()
@@ -25,9 +35,13 @@ export async function handleStorageRoute({ request, response, url, storage }) {
   for (const action of ['verify', 'restore']) {
     const id = matchAttachmentRoute(url.pathname, action);
     if (request.method === 'POST' && id !== null) {
-      const result = action === 'verify'
-        ? await storage.verifyAttachment({ id })
-        : await storage.restoreAttachment({ id }, await parseBody(request, { limitBytes: requestBodyLimit(request.method, url.pathname) }));
+      const result =
+        action === 'verify'
+          ? await storage.verifyAttachment({ id })
+          : await storage.restoreAttachment(
+              { id },
+              await parseBody(request, { limitBytes: requestBodyLimit(request.method, url.pathname) })
+            );
       sendJson(response, 200, { data: result });
       return true;
     }
@@ -46,10 +60,7 @@ export async function handleStorageRoute({ request, response, url, storage }) {
     return true;
   }
 
-  const contentAttachmentId = matchAttachmentRoute(
-    url.pathname,
-    'content'
-  );
+  const contentAttachmentId = matchAttachmentRoute(url.pathname, 'content');
   if (request.method === 'GET' && contentAttachmentId !== null) {
     const payload = await storage.getAttachmentContent({
       id: contentAttachmentId
@@ -101,17 +112,17 @@ export async function handleStorageRoute({ request, response, url, storage }) {
   return false;
 }
 
-function matchAttachmentRoute(pathname, trailingSegment = null) {
+function matchAttachmentRoute(pathname: string, trailingSegment: string | null = null): string | null {
   const segments = pathname.split('/');
   const expectedLength = trailingSegment ? 6 : 5;
   if (
-    segments.length !== expectedLength
-    || segments[0] !== ''
-    || segments[1] !== 'api'
-    || segments[2] !== 'storage'
-    || segments[3] !== 'attachments'
-    || !segments[4]
-    || (trailingSegment && segments[5] !== trailingSegment)
+    segments.length !== expectedLength ||
+    segments[0] !== '' ||
+    segments[1] !== 'api' ||
+    segments[2] !== 'storage' ||
+    segments[3] !== 'attachments' ||
+    !segments[4] ||
+    (trailingSegment && segments[5] !== trailingSegment)
   ) {
     return null;
   }
@@ -119,11 +130,11 @@ function matchAttachmentRoute(pathname, trailingSegment = null) {
   try {
     const attachmentId = decodeURIComponent(segments[4]);
     if (
-      !attachmentId
-      || attachmentId === '.'
-      || attachmentId === '..'
-      || attachmentId.includes('/')
-      || attachmentId.includes('\\')
+      !attachmentId ||
+      attachmentId === '.' ||
+      attachmentId === '..' ||
+      attachmentId.includes('/') ||
+      attachmentId.includes('\\')
     ) {
       return null;
     }

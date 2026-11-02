@@ -1,14 +1,10 @@
-import { parseBody } from '../../http/request.js';
-import { sendJson } from '../../http/response.js';
+import { parseBody } from '../../http/request.ts';
+import { sendJson } from '../../http/response.ts';
 import { fail } from './contract.js';
 
 async function multipart(request) {
   const contentType = request.headers['content-type'];
-  if (
-    typeof contentType !== 'string' ||
-    !/^multipart\/form-data;\s*boundary=/i.test(contentType)
-  )
-    fail();
+  if (typeof contentType !== 'string' || !/^multipart\/form-data;\s*boundary=/i.test(contentType)) fail();
   let size = 0;
   const chunks = [];
   for await (const chunk of request) {
@@ -21,16 +17,14 @@ async function multipart(request) {
     form = await new Request('http://localhost/', {
       method: 'POST',
       headers: { 'content-type': contentType },
-      body: Buffer.concat(chunks),
+      body: Buffer.concat(chunks)
     }).formData();
   } catch {
     fail();
   }
   if (
     [...form.keys()].length !== 3 ||
-    !['operationId', 'expectedRevision', 'file'].every(
-      (k) => form.getAll(k).length === 1,
-    )
+    !['operationId', 'expectedRevision', 'file'].every(k => form.getAll(k).length === 1)
   )
     fail();
   const file = form.get('file');
@@ -47,27 +41,19 @@ async function multipart(request) {
     expectedRevision: Number(form.get('expectedRevision')),
     fileName: file.name,
     mimeType: file.type,
-    bytes: Buffer.from(await file.arrayBuffer()),
+    bytes: Buffer.from(await file.arrayBuffer())
   };
 }
-export async function handleTaskWorkspaceRoute({
-  request,
-  response,
-  url,
-  service,
-  context,
-}) {
+export async function handleTaskWorkspaceRoute({ request, response, url, service, context }) {
   const root = '/api/task-workspaces';
-  if (url.pathname !== root && !url.pathname.startsWith(`${root}/`))
-    return false;
+  if (url.pathname !== root && !url.pathname.startsWith(`${root}/`)) return false;
   response.setHeader('Cache-Control', 'no-store');
   try {
-    const ctx =
-      typeof context === 'function' ? context(request, response) : context;
+    const ctx = typeof context === 'function' ? context(request, response) : context;
     if (!ctx || ctx.actor?.kind !== 'user') fail('FORBIDDEN');
     const parts = url.pathname.slice(root.length).split('/').filter(Boolean);
     if (
-      parts.some((p) => {
+      parts.some(p => {
         try {
           return decodeURIComponent(p) !== p;
         } catch {
@@ -76,20 +62,12 @@ export async function handleTaskWorkspaceRoute({
       })
     )
       fail();
-    const [workspaceId, collection, entityId, action, attachmentId, content] =
-      parts;
+    const [workspaceId, collection, entityId, action, attachmentId, content] = parts;
     const base = { workspaceId };
     const query = {};
     for (const key of url.searchParams.keys()) {
       if (
-        ![
-          'limit',
-          'cursor',
-          'status',
-          'versionId',
-          'start',
-          'afterSequence',
-        ].includes(key) ||
+        !['limit', 'cursor', 'status', 'versionId', 'start', 'afterSequence'].includes(key) ||
         url.searchParams.getAll(key).length !== 1
       )
         fail();
@@ -104,34 +82,25 @@ export async function handleTaskWorkspaceRoute({
       if (parts.length === 1 && workspaceId === 'capabilities') {
         if (url.search) fail();
         data = await service.capabilities(ctx);
-      } else if (parts.length === 0)
-        data = await service.listWorkspaces(ctx, query);
-      else if (parts.length === 1)
-        data = await service.getWorkspace(ctx, { ...base, ...query });
+      } else if (parts.length === 0) data = await service.listWorkspaces(ctx, query);
+      else if (parts.length === 1) data = await service.getWorkspace(ctx, { ...base, ...query });
       else if (collection === 'documents' && parts.length === 2)
         data = await service.listDocuments(ctx, { ...base, ...query });
       else if (collection === 'documents' && parts.length === 3)
         data = await service.getDocument(ctx, {
           ...base,
           documentId: entityId,
-          ...query,
+          ...query
         });
-      else if (
-        collection === 'documents' &&
-        action === 'attachments' &&
-        content === 'content' &&
-        parts.length === 6
-      ) {
-        if (Object.keys(query).some((k) => k !== 'versionId')) fail();
+      else if (collection === 'documents' && action === 'attachments' && content === 'content' && parts.length === 6) {
+        if (Object.keys(query).some(k => k !== 'versionId')) fail();
         const versionId =
-          query.versionId ??
-          (await service.getDocument(ctx, { ...base, documentId: entityId }))
-            .version.id;
+          query.versionId ?? (await service.getDocument(ctx, { ...base, documentId: entityId })).version.id;
         const image = await service.readAttachment(ctx, {
           ...base,
           documentId: entityId,
           attachmentId,
-          versionId,
+          versionId
         });
         service.capabilities(ctx);
         response.setHeader('Content-Type', image.mimeType);
@@ -145,33 +114,23 @@ export async function handleTaskWorkspaceRoute({
         data = await service.getTask(ctx, {
           ...base,
           taskId: entityId,
-          ...query,
+          ...query
         });
-      else if (
-        collection === 'tasks' &&
-        action === 'events' &&
-        parts.length === 4
-      )
+      else if (collection === 'tasks' && action === 'events' && parts.length === 4)
         data = await service.listTaskEvents(ctx, {
           ...base,
           taskId: entityId,
-          ...query,
+          ...query
         });
       else fail();
     } else if (['POST', 'PATCH'].includes(request.method)) {
-      if (request.headers['x-task-workspace-epoch'] !== ctx.datasetEpoch)
-        fail('CONFLICT');
+      if (request.headers['x-task-workspace-epoch'] !== ctx.datasetEpoch) fail('CONFLICT');
       if (url.search) fail();
-      if (
-        request.method === 'POST' &&
-        collection === 'documents' &&
-        action === 'attachments' &&
-        parts.length === 4
-      )
+      if (request.method === 'POST' && collection === 'documents' && action === 'attachments' && parts.length === 4)
         data = await service.uploadAttachment(ctx, {
           ...(await multipart(request)),
           ...base,
-          documentId: entityId,
+          documentId: entityId
         });
       else {
         const body = await parseBody(request, { limitBytes: 1024 * 1024 });
@@ -189,39 +148,22 @@ export async function handleTaskWorkspaceRoute({
             'pairingId',
             'datasetId',
             'datasetEpoch',
-            'acceptedAt',
-          ].some((k) => Object.hasOwn(body, k))
+            'acceptedAt'
+          ].some(k => Object.hasOwn(body, k))
         )
           fail();
-        if (request.method === 'POST' && parts.length === 0)
-          data = await service.createWorkspace(ctx, body);
-        else if (
-          request.method === 'POST' &&
-          parts.length === 2 &&
-          collection === 'archive'
-        )
+        if (request.method === 'POST' && parts.length === 0) data = await service.createWorkspace(ctx, body);
+        else if (request.method === 'POST' && parts.length === 2 && collection === 'archive')
           data = await service.archiveWorkspace(ctx, { ...body, ...base });
-        else if (
-          request.method === 'POST' &&
-          parts.length === 2 &&
-          collection === 'documents'
-        )
+        else if (request.method === 'POST' && parts.length === 2 && collection === 'documents')
           data = await service.createDocument(ctx, { ...body, ...base });
-        else if (
-          request.method === 'PATCH' &&
-          parts.length === 3 &&
-          collection === 'documents'
-        )
+        else if (request.method === 'PATCH' && parts.length === 3 && collection === 'documents')
           data = await service.updateDocument(ctx, {
             ...body,
             ...base,
-            documentId: entityId,
+            documentId: entityId
           });
-        else if (
-          request.method === 'POST' &&
-          parts.length === 2 &&
-          collection === 'tasks'
-        )
+        else if (request.method === 'POST' && parts.length === 2 && collection === 'tasks')
           data = await service.createTask(ctx, { ...body, ...base });
         else if (
           request.method === 'POST' &&
@@ -233,7 +175,7 @@ export async function handleTaskWorkspaceRoute({
             {
               publish: 'publishTask',
               cancel: 'cancelTask',
-              review: 'reviewSubmission',
+              review: 'reviewSubmission'
             }[action]
           ](ctx, { ...body, ...base, taskId: entityId });
         else fail();
@@ -248,8 +190,8 @@ export async function handleTaskWorkspaceRoute({
     sendJson(response, safe ? error.statusCode : 422, {
       error: {
         code: safe ? error.code : 'TASK_WORKSPACE_INVALID',
-        message: safe ? error.message : '任务工作区请求无效。',
-      },
+        message: safe ? error.message : '任务工作区请求无效。'
+      }
     });
     return true;
   }
