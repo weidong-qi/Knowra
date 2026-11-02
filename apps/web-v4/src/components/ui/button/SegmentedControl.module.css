@@ -50,7 +50,7 @@
 .underline .segment[data-disabled] { color: var(--text-muted); background: transparent; }
 .underline .segment[data-focus-visible] { outline-offset: -2px; border-radius: var(--radius-control); box-shadow: var(--focus-ring); }
 
-@media (max-width: 767px), (any-pointer: coarse) {
+@media (max-width: 767px) {
   .segment { min-height: var(--index-size-44); }
   .iconOnly, .compactGroup .iconOnly { width: var(--index-size-44); }
   .compactGroup .segment, .comfortableGroup .segment { min-height: var(--index-size-44); }

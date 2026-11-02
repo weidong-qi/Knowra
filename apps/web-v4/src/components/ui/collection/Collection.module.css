@@ -93,7 +93,7 @@
 .treeEmpty { padding: 18px 12px; text-align: center; font-size: 12px; color: var(--text-muted); }
 
 @media (prefers-reduced-motion: reduce) { .tab, .tag, .tagRemove { transition: none !important; } }
-@media (max-width: 767px), (any-pointer: coarse) { .tab, .treeRow, .listboxItem, .listbox [role='option'] { min-height: 44px; } }
+@media (max-width: 767px) { .tab, .treeRow, .listboxItem, .listbox [role='option'] { min-height: 44px; } }
 @media (max-width: 767px) {
   .gridList { display: block; }
   .gridRow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); }

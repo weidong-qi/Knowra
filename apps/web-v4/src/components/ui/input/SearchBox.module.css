@@ -39,7 +39,7 @@
 .shell[data-size='command'] .input { font-size: 14px; }
 .shell[data-size='field'] { width: 100%; height: 36px; padding: 0 10px; }
 .shell[data-size='field'] .input { font-size: 13px; }
-@media (max-width: 767px), (any-pointer: coarse) {
+@media (max-width: 767px) {
   .shell[data-size='toolbar'] { flex-basis: 100%; height: var(--index-size-44); }
   .shell[data-size='field'], .shell[data-size='sidebar'] { min-height: 44px; }
   .input, .shell[data-size='command'] .input, .shell[data-size='field'] .input { font-size: 16px; }

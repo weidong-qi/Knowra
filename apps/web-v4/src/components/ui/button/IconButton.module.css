@@ -92,6 +92,6 @@
 
 .base:disabled { color: var(--text-muted); cursor: not-allowed; opacity: 0.5; }
 
-@media (max-width: 767px), (any-pointer: coarse) {
+@media (max-width: 767px) {
   .base { min-width: 44px; min-height: 44px; }
 }
