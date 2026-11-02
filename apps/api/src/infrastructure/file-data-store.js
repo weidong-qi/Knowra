@@ -1,4 +1,4 @@
-import { createEmptyTaskWorkspaceSnapshot, createJsonTaskWorkspaceStore } from './task-workspace-json-store.js';
+import { createEmptyTaskWorkspaceSnapshot, createJsonTaskWorkspaceStore } from './task-workspace-json-store.ts';
 import {
   validateTaskWorkspaceSnapshot,
   rebindTaskWorkspaceSnapshot
@@ -29,7 +29,7 @@ import { createAppError } from '../errors/app-error.js';
 import { writeJsonFileAtomically } from './atomic-json-file.ts';
 import { withDataFileWriteLock } from './data-file-write-lock.ts';
 import { cloneJsonData } from './json-clone.ts';
-import { readJsonFileSync } from './json-file-reader.js';
+import { readJsonFileSync } from './json-file-reader.ts';
 import { coreOperationKey, validateCoreOperationState } from './core-operation-contract.js';
 import { createSyncCoreOperationStore } from './core-operation-store.js';
 import {
@@ -63,6 +63,15 @@ import {
   assertPersistedLocalState,
   validatePersistedLocalState
 } from './local-data-schema.js';
+
+/** @typedef {ReturnType<typeof validateCoreOperationState>} CoreOperationState */
+/** @typedef {ReturnType<typeof validateKnowledgeExtractionCommitState>} ExtractionCommitState */
+/** @typedef {ReturnType<typeof validateExtractionTaskState>} ExtractionTaskState */
+/** @typedef {import('../modules/task-workspaces/repository-port.ts').TaskWorkspaceSnapshot} TaskWorkspaceSnapshot */
+// 旧 JS 校验器接受原始 JSON；默认参数的推断类型不代表输入已校验。
+/** @typedef {(input?: unknown) => CoreOperationState} CoreOperationStateParser */
+/** @typedef {(input?: unknown) => ExtractionCommitState} ExtractionCommitStateParser */
+/** @typedef {(input?: unknown) => ExtractionTaskState} ExtractionTaskStateParser */
 
 function ensureParentDirectory(filePath) {
   const directory = path.dirname(filePath);
@@ -111,8 +120,10 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     writeJson(filePath, createPersistedLocalDocument(createEmptyLocalState()));
   }
 
-  const parsed = parsePersistedState(filePath);
-  const state = validatePersistedLocalState(parsed);
+  const parsedInput = parsePersistedState(filePath);
+  const state = validatePersistedLocalState(parsedInput);
+  // 既有校验已确认顶层为对象；各扩展仍保持未校验输入类型并独立校验。
+  const parsed = /** @type {Record<string, unknown>} */ (parsedInput);
   // 独立扩展不加入普通笔记 collections、搜索或 sync；坏数据原样保留。
   let taskWorkspaces = parsed.taskWorkspaces === undefined ? createEmptyTaskWorkspaceSnapshot() : parsed.taskWorkspaces;
   let taskWorkspaceStoreError = null;
@@ -124,21 +135,23 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
   let coreOperations = parsed.coreOperations;
   let coreOperationStoreError = null;
   try {
-    coreOperations = validateCoreOperationState(coreOperations);
+    coreOperations = /** @type {CoreOperationStateParser} */ (validateCoreOperationState)(coreOperations);
   } catch (error) {
     coreOperationStoreError = error;
   }
   let knowledgeExtractionCommits = parsed.knowledgeExtractionCommits;
   let knowledgeExtractionCommitStoreError = null;
   try {
-    knowledgeExtractionCommits = validateKnowledgeExtractionCommitState(knowledgeExtractionCommits);
+    knowledgeExtractionCommits = /** @type {ExtractionCommitStateParser} */ (validateKnowledgeExtractionCommitState)(
+      knowledgeExtractionCommits
+    );
   } catch (error) {
     knowledgeExtractionCommitStoreError = error;
   }
   let extractionTasks = parsed.aiKnowledgeExtractionTasks;
   let knowledgeExtractionTaskStoreError = null;
   try {
-    extractionTasks = validateExtractionTaskState(extractionTasks);
+    extractionTasks = /** @type {ExtractionTaskStateParser} */ (validateExtractionTaskState)(extractionTasks);
   } catch (error) {
     knowledgeExtractionTaskStoreError = error;
   }
@@ -172,7 +185,10 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     )
   ) {
     const previous = Object.fromEntries(
-      LOCAL_DATA_COLLECTIONS.map(collection => [collection, cloneJsonData(parsed[collection] ?? [])])
+      LOCAL_DATA_COLLECTIONS.map(collection => [
+        collection,
+        cloneJsonData(/** @type {{id: string}[] | undefined} */ (parsed[collection]) ?? [])
+      ])
     );
     journal = appendChanges(journal, previous, state);
     writeJson(filePath, {
@@ -359,8 +375,8 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     const previousTaskWorkspaces = taskWorkspaces;
     try {
       if (!taskWorkspaceStoreError)
-        taskWorkspaces = rebindTaskWorkspaceSnapshot(taskWorkspaces, {
-          datasetId: taskWorkspaces.datasetId,
+        taskWorkspaces = rebindTaskWorkspaceSnapshot(/** @type {TaskWorkspaceSnapshot} */ (taskWorkspaces), {
+          datasetId: /** @type {TaskWorkspaceSnapshot} */ (taskWorkspaces).datasetId,
           datasetEpoch: randomUUID()
         });
       aiRuntime = { ...aiRuntime, datasetEpoch: randomUUID() };
@@ -404,13 +420,17 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
           sync: nextJournal,
           taskWorkspaces,
           aiRuntime: aiRuntimeError ? aiRuntime : validateAiState(aiRuntime),
-          coreOperations: coreOperationStoreError ? coreOperations : validateCoreOperationState(coreOperations),
+          coreOperations: coreOperationStoreError
+            ? coreOperations
+            : /** @type {CoreOperationStateParser} */ (validateCoreOperationState)(coreOperations),
           knowledgeExtractionCommits: knowledgeExtractionCommitStoreError
             ? knowledgeExtractionCommits
-            : validateKnowledgeExtractionCommitState(knowledgeExtractionCommits),
+            : /** @type {ExtractionCommitStateParser} */ (validateKnowledgeExtractionCommitState)(
+                knowledgeExtractionCommits
+              ),
           aiKnowledgeExtractionTasks: knowledgeExtractionTaskStoreError
             ? extractionTasks
-            : validateExtractionTaskState(extractionTasks)
+            : /** @type {ExtractionTaskStateParser} */ (validateExtractionTaskState)(extractionTasks)
         },
         {
           beforeCommit: () => {
@@ -470,8 +490,8 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
       }
       return structuredClone({
         ai: aiRuntime,
-        tasks: extractionTasks.tasks,
-        receipts: knowledgeExtractionCommits.receipts
+        tasks: /** @type {ExtractionTaskState} */ (extractionTasks).tasks,
+        receipts: /** @type {ExtractionCommitState} */ (knowledgeExtractionCommits).receipts
       });
     },
     knowledgeExtractionTaskStore: knowledgeExtractionTaskStoreError
@@ -482,16 +502,21 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
             if (transaction) throw new TypeError('提炼任务必须拥有最外层事务。');
             return runTransaction(operation);
           },
-          get: input => structuredClone(extractionTasks.tasks.find(task => taskKey(task) === taskKey(input)) ?? null),
+          get: input =>
+            structuredClone(
+              /** @type {ExtractionTaskState} */ (extractionTasks).tasks.find(
+                task => taskKey(task) === taskKey(input)
+              ) ?? null
+            ),
           list: input =>
-            extractionTasks.tasks
+            /** @type {ExtractionTaskState} */ (extractionTasks).tasks
               .filter(task => task.ownerId === input.ownerId && task.datasetId === input.datasetId)
               .map(task => structuredClone(task)),
           listPage: input =>
             extractionPageRows(
               aiRuntime.jobs,
               new Set(
-                extractionTasks.tasks
+                /** @type {ExtractionTaskState} */ (extractionTasks).tasks
                   .filter(
                     task =>
                       task.ownerId === input.ownerId &&
@@ -504,9 +529,11 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
             ),
           insert(task) {
             const record = validateExtractionTask(task);
-            if (extractionTasks.tasks.some(task => taskKey(task) === taskKey(record)))
+            if (
+              /** @type {ExtractionTaskState} */ (extractionTasks).tasks.some(task => taskKey(task) === taskKey(record))
+            )
               throw new Error('提炼任务描述已存在。');
-            extractionTasks.tasks.push(record);
+            /** @type {ExtractionTaskState} */ (extractionTasks).tasks.push(record);
             flush();
           }
         },
@@ -521,12 +548,14 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
           },
           get: input =>
             structuredClone(
-              knowledgeExtractionCommits.receipts.find(
+              /** @type {ExtractionCommitState} */ (knowledgeExtractionCommits).receipts.find(
                 receipt => knowledgeExtractionCommitKey(receipt) === knowledgeExtractionCommitKey(input)
               ) ?? null
             ),
           insert: receipt => {
-            knowledgeExtractionCommits.receipts.push(validateKnowledgeExtractionCommit(receipt));
+            /** @type {ExtractionCommitState} */ (knowledgeExtractionCommits).receipts.push(
+              validateKnowledgeExtractionCommit(receipt)
+            );
             flush();
           }
         },
@@ -539,9 +568,11 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
             return runTransaction(operation);
           },
           get: input =>
-            coreOperations.receipts.find(receipt => coreOperationKey(receipt) === coreOperationKey(input)) ?? null,
+            /** @type {CoreOperationState} */ (coreOperations).receipts.find(
+              receipt => coreOperationKey(receipt) === coreOperationKey(input)
+            ) ?? null,
           insert: receipt => {
-            coreOperations.receipts.push(receipt);
+            /** @type {CoreOperationState} */ (coreOperations).receipts.push(receipt);
             flush();
           }
         }),

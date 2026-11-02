@@ -1,20 +1,25 @@
 import fs from 'node:fs';
 import { JSONParser } from '@streamparser/json';
+import type { PathLike } from 'node:fs';
+
+export interface ReadJsonFileOptions {
+  paths?: string[];
+  onValue?: JSONParser['onValue'];
+  onToken?: JSONParser['onToken'];
+  allowEmpty?: boolean;
+  chunkSize?: number;
+}
 
 // 同步存储工厂保持原接口；分块输入避免同时保留整个文件的 UTF-8/UTF-16 文本。
 // paths 可只保留检查所需字段；被跳过的数据仍经过完整 JSON 语法检查。
-/**
- * @param {import('node:fs').PathLike} filePath
- * @param {{paths?: string[], onValue?: JSONParser['onValue'], onToken?: JSONParser['onToken'], allowEmpty?: boolean, chunkSize?: number}} options
- */
 export function readJsonFileSync(
-  filePath,
-  { paths = ['$'], onValue, onToken, allowEmpty = false, chunkSize = 64 * 1024 } = {}
-) {
+  filePath: PathLike,
+  { paths = ['$'], onValue, onToken, allowEmpty = false, chunkSize = 64 * 1024 }: ReadJsonFileOptions = {}
+): unknown {
   if (!Number.isSafeInteger(chunkSize) || chunkSize < 1) throw new TypeError('JSON chunk size must be positive');
   const parser = new JSONParser({ paths, keepStack: false, stringBufferSize: 64 * 1024, numberBufferSize: 256 });
-  let result,
-    hasContent = false;
+  let result: unknown;
+  let hasContent = false;
   parser.onValue =
     onValue ??
     (({ value }) => {
@@ -30,7 +35,8 @@ export function readJsonFileSync(
       if (!hasContent) {
         const first = chunk.find(byte => ![9, 10, 13, 32].includes(byte));
         // 解析库接受 BOM；既有 JSON.parse 文件入口拒绝带 BOM/UTF-16/UTF-32 的文档。
-        if ([0xef, 0xfe, 0xff, 0].includes(first)) throw new SyntaxError('JSON file must be UTF-8 without BOM');
+        if (([0xef, 0xfe, 0xff, 0] as (number | undefined)[]).includes(first))
+          throw new SyntaxError('JSON file must be UTF-8 without BOM');
         hasContent = first !== undefined;
       }
       parser.write(chunk);
