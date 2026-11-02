@@ -243,7 +243,7 @@ export function createAiWorker({
     if (attempts.length >= MAX_ATTEMPTS) fail('AI_ATTEMPT_LIMIT', '任务已达到四次调用上限。');
     if (job.status === 'failed') job = await replace('aiJob', job, { status: 'retrying', phase: 'preparing' });
     if (!['pending', 'retrying'].includes(job.status)) fail('AI_JOB_NOT_RUNNABLE', '任务当前不可领取。');
-    job = await replace('aiJob', job, { status: 'running', phase: 'generating' });
+    await replace('aiJob', job, { status: 'running', phase: 'generating' });
     const startedAt = now().toISOString();
     let attempt = await repository.insert('aiJobAttempt', {
       contractVersion: 1,

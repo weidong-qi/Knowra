@@ -36,7 +36,7 @@ const id = value =>
   value.length > 0 &&
   value.length <= 200 &&
   value.trim() === value &&
-  !/[\u0000-\u001f]/.test(value);
+  !Array.from(value).some(character => character.charCodeAt(0) <= 31);
 const boundary = (text, offset) =>
   offset === 0 ||
   offset === text.length ||

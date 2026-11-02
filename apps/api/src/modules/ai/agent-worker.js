@@ -708,7 +708,6 @@ export function createAiAgentWorker({
     for (const ref of sourceRefs) await verifyRef(grant?.grantId, ref);
     let searchTruncated = checkpoint.searchTruncated;
     let searchFallback = checkpoint.searchFallback;
-    let initialTools = 0;
     let externalContext = checkpoint.externalContext;
     let toolFeedback = checkpoint.toolFeedback;
     let totalTools = Math.max(checkpoint.totalTools, (await store.listToolCalls(turn.turnId)).length);
@@ -783,7 +782,6 @@ export function createAiAgentWorker({
       }
     }
     if (!initialSearchDone && grant && /(我的|我记|笔记|资料|文档|记录|之前|根据|比较|总结|引用)/.test(user.content)) {
-      initialTools++;
       const callId = hashRecord({ turnId: turn.turnId, initialSearch: true });
       const initialCall = await store.appendToolCall(turn.turnId, generation, {
         callId,

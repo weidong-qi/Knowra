@@ -21,7 +21,7 @@ const label = value =>
   typeof value === 'string' &&
   value.length >= 1 &&
   value.length <= 128 &&
-  !/[\u0000-\u001f\u007f]/.test(value)
+  !Array.from(value).some(character => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127)
     ? value
     : null;
 

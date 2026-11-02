@@ -47,7 +47,7 @@ export function requestsKnowledgeProposal(content) {
 
 export function renderExternalSources(context) {
   const hits = JSON.parse(context.slice(context.indexOf('：') + 1));
-  return hits.map(hit => `[${hit.title.replace(/[\[\]\\]/g, '')}](${hit.url.replace(/\)/g, '%29')})`).join('、');
+  return hits.map(hit => `[${hit.title.replace(/[[\]\\]/g, '')}](${hit.url.replace(/\)/g, '%29')})`).join('、');
 }
 
 export const WEB_SEARCH_TOOL = Object.freeze({
