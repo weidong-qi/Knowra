@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import type { PathLike } from 'node:fs';
 import { ATTACHMENT_STATUS } from './attachment-status.ts';
-import { sha256FileSync } from './local-attachment-store-utils.js';
+import { sha256FileSync } from './local-attachment-store-utils.ts';
 
 // 未校验、可变的最小元数据视图；不保证访问器稳定或磁盘状态不变。
 export interface AttachmentIntegrityRecord {

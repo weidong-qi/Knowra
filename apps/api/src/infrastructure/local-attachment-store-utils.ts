@@ -2,39 +2,44 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import crypto, { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import type { BinaryLike } from 'node:crypto';
+import type { PathLike } from 'node:fs';
+import type { AttachmentOperationError } from './local-attachment-types.ts';
 
-export function ensureDirectory(directoryPath) {
+export function ensureDirectory(directoryPath: string) {
   fs.mkdirSync(directoryPath, { recursive: true });
 }
 
-export function sanitizeFileName(fileName) {
-  return String(fileName ?? 'attachment.bin')
-    .replace(/[\x00-\x1f\x7f/\\?%*:|"<>]+/g, '-')
-    .replace(/\s+/g, ' ')
-    .replace(/-+/g, '-')
-    .replace(/^[.\s-]+|[.\s-]+$/g, '') || 'attachment.bin';
+export function sanitizeFileName(fileName: unknown) {
+  return (
+    String(fileName ?? 'attachment.bin')
+      .replace(/(?:[/\\?%*:|"<>]|[^\x20-\x7e\u0080-\uffff])+/g, '-')
+      .replace(/\s+/g, ' ')
+      .replace(/-+/g, '-')
+      .replace(/^[.\s-]+|[.\s-]+$/g, '') || 'attachment.bin'
+  );
 }
 
 export function createAttachmentId() {
   return `attachment-${randomUUID()}`;
 }
 
-export function cloneValue(value) {
-  return JSON.parse(JSON.stringify(value));
+export function cloneValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
-export function sha256Buffer(value) {
+export function sha256Buffer(value: BinaryLike) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
-export function sha256FileSync(filePath) {
+export function sha256FileSync(filePath: PathLike) {
   return sha256Buffer(fs.readFileSync(filePath));
 }
 
-export function writeFileAtomically(filePath, content) {
+export function writeFileAtomically(filePath: string, content: string | Uint8Array) {
   ensureDirectory(path.dirname(filePath));
   const temporaryPath = `${filePath}.tmp-${randomUUID()}`;
-  let operationError = null;
+  let operationError: AttachmentOperationError | null = null;
 
   try {
     const descriptor = fs.openSync(temporaryPath, 'wx', 0o600);
@@ -46,17 +51,17 @@ export function writeFileAtomically(filePath, content) {
     }
     fs.renameSync(temporaryPath, filePath);
   } catch (error) {
-    operationError = error;
+    operationError = error as AttachmentOperationError;
     throw error;
   } finally {
     removeTemporaryFile(temporaryPath, operationError);
   }
 }
 
-export async function writeFileAtomicallyAsync(filePath, content) {
+export async function writeFileAtomicallyAsync(filePath: string, content: string | Uint8Array) {
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   const temporaryPath = `${filePath}.tmp-${randomUUID()}`;
-  let operationError = null;
+  let operationError: AttachmentOperationError | null = null;
 
   try {
     const handle = await fsp.open(temporaryPath, 'wx', 0o600);
@@ -68,14 +73,14 @@ export async function writeFileAtomicallyAsync(filePath, content) {
     }
     await fsp.rename(temporaryPath, filePath);
   } catch (error) {
-    operationError = error;
+    operationError = error as AttachmentOperationError;
     throw error;
   } finally {
     await removeTemporaryFileAsync(temporaryPath, operationError);
   }
 }
 
-export function toPortablePath(targetPath) {
+export function toPortablePath(targetPath: string | null | undefined) {
   return String(targetPath ?? '')
     .replaceAll('\\', '/')
     .replace(/\/+/g, '/')
@@ -83,26 +88,26 @@ export function toPortablePath(targetPath) {
     .trim();
 }
 
-export function joinPortablePath(...segments) {
+export function joinPortablePath(...segments: (string | null | undefined)[]) {
   return segments
-    .map((segment) => toPortablePath(segment))
+    .map(segment => toPortablePath(segment))
     .filter(Boolean)
     .join('/');
 }
 
-export function looksWindowsAbsolute(targetPath) {
+export function looksWindowsAbsolute(targetPath: string | null | undefined) {
   return /^[A-Za-z]:[\\/]/.test(String(targetPath ?? ''));
 }
 
-export function looksPosixAbsolute(targetPath) {
+export function looksPosixAbsolute(targetPath: string | null | undefined) {
   return String(targetPath ?? '').startsWith('/');
 }
 
-export function uniquePaths(paths) {
-  return [...new Set(paths.filter(Boolean).map((value) => path.normalize(value)))];
+export function uniquePaths(paths: string[]) {
+  return [...new Set(paths.filter(Boolean).map(value => path.normalize(value)))];
 }
 
-export function scheduleFileCleanup(storagePath, remainingAttempts = 5) {
+export function scheduleFileCleanup(storagePath: string | null | undefined, remainingAttempts = 5) {
   if (!storagePath || remainingAttempts <= 0) {
     return;
   }
@@ -113,13 +118,16 @@ export function scheduleFileCleanup(storagePath, remainingAttempts = 5) {
         fs.rmSync(storagePath, { force: true, maxRetries: 5, retryDelay: 50 });
       }
     } catch (error) {
-      console.error('scheduleFileCleanup: rmSync failed, scheduling retry:', error?.message);
+      console.error(
+        'scheduleFileCleanup: rmSync failed, scheduling retry:',
+        (error as AttachmentOperationError)?.message
+      );
       scheduleFileCleanup(storagePath, remainingAttempts - 1);
     }
   }, 150);
 }
 
-export function moveFileSafely(sourcePath, targetPath) {
+export function moveFileSafely(sourcePath: string | null | undefined, targetPath: string | null | undefined) {
   if (!sourcePath || !targetPath || path.normalize(sourcePath) === path.normalize(targetPath)) {
     return;
   }
@@ -128,13 +136,13 @@ export function moveFileSafely(sourcePath, targetPath) {
   try {
     fs.renameSync(sourcePath, targetPath);
   } catch (error) {
-    console.error('renameSync failed, falling back to copy+delete:', error?.message);
+    console.error('renameSync failed, falling back to copy+delete:', (error as AttachmentOperationError)?.message);
     fs.copyFileSync(sourcePath, targetPath);
     fs.rmSync(sourcePath, { force: true, maxRetries: 5, retryDelay: 50 });
   }
 }
 
-function removeTemporaryFile(filePath, operationError) {
+function removeTemporaryFile(filePath: string, operationError: AttachmentOperationError | null) {
   if (!fs.existsSync(filePath)) {
     return;
   }
@@ -142,14 +150,14 @@ function removeTemporaryFile(filePath, operationError) {
     fs.rmSync(filePath, { force: true });
   } catch (cleanupError) {
     if (operationError) {
-      operationError.cleanupError = cleanupError;
+      operationError.cleanupError = cleanupError as Error;
       return;
     }
     throw cleanupError;
   }
 }
 
-async function removeTemporaryFileAsync(filePath, operationError) {
+async function removeTemporaryFileAsync(filePath: string, operationError: AttachmentOperationError | null) {
   if (!fs.existsSync(filePath)) {
     return;
   }
@@ -157,7 +165,7 @@ async function removeTemporaryFileAsync(filePath, operationError) {
     await fsp.rm(filePath, { force: true });
   } catch (cleanupError) {
     if (operationError) {
-      operationError.cleanupError = cleanupError;
+      operationError.cleanupError = cleanupError as Error;
       return;
     }
     throw cleanupError;

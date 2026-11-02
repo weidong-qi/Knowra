@@ -1,6 +1,6 @@
 import { createAppError } from '../errors/app-error.js';
 import { ATTACHMENT_STATUS } from './attachment-status.ts';
-import { sanitizeFileName, sha256Buffer } from './local-attachment-store-utils.js';
+import { sanitizeFileName, sha256Buffer } from './local-attachment-store-utils.ts';
 
 const SAFE_ATTACHMENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 

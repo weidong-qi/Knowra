@@ -1,35 +1,37 @@
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { inspectAttachmentDeletion } from './attachment-deletion-preflight.js';
+import type { LocalAttachmentDataStore, LocalAttachmentRecord } from './local-attachment-types.ts';
+
+export interface LocalAttachmentDeletionDependencies {
+  dataStore: LocalAttachmentDataStore;
+  // 保留现有参数解构；本模块不调用文件端口的方法。
+  fileManager?: object;
+  flush: () => void;
+  cleanupQueue: {
+    enqueue(attachment: LocalAttachmentRecord): void;
+    finish(attachment: LocalAttachmentRecord): 'complete' | 'pending-retry';
+  };
+}
 
 export function createLocalAttachmentDeletionManager({
   dataStore,
   fileManager,
   flush,
   cleanupQueue
-}) {
-  function removeAttachmentFiles(attachments) {
+}: LocalAttachmentDeletionDependencies) {
+  function removeAttachmentFiles(attachments: LocalAttachmentRecord[]) {
     return attachments.map(attachment => ({ id: attachment.id, cleanup: cleanupQueue.finish(attachment) }));
   }
 
-  function deleteAttachment(attachmentId) {
-    const existingIndex = dataStore.state.attachments.findIndex(
-      (attachment) => attachment.id === attachmentId
-    );
+  function deleteAttachment(attachmentId: string) {
+    const existingIndex = dataStore.state.attachments.findIndex(attachment => attachment.id === attachmentId);
     if (existingIndex === -1) {
-      throw createAppError(
-        'ATTACHMENT_NOT_FOUND',
-        'Attachment not found',
-        404
-      );
+      throw createAppError('ATTACHMENT_NOT_FOUND', 'Attachment not found', 404);
     }
 
     const preflight = inspectAttachmentDeletion(attachmentId, dataStore.state);
     if (preflight.references.length) {
-      throw createAppError(
-        'ATTACHMENT_REFERENCED',
-        '保留的资产仍引用此附件，不能删除。',
-        409
-      );
+      throw createAppError('ATTACHMENT_REFERENCED', '保留的资产仍引用此附件，不能删除。', 409);
     }
 
     const attachment = dataStore.state.attachments[existingIndex];
@@ -45,9 +47,9 @@ export function createLocalAttachmentDeletionManager({
     return { ...attachment, cleanup: result.cleanup };
   }
 
-  function detachAttachmentsForNotes(noteIds) {
+  function detachAttachmentsForNotes(noteIds: Iterable<string>) {
     const noteIdSet = new Set(noteIds);
-    const detached = [];
+    const detached: LocalAttachmentRecord[] = [];
 
     for (const attachment of dataStore.state.attachments) {
       if (!noteIdSet.has(attachment.noteId)) continue;
@@ -59,11 +61,7 @@ export function createLocalAttachmentDeletionManager({
     for (const attachment of dataStore.state.attachments.filter(item => noteIdSet.has(item.noteId))) {
       cleanupQueue.enqueue(attachment);
     }
-    for (
-      let index = dataStore.state.attachments.length - 1;
-      index >= 0;
-      index -= 1
-    ) {
+    for (let index = dataStore.state.attachments.length - 1; index >= 0; index -= 1) {
       if (!noteIdSet.has(dataStore.state.attachments[index].noteId)) {
         continue;
       }
@@ -78,8 +76,8 @@ export function createLocalAttachmentDeletionManager({
 
   return {
     deleteAttachment,
-    inspectAttachmentDeletion: (attachmentId) => {
-      if (!dataStore.state.attachments.some((item) => item.id === attachmentId)) {
+    inspectAttachmentDeletion: (attachmentId: string) => {
+      if (!dataStore.state.attachments.some(item => item.id === attachmentId)) {
         throw createAppError('ATTACHMENT_NOT_FOUND', 'Attachment not found', 404);
       }
       return inspectAttachmentDeletion(attachmentId, dataStore.state);

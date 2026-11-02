@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ATTACHMENT_STATUS, normalizeAttachmentStatus } from './attachment-status.ts';
 import { normalizeSha256 } from './attachment-record-reconciliation.ts';
-import { sha256FileSync } from './local-attachment-store-utils.js';
+import { sha256FileSync } from './local-attachment-store-utils.ts';
 
-/** @param {{attachments?: {id: string, storagePath?: string, size?: number, sha256?: string, status?: string, verifiedAt?: string}[], fileManager?: ReturnType<typeof import('./local-attachment-file-manager.js').createLocalAttachmentFileManager>, generatedAt?: string}} options */
+/** @param {{attachments?: {id: string, storagePath?: string, size?: number, sha256?: string, status?: string, verifiedAt?: string}[], fileManager?: ReturnType<typeof import('./local-attachment-file-manager.ts').createLocalAttachmentFileManager>, generatedAt?: string}} options */
 export function inspectAttachmentIntegrity({
   attachments = [],
   fileManager,
