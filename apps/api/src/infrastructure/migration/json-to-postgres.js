@@ -369,6 +369,7 @@ export async function applyJsonMigration({
     throw createAppError('MIGRATION_PRECHECK_FAILED', 'JSON migration preflight did not pass', 422, { report });
   }
 
+  /** @param {import('./migration-client.ts').MigrationTransaction} tx */
   const applyPlan = async tx => {
     const existingProvenance = await tx.knowledgeArtifactProvenance.findMany();
     assertNoKnowledgeArtifactProvenanceDowngrade(
