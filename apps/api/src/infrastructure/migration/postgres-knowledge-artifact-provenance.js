@@ -1,7 +1,13 @@
 import { createAppError } from '../../errors/app-error.js';
 import { backfillKnowledgeArtifactProvenance } from './knowledge-artifact-provenance-backfill.js';
 import { dbKnowledgeArtifactProvenance } from './db-mappers.js';
-import { mapKnowledgeItem, mapKnowledgeEvidence, mapNote, mapNoteVersion, mapKnowledgeArtifactProvenance } from '../../modules/knowledge/infrastructure/postgres/mappers.js';
+import {
+  mapKnowledgeItem,
+  mapKnowledgeEvidence,
+  mapNote,
+  mapNoteVersion,
+  mapKnowledgeArtifactProvenance
+} from '../../modules/knowledge/infrastructure/postgres/mappers.ts';
 import { validateKnowledgeArtifactProvenanceRelations } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.js';
 import { knowledgeExtractionCommitKey } from '../../modules/ai/knowledge-extraction-commit-contract.js';
 
@@ -9,28 +15,51 @@ import { knowledgeExtractionCommitKey } from '../../modules/ai/knowledge-extract
 export async function migratePostgresKnowledgeArtifactProvenance(db, ownerId) {
   return db.$transaction(async tx => {
     const migrations = await tx.$queryRawUnsafe('SELECT version FROM knowledge_artifact_provenance_migrations');
-    if (migrations.some(row => row.version !== 1)) throw createAppError('STORAGE_SCHEMA_VERSION_UNSUPPORTED', '来源迁移版本未知。', 422);
+    if (migrations.some(row => row.version !== 1))
+      throw createAppError('STORAGE_SCHEMA_VERSION_UNSUPPORTED', '来源迁移版本未知。', 422);
     const [items, evidence, notes, versions, records, journal] = await Promise.all([
-      tx.knowledgeItem.findMany(), tx.knowledgeEvidence.findMany(), tx.note.findMany({ include: { noteTags: true } }),
-      tx.noteVersion.findMany(), tx.knowledgeArtifactProvenance.findMany(), tx.syncJournal.findUnique({ where: { ownerId } })
+      tx.knowledgeItem.findMany(),
+      tx.knowledgeEvidence.findMany(),
+      tx.note.findMany({ include: { noteTags: true } }),
+      tx.noteVersion.findMany(),
+      tx.knowledgeArtifactProvenance.findMany(),
+      tx.syncJournal.findUnique({ where: { ownerId } })
     ]);
-    const state = { knowledgeItems: items.map(mapKnowledgeItem), knowledgeEvidence: evidence.map(mapKnowledgeEvidence),
-      notes: notes.map(mapNote), noteVersions: versions.map(mapNoteVersion), knowledgeArtifactProvenance: records.map(mapKnowledgeArtifactProvenance) };
-    if (migrations.length) { validateKnowledgeArtifactProvenanceRelations(state); return { migrated: false }; }
-    const [available] = await tx.$queryRawUnsafe("SELECT to_regclass('knowledge_extraction_commits')::text AS relation");
-    const rows = available?.relation ? await tx.$queryRawUnsafe('SELECT to_jsonb(c) AS row FROM knowledge_extraction_commits c') : [];
+    const state = {
+      knowledgeItems: items.map(mapKnowledgeItem),
+      knowledgeEvidence: evidence.map(mapKnowledgeEvidence),
+      notes: notes.map(mapNote),
+      noteVersions: versions.map(mapNoteVersion),
+      knowledgeArtifactProvenance: records.map(mapKnowledgeArtifactProvenance)
+    };
+    if (migrations.length) {
+      validateKnowledgeArtifactProvenanceRelations(state);
+      return { migrated: false };
+    }
+    const [available] = await tx.$queryRawUnsafe(
+      "SELECT to_regclass('knowledge_extraction_commits')::text AS relation"
+    );
+    const rows = available?.relation
+      ? await tx.$queryRawUnsafe('SELECT to_jsonb(c) AS row FROM knowledge_extraction_commits c')
+      : [];
     const receipts = rows.map(({ row }) => {
       try {
         const record = JSON.parse(row.receipt_json);
-        return knowledgeExtractionCommitKey(record) === knowledgeExtractionCommitKey({ ownerId: row.owner_id,
-          datasetId: row.dataset_id, jobId: row.job_id }) && record.receiptHash === row.receipt_hash ? record : null;
-      } catch { return null; }
+        return knowledgeExtractionCommitKey(record) ===
+          knowledgeExtractionCommitKey({ ownerId: row.owner_id, datasetId: row.dataset_id, jobId: row.job_id }) &&
+          record.receiptHash === row.receipt_hash
+          ? record
+          : null;
+      } catch {
+        return null;
+      }
     });
     const getTombstone = (collection, id) => journal?.payload?.tombstones?.[JSON.stringify([collection, id])];
     const stats = backfillKnowledgeArtifactProvenance(state, { receipts, getTombstone });
     const previous = new Map(records.map(record => [record.id, record.provenanceHash]));
     for (const record of state.knowledgeArtifactProvenance) {
-      if (getTombstone('knowledgeArtifactProvenance', record.id)) throw createAppError('KNOWLEDGE_ARTIFACT_PROVENANCE_CONFLICT', '已永久删除的来源记录不能通过迁移重建。', 409);
+      if (getTombstone('knowledgeArtifactProvenance', record.id))
+        throw createAppError('KNOWLEDGE_ARTIFACT_PROVENANCE_CONFLICT', '已永久删除的来源记录不能通过迁移重建。', 409);
       if (previous.get(record.id) === record.provenanceHash) continue;
       const data = dbKnowledgeArtifactProvenance(record);
       if (previous.has(record.id)) await tx.knowledgeArtifactProvenance.update({ where: { id: record.id }, data });

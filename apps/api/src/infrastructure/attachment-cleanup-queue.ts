@@ -25,7 +25,8 @@ interface RawCleanupTask {
   createdAt?: unknown;
   reasonCode?: unknown;
 }
-type MetadataPresence = (id: string) => boolean | Promise<boolean>;
+// 本地调用方返回布尔值，PG 调用方返回记录或 null；队列只判断真值，不读取返回结构。
+type MetadataPresence<Metadata> = (id: string) => Metadata | Promise<Metadata>;
 
 // 先持久化意图，再提交业务删除。事务失败留下的任务只会看到仍存在的元数据，不能误删文件。
 export function createAttachmentCleanupQueue({ storageRootDir, fileManager }: AttachmentCleanupQueueDependencies) {
@@ -72,7 +73,7 @@ export function createAttachmentCleanupQueue({ storageRootDir, fileManager }: At
     }
   }
 
-  async function retry(isMetadataPresent: MetadataPresence) {
+  async function retry<Metadata>(isMetadataPresent: MetadataPresence<Metadata>) {
     let completed = 0;
     let pending = 0;
     for (const name of fs.readdirSync(directory).filter(name => /^[a-f0-9]{64}\.json$/.test(name))) {
@@ -95,7 +96,7 @@ export function createAttachmentCleanupQueue({ storageRootDir, fileManager }: At
     return { completed, pending };
   }
 
-  async function list(isMetadataPresent: MetadataPresence) {
+  async function list<Metadata>(isMetadataPresent: MetadataPresence<Metadata>) {
     const items = [];
     for (const name of fs.readdirSync(directory).filter(name => /^[a-f0-9]{64}\.json$/.test(name))) {
       try {

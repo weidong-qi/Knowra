@@ -1,5 +1,5 @@
 import { createAppError } from '../../../../errors/app-error.js';
-import { mapKnowledgeItem, toDate } from './mappers.js';
+import { mapKnowledgeItem, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresKnowledgeItemRepository({ db }) {

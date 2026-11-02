@@ -12,10 +12,10 @@ import { createPostgresSnapshotService } from './infrastructure/postgres-snapsho
 import { createPostgresKnowledgeModule } from './modules/knowledge/postgres-async-module.js';
 import { createPostgresKnowledgeHttpHandlers } from './modules/knowledge/http/postgres-async-handlers.js';
 import { createPostgresNoteRepository } from './modules/knowledge/infrastructure/postgres/note-repository.js';
-import { createPostgresFolderRepository } from './modules/knowledge/infrastructure/postgres/folder-repository.js';
-import { createPostgresTagRepository } from './modules/knowledge/infrastructure/postgres/tag-repository.js';
-import { createPostgresTagGroupRepository } from './modules/knowledge/infrastructure/postgres/tag-group-repository.js';
-import { createPostgresKnowledgeSpaceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-space-repository.js';
+import { createPostgresFolderRepository } from './modules/knowledge/infrastructure/postgres/folder-repository.ts';
+import { createPostgresTagRepository } from './modules/knowledge/infrastructure/postgres/tag-repository.ts';
+import { createPostgresTagGroupRepository } from './modules/knowledge/infrastructure/postgres/tag-group-repository.ts';
+import { createPostgresKnowledgeSpaceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-space-repository.ts';
 import { createPostgresContentAnnotationRepository } from './modules/knowledge/infrastructure/postgres/content-annotation-repository.js';
 import { createPostgresAttachmentRepository } from './modules/knowledge/infrastructure/postgres/attachment-repository.js';
 import { createPostgresNoteVersionRepository } from './modules/knowledge/infrastructure/postgres/note-version-repository.js';

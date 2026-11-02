@@ -1,4 +1,4 @@
-import { mapQuestionSource, toDate } from './mappers.js';
+import { mapQuestionSource, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresQuestionSourceRepository({ db }) {

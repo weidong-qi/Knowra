@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { mapAnnotation, toDate } from './mappers.js';
+import { mapAnnotation, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresContentAnnotationRepository({ db }) {

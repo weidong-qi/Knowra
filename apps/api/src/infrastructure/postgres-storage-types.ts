@@ -33,25 +33,25 @@ export interface SnapshotRepositories {
   >;
   folderRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/folder-repository.js').createPostgresFolderRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/folder-repository.ts').createPostgresFolderRepository
     >,
     'list'
   >;
   tagRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/tag-repository.js').createPostgresTagRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/tag-repository.ts').createPostgresTagRepository
     >,
     'list'
   >;
   tagGroupRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/tag-group-repository.js').createPostgresTagGroupRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/tag-group-repository.ts').createPostgresTagGroupRepository
     >,
     'list'
   >;
   knowledgeSpaceRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-space-repository.js').createPostgresKnowledgeSpaceRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/knowledge-space-repository.ts').createPostgresKnowledgeSpaceRepository
     >,
     'list'
   >;

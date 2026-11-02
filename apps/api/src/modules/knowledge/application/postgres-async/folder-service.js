@@ -158,7 +158,11 @@ export function createAsyncFolderService({
     async restoreDeletedFolder(folderId) {
       const root = await requireFolder(folderId);
       if (!root.deletedAt || !root.deletionPackage) throw conflictError('FOLDER_NOT_IN_TRASH', '文件夹不在回收站中');
-      const folders = await Promise.all(root.deletionPackage.folderIds.map(id => requireFolder(id)));
+      const folders = await Promise.all(
+        /** @type {{folderIds: import('@prisma/client').Prisma.JsonArray}} */ (root.deletionPackage).folderIds.map(id =>
+          requireFolder(id)
+        )
+      );
       for (const folder of folders)
         await validateSiblingNameConflict?.({
           spaceId: folder.spaceId,

@@ -1,4 +1,4 @@
-import { mapAttachment, toDate } from './mappers.js';
+import { mapAttachment, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresAttachmentRepository({ db }) {

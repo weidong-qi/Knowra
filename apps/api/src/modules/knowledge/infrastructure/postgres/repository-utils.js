@@ -60,6 +60,11 @@ export async function replaceNoteTags(tx, noteId, tagIds = []) {
   }
 }
 
+/**
+ * @template Result
+ * @param {() => Result | PromiseLike<Result>} operation
+ * @param {import('../../../../infrastructure/postgres-errors.ts').PostgresErrorOptions} [options]
+ */
 export async function withRepositoryErrors(operation, options) {
   return withPostgresErrors(operation, options);
 }

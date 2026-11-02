@@ -1,4 +1,4 @@
-import { mapExamFocus, toDate } from './mappers.js';
+import { mapExamFocus, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresExamFocusRepository({ db }) {

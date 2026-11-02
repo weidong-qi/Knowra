@@ -11,7 +11,7 @@ import type {
   AttachmentOperationError,
   AttachmentRestoreBody,
   AttachmentRestoreIntent,
-  LocalAttachmentRecord
+  AttachmentRecoveryRecord
 } from './local-attachment-types.ts';
 
 type AttachmentInspectionFileManager = Pick<AttachmentFileManager, 'resolveReadableAttachmentPath'>;
@@ -21,7 +21,7 @@ type AttachmentRestoreFileManager = Pick<
 >;
 type AttachmentLookup = (
   id: string | undefined
-) => LocalAttachmentRecord | null | undefined | Promise<LocalAttachmentRecord | null | undefined>;
+) => AttachmentRecoveryRecord | null | undefined | Promise<AttachmentRecoveryRecord | null | undefined>;
 
 export function decodeAttachmentBytes(contentBase64: unknown, limit = MAX_ATTACHMENT_UPLOAD_BYTES, allowEmpty = false) {
   if (typeof contentBase64 !== 'string' || contentBase64.length > Math.ceil(limit / 3) * 4) {
@@ -38,7 +38,7 @@ export function decodeAttachmentBytes(contentBase64: unknown, limit = MAX_ATTACH
   return content;
 }
 
-export function attachmentIdentity(attachment: LocalAttachmentRecord) {
+export function attachmentIdentity(attachment: AttachmentRecoveryRecord) {
   return JSON.stringify([
     attachment.id,
     attachment.noteId,
@@ -50,9 +50,9 @@ export function attachmentIdentity(attachment: LocalAttachmentRecord) {
 }
 
 export function assertSameAttachment(
-  current: LocalAttachmentRecord | null | undefined,
-  expected: LocalAttachmentRecord
-): asserts current is LocalAttachmentRecord {
+  current: AttachmentRecoveryRecord | null | undefined,
+  expected: AttachmentRecoveryRecord
+): asserts current is AttachmentRecoveryRecord {
   if (!current || attachmentIdentity(current) !== attachmentIdentity(expected)) {
     throw createAppError('ATTACHMENT_CHANGED', '附件已删除或发生变化，请刷新后重试。', 409);
   }
@@ -60,7 +60,7 @@ export function assertSameAttachment(
 
 // 读取前保存期望值；文件定位工具不得把实测大小写回有可信哈希的记录。
 export function inspectAttachmentFile(
-  attachment: LocalAttachmentRecord,
+  attachment: AttachmentRecoveryRecord,
   fileManager: AttachmentInspectionFileManager
 ): AttachmentFileHealth {
   const expected = normalizeSha256(attachment.sha256);
@@ -84,7 +84,7 @@ export function inspectAttachmentFile(
   };
 }
 
-export function assertReadableStatus(attachment: Pick<LocalAttachmentRecord, 'status'>) {
+export function assertReadableStatus(attachment: Pick<AttachmentRecoveryRecord, 'status'>) {
   if (attachment.status === 'corrupt')
     throw createAppError('ATTACHMENT_FILE_CORRUPT', '附件文件损坏，请核验或恢复原文件。', 409);
   if (!['ready', 'missing'].includes(attachment.status!))
@@ -99,7 +99,7 @@ export function throwFileHealth(status: AttachmentFileHealth['status']): never {
 
 // 原内容永不覆盖：损坏副本作为恢复材料保留，成功提交后才移除本次临时备份。
 export function prepareAttachmentRestore(
-  attachment: LocalAttachmentRecord,
+  attachment: AttachmentRecoveryRecord,
   body: AttachmentRestoreBody | null | undefined,
   fileManager: AttachmentRestoreFileManager
 ) {

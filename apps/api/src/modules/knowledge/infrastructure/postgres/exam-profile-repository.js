@@ -1,4 +1,4 @@
-import { mapExamProfile, toDate } from './mappers.js';
+import { mapExamProfile, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresExamProfileRepository({ db }) {
@@ -20,20 +20,44 @@ export function createPostgresExamProfileRepository({ db }) {
   }
   return {
     async create(profile) {
-      return withRepositoryErrors(() => db.examProfile.create({
-        data: toData(profile)
-      }).then(mapExamProfile));
+      return withRepositoryErrors(() =>
+        db.examProfile
+          .create({
+            data: toData(profile)
+          })
+          .then(mapExamProfile)
+      );
     },
     async save(profile) {
       const data = toData(profile);
-      return withRepositoryErrors(() => db.examProfile.upsert({ where: { id: data.id }, create: data, update: (() => { const { id: _id, createdAt: _createdAt, ...rest } = data; return rest; })() }).then(mapExamProfile));
+      return withRepositoryErrors(() =>
+        db.examProfile
+          .upsert({
+            where: { id: data.id },
+            create: data,
+            update: (() => {
+              const { id: _id, createdAt: _createdAt, ...rest } = data;
+              return rest;
+            })()
+          })
+          .then(mapExamProfile)
+      );
     },
-    async findById(id) { return withRepositoryErrors(() => db.examProfile.findUnique({ where: { id } }).then(mapExamProfile)); },
+    async findById(id) {
+      return withRepositoryErrors(() => db.examProfile.findUnique({ where: { id } }).then(mapExamProfile));
+    },
     list({ includeArchived = false, includeDeleted = false } = {}) {
-      const where = { ...(includeArchived ? {} : { archivedAt: null }), ...(includeDeleted ? {} : { deletedAt: null }) };
-      return withRepositoryErrors(() => db.examProfile.findMany({ where, orderBy: { updatedAt: 'desc' } }).then((rows) => rows.map(mapExamProfile)));
+      const where = {
+        ...(includeArchived ? {} : { archivedAt: null }),
+        ...(includeDeleted ? {} : { deletedAt: null })
+      };
+      return withRepositoryErrors(() =>
+        db.examProfile.findMany({ where, orderBy: { updatedAt: 'desc' } }).then(rows => rows.map(mapExamProfile))
+      );
     },
-    async delete(id) { return withRepositoryErrors(() => db.examProfile.delete({ where: { id } }).then(mapExamProfile)); },
+    async delete(id) {
+      return withRepositoryErrors(() => db.examProfile.delete({ where: { id } }).then(mapExamProfile));
+    },
     supportsAsync: true
   };
 }
