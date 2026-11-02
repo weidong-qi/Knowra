@@ -4,6 +4,7 @@ import type { KnowledgeSpaceRecord } from '../knowledge/infrastructure/knowledge
 import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
 import type { NoteVersionRecord } from '../knowledge/infrastructure/note-version-repository.ts';
 import type { AnalysisScopeRecord } from '../knowledge/infrastructure/annotation-support-repositories.ts';
+import type { AiJob, AiRecord, AiRecordRepositoryPort, AiReadEvent } from './record-types.ts';
 
 export type Awaitable<Value> = Value | PromiseLike<Value>;
 export interface ExtractionPageRow {
@@ -18,18 +19,11 @@ export interface ExtractionPage extends DatasetIdentity {
   limit: number;
   before?: ExtractionPageRow;
 }
-export interface ExtractionPageJob extends ExtractionPageRow, DatasetIdentity {
-  ownerId: string;
-  spaceId: string;
-  jobKind: string;
-  idempotencyKey: string;
-}
-export interface ExtractionQueryJob extends ExtractionPageRow {
-  spaceId: string;
-  status: string;
-  phase: string;
-  updatedAt: string;
-}
+export type ExtractionPageJob = Pick<
+  AiJob,
+  'jobId' | 'createdAt' | 'datasetId' | 'datasetEpoch' | 'ownerId' | 'spaceId' | 'jobKind' | 'idempotencyKey'
+>;
+export type ExtractionQueryJob = Pick<AiJob, 'jobId' | 'createdAt' | 'spaceId' | 'status' | 'phase' | 'updatedAt'>;
 export interface ExtractionLoadedTask {
   job: ExtractionQueryJob;
   descriptor: { scopeId: string };
@@ -57,11 +51,7 @@ export interface ExtractionJobPage {
   items: ExtractionJobSummary[];
   nextCursor: string | null;
 }
-export interface ExtractionQueryEvent {
-  eventKind: string;
-  /** PostgreSQL事件读取只JSON.parse；此字段未经过本地事件校验器。 */
-  safePayload?: unknown;
-}
+export type ExtractionQueryEvent = Pick<AiReadEvent, 'eventKind' | 'safePayload'>;
 interface ExtractionQueryAttempt {
   attemptId: string;
 }
@@ -73,6 +63,8 @@ type ExtractionReadValue =
   | NoteRecord
   | NoteVersionRecord
   | AnalysisScopeRecord
+  | AiRecord
+  | AiRecord[]
   | RawExtractionRecord
   | ExtractionPageRow[]
   | ExtractionQueryAttempt[]
@@ -82,15 +74,7 @@ type ExtractionReadValue =
 export type ExtractionQuerySteps<Result> = Generator<Awaitable<ExtractionReadValue>, Result, ExtractionReadValue>;
 export interface ExtractionQueryContext<Transaction = object | undefined> {
   transaction: Transaction;
-  aiRepository: {
-    identity(): Awaitable<DatasetIdentity>;
-    get(
-      kind: 'aiJob' | 'aiGrant' | 'contextManifest' | 'scopeSnapshot',
-      id: string
-    ): Awaitable<RawExtractionRecord | null>;
-    list(kind: 'aiJobAttempt', input: { jobId: string }): Awaitable<ExtractionQueryAttempt[]>;
-    listEvents(jobId: string): Awaitable<ExtractionQueryEvent[]>;
-  };
+  aiRepository: Pick<AiRecordRepositoryPort, 'identity' | 'get' | 'list' | 'listEvents'>;
   repositories: {
     knowledgeSpaceRepository: { findById(id: unknown): Awaitable<KnowledgeSpaceRecord | null> };
     analysisScopeRepository: { findById(id: string): Awaitable<AnalysisScopeRecord | null> };

@@ -3,6 +3,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import schema from './contracts/ai-v1.schema.json' with { type: 'json' };
 
+/** @type {Readonly<import('./record-types.ts').AiRecordDefinitions>} */
 export const AI_RECORD_KINDS = Object.freeze({
   scopeSnapshot: { collection: 'scopeSnapshots', id: 'scopeSnapshotId' },
   contextManifest: { collection: 'contextManifests', id: 'manifestId' },
@@ -53,6 +54,14 @@ function invalid(message) {
   throw error;
 }
 
+/**
+ * @template {import('./record-types.ts').AiRecordKind} Kind
+ * @overload
+ * @param {Kind} kind
+ * @param {unknown} input
+ * @returns {import('./record-types.ts').AiRecordByKind[Kind]}
+ */
+/** @returns {import('./record-types.ts').AiRecord} */
 export function validateAiRecord(kind, input) {
   const validate = validators[kind];
   if (!validate) invalid('未知的 AI 记录类型。');
@@ -90,6 +99,12 @@ function validateSource(source) {
   }
 }
 
+/**
+ * @overload
+ * @param {unknown} input
+ * @returns {import('./record-types.ts').AiEvent}
+ */
+/** @returns {import('./record-types.ts').AiEvent} */
 export function validateAiEvent(input) {
   if (
     !input ||

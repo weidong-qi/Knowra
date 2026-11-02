@@ -9,6 +9,7 @@ const MAX_INPUT_TOKENS = 100_000;
 const MAX_OUTPUT_TOKENS = 20_000;
 const LEASE_MS = 120_000;
 const allowedTools = new Set(['notes_search', 'notes_read']);
+/** @returns {never} */
 function fail(code, message) {
   /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
   const error = new Error(message);
@@ -130,11 +131,26 @@ export function createAiWorker({
   if (!repository || !budget || !gateway) throw new TypeError('AI Worker needs repository, budget and gateway');
   const controllers = new Map();
 
+  /**
+   * @template {import('./record-types.ts').AiMutableRecordKind} Kind
+   * @param {Kind} kind
+   * @param {import('./record-types.ts').AiRecordByKind[Kind]} previous
+   * @param {Partial<import('./record-types.ts').AiRecordByKind[Kind]>} patch
+   */
   async function replace(kind, previous, patch) {
     const next = { ...previous, ...patch };
-    if (kind === 'aiJob') next.updatedAt = later(now(), previous.updatedAt);
+    if (kind === 'aiJob')
+      /** @type {import('./record-types.ts').AiJob} */ (next).updatedAt = later(
+        now(),
+        /** @type {import('./record-types.ts').AiJob} */ (previous).updatedAt
+      );
     return repository.replace(kind, next, hashRecord(previous));
   }
+  /**
+   * @param {string} jobId
+   * @param {string} eventKind
+   * @param {import('./record-types.ts').AiEventPayload} safePayload
+   */
   async function recordEvent(jobId, eventKind, safePayload) {
     try {
       const sequence = (await repository.listEvents(jobId)).length + 1;
@@ -144,6 +160,7 @@ export function createAiWorker({
       logger.warn?.('AI diagnostic event could not be saved', { jobId, eventKind, code: safeCode(error?.code) });
     }
   }
+  /** @param {import('./record-types.ts').AiJob} job */
   async function validBoundary(job) {
     const identity = await repository.identity();
     const grant = await repository.get('aiGrant', job.grantId);

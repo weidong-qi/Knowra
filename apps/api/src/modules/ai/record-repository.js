@@ -88,6 +88,11 @@ const MUTABLE_FIELDS = {
   aiJobAttempt: ['status', 'leaseExpiresAt', 'providerRequestId', 'deliveryUncertain', 'finishedAt']
 };
 
+/**
+ * @overload
+ * @param {import('./record-types.ts').AiRecordStorage} storage
+ * @returns {import('./record-types.ts').SyncAiRecordRepository}
+ */
 /** 仅受信应用服务可使用；不暴露 HTTP/IPC 写入路由。 */
 export function createAiRecordRepository(storage) {
   function assertCurrent(record) {

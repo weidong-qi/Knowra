@@ -1,9 +1,7 @@
 import type { ReadRepositories } from './access-service-types.ts';
+import type { AiRecordRepositoryPort } from './record-types.ts';
 export interface AiReadContextDependencies extends ReadRepositories {
-  repository?: Pick<
-    ReturnType<typeof import('./record-repository.js').createAiRecordRepository>,
-    'identity' | 'get' | 'insert'
-  >;
+  repository?: Pick<AiRecordRepositoryPort, 'identity' | 'get' | 'insert'>;
 }
 export interface ReadScope {
   kind: string;

@@ -1,12 +1,8 @@
 import type { AppError } from '../errors/app-error.ts';
+import type { AiIdByKind, AiRecordBoundary, AiRecordCollections, AiRecordKind } from '../modules/ai/record-types.ts';
 
-// 仅列出清理核查读取的字段；schema/hash 仍由原有 AI/提炼校验器检查，不重建或过滤正文。
-interface PurgeIdentity {
-  ownerId: string;
-  datasetId: string;
-  datasetEpoch: string;
-  spaceId: string;
-}
+// 核心记录复用 AI 校验契约；提炼扩展只列清理核查读取的字段，不重建或过滤正文。
+type PurgeIdentity = AiRecordBoundary;
 export type PurgeComparisonField =
   | keyof PurgeIdentity
   | 'jobId'
@@ -20,73 +16,11 @@ export type PurgeComparisonField =
   | 'promptVersion'
   | 'resultSchemaVersion';
 export type PurgeComparable = Partial<Record<PurgeComparisonField, string | null>>;
-interface SourceView {
-  sourceId: string;
-}
-interface ScopeView extends PurgeIdentity {
-  scopeSnapshotId: string;
-  scopeKind: string;
-  scopeHash: string;
-  allowedSources: SourceView[];
-  excludedSourceIds: string[];
-}
-interface ManifestView extends PurgeIdentity {
-  manifestId: string;
-  scopeSnapshotId: string;
-  scopeKind: string;
-  scopeHash: string;
-  recipient: string;
-  sources: SourceView[];
-}
-interface GrantView extends PurgeIdentity {
-  grantId: string;
-  scopeSnapshotId: string;
-  scopeHash: string;
-}
-interface JobView extends PurgeIdentity {
-  jobId: string;
-  manifestId: string;
-  grantId: string;
-  manifestHash: string;
-  jobKind: string;
-  provider: string;
-  credentialRef: string;
-  status: string;
-  phase: string;
-  parentJobId: string | null;
-  acceptedAttemptId: string | null;
-  resultJson?: object;
-  inputHash: string;
-  outputHash: string | null;
-  createdAt: string;
-  requestId: string;
-  modelId: string;
-  promptVersion: string;
-  resultSchemaVersion: string;
-}
-interface AttemptView {
-  attemptId: string;
-  jobId: string;
-  ordinal: number;
-  leaseGeneration: number;
-}
-interface UsageView {
-  usageId: string;
-  jobId: string;
-  attemptId: string;
-}
-export type PurgeAiCollections = {
-  scopeSnapshots: ScopeView[];
-  contextManifests: ManifestView[];
-  grants: GrantView[];
-  jobs: JobView[];
-  attempts: AttemptView[];
-  usageRecords: UsageView[];
-};
+export type PurgeAiCollections = AiRecordCollections;
 export type PurgeAiCollection = keyof PurgeAiCollections;
 export type PurgeAiRecord = PurgeAiCollections[PurgeAiCollection][number];
-export type PurgeAiId = 'scopeSnapshotId' | 'manifestId' | 'grantId' | 'jobId' | 'attemptId' | 'usageId';
-export type PurgeAiKind = 'scopeSnapshot' | 'contextManifest' | 'aiGrant' | 'aiJob' | 'aiJobAttempt' | 'aiUsageRecord';
+export type PurgeAiId = AiIdByKind[AiRecordKind];
+export type PurgeAiKind = AiRecordKind;
 export interface PurgeExtractionTask extends PurgeIdentity {
   jobId: string;
   scopeId: string;

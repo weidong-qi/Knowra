@@ -3,7 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { AI_RECORD_KINDS, validateAiEvent, validateAiRecord } from './record-contract.js';
 import { createAiRecordRepository } from './record-repository.js';
 import { validateBudgetState } from './budget-ledger.js';
-import { ACCESS_KINDS, createJsonAiAccessStore, validateAccessRecord, validateAccessRelationships } from './access-records.js';
+import {
+  ACCESS_KINDS,
+  createJsonAiAccessStore,
+  validateAccessRecord,
+  validateAccessRelationships
+} from './access-records.js';
 import { CONVERSATION_KINDS, emptyConversationState, validateConversationState } from './conversation-records.js';
 import { createJsonAiConversationStore } from './conversation-store.js';
 
@@ -20,18 +25,43 @@ export function createEmptyAiState({ datasetId = randomUUID(), datasetEpoch = ra
     datasetEpoch,
     ...Object.fromEntries(collections.map(name => [name, []])),
     ...Object.fromEntries(accessCollections.map(name => [name, []])),
-    ...emptyConversationState(), actionLedger: emptyActionState(),
-    events: [], budgetDays: [], budgetReservations: [], budgetMonths: []
+    ...emptyConversationState(),
+    actionLedger: emptyActionState(),
+    events: [],
+    budgetDays: [],
+    budgetReservations: [],
+    budgetMonths: []
   };
 }
 
 export function validateAiState(input) {
   if (input === undefined) return createEmptyAiState();
-  if (!input || typeof input !== 'object' || Array.isArray(input)
-    || ![1, 2, 3, 4, 5, AI_PRIVATE_STATE_VERSION].includes(input.version)
-    || typeof input.datasetId !== 'string' || !input.datasetId
-    || typeof input.datasetEpoch !== 'string' || !input.datasetEpoch
-    || Object.keys(input).some(key => !['version', 'datasetId', 'datasetEpoch', 'events', 'budgetDays', 'budgetReservations', 'budgetMonths', 'actionLedger', ...collections, ...accessCollections, ...conversationCollections].includes(key))) {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    Array.isArray(input) ||
+    ![1, 2, 3, 4, 5, AI_PRIVATE_STATE_VERSION].includes(input.version) ||
+    typeof input.datasetId !== 'string' ||
+    !input.datasetId ||
+    typeof input.datasetEpoch !== 'string' ||
+    !input.datasetEpoch ||
+    Object.keys(input).some(
+      key =>
+        ![
+          'version',
+          'datasetId',
+          'datasetEpoch',
+          'events',
+          'budgetDays',
+          'budgetReservations',
+          'budgetMonths',
+          'actionLedger',
+          ...collections,
+          ...accessCollections,
+          ...conversationCollections
+        ].includes(key)
+    )
+  ) {
     throw new Error('AI 私有存储版本或结构无效，已停止加载。');
   }
   const state = structuredClone(input);
@@ -46,7 +76,8 @@ export function validateAiState(input) {
     if (conversationCollections.some(collection => Object.hasOwn(state, collection))) {
       throw new Error('AI v2 私有状态不能包含 v3 会话记录。');
     }
-    for (const collection of v5ConversationCollections.filter(name => name !== 'conversationModelAttempts')) state[collection] = [];
+    for (const collection of v5ConversationCollections.filter(name => name !== 'conversationModelAttempts'))
+      state[collection] = [];
     state.version = 3;
   }
   if (state.version === 3) {
@@ -58,18 +89,20 @@ export function validateAiState(input) {
   }
   if (state.version === 4) {
     if (Object.hasOwn(state, 'actionLedger')) throw new Error('旧版本不能包含新动作账本。');
-    state.actionLedger = emptyActionState(); state.version = 5;
+    state.actionLedger = emptyActionState();
+    state.version = 5;
   }
   if (state.version === 5) {
     if (Object.hasOwn(state, 'conversationAttachments')) throw new Error('旧版本不能包含对话附件。');
-    state.conversationAttachments = []; state.version = 6;
+    state.conversationAttachments = [];
+    state.version = 6;
   }
   validateActionState(state.actionLedger);
   for (const [kind, { collection, id }] of Object.entries(AI_RECORD_KINDS)) {
     if (!Array.isArray(state[collection])) throw new Error(`AI 私有集合 ${collection} 无效。`);
     const ids = new Set();
     for (const record of state[collection]) {
-      validateAiRecord(kind, record);
+      validateAiRecord(/** @type {import('./record-types.ts').AiRecordKind} */ (kind), record);
       if (ids.has(record[id])) throw new Error(`AI 私有集合 ${collection} 存在重复 ID。`);
       ids.add(record[id]);
     }
@@ -102,16 +135,26 @@ export function createJsonAiRepository({ getState, runTransaction, onChange }) {
       const { collection, id: idField } = AI_RECORD_KINDS[kind];
       return getState()[collection].find(record => record[idField] === id) ?? null;
     },
-    list(kind) { return getState()[AI_RECORD_KINDS[kind].collection]; },
-    insert(kind, record) { getState()[AI_RECORD_KINDS[kind].collection].push(record); onChange(); },
+    list(kind) {
+      return getState()[AI_RECORD_KINDS[kind].collection];
+    },
+    insert(kind, record) {
+      getState()[AI_RECORD_KINDS[kind].collection].push(record);
+      onChange();
+    },
     replace(kind, record) {
       const { collection, id } = AI_RECORD_KINDS[kind];
       const rows = getState()[collection];
       rows[rows.findIndex(item => item[id] === record[id])] = record;
       onChange();
     },
-    listEvents(jobId) { return getState().events.filter(event => event.jobId === jobId); },
-    insertEvent(event) { getState().events.push(event); onChange(); },
+    listEvents(jobId) {
+      return getState().events.filter(event => event.jobId === jobId);
+    },
+    insertEvent(event) {
+      getState().events.push(event);
+      onChange();
+    },
     transaction: runTransaction,
     rotateEpoch() {
       return runTransaction(() => {
