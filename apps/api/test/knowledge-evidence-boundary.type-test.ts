@@ -385,8 +385,9 @@ pg.create(_created);
 pg.save(_created);
 const _transaction = <Value>(operation: () => Value): Value => operation();
 const _localPorts = {
-  repository: createInMemoryKnowledgeItemRepository(),
-  evidenceRepository: _wide,
+  repository:
+    createInMemoryKnowledgeItemRepository<import('../src/modules/knowledge/domain/knowledge-item.ts').KnowledgeItem>(),
+  evidenceRepository: repository<KnowledgeEvidence>(),
   runTransaction: _transaction
 };
 const _sync = createKnowledgeItemService(_localPorts);
@@ -558,7 +559,7 @@ export type EvidenceBoundaryContracts = [
   Assert<
     Equal<
       'evidenceRepository' extends keyof NonNullable<Parameters<typeof createKnowledgeItemService>[0]> ? true : false,
-      false
+      true
     >
   >,
   Assert<
@@ -566,7 +567,7 @@ export type EvidenceBoundaryContracts = [
       'evidenceRepository' extends keyof NonNullable<Parameters<typeof createAsyncKnowledgeItemService>[0]>
         ? true
         : false,
-      false
+      true
     >
   >,
   Assert<Equal<IsAny<typeof _syncCreated>, true>>,

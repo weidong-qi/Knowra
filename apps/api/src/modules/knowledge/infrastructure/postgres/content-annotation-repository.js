@@ -44,43 +44,46 @@ export function createPostgresContentAnnotationRepository({ db }) {
         updatedAt: toDate(annotation.updatedAt),
         deletedAt: annotation.deletedAt ? toDate(annotation.deletedAt) : null
       };
-      return withRepositoryErrors(async () => mapAnnotation(
-        await db.contentAnnotation.upsert({
-          where: { id: data.id },
-          create: data,
-          update: (() => {
-            const { id: _ignoredId, createdAt: _ignoredCreatedAt, ...updateData } = data;
-            return updateData;
-          })()
-        })
-      ));
+      return withRepositoryErrors(async () =>
+        mapAnnotation(
+          await db.contentAnnotation.upsert({
+            where: { id: data.id },
+            create: data,
+            update: (() => {
+              const { id: _ignoredId, createdAt: _ignoredCreatedAt, ...updateData } = data;
+              return updateData;
+            })()
+          })
+        )
+      );
     },
     async findById(id) {
-      return withRepositoryErrors(async () => mapAnnotation(
-        await db.contentAnnotation.findUnique({ where: { id } })
-      ));
+      return withRepositoryErrors(async () => mapAnnotation(await db.contentAnnotation.findUnique({ where: { id } })));
     },
     async findByIdempotencyKey(noteId, idempotencyKey) {
-      return withRepositoryErrors(async () => mapAnnotation(
-        await db.contentAnnotation.findUnique({
-          where: { noteId_idempotencyKey: { noteId, idempotencyKey } }
-        })
-      ));
+      return withRepositoryErrors(async () =>
+        mapAnnotation(
+          await db.contentAnnotation.findUnique({
+            where: { noteId_idempotencyKey: { noteId, idempotencyKey } }
+          })
+        )
+      );
     },
     async findDuplicate({ noteId, kind, scopeType, anchorFingerprint, quoteText, fromPosition, toPosition }) {
-      return withRepositoryErrors(async () => mapAnnotation(
-        await db.contentAnnotation.findFirst({
-          where: {
-            noteId,
-            kind,
-            lifecycleStatus: 'active',
-            ...(anchorFingerprint
-              ? { scopeType, anchorFingerprint }
-              : { quoteText, fromPosition, toPosition })
-          }
-        })
-      ));
+      return withRepositoryErrors(async () =>
+        mapAnnotation(
+          await db.contentAnnotation.findFirst({
+            where: {
+              noteId,
+              kind,
+              lifecycleStatus: 'active',
+              ...(anchorFingerprint ? { scopeType, anchorFingerprint } : { quoteText, fromPosition, toPosition })
+            }
+          })
+        )
+      );
     },
+    /** @param {{ noteId?: string, spaceId?: string, includeDeleted?: boolean, kind?: string, scopeType?: string, anchorStatus?: string }} options */
     async list({ noteId, spaceId, includeDeleted = false, kind, scopeType, anchorStatus } = {}) {
       const where = {
         ...(noteId ? { noteId } : {}),
@@ -90,33 +93,52 @@ export function createPostgresContentAnnotationRepository({ db }) {
         ...(anchorStatus ? { anchorStatus } : {}),
         ...(includeDeleted ? {} : { lifecycleStatus: 'active' })
       };
-      return withRepositoryErrors(async () => (await db.contentAnnotation.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' }
-      })).map(mapAnnotation));
+      return withRepositoryErrors(async () =>
+        (
+          await db.contentAnnotation.findMany({
+            where,
+            orderBy: { updatedAt: 'desc' }
+          })
+        ).map(mapAnnotation)
+      );
     },
     async deleteByNoteIds(noteIds) {
       if (!noteIds.length) return [];
-      const existing = await withRepositoryErrors(() => db.contentAnnotation.findMany({
-        where: { noteId: { in: noteIds } }
-      }));
-      await withRepositoryErrors(() => db.contentAnnotation.deleteMany({
-        where: { noteId: { in: noteIds } }
-      }));
+      const existing = await withRepositoryErrors(() =>
+        db.contentAnnotation.findMany({
+          where: { noteId: { in: noteIds } }
+        })
+      );
+      await withRepositoryErrors(() =>
+        db.contentAnnotation.deleteMany({
+          where: { noteId: { in: noteIds } }
+        })
+      );
       return existing.map(mapAnnotation);
     },
     async markStaleByNoteId(noteId, currentContentHash) {
       return withRepositoryErrors(async () => {
         const rows = await db.contentAnnotation.findMany({
           // v3（内联重点）的位置在正文标记里，不按正文哈希判定过期。
-          where: { noteId, lifecycleStatus: 'active', noteContentHash: { not: currentContentHash }, schemaVersion: { not: 3 } }
+          where: {
+            noteId,
+            lifecycleStatus: 'active',
+            noteContentHash: { not: currentContentHash },
+            schemaVersion: { not: 3 }
+          }
         });
         if (!rows.length) return [];
         await db.contentAnnotation.updateMany({
-          where: { id: { in: rows.map((row) => row.id) } },
-          data: { status: 'stale', anchorStatus: 'needsReview', anchorReason: 'contentChanged', revision: { increment: 1 }, updatedAt: new Date() }
+          where: { id: { in: rows.map(row => row.id) } },
+          data: {
+            status: 'stale',
+            anchorStatus: 'needsReview',
+            anchorReason: 'contentChanged',
+            revision: { increment: 1 },
+            updatedAt: new Date()
+          }
         });
-        return rows.map((row) => mapAnnotation({ ...row, status: 'stale' }));
+        return rows.map(row => mapAnnotation({ ...row, status: 'stale' }));
       });
     },
     supportsAsync: true

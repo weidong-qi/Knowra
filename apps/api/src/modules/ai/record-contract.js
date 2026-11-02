@@ -12,17 +12,23 @@ export const AI_RECORD_KINDS = Object.freeze({
   aiUsageRecord: { collection: 'usageRecords', id: 'usageId' }
 });
 
-const ajv = new Ajv2020({ allErrors: true, strict: false });
-addFormats(ajv);
+const ajv = new /** @type {typeof import('ajv/dist/2020.js').Ajv2020} */ (/** @type {unknown} */ (Ajv2020))({
+  allErrors: true,
+  strict: false
+});
+/** @type {import('ajv-formats').FormatsPlugin} */ (/** @type {unknown} */ (addFormats))(ajv);
 ajv.addSchema(schema);
-const validators = Object.fromEntries(Object.keys(AI_RECORD_KINDS).map(kind => [
-  kind, ajv.compile({ $ref: `${schema.$id}#/$defs/${kind}` })
-]));
+const validators = Object.fromEntries(
+  Object.keys(AI_RECORD_KINDS).map(kind => [kind, ajv.compile({ $ref: `${schema.$id}#/$defs/${kind}` })])
+);
 
 export function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+    return `{${Object.keys(value)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(',')}}`;
   }
   return JSON.stringify(value);
 }
@@ -41,6 +47,7 @@ export function manifestHash(manifest) {
 }
 
 function invalid(message) {
+  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
   const error = new Error(message);
   error.code = 'AI_RECORD_INVALID';
   throw error;
@@ -65,8 +72,12 @@ export function validateAiRecord(kind, input) {
   if (kind === 'aiGrant' && Date.parse(record.expiresAt) <= Date.parse(record.issuedAt)) {
     invalid('授权有效期无效。');
   }
-  if (kind === 'aiJob' && record.resultJson && (record.status !== 'succeeded'
-    || record.outputHash !== hashRecord(record.resultJson))) invalid('任务结果与状态或哈希不一致。');
+  if (
+    kind === 'aiJob' &&
+    record.resultJson &&
+    (record.status !== 'succeeded' || record.outputHash !== hashRecord(record.resultJson))
+  )
+    invalid('任务结果与状态或哈希不一致。');
   if (kind === 'aiUsageRecord' && record.usageUnknown && record.actualMicrounits !== null) {
     invalid('未知用量不能写成已知实际费用。');
   }
@@ -80,20 +91,51 @@ function validateSource(source) {
 }
 
 export function validateAiEvent(input) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)
-    || Object.keys(input).some(key => !['jobId', 'sequence', 'eventKind', 'safePayload', 'createdAt'].includes(key))
-    || typeof input.jobId !== 'string' || !input.jobId
-    || !Number.isSafeInteger(input.sequence) || input.sequence < 1
-    || typeof input.eventKind !== 'string' || !/^[a-zA-Z][a-zA-Z0-9_]{0,79}$/.test(input.eventKind)
-    || typeof input.createdAt !== 'string' || Number.isNaN(Date.parse(input.createdAt))
-    || !input.safePayload || typeof input.safePayload !== 'object' || Array.isArray(input.safePayload)) invalid('AI 事件格式无效。');
-  const allowed = new Set(['phase', 'status', 'attemptId', 'usageId', 'code', 'deliveryUncertain',
-    'stage', 'priceVersion', 'inputUpperBoundBytes', 'maxOutputTokens', 'sourceCount',
-    'reservedMicrounits', 'responseId', 'finishReason', 'inputTokens', 'outputTokens',
-    'usageUnknown', 'actualMicrounits', 'budgetDisposition', 'httpStatus']);
-  if (Object.keys(input.safePayload).some(key => !allowed.has(key))
-    || Buffer.byteLength(JSON.stringify(input.safePayload)) > 2048
-    || Object.values(input.safePayload).some(value => !['string', 'number', 'boolean'].includes(typeof value))) {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    Array.isArray(input) ||
+    Object.keys(input).some(key => !['jobId', 'sequence', 'eventKind', 'safePayload', 'createdAt'].includes(key)) ||
+    typeof input.jobId !== 'string' ||
+    !input.jobId ||
+    !Number.isSafeInteger(input.sequence) ||
+    input.sequence < 1 ||
+    typeof input.eventKind !== 'string' ||
+    !/^[a-zA-Z][a-zA-Z0-9_]{0,79}$/.test(input.eventKind) ||
+    typeof input.createdAt !== 'string' ||
+    Number.isNaN(Date.parse(input.createdAt)) ||
+    !input.safePayload ||
+    typeof input.safePayload !== 'object' ||
+    Array.isArray(input.safePayload)
+  )
+    invalid('AI 事件格式无效。');
+  const allowed = new Set([
+    'phase',
+    'status',
+    'attemptId',
+    'usageId',
+    'code',
+    'deliveryUncertain',
+    'stage',
+    'priceVersion',
+    'inputUpperBoundBytes',
+    'maxOutputTokens',
+    'sourceCount',
+    'reservedMicrounits',
+    'responseId',
+    'finishReason',
+    'inputTokens',
+    'outputTokens',
+    'usageUnknown',
+    'actualMicrounits',
+    'budgetDisposition',
+    'httpStatus'
+  ]);
+  if (
+    Object.keys(input.safePayload).some(key => !allowed.has(key)) ||
+    Buffer.byteLength(JSON.stringify(input.safePayload)) > 2048 ||
+    Object.values(input.safePayload).some(value => !['string', 'number', 'boolean'].includes(typeof value))
+  ) {
     invalid('AI 事件只能保存安全摘要。');
   }
   for (const [key, value] of Object.entries(input.safePayload)) {

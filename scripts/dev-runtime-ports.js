@@ -37,6 +37,7 @@ export function clearRuntimePort(filePath, service) {
   return nextState;
 }
 
+/** @param {{envApiPort?: string | number, runtimePorts?: {api?: string | number}, webPort?: number, fallbackPort?: number}} options */
 export function resolveApiPort({ envApiPort, runtimePorts = {}, webPort, fallbackPort = 3001 }) {
   const envPort = normalizePort(envApiPort);
   if (envPort) {

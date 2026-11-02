@@ -8,7 +8,9 @@ import {
 
 export const KNOWLEDGE_EXTRACTION_PROMPT_VERSION = 'knowledge-extraction-v1';
 const MAX_MESSAGE_CHARACTERS = 120_000;
-const fail = (code, message) => { throw createAppError(code, message, 422); };
+const fail = (code, message) => {
+  throw createAppError(code, message, 422);
+};
 /** 线上 v1 提示词；导出仅供离线 A/B 实验脚本复用原文，不改变线上行为。 */
 export const KNOWLEDGE_EXTRACTION_SYSTEM_PROMPT = [
   '你负责从所选资料提炼待审核的知识候选，只返回完整 JSON 对象，不使用 Markdown 代码围栏。',
@@ -26,6 +28,7 @@ export const KNOWLEDGE_EXTRACTION_SYSTEM_PROMPT = [
  * 此处只适配协议，不读取凭据、不调用模型，也不创建任务或业务资产。
  * 未来 Worker 仍须负责 grant/manifest、核价、预算、取消和来源入库复核。
  */
+/** @param {import('./boundary-types.ts').ExtractionGatewayOptions} [options] */
 export function prepareKnowledgeExtractionGateway({ scope, noteVersions, idempotencyKey, maxTokens = 8_192 } = {}) {
   const extractionRequest = prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey });
   // 仅发送提炼必需的来源定位和所选原文；权限及版本映射保留在服务端原始请求。
@@ -39,13 +42,19 @@ export function prepareKnowledgeExtractionGateway({ scope, noteVersions, idempot
     fail('KNOWLEDGE_EXTRACTION_GATEWAY_INPUT_TOO_LARGE', '提炼范围封装后超过模型消息限制，请缩小范围。');
   }
   const gatewayRequest = normalizeAiRequest({
-    messages: [{ role: 'system', content: KNOWLEDGE_EXTRACTION_SYSTEM_PROMPT }, { role: 'user', content }],
-    maxTokens, format: 'json', tools: []
+    messages: [
+      { role: 'system', content: KNOWLEDGE_EXTRACTION_SYSTEM_PROMPT },
+      { role: 'user', content }
+    ],
+    maxTokens,
+    format: 'json',
+    tools: []
   });
   return { promptVersion: KNOWLEDGE_EXTRACTION_PROMPT_VERSION, extractionRequest, gatewayRequest };
 }
 
 /** 只接受 Gateway 的完整无工具响应；绑定服务端原请求，整批生成候选计划而不执行确认。 */
+/** @param {import('./boundary-types.ts').ExtractionGatewayResultOptions} [options] */
 export function validateKnowledgeExtractionGatewayResult({ extractionRequest, result } = {}) {
   if (result?.refused === true) {
     fail('KNOWLEDGE_EXTRACTION_REFUSED', '模型拒绝提炼，未采纳任何候选。');
@@ -53,8 +62,15 @@ export function validateKnowledgeExtractionGatewayResult({ extractionRequest, re
   if (result?.truncated === true || result?.finishReason === 'length') {
     fail('KNOWLEDGE_EXTRACTION_TRUNCATED', '模型提炼结果被截断，请缩小范围后重试。');
   }
-  if (!result || result.finishReason !== 'stop' || result.refused !== false || result.truncated !== false
-    || !Array.isArray(result.toolCalls) || result.toolCalls.length !== 0 || typeof result.content !== 'string') {
+  if (
+    !result ||
+    result.finishReason !== 'stop' ||
+    result.refused !== false ||
+    result.truncated !== false ||
+    !Array.isArray(result.toolCalls) ||
+    result.toolCalls.length !== 0 ||
+    typeof result.content !== 'string'
+  ) {
     fail('KNOWLEDGE_EXTRACTION_RESPONSE_INCOMPLETE', '模型未返回完整的无工具提炼结果。');
   }
   // 使用原始响应文本执行字节限制和完整 JSON 校验；不信任模型回传的来源或状态。

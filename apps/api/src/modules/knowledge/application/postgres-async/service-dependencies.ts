@@ -1,0 +1,198 @@
+import type { Note } from '../../domain/note.ts';
+import type { NoteVersion } from '../../domain/note-version.ts';
+export interface PostgresRepositories {
+  tagRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/tag-repository.js').createPostgresTagRepository
+  >;
+  folderRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/folder-repository.js').createPostgresFolderRepository
+  >;
+  knowledgeArtifactProvenanceRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/knowledge-artifact-provenance-repository.js').createPostgresKnowledgeArtifactProvenanceRepository
+  >;
+  questionObjectiveRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/question-objective-repository.js').createPostgresQuestionObjectiveRepository
+  >;
+  tagGroupRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/tag-group-repository.js').createPostgresTagGroupRepository
+  >;
+  attachmentRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/attachment-repository.js').createPostgresAttachmentRepository
+  >;
+  examFocusRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/exam-focus-repository.js').createPostgresExamFocusRepository
+  >;
+  noteVersionRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/note-version-repository.js').createPostgresNoteVersionRepository
+  >;
+  questionSourceRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/question-source-repository.js').createPostgresQuestionSourceRepository
+  >;
+  contentAnnotationRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/content-annotation-repository.js').createPostgresContentAnnotationRepository
+  >;
+  annotationExclusionRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/annotation-support-repositories.js').createPostgresAnnotationExclusionRepository
+  >;
+  annotationRevisionRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/annotation-support-repositories.js').createPostgresAnnotationRevisionRepository
+  >;
+  analysisScopeRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/annotation-support-repositories.js').createPostgresAnalysisScopeRepository
+  >;
+  knowledgeEvidenceRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/knowledge-evidence-repository.js').createPostgresKnowledgeEvidenceRepository
+  >;
+  examProfileRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/exam-profile-repository.js').createPostgresExamProfileRepository
+  >;
+  knowledgeItemRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/knowledge-item-repository.js').createPostgresKnowledgeItemRepository
+  >;
+  noteRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/note-repository.js').createPostgresNoteRepository
+  >;
+  learningObjectiveRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/learning-objective-repository.js').createPostgresLearningObjectiveRepository
+  >;
+  knowledgeSpaceRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/knowledge-space-repository.js').createPostgresKnowledgeSpaceRepository
+  >;
+  questionRepository: ReturnType<
+    typeof import('../../infrastructure/postgres/question-repository.js').createPostgresQuestionRepository
+  >;
+}
+type AwaitablePort<Port> = {
+  [Key in keyof Port]: Port[Key] extends (...args: infer Args) => infer Result
+    ? (...args: Args) => Result | Awaited<Result>
+    : Port[Key];
+};
+type KnowledgeItemPort = AwaitablePort<Pick<PostgresRepositories['knowledgeItemRepository'], 'findById' | 'save'>> &
+  Partial<AwaitablePort<Pick<PostgresRepositories['knowledgeItemRepository'], 'create'>>> & {
+    list(options?: {
+      reviewStatus?: import('../../domain/knowledge-item.ts').KnowledgeItem['reviewStatus'] | '';
+      query?: string;
+      includeArchived?: boolean | string;
+      includeDeleted?: boolean | string;
+    }):
+      | ReturnType<PostgresRepositories['knowledgeItemRepository']['list']>
+      | Awaited<ReturnType<PostgresRepositories['knowledgeItemRepository']['list']>>;
+  };
+type EvidencePort = AwaitablePort<Omit<PostgresRepositories['knowledgeEvidenceRepository'], 'supportsAsync'>>;
+type AnnotationRecord = import('../../domain/content-annotation.ts').ContentAnnotation;
+interface AnnotationReconciliation {
+  annotations: AnnotationRecord[];
+  contentChangedAnnotationIds: string[];
+}
+interface NoteTransactionContext extends Partial<PostgresRepositories> {
+  itemRepository?: PostgresRepositories['knowledgeItemRepository'];
+  evidenceRepository?: EvidencePort;
+  annotationRepository?: PostgresRepositories['contentAnnotationRepository'] | null;
+  noteVersionService?: ReturnType<typeof import('../note-version-service.js').createAsyncNoteVersionService>;
+  onNoteContentChanged?: (
+    note: Note,
+    version: NoteVersion,
+    change: ReturnType<typeof import('../annotation-change-context.js').prepareAnnotationChange>
+  ) => void | Promise<void | AnnotationReconciliation>;
+  onNoteIdentityChanged?: (
+    note: import('../../domain/note.ts').Note,
+    change: ReturnType<typeof import('../annotation-change-context.js').prepareAnnotationChange>
+  ) => void | AnnotationRecord[] | Promise<void | AnnotationRecord[]>;
+  onNoteDeleted?: (
+    id: string
+  ) => void | Promise<void | import('../../domain/knowledge-evidence.ts').KnowledgeEvidence[]>;
+  onBeforePermanentDelete?: (id: string) => void | Promise<void>;
+}
+interface TransactionDependencies {
+  getTombstone?: (
+    collection: string,
+    id: string
+  ) => { previousUpdatedAt?: string } | null | PromiseLike<{ previousUpdatedAt?: string } | null>;
+  runTransaction?: <T>(operation: (repositories?: NoteTransactionContext) => T | Promise<T>) => T | Promise<T>;
+}
+export interface KnowledgeItemDependencies extends TransactionDependencies {
+  repository?: KnowledgeItemPort;
+  evidenceRepository?: EvidencePort;
+  noteRepository?: PostgresRepositories['noteRepository'];
+  noteVersionRepository?: PostgresRepositories['noteVersionRepository'];
+  annotationRepository?: PostgresRepositories['contentAnnotationRepository'] | null;
+  onItemInvalidated?: (id: string) => void | Promise<void>;
+}
+export interface LearningObjectiveDependencies extends TransactionDependencies {
+  repository?: PostgresRepositories['learningObjectiveRepository'];
+  knowledgeItemRepository?: Pick<PostgresRepositories['knowledgeItemRepository'], 'findById'> &
+    Partial<Pick<PostgresRepositories['knowledgeItemRepository'], 'lockById'>>;
+  onObjectiveInvalidated?: (id: string) => void | Promise<void | {
+    sources: import('../../domain/question-source.ts').QuestionSource[];
+    questions: import('../../domain/question.ts').Question[];
+  }>;
+}
+export interface AssessmentContextDependencies extends TransactionDependencies {
+  examProfileRepository?: PostgresRepositories['examProfileRepository'];
+  examFocusRepository?: PostgresRepositories['examFocusRepository'];
+  learningObjectiveRepository?: PostgresRepositories['learningObjectiveRepository'];
+}
+export interface QuestionDependencies extends TransactionDependencies {
+  repository?: PostgresRepositories['questionRepository'];
+  questionObjectiveRepository?: PostgresRepositories['questionObjectiveRepository'];
+  questionSourceRepository?: PostgresRepositories['questionSourceRepository'];
+  learningObjectiveRepository?: PostgresRepositories['learningObjectiveRepository'];
+  examFocusRepository?: PostgresRepositories['examFocusRepository'];
+  knowledgeItemRepository?: PostgresRepositories['knowledgeItemRepository'];
+  noteRepository?: PostgresRepositories['noteRepository'];
+  noteVersionRepository?: PostgresRepositories['noteVersionRepository'];
+  knowledgeEvidenceRepository?: PostgresRepositories['knowledgeEvidenceRepository'];
+}
+export interface ContentAnnotationDependencies {
+  repository?: PostgresRepositories['contentAnnotationRepository'];
+  noteRepository?: PostgresRepositories['noteRepository'];
+  noteVersionRepository?: PostgresRepositories['noteVersionRepository'];
+  revisionRepository?: PostgresRepositories['annotationRevisionRepository'];
+  exclusionRepository?: PostgresRepositories['annotationExclusionRepository'];
+  onSourceChanged?: (
+    annotation: import('../../domain/content-annotation.ts').ContentAnnotation
+  ) => void | Promise<void>;
+}
+export interface SpaceDependencies extends TransactionDependencies {
+  repository?: PostgresRepositories['knowledgeSpaceRepository'];
+  tagGroupRepository?: PostgresRepositories['tagGroupRepository'];
+}
+export interface SiblingNameInput {
+  spaceId: string;
+  parentId?: string | null;
+  folderId?: string | null;
+  title?: string;
+  name?: string;
+  currentFolderId?: string | null;
+  currentNoteId?: string | null;
+}
+export interface FolderDependencies {
+  repository?: PostgresRepositories['folderRepository'];
+  validateSiblingNameConflict?: (input: SiblingNameInput) => void | Promise<void>;
+  validateSpaceReference?: (id: string) => void | Promise<void>;
+}
+export interface TagDependencies {
+  repository?: PostgresRepositories['tagRepository'];
+  validateSpaceReference?: (id: string) => void | Promise<void>;
+  validateGroupReference?: (groupId: string, spaceId: string) => void | Promise<void>;
+}
+export interface NoteDependencies extends TransactionDependencies {
+  repository?: PostgresRepositories['noteRepository'];
+  annotationRepository?: PostgresRepositories['contentAnnotationRepository'] | null;
+  validateSiblingNameConflict?: (input: SiblingNameInput) => void | Promise<void>;
+  validateNoteReferences?: import('./navigation-reference-policy.ts').AsyncNavigationReferencePolicy['assertNoteReferences'];
+  normalizeTagIds?: import('./navigation-reference-policy.ts').AsyncNavigationReferencePolicy['normalizeTagIds'];
+  noteVersionService?: NoteTransactionContext['noteVersionService'];
+  onNoteContentChanged?: NoteTransactionContext['onNoteContentChanged'];
+  onNoteIdentityChanged?: NoteTransactionContext['onNoteIdentityChanged'];
+  onNoteDeleted?: NoteTransactionContext['onNoteDeleted'];
+  onBeforePermanentDelete?: NoteTransactionContext['onBeforePermanentDelete'];
+}
+export interface PostgresModuleDependencies extends Partial<PostgresRepositories> {
+  client?: import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost;
+  getPurgeTombstone?: TransactionDependencies['getTombstone'];
+  readPurgeTaskState?: ReturnType<
+    typeof import('../../../../infrastructure/asset-purge-task-state.js').createPostgresPurgeTaskReader
+  >;
+  getPurgeDatasetEpoch?: () => string | Promise<string>;
+}

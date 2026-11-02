@@ -228,10 +228,21 @@ export function adoptIdentityIds(
   identity: unknown,
   editorBlocks: IdentityEditorBlock[]
 ): Map<number, string> | null;
+export interface IdentitySourceAnnotation {
+  id?: string;
+  scopeType?: string;
+  anchorStatus?: string;
+  anchorReason?: string | null;
+  lifecycleStatus?: string;
+  anchor?: Partial<Pick<ContentAnchor, 'sourceStart' | 'sourceEnd' | 'quoteText'>> | null;
+  fromPosition?: number;
+  toPosition?: number;
+  quoteText?: string;
+}
 export function compareIdentityShadow(input: {
   markdown: string;
   editorState: unknown;
-  annotations: Array<Record<string, any>>;
+  annotations: IdentitySourceAnnotation[];
 }): IdentityShadowResult;
 export interface AnnotationStructure {
   formatVersion: 1;
@@ -305,18 +316,35 @@ export type IdentityBinding = { formatVersion: 2; contentHash: string } & (
   | { scopeType: 'blocks'; startBlockId: string; endBlockId: string }
   | { scopeType: 'section' | 'list'; rootBlockId: string }
 );
+export interface IdentityBindingCache {
+  markdown?: string;
+  identitySignature?: string;
+  context?: {
+    blocks: ReturnType<typeof parseIdentityBlocks>;
+    models: IdentityBlockModel[];
+    ids: string[];
+    contentHash: string;
+  } | null;
+}
 export const IDENTITY_BINDING_FORMAT: 2;
 export function bindingFromAnchor(
   markdown: string,
   identity: unknown,
-  annotation: Record<string, any>
+  annotation: IdentitySourceAnnotation,
+  cache?: IdentityBindingCache | null
 ): IdentityBinding | null;
 export function bindingFromEditor(
   markdown: string,
   identity: unknown,
-  reported: IdentityEditorAnnotation
+  reported: IdentityEditorAnnotation,
+  cache?: IdentityBindingCache | null
 ): IdentityBinding | null;
-export function validBinding(markdown: string, identity: unknown, binding: unknown): binding is IdentityBinding;
+export function validBinding(
+  markdown: string,
+  identity: unknown,
+  binding: unknown,
+  cache?: IdentityBindingCache | null
+): binding is IdentityBinding;
 export function bindingSourceRange(
   markdown: string,
   identity: unknown,

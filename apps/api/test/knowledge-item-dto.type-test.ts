@@ -302,31 +302,28 @@ export type ExistingJavascriptBoundaryLimitations = [
   Assert<Equal<IsAny<typeof _legacyEvidenceRepository>, true>>,
   Assert<Equal<IsAny<typeof _app.modules.knowledge.repositories.knowledgeItemRepository>, true>>,
   Assert<Equal<IsAny<typeof _app.modules.knowledge.repositories.knowledgeEvidenceRepository>, true>>,
-  Assert<Equal<IsAny<ReturnType<ReturnType<typeof createKnowledgeItemService>['createCandidate']>>, true>>,
-  Assert<Equal<IsAny<ReturnType<ReturnType<typeof createKnowledgeItemService>['updateItem']>>, true>>,
+  Assert<Equal<IsAny<ReturnType<ReturnType<typeof createKnowledgeItemService>['createCandidate']>>, false>>,
+  Assert<Equal<IsAny<ReturnType<ReturnType<typeof createKnowledgeItemService>['updateItem']>>, false>>,
   Assert<Equal<IsAny<ReturnType<ReturnType<typeof createKnowledgeItemService>['createEvidence']>>, true>>,
   Assert<
-    Equal<IsAny<Awaited<ReturnType<ReturnType<typeof createAsyncKnowledgeItemService>['createCandidate']>>>, true>
+    Equal<IsAny<Awaited<ReturnType<ReturnType<typeof createAsyncKnowledgeItemService>['createCandidate']>>>, false>
   >,
   Assert<Equal<IsAny<Awaited<ReturnType<ReturnType<typeof createAsyncKnowledgeItemService>['updateItem']>>>, true>>,
   Assert<Equal<IsAny<Awaited<ReturnType<ReturnType<typeof createAsyncKnowledgeItemService>['createEvidence']>>>, true>>,
   Assert<Equal<IsAny<ReturnType<typeof normalizeKnowledgeChange>>, true>>,
   Assert<
-    Equal<
-      'repository' extends keyof NonNullable<Parameters<typeof createKnowledgeItemService>[0]> ? true : false,
-      false
-    >
+    Equal<'repository' extends keyof NonNullable<Parameters<typeof createKnowledgeItemService>[0]> ? true : false, true>
   >,
   Assert<
     Equal<
       'evidenceRepository' extends keyof NonNullable<Parameters<typeof createKnowledgeItemService>[0]> ? true : false,
-      false
+      true
     >
   >,
   Assert<
     Equal<
       'repository' extends keyof NonNullable<Parameters<typeof createAsyncKnowledgeItemService>[0]> ? true : false,
-      false
+      true
     >
   >,
   Assert<
@@ -334,7 +331,7 @@ export type ExistingJavascriptBoundaryLimitations = [
       'evidenceRepository' extends keyof NonNullable<Parameters<typeof createAsyncKnowledgeItemService>[0]>
         ? true
         : false,
-      false
+      true
     >
   >,
   Assert<Equal<typeof _defaultFromLegacyItems, KnowledgeItemRepository>>,

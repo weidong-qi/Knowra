@@ -119,16 +119,16 @@ assertLearningObjectiveConfirmable(_default, { deletedAt: null, reviewStatus: 'c
 // 实际 PG 与服务仍是 JS；以下仅验证接线兼容，不声称其未迁移返回值已经静态安全。
 declare const pg: ReturnType<typeof createPostgresLearningObjectiveRepository>;
 pg.create(_unknown);
-pg.save(_unknown);
-pg.save(_updated);
+pg.save(_default);
+pg.save(new LearningObjective({ id: 'o', knowledgeItemId: 'k', objective: 'Updated objective' }));
 const _transaction = <Value>(operation: () => Value): Value => operation();
 const _localPorts = {
-  repository: _local,
-  knowledgeItemRepository: { findById: (_id: unknown) => ({ id: 'k', reviewStatus: 'confirmed' }) }
+  repository: createInMemoryLearningObjectiveRepository<LearningObjective>(),
+  knowledgeItemRepository: { findById: (_id: unknown) => ({ id: 'k', reviewStatus: 'confirmed' as const }) }
 };
 const _pgPorts = {
   repository: pg,
-  knowledgeItemRepository: { findById: async (_id: unknown) => ({ id: 'k', reviewStatus: 'confirmed' }) }
+  knowledgeItemRepository: { findById: async (_id: unknown) => ({ id: 'k', reviewStatus: 'confirmed' as const }) }
 };
 createLearningObjectiveService({ ..._localPorts, runTransaction: _transaction }).createCandidate(input);
 createAsyncLearningObjectiveService({ ..._pgPorts, runTransaction: _transaction }).createCandidate(input);

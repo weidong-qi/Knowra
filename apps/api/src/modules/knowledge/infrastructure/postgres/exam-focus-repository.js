@@ -19,7 +19,15 @@ export function createPostgresExamFocusRepository({ db }) {
       updatedAt: toDate(focus.updatedAt)
     };
   }
-  function whereFor({ examProfileId, learningObjectiveId, reviewStatus, includeArchived = false, includeDeleted = false } = {}) {
+  /** @param {{ examProfileId?: string, learningObjectiveId?: string, reviewStatus?: string, includeArchived?: boolean, includeDeleted?: boolean }} options */
+  function whereFor({
+    examProfileId,
+    learningObjectiveId,
+    reviewStatus,
+    includeArchived = false,
+    includeDeleted = false
+  } = {}) {
+    /** @type {import("@prisma/client").Prisma.ExamFocusWhereInput} */
     const where = {
       ...(examProfileId ? { examProfileId } : {}),
       ...(learningObjectiveId ? { learningObjectiveId } : {})
@@ -31,20 +39,49 @@ export function createPostgresExamFocusRepository({ db }) {
   }
   return {
     async create(focus) {
-      return withRepositoryErrors(() => db.examFocus.create({
-        data: toData(focus)
-      }).then(mapExamFocus));
+      return withRepositoryErrors(() =>
+        db.examFocus
+          .create({
+            data: toData(focus)
+          })
+          .then(mapExamFocus)
+      );
     },
     async save(focus) {
       const data = toData(focus);
-      return withRepositoryErrors(() => db.examFocus.upsert({ where: { id: data.id }, create: data, update: (() => { const { id: _id, createdAt: _createdAt, ...rest } = data; return rest; })() }).then(mapExamFocus));
+      return withRepositoryErrors(() =>
+        db.examFocus
+          .upsert({
+            where: { id: data.id },
+            create: data,
+            update: (() => {
+              const { id: _id, createdAt: _createdAt, ...rest } = data;
+              return rest;
+            })()
+          })
+          .then(mapExamFocus)
+      );
     },
-    async findById(id) { return withRepositoryErrors(() => db.examFocus.findUnique({ where: { id } }).then(mapExamFocus)); },
+    async findById(id) {
+      return withRepositoryErrors(() => db.examFocus.findUnique({ where: { id } }).then(mapExamFocus));
+    },
     async findByProfileAndObjective(examProfileId, learningObjectiveId) {
-      return withRepositoryErrors(() => db.examFocus.findUnique({ where: { examProfileId_learningObjectiveId: { examProfileId, learningObjectiveId } } }).then(mapExamFocus));
+      return withRepositoryErrors(() =>
+        db.examFocus
+          .findUnique({ where: { examProfileId_learningObjectiveId: { examProfileId, learningObjectiveId } } })
+          .then(mapExamFocus)
+      );
     },
-    list(options = {}) { return withRepositoryErrors(() => db.examFocus.findMany({ where: whereFor(options), orderBy: [{ priority: 'asc' }, { updatedAt: 'desc' }] }).then((rows) => rows.map(mapExamFocus))); },
-    async delete(id) { return withRepositoryErrors(() => db.examFocus.delete({ where: { id } }).then(mapExamFocus)); },
+    list(options = {}) {
+      return withRepositoryErrors(() =>
+        db.examFocus
+          .findMany({ where: whereFor(options), orderBy: [{ priority: 'asc' }, { updatedAt: 'desc' }] })
+          .then(rows => rows.map(mapExamFocus))
+      );
+    },
+    async delete(id) {
+      return withRepositoryErrors(() => db.examFocus.delete({ where: { id } }).then(mapExamFocus));
+    },
     supportsAsync: true
   };
 }

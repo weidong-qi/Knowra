@@ -12,7 +12,23 @@ export function createSearchService({ listNotes, findKnowledgeSpace }) {
       const notes = service.searchNotes({ ...scoped, includeDeleted: false, deletedOnly: false });
       return commandSearchResults(notes, scoped);
     },
-    searchNotes({ query, spaceId, folderId = null, tagId = null, tagIds = [], tagMatch, match, sortBy, order, limit, offset, includeDeleted, deletedOnly, favoriteOnly }) {
+    /** @param {import('../infrastructure/note-repository.ts').NoteListOptions & { query?: string }} options */
+    searchNotes({
+      query,
+      spaceId,
+      folderId = null,
+      tagId = null,
+      tagIds = [],
+      tagMatch,
+      match,
+      sortBy,
+      order,
+      limit,
+      offset,
+      includeDeleted,
+      deletedOnly,
+      favoriteOnly
+    }) {
       const normalizedQuery = normalizeQuery(query);
 
       if (!normalizedQuery) {
@@ -30,11 +46,10 @@ export function createSearchService({ listNotes, findKnowledgeSpace }) {
         includeDeleted,
         deletedOnly,
         favoriteOnly
-      })
-        .filter((note) => {
-          const haystack = `${note.title} ${note.plainText}`.toLowerCase();
-          return haystack.includes(normalizedQuery);
-        });
+      }).filter(note => {
+        const haystack = `${note.title} ${note.plainText}`.toLowerCase();
+        return haystack.includes(normalizedQuery);
+      });
 
       const start = offset ? Number(offset) : 0;
 

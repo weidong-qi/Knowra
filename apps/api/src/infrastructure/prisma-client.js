@@ -10,7 +10,7 @@ export function createPrismaRuntime(options = {}) {
 async function createRuntimeFromGeneratedClient({
   databaseUrl = process.env.DATABASE_URL,
   clientFactory = null,
-  log = ['error']
+  log = /** @type {import('@prisma/client').Prisma.LogLevel[]} */ (['error'])
 } = {}) {
   if (!String(databaseUrl ?? '').trim()) {
     throw createAppError(
@@ -47,12 +47,7 @@ function buildRuntime(prisma) {
         connected = true;
         return prisma;
       } catch (error) {
-        throw createAppError(
-          'DATABASE_CONNECT_FAILED',
-          'Failed to connect to PostgreSQL',
-          503,
-          { cause: error }
-        );
+        throw createAppError('DATABASE_CONNECT_FAILED', 'Failed to connect to PostgreSQL', 503, { cause: error });
       }
     },
     async disconnect() {

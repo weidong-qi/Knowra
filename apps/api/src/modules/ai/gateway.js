@@ -1,6 +1,15 @@
 const TOOL_NAMES = new Set([
-  'notes_search', 'notes_read', 'folders_list', 'tags_list', 'web_search',
-  'notes_create', 'notes_append', 'notes_propose_patch', 'notes_propose_organize', 'annotations_list', 'knowledge_propose',
+  'notes_search',
+  'notes_read',
+  'folders_list',
+  'tags_list',
+  'web_search',
+  'notes_create',
+  'notes_append',
+  'notes_propose_patch',
+  'notes_propose_organize',
+  'annotations_list',
+  'knowledge_propose',
   'notes_list'
 ]);
 
@@ -15,6 +24,7 @@ export class AiGatewayError extends Error {
 }
 
 /** 仅供受信 worker 调用；预算服务未注入前真实供应商调用默认关闭。 */
+/** @param {import('./boundary-types.ts').GatewayOptions} options */
 export function createAiGateway({ adapter, resolveCredential, authorizePaidCall = async () => false }) {
   if (!adapter || typeof adapter.complete !== 'function' || typeof adapter.stream !== 'function') {
     throw new TypeError('AI adapter is required');
@@ -49,11 +59,16 @@ export function createAiGateway({ adapter, resolveCredential, authorizePaidCall 
     if (!request?.credentialRef || typeof resolveCredential !== 'function') {
       throw new AiGatewayError('AI_CREDENTIAL_UNAVAILABLE', '模型凭据不可用。');
     }
-    if (await authorizePaidCall(request) !== true) {
+    if ((await authorizePaidCall(request)) !== true) {
       throw new AiGatewayError('AI_BUDGET_NOT_AUTHORIZED', '模型费用尚未预留，不能调用供应商。');
     }
     const credential = await resolveCredential(request.credentialRef);
-    if (!credential || typeof credential.apiKey !== 'string' || !credential.apiKey || !/^[a-zA-Z0-9._-]{1,80}$/.test(credential.modelId)) {
+    if (
+      !credential ||
+      typeof credential.apiKey !== 'string' ||
+      !credential.apiKey ||
+      !/^[a-zA-Z0-9._-]{1,80}$/.test(credential.modelId)
+    ) {
       throw new AiGatewayError('AI_CREDENTIAL_UNAVAILABLE', '模型凭据不可用。');
     }
     if (request.modelId && request.modelId !== credential.modelId) {
@@ -68,8 +83,12 @@ export function normalizeAiRequest(value) {
     throw new AiGatewayError('AI_REQUEST_INVALID', '模型消息无效。');
   }
   const messages = value.messages.map(message => {
-    if (!message || !['system', 'user', 'assistant', 'tool'].includes(message.role)
-      || typeof message.content !== 'string' || message.content.length > 120000) {
+    if (
+      !message ||
+      !['system', 'user', 'assistant', 'tool'].includes(message.role) ||
+      typeof message.content !== 'string' ||
+      message.content.length > 120000
+    ) {
       throw new AiGatewayError('AI_REQUEST_INVALID', '模型消息无效。');
     }
     if (message.role === 'tool' && (typeof message.tool_call_id !== 'string' || !message.tool_call_id)) {
@@ -80,21 +99,39 @@ export function normalizeAiRequest(value) {
       : { role: message.role, content: message.content };
   });
   const maxTokens = value.maxTokens ?? 512;
-  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 20000) throw new AiGatewayError('AI_REQUEST_INVALID', '输出 token 上限无效。');
+  if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 20000)
+    throw new AiGatewayError('AI_REQUEST_INVALID', '输出 token 上限无效。');
   const format = value.format ?? 'text';
   if (!['text', 'json'].includes(format)) throw new AiGatewayError('AI_REQUEST_INVALID', '输出格式无效。');
   if (format === 'json' && !messages.some(message => /json/i.test(message.content))) {
     throw new AiGatewayError('AI_REQUEST_INVALID', 'JSON 输出请求需在提示词中明确指定 JSON。');
   }
   const tools = value.tools ?? [];
-  if (!Array.isArray(tools) || tools.length > 12 || tools.some(tool =>
-    !tool || !TOOL_NAMES.has(tool.name) || !tool.parameters || typeof tool.parameters !== 'object' || Array.isArray(tool.parameters))) {
+  if (
+    !Array.isArray(tools) ||
+    tools.length > 12 ||
+    tools.some(
+      tool =>
+        !tool ||
+        !TOOL_NAMES.has(tool.name) ||
+        !tool.parameters ||
+        typeof tool.parameters !== 'object' ||
+        Array.isArray(tool.parameters)
+    )
+  ) {
     throw new AiGatewayError('AI_REQUEST_INVALID', '模型工具定义无效。');
   }
-  if (new Set(tools.map(tool => tool.name)).size !== tools.length) throw new AiGatewayError('AI_REQUEST_INVALID', '模型工具名称重复。');
+  if (new Set(tools.map(tool => tool.name)).size !== tools.length)
+    throw new AiGatewayError('AI_REQUEST_INVALID', '模型工具名称重复。');
   return {
-    messages, maxTokens, format,
-    tools: tools.map(tool => ({ name: tool.name, description: String(tool.description ?? '').slice(0, 500), parameters: tool.parameters })),
+    messages,
+    maxTokens,
+    format,
+    tools: tools.map(tool => ({
+      name: tool.name,
+      description: String(tool.description ?? '').slice(0, 500),
+      parameters: tool.parameters
+    })),
     signal: value.signal
   };
 }
@@ -105,48 +142,91 @@ function normalize(raw, request, provider) {
     throw new AiGatewayError('AI_RESPONSE_INVALID', '模型响应结构无效。');
   }
   const finishReason = choice.finish_reason;
-  if (!['stop', 'length', 'content_filter', 'tool_calls', 'insufficient_system_resource', 'aborted'].includes(finishReason)) {
+  if (
+    !['stop', 'length', 'content_filter', 'tool_calls', 'insufficient_system_resource', 'aborted'].includes(
+      finishReason
+    )
+  ) {
     throw new AiGatewayError('AI_RESPONSE_INVALID', '模型结束状态无效。');
   }
   const content = choice.message.content;
-  if (content !== null && typeof content !== 'string') throw new AiGatewayError('AI_RESPONSE_INVALID', '模型文本无效。');
+  if (content !== null && typeof content !== 'string')
+    throw new AiGatewayError('AI_RESPONSE_INVALID', '模型文本无效。');
   const toolCalls = (choice.message.tool_calls ?? []).map(call => {
-    if (call?.type !== 'function' || !TOOL_NAMES.has(call.function?.name) || !request.tools.some(tool => tool.name === call.function.name)) {
+    if (
+      call?.type !== 'function' ||
+      !TOOL_NAMES.has(call.function?.name) ||
+      !request.tools.some(tool => tool.name === call.function.name)
+    ) {
       throw new AiGatewayError('AI_TOOL_INVALID', '模型请求了未授权工具。');
     }
     let args;
-    try { args = JSON.parse(call.function.arguments); } catch { throw new AiGatewayError('AI_TOOL_ARGUMENTS_INVALID', '模型工具参数不是有效 JSON。'); }
-    if (!args || typeof args !== 'object' || Array.isArray(args)) throw new AiGatewayError('AI_TOOL_ARGUMENTS_INVALID', '模型工具参数无效。');
+    try {
+      args = JSON.parse(call.function.arguments);
+    } catch {
+      throw new AiGatewayError('AI_TOOL_ARGUMENTS_INVALID', '模型工具参数不是有效 JSON。');
+    }
+    if (!args || typeof args !== 'object' || Array.isArray(args))
+      throw new AiGatewayError('AI_TOOL_ARGUMENTS_INVALID', '模型工具参数无效。');
     return { id: call.id, name: call.function.name, arguments: args };
   });
   const truncated = finishReason === 'length';
-  const refused = finishReason === 'content_filter' || typeof choice.message.refusal === 'string' && Boolean(choice.message.refusal);
+  const refused =
+    finishReason === 'content_filter' ||
+    (typeof choice.message.refusal === 'string' && Boolean(choice.message.refusal));
   let json = null;
   if (request.format === 'json' && !truncated && !refused && finishReason === 'stop') {
-    try { json = parseJsonContent(content); } catch {
+    try {
+      json = parseJsonContent(content);
+    } catch {
       // 带工具的请求没有强制 JSON 模式；模型直接用自然语言作答时，按无引用的回答处理，而不是让整轮失败。
-      if (!request.tools.length || typeof content !== 'string' || !content.trim()) throw new AiGatewayError('AI_JSON_INVALID', '模型未返回有效 JSON。');
+      if (!request.tools.length || typeof content !== 'string' || !content.trim())
+        throw new AiGatewayError('AI_JSON_INVALID', '模型未返回有效 JSON。');
       json = { answer: content.trim(), citations: [] };
     }
-    if (!json || typeof json !== 'object' || Array.isArray(json)) throw new AiGatewayError('AI_JSON_INVALID', '模型 JSON 结果无效。');
+    if (!json || typeof json !== 'object' || Array.isArray(json))
+      throw new AiGatewayError('AI_JSON_INVALID', '模型 JSON 结果无效。');
   }
-  const usage = raw.usage && Number.isSafeInteger(raw.usage.prompt_tokens) && raw.usage.prompt_tokens >= 0
-    && Number.isSafeInteger(raw.usage.completion_tokens) && raw.usage.completion_tokens >= 0
-    ? { inputTokens: raw.usage.prompt_tokens, outputTokens: raw.usage.completion_tokens, unknown: false,
-      // DeepSeek 额外返回的缓存命中数，仅用于用量展示；缺失或越界时记为未知，不影响计费口径。
-      cacheHitTokens: Number.isSafeInteger(raw.usage.prompt_cache_hit_tokens) && raw.usage.prompt_cache_hit_tokens >= 0
-        && raw.usage.prompt_cache_hit_tokens <= raw.usage.prompt_tokens ? raw.usage.prompt_cache_hit_tokens : null }
-    : { inputTokens: null, outputTokens: null, unknown: true };
+  const usage =
+    raw.usage &&
+    Number.isSafeInteger(raw.usage.prompt_tokens) &&
+    raw.usage.prompt_tokens >= 0 &&
+    Number.isSafeInteger(raw.usage.completion_tokens) &&
+    raw.usage.completion_tokens >= 0
+      ? {
+          inputTokens: raw.usage.prompt_tokens,
+          outputTokens: raw.usage.completion_tokens,
+          unknown: false,
+          // DeepSeek 额外返回的缓存命中数，仅用于用量展示；缺失或越界时记为未知，不影响计费口径。
+          cacheHitTokens:
+            Number.isSafeInteger(raw.usage.prompt_cache_hit_tokens) &&
+            raw.usage.prompt_cache_hit_tokens >= 0 &&
+            raw.usage.prompt_cache_hit_tokens <= raw.usage.prompt_tokens
+              ? raw.usage.prompt_cache_hit_tokens
+              : null
+        }
+      : { inputTokens: null, outputTokens: null, unknown: true };
   return {
-    provider, modelId: raw.model ?? null, requestId: raw.id ?? null,
-    content: content ?? '', json, toolCalls, finishReason, truncated, refused, usage
+    provider,
+    modelId: raw.model ?? null,
+    requestId: raw.id ?? null,
+    content: content ?? '',
+    json,
+    toolCalls,
+    finishReason,
+    truncated,
+    refused,
+    usage
   };
 }
 
 /** JSON 模式偶尔带 ```json 围栏或前后说明文字；先严格解析，失败再截取最外层对象。 */
 function parseJsonContent(content) {
-  try { return JSON.parse(content); } catch (error) {
-    const start = content?.indexOf('{') ?? -1, end = content?.lastIndexOf('}') ?? -1;
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    const start = content?.indexOf('{') ?? -1,
+      end = content?.lastIndexOf('}') ?? -1;
     if (start < 0 || end <= start) throw error;
     return JSON.parse(content.slice(start, end + 1));
   }

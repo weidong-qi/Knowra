@@ -15,7 +15,9 @@ export function createPostgresNoteVersionRepository({ db }) {
         createdBy: version.createdBy
       };
       return withRepositoryErrors(async () => {
-        const existing = await db.noteVersion.findUnique({ where: { noteId_contentHash: { noteId: data.noteId, contentHash: data.contentHash } } });
+        const existing = await db.noteVersion.findUnique({
+          where: { noteId_contentHash: { noteId: data.noteId, contentHash: data.contentHash } }
+        });
         if (existing) return mapNoteVersion(existing);
         return mapNoteVersion(await db.noteVersion.create({ data }));
       });
@@ -24,34 +26,57 @@ export function createPostgresNoteVersionRepository({ db }) {
       return withRepositoryErrors(() => db.noteVersion.findUnique({ where: { id } }).then(mapNoteVersion));
     },
     async findByNoteIdAndContentHash(noteId, contentHash) {
-      return withRepositoryErrors(() => db.noteVersion.findUnique({ where: { noteId_contentHash: { noteId, contentHash } } }).then(mapNoteVersion));
+      return withRepositoryErrors(() =>
+        db.noteVersion.findUnique({ where: { noteId_contentHash: { noteId, contentHash } } }).then(mapNoteVersion)
+      );
     },
+    /** @param {{ noteId?: string }} options */
     list({ noteId } = {}) {
-      return withRepositoryErrors(() => db.noteVersion.findMany({
-        where: noteId ? { noteId } : {},
-        orderBy: { createdAt: 'desc' }
-      }).then((rows) => rows.map(mapNoteVersion)));
+      return withRepositoryErrors(() =>
+        db.noteVersion
+          .findMany({
+            where: noteId ? { noteId } : {},
+            orderBy: { createdAt: 'desc' }
+          })
+          .then(rows => rows.map(mapNoteVersion))
+      );
     },
     // 只取 ID：保存正文时只需要旧版本标识，不能把每个历史版本的全文都读出来。
+    /** @param {{ noteId?: string }} options */
     listIds({ noteId } = {}) {
-      return withRepositoryErrors(() => db.noteVersion.findMany({
-        where: noteId ? { noteId } : {},
-        select: { id: true }
-      }).then((rows) => rows.map((row) => row.id)));
+      return withRepositoryErrors(() =>
+        db.noteVersion
+          .findMany({
+            where: noteId ? { noteId } : {},
+            select: { id: true }
+          })
+          .then(rows => rows.map(row => row.id))
+      );
     },
     listPage({ noteId, limit, after, currentContentHash }) {
       return withRepositoryErrors(async () => {
         const [items, total, current] = await Promise.all([
           db.noteVersion.findMany({
-            where: { noteId, ...(after ? { OR: [
-              { createdAt: { lt: toDate(after.createdAt) } },
-              { createdAt: toDate(after.createdAt), id: { lt: after.id } }
-            ] } : {}) },
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: limit + 1,
+            where: {
+              noteId,
+              ...(after
+                ? {
+                    OR: [
+                      { createdAt: { lt: toDate(after.createdAt) } },
+                      { createdAt: toDate(after.createdAt), id: { lt: after.id } }
+                    ]
+                  }
+                : {})
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: limit + 1,
             select: { id: true, noteId: true, contentHash: true, createdAt: true, createdBy: true }
           }),
           db.noteVersion.count({ where: { noteId } }),
-          db.noteVersion.findUnique({ where: { noteId_contentHash: { noteId, contentHash: currentContentHash } }, select: { id: true } })
+          db.noteVersion.findUnique({
+            where: { noteId_contentHash: { noteId, contentHash: currentContentHash } },
+            select: { id: true }
+          })
         ]);
         return versionPage(items, { limit, total, currentVersionId: current?.id ?? null });
       });
