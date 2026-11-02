@@ -7,6 +7,8 @@ function reject(code, message) {
   throw error;
 }
 
+/** @param {import('./record-infrastructure-types.ts').AiRecordFields} left
+ * @param {import('./record-infrastructure-types.ts').AiRecordFields} right */
 function sameBoundary(left, right) {
   return ['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'].every(key => left[key] === right[key]);
 }
@@ -110,6 +112,8 @@ export function createAiRecordRepository(storage) {
       const value = storage.get(kind, id);
       return value ? structuredClone(value) : null;
     },
+    /** @param {import('./record-types.ts').AiRecordKind} kind
+     * @param {import('./record-infrastructure-types.ts').AiRecordFields} [filter] */
     list(kind, filter = {}) {
       if (!AI_RECORD_KINDS[kind]) reject('AI_RECORD_INVALID', '未知的 AI 记录类型。');
       return storage

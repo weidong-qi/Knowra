@@ -18,15 +18,28 @@ const accessCollections = Object.values(ACCESS_KINDS).map(value => value.collect
 const conversationCollections = Object.values(CONVERSATION_KINDS).map(value => value.collection);
 const v5ConversationCollections = conversationCollections.filter(name => name !== 'conversationAttachments');
 
+/** @returns {import('./record-infrastructure-types.ts').AiPrivateState} */
 export function createEmptyAiState({ datasetId = randomUUID(), datasetEpoch = randomUUID() } = {}) {
   return {
     version: AI_PRIVATE_STATE_VERSION,
     datasetId,
     datasetEpoch,
-    ...Object.fromEntries(collections.map(name => [name, []])),
-    ...Object.fromEntries(accessCollections.map(name => [name, []])),
-    ...emptyConversationState(),
-    actionLedger: emptyActionState(),
+    .../** @type {import('./record-types.ts').AiRecordCollections} */ (
+      /** @type {Record<string, import('./record-types.ts').AiRecord[]>} */ (
+        Object.fromEntries(collections.map(name => [name, []]))
+      )
+    ),
+    .../** @type {import('./record-infrastructure-types.ts').AiAccessCollections} */ (
+      /** @type {Record<string, import('./record-infrastructure-types.ts').AiAccessCollections[keyof import('./record-infrastructure-types.ts').AiAccessCollections]>} */ (
+        Object.fromEntries(accessCollections.map(name => [name, []]))
+      )
+    ),
+    .../** @type {import('./record-infrastructure-types.ts').AiConversationCollections} */ (
+      /** @type {Record<string, object[]>} */ (emptyConversationState())
+    ),
+    actionLedger: /** @type {import('./record-infrastructure-types.ts').AiPrivateState['actionLedger']} */ (
+      emptyActionState()
+    ),
     events: [],
     budgetDays: [],
     budgetReservations: [],
@@ -34,6 +47,7 @@ export function createEmptyAiState({ datasetId = randomUUID(), datasetEpoch = ra
   };
 }
 
+/** @returns {import('./record-infrastructure-types.ts').AiPrivateState} */
 export function validateAiState(input) {
   if (input === undefined) return createEmptyAiState();
   if (
@@ -125,6 +139,7 @@ export function validateAiState(input) {
 
 export { createJsonAiAccessStore, createJsonAiConversationStore };
 
+/** @param {import('./record-infrastructure-types.ts').JsonAiRepositoryOptions} options */
 export function createJsonAiRepository({ getState, runTransaction, onChange }) {
   const adapter = {
     identity() {
