@@ -1,15 +1,32 @@
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { extractionHttpError } from './knowledge-extraction-http-errors.js';
+import { extractionHttpError } from './knowledge-extraction-http-errors.ts';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createKnowledgeExtractionHttpService } from './knowledge-extraction-http-service.ts';
 
-/** @type {() => never} */
-const invalid = () => {
+interface ExtractionJobRouteContext {
+  request: IncomingMessage;
+  response: ServerResponse;
+  url: URL;
+  extraction: Pick<
+    ReturnType<typeof createKnowledgeExtractionHttpService>,
+    'capabilities' | 'list' | 'get' | 'start' | 'cancel' | 'retry'
+  >;
+}
+interface ExtractionRoutePageInput {
+  spaceId: string | null;
+  cursor?: string | null;
+  idempotencyKey?: string | null;
+  limit?: number;
+}
+
+const invalid: () => never = () => {
   throw extractionHttpError({ code: 'KNOWLEDGE_EXTRACTION_REQUEST_INVALID' });
 };
-/** @param {unknown} value @returns {value is Record<string, unknown>} */
-const object = value => value && typeof value === 'object' && !Array.isArray(value);
+const object = (value: unknown): value is Record<string, unknown> =>
+  (value && typeof value === 'object' && !Array.isArray(value)) as boolean;
 
-export async function handleAiJobRoute({ request, response, url, extraction }) {
+export async function handleAiJobRoute({ request, response, url, extraction }: ExtractionJobRouteContext) {
   const root = '/api/ai/jobs';
   const capability = url.pathname === '/api/ai/capabilities';
   const match = url.pathname.match(/^\/api\/ai\/jobs\/([^/]+)(?:\/(cancel|retry))?$/);
@@ -26,18 +43,18 @@ export async function handleAiJobRoute({ request, response, url, extraction }) {
       url.searchParams.get('kind') !== 'knowledgeExtraction'
     )
       invalid();
-    const input = { spaceId: url.searchParams.get('spaceId') };
+    const input: ExtractionRoutePageInput = { spaceId: url.searchParams.get('spaceId') };
     for (const key of ['cursor', 'idempotencyKey'])
-      if (url.searchParams.has(key)) input[key] = url.searchParams.get(key);
+      if (url.searchParams.has(key)) input[key as 'cursor' | 'idempotencyKey'] = url.searchParams.get(key);
     if (url.searchParams.has('limit')) {
       const value = url.searchParams.get('limit');
-      if (!/^[1-9][0-9]?$/.test(value)) invalid();
+      if (!/^[1-9][0-9]?$/.test(value as string)) invalid();
       input.limit = Number(value);
     }
     sendJson(response, 200, { data: await extraction.list(input) });
     return true;
   }
-  let jobId;
+  let jobId!: string;
   if (match) {
     try {
       jobId = decodeURIComponent(match[1]);
@@ -71,7 +88,7 @@ export async function handleAiJobRoute({ request, response, url, extraction }) {
     return true;
   }
   if (!object(input) || Object.keys(input).length) invalid();
-  const data = await extraction[match[2]](jobId);
-  sendJson(response, match[2] === 'retry' ? 202 : 200, { data });
+  const data = await extraction[match![2] as 'cancel' | 'retry'](jobId);
+  sendJson(response, match![2] === 'retry' ? 202 : 200, { data });
   return true;
 }
