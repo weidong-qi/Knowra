@@ -6,7 +6,6 @@ import { createInMemoryNoteRepository } from '../src/modules/knowledge/infrastru
 import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.js';
 import { createPostgresKnowledgeHttpHandlers } from '../src/modules/knowledge/http/postgres-async-handlers.js';
 import { handleNoteRoute } from '../src/modules/knowledge/http/note-routes.js';
-import { withIdentityBindingRefresh } from '../src/modules/knowledge/application/annotation-identity-binding.js';
 import {
   marksOnlyDependencies,
   withInlineAnnotations
@@ -941,8 +940,7 @@ export function lifecycleConsumerCases(subject) {
           }
         }
       };
-      const lifecycle = deps =>
-        withIdentityBindingRefresh(subject.createAsyncNoteDependencyLifecycle(deps), repository);
+      const lifecycle = deps => subject.createAsyncNoteDependencyLifecycle(deps);
       const decorated = withInlineAnnotations(lifecycle(dependencies), {
         repository,
         revisionRepository: { save: value => value },
@@ -958,7 +956,6 @@ export function lifecycleConsumerCases(subject) {
         'knowledgeEvidence',
         'versions',
         'knowledgeEvidence',
-        'annotations.list',
         'annotations.list',
         'annotation.save'
       ]);
@@ -976,7 +973,6 @@ export function lifecycleConsumerCases(subject) {
         'direct-evidence',
         'knowledgeEvidence',
         'noteVersion',
-        'annotations.list',
         'annotations.list'
       ]);
     }

@@ -1,38 +1,13 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { test } from 'node:test';
-import { anchorFromProjectedRange, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
-import { temporaryDirectory } from './helpers.mjs';
-
-export function mark(knowledge, note) {
-  const projection = projectMarkdown(note.rawMarkdown);
-  const start = projection.text.indexOf('重点内容');
-  const anchor = anchorFromProjectedRange(projection, start, start + 4);
-  return knowledge.contentAnnotationService.createAnnotation({
-    spaceId: note.spaceId,
-    noteId: note.id,
-    schemaVersion: 2,
-    scopeType: anchor.scopeType,
-    kind: 'important',
-    sourceMode: 'manual',
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    prefixText: anchor.prefixText,
-    suffixText: anchor.suffixText,
-    headingPath: [],
-    anchor,
-    anchorFingerprint: 'client',
-    noteContentHash: calculateContentHash(note.rawMarkdown),
-    idempotencyKey: `mark-${note.id}`
-  });
-}
+import { temporaryDirectory, markText, inlineId } from './helpers.mjs';
 
 for (const sqlite of [false, true])
-  test(`${sqlite ? 'SQLite 离线' : 'JSON 在线'}：连续编辑不堆积自动修订，当前位置与人工修改正常保存`, t => {
+  test(`${sqlite ? 'SQLite 离线' : 'JSON 在线'}：连续编辑不产生重点自动修订，人工修改备注正常保存`, t => {
     // updatedAt 模拟连续编辑，修订 createdAt 仍取系统时钟；固定在采样桶内，避免运行跨桶改变恢复点数量。
     t.mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-14T12:05:00.000Z') });
     const root = temporaryDirectory(t);
@@ -42,9 +17,9 @@ for (const sqlite of [false, true])
     t.after(() => store.close?.());
     const knowledge = createAppContext({ dataStore: store, storageRootDir: root }).modules.knowledge;
     const space = knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
-    const markdown = '# 标题\n\n重点内容\n\n其它 0';
+    const markdown = `# 标题\n\n${markText('重点内容', 'history')}\n\n其它 0`;
     const note = knowledge.noteService.createNote({ spaceId: space.id, title: '长时间编辑', rawMarkdown: markdown });
-    const annotation = mark(knowledge, note),
+    const annotation = { id: inlineId(note.id, 'history') },
       start = Date.parse(note.updatedAt);
     for (let i = 1; i <= 100; i++)
       knowledge.noteService.updateNote(note.id, {
@@ -52,20 +27,17 @@ for (const sqlite of [false, true])
         updatedAt: new Date(start + i * 1000).toISOString()
       });
     const current = knowledge.contentAnnotationService.getAnnotation(annotation.id);
+    // 位置在正文标记里：编辑别处既不推进重点修订号，也不产生自动修订。
+    assert.equal(current.revision, 1);
+    assert.equal(current.anchorStatus, 'resolved');
+    assert.equal(current.quoteText, '重点内容');
     assert.ok(
       store.state.annotationRevisions.some(
         record => record.annotationId === current.id && record.revision === current.revision
       ),
       '当前修订始终有来源见证'
     );
-    assert.equal(current.revision, 101, '并发控制仍逐次推进，不能用降低修订号假装压缩');
-    assert.equal(current.anchorStatus, 'resolved');
-    assert.equal(current.quoteText, '重点内容');
-    assert.equal(
-      knowledge.noteVersionService.getVersion(current.noteVersionId).content,
-      markdown.replace('其它 0', '其它 100')
-    );
-    assert.equal(store.state.annotationRevisions.filter(record => record.operation === 'sourceReconciled').length, 2);
+    assert.equal(store.state.annotationRevisions.filter(record => record.operation === 'sourceReconciled').length, 0);
     assert.ok(
       store.state.noteVersions.length <= 6,
       `连续编辑只保留少量恢复点和必要锚点：${store.state.noteVersions.length}`

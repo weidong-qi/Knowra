@@ -103,7 +103,6 @@ test('desktop runtime bundle includes migrated TS through legacy JS entries', as
     'infrastructure/attachment-status.ts',
     'infrastructure/knowledge-operation-access.ts',
     'infrastructure/json-chunks.ts',
-    'infrastructure/annotation-shadow-log.ts',
     'infrastructure/transaction-context.ts',
     'modules/knowledge/application/space-deletion-preflight.ts',
     'modules/knowledge/application/note-link-relations.ts',

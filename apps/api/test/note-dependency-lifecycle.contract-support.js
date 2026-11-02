@@ -6,7 +6,6 @@ import { createInMemoryNoteRepository } from '../src/modules/knowledge/infrastru
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.js';
 import { handleNoteRoute } from '../src/modules/knowledge/http/note-routes.js';
-import { withIdentityBindingRefresh } from '../src/modules/knowledge/application/annotation-identity-binding.js';
 import {
   marksOnlyDependencies,
   withInlineAnnotations
@@ -1369,8 +1368,7 @@ export function lifecycleConsumerCases(subject) {
         },
         questionService: { markSourcesStale: type => calls.push(type) }
       };
-      const lifecycle = dependencies =>
-        withIdentityBindingRefresh(subject.createNoteDependencyLifecycle(dependencies), repository);
+      const lifecycle = dependencies => subject.createNoteDependencyLifecycle(dependencies);
       const decorated = withInlineAnnotations(lifecycle(deps), {
         repository,
         revisionRepository: { save: value => value },
@@ -1390,7 +1388,6 @@ export function lifecycleConsumerCases(subject) {
         'knowledgeEvidence',
         'coalesce',
         'annotations.list',
-        'annotations.list',
         'annotation.save'
       ]);
       assert.equal(annotations.length, 1);
@@ -1409,7 +1406,6 @@ export function lifecycleConsumerCases(subject) {
         'knowledgeEvidence',
         'noteVersion',
         'coalesce',
-        'annotations.list',
         'annotations.list'
       ]);
     }

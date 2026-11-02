@@ -380,9 +380,6 @@ if (!baseline) {
   test('existing targeted .run: ' + moduleTest.name, moduleTest.run);
   const { noteVersionCoalescingTests } = await import('./note-version-coalescing.test.js');
   for (const entry of noteVersionCoalescingTests) test('existing targeted .run: ' + entry.name, entry.run);
-  const { annotationIdentityShadowTests } = await import('./annotation-identity-shadow.test.js');
-  for (const entry of annotationIdentityShadowTests.slice(0, 4))
-    test('existing targeted .run: ' + entry.name, entry.run);
   const { inlineAnnotationTests } = await import('./inline-annotations.test.js');
   const marks = inlineAnnotationTests.find(
     entry => entry.name === '只改标记的保存：旧版本证据和题目来源保持有效；真正改正文仍按原规则过期'

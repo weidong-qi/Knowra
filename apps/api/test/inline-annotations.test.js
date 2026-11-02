@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { calculateContentHash, anchorFromProjectedRange, projectMarkdown } from '@study-accelerator/content-anchor';
+import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
 import {
   inlineAnnotationId,
   inlineMarksOf,
@@ -57,6 +58,96 @@ const BASE = [
 ].join('\n');
 
 export const inlineAnnotationTests = [
+  {
+    name: '取消章节或多段重点并修改无关正文时，不误判来源变化',
+    run() {
+      const module = createKnowledgeModule();
+      const cases = [
+        {
+          before: '# 标题 <!--k a s=section-->\n这里 **粗体**。\n\n# 其他\n末尾',
+          after: '# 标题\n这里 **粗体**。\n\n# 其他\n末尾！',
+          status: 'valid',
+          anchorStatus: 'resolved'
+        },
+        {
+          before: '<mark data-k="a">甲</mark>中<mark data-k="a">乙</mark>尾',
+          after: '甲中乙尾！',
+          status: 'valid',
+          anchorStatus: 'resolved'
+        },
+        {
+          before:
+            '# 标题 <!--k a s=section-->\n这里 <mark data-k="b">**粗体**</mark>。\n\n排除内容 <!--k- a-->\n\n# 其他\n末尾',
+          after: '# 标题\n这里 **粗体**。\n\n排除内容已修改\n\n# 其他\n末尾！',
+          status: 'valid',
+          anchorStatus: 'resolved'
+        },
+        {
+          before: '# 标题 <!--k a s=section-->\n这里 **粗体**。\n\n# 其他\n末尾',
+          after: '# 标题\n这里 **改写**。\n\n# 其他\n末尾！',
+          status: 'stale',
+          anchorStatus: 'needsReview'
+        },
+        {
+          before: '<mark data-k="a">甲</mark>中<mark data-k="a">乙</mark>尾',
+          after: '',
+          status: 'insufficient',
+          anchorStatus: 'missing'
+        }
+      ];
+      for (const test of cases) {
+        const note = createNote(module, test.before);
+        const annotationId = inlineAnnotationId(note.id, 'a');
+        const { evidence } = module.knowledgeItemService.createCandidate({
+          spaceId: SPACE,
+          title: `来源 ${note.id}`,
+          canonicalStatement: '以重点为来源的知识',
+          knowledgeType: 'concept',
+          sourceMode: 'annotation',
+          evidence: [{ sourceType: 'annotation', annotationId }]
+        });
+        update(module, note, test.after);
+        assert.equal(module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status, test.status);
+        const annotation = module.repositories.contentAnnotationRepository.findById(annotationId);
+        assert.equal(annotation.lifecycleStatus, 'deleted');
+        assert.equal(annotation.anchorStatus, test.anchorStatus);
+      }
+    }
+  },
+  {
+    name: '内联重点来源证据：改写原文转待核对，清空正文转依据不足，只取消重点不影响证据',
+    run() {
+      const module = createKnowledgeModule();
+      const evidenceFor = (note, markId) => {
+        const annotationId = inlineAnnotationId(note.id, markId);
+        const { evidence } = module.knowledgeItemService.createCandidate({
+          spaceId: SPACE,
+          title: `来源 ${markId}`,
+          canonicalStatement: '以重点为来源的知识',
+          knowledgeType: 'concept',
+          sourceMode: 'annotation',
+          evidence: [{ sourceType: 'annotation', annotationId }]
+        });
+        return () => module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status;
+      };
+      let note = createNote(
+        module,
+        '前文 <mark data-k="a">甲乙</mark> 中间 <mark data-k="b">丙丁</mark> 后文 <mark data-k="c">戊己</mark>'
+      );
+      const [a, b, c] = ['a', 'b', 'c'].map(markId => evidenceFor(note, markId));
+      note = update(module, note, '前文 <mark data-k="a">甲乙</mark> 中间 <mark data-k="b">丙丁</mark> 后文 戊己');
+      assert.deepEqual([a(), b(), c()], ['valid', 'valid', 'valid'], '只删标记是取消重点');
+      note = update(module, note, '前文 <mark data-k="a">甲改</mark> 中间 后文 戊己');
+      assert.equal(a(), 'stale', '标记还在、摘录被改');
+      assert.equal(b(), 'stale', '标记连同原文被改写：待核对，不等同于删除');
+      const row = id => module.repositories.contentAnnotationRepository.findById(inlineAnnotationId(note.id, id));
+      assert.equal(row('b').anchorStatus, 'needsReview');
+      assert.equal(c(), 'valid');
+      note = update(module, note, '');
+      assert.equal(a(), 'insufficient', '正文清空：原文缺失');
+      assert.equal(row('a').anchorStatus, 'missing');
+    }
+  },
   {
     name: '公式内未闭合围栏文字不删除公式后已有的真实重点',
     run() {
@@ -185,29 +276,29 @@ export const inlineAnnotationTests = [
     }
   },
   {
-    name: '内联重点：旧链路跟随不把 v3 标成待确认；类型等只能在正文中修改，备注可改',
+    name: '内联重点：残留的旧格式行保存时不再被跟随，也不影响 v3；类型等只能在正文中修改，备注可改',
     run() {
       const module = createKnowledgeModule();
       let note = createNote(module, BASE);
-      const projection = projectMarkdown(note.rawMarkdown);
-      const start = projection.text.indexOf('等于');
-      const anchor = anchorFromProjectedRange(projection, start, start + 2);
-      const legacy = module.contentAnnotationService.createAnnotation({
-        noteId: note.id,
-        spaceId: SPACE,
-        schemaVersion: 2,
-        scopeType: 'selection',
-        anchor,
-        quoteText: anchor.quoteText,
-        fromPosition: anchor.sourceStart,
-        toPosition: anchor.sourceEnd,
-        anchorFingerprint: 'fixture',
-        noteContentHash: calculateContentHash(note.rawMarkdown),
-        idempotencyKey: randomUUID()
-      });
+      const legacy = module.repositories.contentAnnotationRepository.save(
+        new ContentAnnotation({
+          id: `annotation-${randomUUID()}`,
+          noteId: note.id,
+          spaceId: SPACE,
+          schemaVersion: 1,
+          quoteText: '等于',
+          fromPosition: 0,
+          toPosition: 2,
+          anchorFingerprint: 'fixture',
+          noteContentHash: calculateContentHash(note.rawMarkdown),
+          idempotencyKey: randomUUID()
+        })
+      );
       note = update(module, note, `${note.rawMarkdown}\n\n尾段`);
       for (const row of inlineRows(module, note.id)) assert.equal(row.anchorStatus, 'resolved');
-      assert.equal(module.repositories.contentAnnotationRepository.findById(legacy.id).schemaVersion, 2);
+      const untouched = module.repositories.contentAnnotationRepository.findById(legacy.id);
+      assert.equal(untouched.revision, 1);
+      assert.equal(untouched.anchorStatus, 'resolved');
 
       const id = inlineAnnotationId(note.id, 'm1');
       const row = module.repositories.contentAnnotationRepository.findById(id);

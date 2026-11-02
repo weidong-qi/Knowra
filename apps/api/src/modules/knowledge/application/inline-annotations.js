@@ -136,7 +136,7 @@ export function inlineMarksOf(markdown) {
 const sameJson = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 
 /** 对比正文标记与已有的 v3 行，得出需要写入的行与修订记录。 */
-export function planInlineAnnotations(note, version, existing, now = new Date().toISOString()) {
+export function planInlineAnnotations(note, version, existing, now = new Date().toISOString(), before = null) {
   const rows = (existing ?? []).filter(isInlineAnnotation);
   const marks = inlineMarksOf(note?.rawMarkdown);
   if (!marks.size && !rows.some(row => row.lifecycleStatus === 'active')) return [];
@@ -237,8 +237,12 @@ export function planInlineAnnotations(note, version, existing, now = new Date().
       push(previous, { ...derived, ...written }, null);
     }
   }
+  let text = null;
+  const resolvePreviousSource = typeof before === 'string' ? createInlineAnnotationSourceResolver(before) : null;
   for (const row of rows) {
     if (row.lifecycleStatus !== 'active' || marks.has(row.anchor.markId)) continue;
+    text ??= stripKnowraMarks(String(note.rawMarkdown ?? ''));
+    const source = sourceLoss(text, row, before, resolvePreviousSource);
     push(
       row,
       {
@@ -246,7 +250,8 @@ export function planInlineAnnotations(note, version, existing, now = new Date().
         deletedAt: now,
         revision: row.revision + 1,
         noteVersionId: version?.id ?? row.noteVersionId,
-        noteContentHash: contentHash
+        noteContentHash: contentHash,
+        ...(source ? { anchorStatus: source.anchorStatus, anchorReason: source.anchorReason } : {})
       },
       'deleted'
     );
@@ -255,6 +260,66 @@ export function planInlineAnnotations(note, version, existing, now = new Date().
 }
 
 const then = (value, next) => (value && typeof value.then === 'function' ? value.then(next) : next(value));
+
+/**
+ * 标记消失时原文的去向（与旧链路一致）：原摘录还在正文里是取消重点（null）；
+ * 正文已清空算原文缺失（证据依据不足）；其余是原文被改写，需要核对（不等同于删除）。
+ */
+function sourceLoss(text, row, before, resolvePreviousSource) {
+  const source = resolvePreviousSource?.(row.anchor.markId);
+  const ranges = (source?.ranges ?? []).flatMap(range => {
+    let pieces = [range];
+    for (const excluded of source.excluded) {
+      pieces = pieces.flatMap(piece => {
+        if (excluded.end <= piece.start || excluded.start >= piece.end) return [piece];
+        return [
+          ...(excluded.start > piece.start ? [{ start: piece.start, end: excluded.start }] : []),
+          ...(excluded.end < piece.end ? [{ start: excluded.end, end: piece.end }] : [])
+        ];
+      });
+    }
+    return pieces;
+  });
+  const pieces = ranges.map(range => before.slice(range.start, range.end).trim()).filter(Boolean);
+  // 摘录可能是 Markdown 投影或多个不连续范围的拼接，不能直接在源码中查找 quoteText。
+  // 按原始顺序查找保存前的各源码片段，允许取消重点的同时修改范围以外的内容。
+  let offset = 0;
+  const preserved = pieces.length
+    ? pieces.every(piece => {
+        const index = text.indexOf(piece, offset);
+        if (index < 0) return false;
+        offset = index + piece.length;
+        return true;
+      })
+    : text.includes(row.quoteText);
+  if (preserved) return null;
+  return text.trim()
+    ? { anchorStatus: 'needsReview', anchorReason: 'sourceChanged' }
+    : { anchorStatus: 'missing', anchorReason: 'sourceDeleted' };
+}
+
+/**
+ * 原文（去掉标记后的正文）变化时，哪些活跃的 v3 重点的原文被改或被删：装配层据此把以它们为来源的知识证据降级。
+ * 标记还在但摘录变了、或标记连同原文一起被改写算"改"；正文被清空算"删"；只删标记而原文还在是取消重点，不影响证据。
+ */
+export function inlineSourceChanges(note, existing, before = null) {
+  const marks = inlineMarksOf(note?.rawMarkdown);
+  const text = stripKnowraMarks(String(note?.rawMarkdown ?? ''));
+  const resolvePreviousSource = typeof before === 'string' ? createInlineAnnotationSourceResolver(before) : null;
+  const changed = [],
+    removed = [];
+  for (const row of existing ?? []) {
+    if (!isInlineAnnotation(row) || row.lifecycleStatus !== 'active') continue;
+    const mark = marks.get(row.anchor.markId);
+    if (mark) {
+      if (mark.quoteText !== row.quoteText) changed.push(row.id);
+      continue;
+    }
+    const loss = sourceLoss(text, row, before, resolvePreviousSource);
+    if (loss) (loss.anchorStatus === 'missing' ? removed : changed).push(row.id);
+  }
+  return { changed, removed };
+}
 
 /** 顺序写入（PostgreSQL 事务内不并发查询）；同步与异步仓储共用。 */
 export function applyInlineAnnotationChanges(repository, revisionRepository, changes) {
@@ -269,12 +334,16 @@ export function applyInlineAnnotationChanges(repository, revisionRepository, cha
 }
 
 export function deriveInlineAnnotations(
-  { repository, revisionRepository, now = () => new Date().toISOString() },
+  { repository, revisionRepository, now = () => new Date().toISOString(), before = null },
   note,
   version
 ) {
   return then(repository.list({ noteId: note.id, includeDeleted: true }), list =>
-    applyInlineAnnotationChanges(repository, revisionRepository, planInlineAnnotations(note, version, list, now()))
+    applyInlineAnnotationChanges(
+      repository,
+      revisionRepository,
+      planInlineAnnotations(note, version, list, now(), before)
+    )
   );
 }
 
@@ -299,19 +368,66 @@ export function marksOnlyDependencies(dependencies) {
   };
 }
 
-/** 装配层包装：只改标记时走 marksOnlyLifecycle；级联完成后派生内联重点行。 */
-export function withInlineAnnotations(lifecycle, { repository, revisionRepository, marksOnlyLifecycle = null, now }) {
+/**
+ * 装配层包装：只改标记时走 marksOnlyLifecycle；级联完成后派生内联重点行。
+ * 原文变化时先找出原文被改或被删的重点，派生完成后交给 onSourceChanged 把以它们为来源的证据降级。
+ */
+export function withInlineAnnotations(
+  lifecycle,
+  { repository, revisionRepository, marksOnlyLifecycle = null, onSourceChanged = null, now }
+) {
   return {
     ...lifecycle,
     onNoteContentChanged: (note, version, annotationChange) => {
-      const target =
-        marksOnlyLifecycle && isMarksOnlyChange(annotationChange?.before, note.rawMarkdown)
-          ? marksOnlyLifecycle
-          : lifecycle;
+      const marksOnly = isMarksOnlyChange(annotationChange?.before, note.rawMarkdown);
+      const target = marksOnlyLifecycle && marksOnly ? marksOnlyLifecycle : lifecycle;
       const result = target.onNoteContentChanged(note, version, annotationChange);
+      const watch = onSourceChanged && !marksOnly && typeof annotationChange?.before === 'string';
       return then(result, value =>
-        then(deriveInlineAnnotations({ repository, revisionRepository, now }, note, version), () => value)
+        then(watch ? repository.list({ noteId: note.id, includeDeleted: true }) : null, rows => {
+          const sources = rows ? inlineSourceChanges(note, rows, annotationChange.before) : null;
+          return then(
+            deriveInlineAnnotations(
+              { repository, revisionRepository, now, before: annotationChange?.before },
+              note,
+              version
+            ),
+            () =>
+              then(
+                sources && (sources.changed.length || sources.removed.length) ? onSourceChanged(sources) : null,
+                () => value
+              )
+          );
+        })
       );
     }
+  };
+}
+
+/** 以原文被改的重点为来源的证据转"待核对"，原文被删的转"依据不足"，并让引用这些证据的题目来源过期。 */
+export function degradeInlineSourceEvidence({ knowledgeItemService, questionService }) {
+  return ({ changed, removed }) => {
+    const mark = (ids, status) => ids.flatMap(id => knowledgeItemService.markEvidenceByAnnotationId(id, status));
+    const evidence = [...mark(changed, 'stale'), ...mark(removed, 'insufficient')];
+    return questionService.markSourcesStale(
+      'knowledgeEvidence',
+      evidence.map(item => item.id)
+    );
+  };
+}
+
+/** PostgreSQL 版：依赖都是异步的，逐条等待以保持事务内的顺序。 */
+export function degradeInlineSourceEvidenceAsync({ knowledgeItemService, questionService }) {
+  return async ({ changed, removed }) => {
+    const evidence = [];
+    for (const [ids, status] of [
+      [changed, 'stale'],
+      [removed, 'insufficient']
+    ])
+      for (const id of ids) evidence.push(...(await knowledgeItemService.markEvidenceByAnnotationId(id, status)));
+    await questionService.markSourcesStale(
+      'knowledgeEvidence',
+      evidence.map(item => item.id)
+    );
   };
 }

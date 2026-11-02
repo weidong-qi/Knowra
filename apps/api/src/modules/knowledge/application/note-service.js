@@ -3,11 +3,7 @@ import { Note } from '../domain/note.js';
 import { buildCreateNoteDto, buildUpdateNoteDto } from './dto/note.dto.js';
 import { createNoteSummary } from './note-summary.js';
 import { createInMemoryNoteRepository } from '../infrastructure/note-repository.js';
-import {
-  conflictError,
-  notFoundError,
-  validationError
-} from './knowledge-errors.js';
+import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 import { createNoteAssociationOperations } from './note-association-operations.js';
 import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from './note-link-relations.js';
 
@@ -15,12 +11,11 @@ export function createNoteService({
   repository = createInMemoryNoteRepository(),
   validateSiblingNameConflict = null,
   validateNoteReferences = null,
-  normalizeTagIds = (tagIds) => [...new Set(tagIds)],
+  normalizeTagIds = tagIds => [...new Set(tagIds)],
   noteVersionService = null,
   annotationRepository = null,
-  runTransaction = (operation) => operation(),
+  runTransaction = operation => operation(),
   onNoteContentChanged = null,
-  onNoteIdentityChanged = null,
   onNoteDeleted = null,
   onBeforePermanentDelete = null
 } = {}) {
@@ -30,8 +25,6 @@ export function createNoteService({
       if (createVersion && noteVersionService) {
         const version = noteVersionService.ensureForNote(saved);
         onNoteContentChanged?.(saved, version, annotationChange);
-      } else if (annotationChange) {
-        onNoteIdentityChanged?.(saved, annotationChange);
       }
       return saved;
     });
@@ -52,10 +45,7 @@ export function createNoteService({
 
   function requireNoteIds(noteIds) {
     if (!Array.isArray(noteIds) || noteIds.length === 0) {
-      throw validationError(
-        'NOTE_IDS_REQUIRED',
-        'noteIds must contain at least one note id'
-      );
+      throw validationError('NOTE_IDS_REQUIRED', 'noteIds must contain at least one note id');
     }
 
     return noteIds;
@@ -76,7 +66,7 @@ export function createNoteService({
   }
 
   function assertPermanentDeletionAllowed(noteIds) {
-    noteIds.forEach((noteId) => onBeforePermanentDelete?.(noteId));
+    noteIds.forEach(noteId => onBeforePermanentDelete?.(noteId));
   }
 
   const associationOperations = createNoteAssociationOperations({
@@ -110,22 +100,17 @@ export function createNoteService({
     },
     importMarkdownBatch(items = []) {
       if (!Array.isArray(items) || items.length === 0) {
-        throw validationError(
-          'MARKDOWN_IMPORT_ITEMS_REQUIRED',
-          'Markdown import batch must contain at least one item'
-        );
+        throw validationError('MARKDOWN_IMPORT_ITEMS_REQUIRED', 'Markdown import batch must contain at least one item');
       }
 
-      return items.map((item) => this.importMarkdown(item));
+      return items.map(item => this.importMarkdown(item));
     },
     getNote(noteId, options = {}) {
       return requireNote(noteId, options);
     },
     getLinkedNotes(noteId) {
       const note = requireNote(noteId, { includeDeleted: true });
-      const internalLinks = Array.isArray(note.internalLinks)
-        ? note.internalLinks
-        : [];
+      const internalLinks = Array.isArray(note.internalLinks) ? note.internalLinks : [];
       const linkedNotes = [];
 
       for (const linkedId of internalLinks) {
@@ -145,8 +130,10 @@ export function createNoteService({
     updateNote(noteId, updates) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       const dto = buildUpdateNoteDto(updates);
-      if (dto.rawMarkdown !== undefined) addedNoteLinkTargets(dto.rawMarkdown, currentNote.rawMarkdown)
-        .forEach(id => assertNoteLinkTarget(repository.findById(id), dto.spaceId ?? currentNote.spaceId));
+      if (dto.rawMarkdown !== undefined)
+        addedNoteLinkTargets(dto.rawMarkdown, currentNote.rawMarkdown).forEach(id =>
+          assertNoteLinkTarget(repository.findById(id), dto.spaceId ?? currentNote.spaceId)
+        );
       // 原生 Date 接受未知值并可能抛错或产生 Invalid Date；此局部签名不声明输入已校验。
       if (
         dto.expectedUpdatedAt &&
@@ -155,9 +142,7 @@ export function createNoteService({
       ) {
         throw conflictError('NOTE_UPDATE_CONFLICT', 'Note has changed since it was loaded');
       }
-      const nextFolderId = Object.prototype.hasOwnProperty.call(dto, 'folderId')
-        ? dto.folderId
-        : currentNote.folderId;
+      const nextFolderId = Object.prototype.hasOwnProperty.call(dto, 'folderId') ? dto.folderId : currentNote.folderId;
       const nextNote = {
         spaceId: dto.spaceId ?? currentNote.spaceId,
         folderId: nextFolderId,
@@ -170,7 +155,8 @@ export function createNoteService({
         title: dto.title ?? currentNote.title,
         currentNoteId: currentNote.id
       });
-      const annotationChange = dto.rawMarkdown !== undefined ? prepareAnnotationChange(currentNote, dto.rawMarkdown, updates.annotationMapping) : null;
+      const annotationChange =
+        dto.rawMarkdown !== undefined ? prepareAnnotationChange(currentNote, dto.rawMarkdown) : null;
       const updatedNote = new Note({
         ...currentNote,
         annotationStructure: annotationChange?.structure ?? currentNote.annotationStructure,
@@ -190,15 +176,21 @@ export function createNoteService({
 
       return persistNote(updatedNote, {
         annotationChange,
-        createVersion: dto.rawMarkdown !== undefined
-          && (dto.rawMarkdown !== currentNote.rawMarkdown || annotationChange?.edits?.length > 0)
+        createVersion: dto.rawMarkdown !== undefined && dto.rawMarkdown !== currentNote.rawMarkdown
       });
     },
     deleteNote(noteId) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       if (currentNote.deleted) return currentNote;
       const deletedAt = new Date().toISOString();
-      const annotationStates = annotationRepository?.list({ noteId, includeDeleted: true }).map(annotation => ({ id: annotation.id, lifecycleStatus: annotation.lifecycleStatus ?? 'active', revision: annotation.revision ?? 1 })) ?? [];
+      const annotationStates =
+        annotationRepository
+          ?.list({ noteId, includeDeleted: true })
+          .map(annotation => ({
+            id: annotation.id,
+            lifecycleStatus: annotation.lifecycleStatus ?? 'active',
+            revision: annotation.revision ?? 1
+          })) ?? [];
       const deletedNote = new Note({
         ...currentNote,
         deleted: true,
@@ -215,8 +207,8 @@ export function createNoteService({
     },
     deleteNotes(noteIds) {
       const validatedIds = requireNoteIds(noteIds);
-      validatedIds.forEach((noteId) => requireNote(noteId, { includeDeleted: true }));
-      return validatedIds.map((noteId) => this.deleteNote(noteId));
+      validatedIds.forEach(noteId => requireNote(noteId, { includeDeleted: true }));
+      return validatedIds.map(noteId => this.deleteNote(noteId));
     },
     restoreNote(noteId) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
@@ -240,10 +232,7 @@ export function createNoteService({
     permanentlyDeleteNote(noteId) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       if (!currentNote.deleted) {
-        throw conflictError(
-          'NOTE_NOT_IN_RECYCLE_BIN',
-          'Note must be in recycle bin before permanent delete'
-        );
+        throw conflictError('NOTE_NOT_IN_RECYCLE_BIN', 'Note must be in recycle bin before permanent delete');
       }
 
       return runTransaction(() => {
@@ -257,19 +246,17 @@ export function createNoteService({
     },
     emptyRecycleBin(spaceId = null) {
       return runTransaction(() => {
-        const recycleBinNotes = repository
-          .list({ includeDeleted: true, spaceId })
-          .filter((note) => note.deleted);
-        assertPermanentDeletionAllowed(recycleBinNotes.map((note) => note.id));
+        const recycleBinNotes = repository.list({ includeDeleted: true, spaceId }).filter(note => note.deleted);
+        assertPermanentDeletionAllowed(recycleBinNotes.map(note => note.id));
 
-        const deletedNotes = repository.deleteWhere((note) => (
-          note.deleted && (spaceId ? note.spaceId === spaceId : true)
-        ));
-        deletedNotes.forEach((note) => onNoteDeleted?.(note.id));
+        const deletedNotes = repository.deleteWhere(
+          note => note.deleted && (spaceId ? note.spaceId === spaceId : true)
+        );
+        deletedNotes.forEach(note => onNoteDeleted?.(note.id));
 
         return {
           deletedCount: deletedNotes.length,
-          noteIds: deletedNotes.map((note) => note.id)
+          noteIds: deletedNotes.map(note => note.id)
         };
       });
     },
@@ -288,9 +275,7 @@ export function createNoteService({
     ...associationOperations,
     listNotes(options = {}) {
       const notes = repository.list(options);
-      return options.summaryOnly === true || options.summaryOnly === 'true'
-        ? notes.map(createNoteSummary)
-        : notes;
+      return options.summaryOnly === true || options.summaryOnly === 'true' ? notes.map(createNoteSummary) : notes;
     }
   };
 }

@@ -1,93 +1,86 @@
 import assert from 'node:assert/strict';
-import crypto from 'node:crypto';
 import { AppError } from '../src/errors/app-error.js';
 import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.js';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
-import { anchorFromProjectedRange, projectMarkdown } from '@study-accelerator/content-anchor';
+import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
 
-const hash = (value) => crypto.createHash('sha256').update(value).digest('hex');
-const note = { id: 'note-1', spaceId: 'space-1', rawMarkdown: 'alpha important beta', deleted: false };
-const input = (key = 'request-1') => ({ spaceId: 'space-1', noteId: 'note-1', quoteText: 'important', fromPosition: 6, toPosition: 15, prefixText: 'alpha ', suffixText: ' beta', headingPath: [], anchorFingerprint: 'fingerprint', noteContentHash: hash(note.rawMarkdown), idempotencyKey: key });
-const version = { id: 'version-1', noteId: note.id, content: note.rawMarkdown, contentHash: hash(note.rawMarkdown) };
+// 重点内联化 I4b：重点只能写在正文标记里。库里残留的旧格式行（v1）仍可取消、归档和改备注。
+const legacyRow = (overrides = {}) =>
+  new ContentAnnotation({
+    id: 'annotation-legacy',
+    spaceId: 'space-1',
+    noteId: 'note-1',
+    quoteText: 'important',
+    fromPosition: 6,
+    toPosition: 15,
+    anchorFingerprint: 'fingerprint',
+    noteContentHash: 'hash',
+    idempotencyKey: 'legacy-key',
+    schemaVersion: 1,
+    ...overrides
+  });
 
-function versionedInput(markdown = note.rawMarkdown, key = 'versioned-request') {
-  const projection = projectMarkdown(markdown);
-  const start = projection.text.indexOf('important');
-  const anchor = anchorFromProjectedRange(projection, start, start + 'important'.length);
-  return {
-    spaceId: note.spaceId,
-    noteId: note.id,
-    schemaVersion: 2,
-    scopeType: 'selection',
-    kind: 'important',
-    sourceMode: 'manual',
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    prefixText: anchor.prefixText,
-    suffixText: anchor.suffixText,
-    headingPath: [],
-    anchor,
-    anchorFingerprint: 'client-assertion-only',
-    noteContentHash: hash(markdown),
-    idempotencyKey: key
-  };
+function serviceWith(rows = [legacyRow()], options = {}) {
+  const repository = createInMemoryContentAnnotationRepository();
+  for (const row of rows) repository.save(row);
+  return { repository, service: createContentAnnotationService({ repository, ...options }) };
 }
+
+const legacyRemoved = error => {
+  assert.ok(error instanceof AppError);
+  assert.equal(error.code, 'ANNOTATION_LEGACY_REMOVED');
+  assert.equal(error.statusCode, 410);
+  return true;
+};
 
 export const contentAnnotationServiceTests = [
   {
-    name: 'content annotation service persists idempotently and archives annotations',
+    name: '旧格式重点不再新建、改范围、确认范围或恢复，统一返回 ANNOTATION_LEGACY_REMOVED',
     async run() {
-      const service = createContentAnnotationService({
-        noteRepository: { findById: () => note }
+      const { service } = serviceWith([
+        legacyRow(),
+        legacyRow({ id: 'annotation-deleted', idempotencyKey: 'deleted', lifecycleStatus: 'deleted' })
+      ]);
+      assert.throws(() => service.createAnnotation({ noteId: 'note-1', schemaVersion: 2 }), legacyRemoved);
+      assert.throws(() => service.updateAnnotationAnchor('annotation-legacy', {}), legacyRemoved);
+      assert.throws(() => service.confirmAnnotationRange('annotation-legacy', {}), legacyRemoved);
+      assert.throws(() => service.restoreAnnotation('annotation-deleted'), legacyRemoved);
+      assert.equal(service.restoreAnnotation('annotation-legacy').id, 'annotation-legacy');
+      assert.deepEqual(service.reconcileForNote('note-1', 'hash'), {
+        annotations: [],
+        contentChangedAnnotationIds: []
       });
-      const created = service.createAnnotation(input());
-      assert.equal(created.importance, 'normal');
-      assert.equal(service.createAnnotation(input()).id, created.id);
-      assert.equal(
-        service.listAnnotationsByNote({ noteId: note.id }).length,
-        1
-      );
-      assert.equal(service.archiveAnnotation(created.id).status, 'archived');
-      assert.equal(
-        service.listAnnotationsByNote({ noteId: note.id }).length,
-        0
-      );
-      assert.equal(service.restoreAnnotation(created.id).status, 'active');
     }
   },
   {
-    name: 'explicit legacy null importance remains idempotent without changing existing records',
+    name: '残留的旧格式重点仍可改备注、归档和取消，并受修订号保护',
     async run() {
-      const service = createContentAnnotationService({ noteRepository: { findById: () => note } });
-      const request = { ...input('legacy-null'), importance: null };
-      const legacy = service.createAnnotation(request);
-      assert.equal(legacy.importance, null);
-      assert.equal(service.createAnnotation(request).id, legacy.id);
-      assert.equal(service.createAnnotation({ ...input('new-default'), kind: 'question' }).importance, 'normal');
-      assert.equal(service.getAnnotation(legacy.id).importance, null);
-    }
-  },
-  {
-    name: 'content annotation creation accepts an explicitly rated importance',
-    async run() {
-      const service = createContentAnnotationService({ noteRepository: { findById: () => note } });
-      const created = service.createAnnotation({ ...input('explicit-normal'), importance: 'normal' });
-      assert.equal(created.importance, 'normal');
+      const { service } = serviceWith();
+      const updated = service.updateAnnotation('annotation-legacy', {
+        expectedRevision: 1,
+        comment: '待核对',
+        importance: 'core'
+      });
+      assert.equal(updated.revision, 2);
+      assert.equal(updated.importance, 'core');
+      assert.throws(
+        () => service.updateAnnotation('annotation-legacy', { expectedRevision: 1, comment: '覆盖' }),
+        error => error.code === 'ANNOTATION_REVISION_CONFLICT'
+      );
+      assert.equal(service.archiveAnnotation('annotation-legacy', { expectedRevision: 2 }).lifecycleStatus, 'archived');
+      assert.equal(service.deleteAnnotation('annotation-legacy', { expectedRevision: 3 }).lifecycleStatus, 'deleted');
+      assert.equal(service.listAnnotationsByNote({ noteId: 'note-1' }).length, 0);
     }
   },
   {
     name: 'content annotation service uses the shared AppError contract',
     async run() {
-      const service = createContentAnnotationService({
-        noteRepository: { findById: () => null }
-      });
-
+      const { service } = serviceWith([]);
       assert.throws(
-        () => service.createAnnotation(input('missing-note')),
-        (error) => {
+        () => service.getAnnotation('missing'),
+        error => {
           assert.ok(error instanceof AppError);
-          assert.equal(error.code, 'ANNOTATION_NOTE_NOT_FOUND');
+          assert.equal(error.code, 'ANNOTATION_NOT_FOUND');
           assert.equal(error.statusCode, 404);
           return true;
         }
@@ -95,63 +88,15 @@ export const contentAnnotationServiceTests = [
     }
   },
   {
-    name: 'schema v2 annotation validates the quote against the saved NoteVersion projection',
-    async run() {
-      const service = createContentAnnotationService({
-        noteRepository: { findById: () => note },
-        noteVersionRepository: { findByNoteIdAndContentHash: () => version }
-      });
-      const created = service.createAnnotation(versionedInput());
-      assert.equal(created.schemaVersion, 2);
-      assert.equal(created.noteVersionId, version.id);
-      assert.equal(created.originSnapshot.quoteText, 'important');
-      assert.equal(created.anchor.noteVersionId, version.id);
-
-      assert.throws(
-        () => service.createAnnotation({ ...versionedInput(note.rawMarkdown, 'forged'), quoteText: 'forged quote' }),
-        (error) => error.code === 'ANNOTATION_QUOTE_MISMATCH'
-      );
-    }
-  },
-  {
-    name: 'annotation revisions protect metadata writes and idempotency keys',
-    async run() {
-      const repository = createInMemoryContentAnnotationRepository();
-      const service = createContentAnnotationService({
-        repository,
-        noteRepository: { findById: () => note },
-        noteVersionRepository: { findByNoteIdAndContentHash: () => version }
-      });
-      const request = versionedInput(note.rawMarkdown, 'revision-request');
-      const created = service.createAnnotation(request);
-      const updated = service.updateAnnotation(created.id, {
-        expectedRevision: created.revision,
-        kind: 'question',
-        comment: '待核对',
-        importance: 'core'
-      });
-      assert.equal(updated.revision, 2);
-      assert.equal(updated.kind, 'question');
-      assert.throws(
-        () => service.updateAnnotation(created.id, { expectedRevision: 1, comment: '覆盖' }),
-        (error) => error.code === 'ANNOTATION_REVISION_CONFLICT'
-      );
-      assert.throws(
-        () => service.createAnnotation({ ...request, quoteText: 'different' }),
-        (error) => error.code === 'ANNOTATION_IDEMPOTENCY_CONFLICT'
-      );
-    }
-  },
-  {
     name: 'archiving a reading mark does not invalidate historical evidence',
     async run() {
       let archivedCallbackCount = 0;
-      const service = createContentAnnotationService({
-        noteRepository: { findById: () => note },
-        onAnnotationArchived: () => { archivedCallbackCount += 1; }
+      const { service } = serviceWith([legacyRow()], {
+        onAnnotationArchived: () => {
+          archivedCallbackCount += 1;
+        }
       });
-      const created = service.createAnnotation(input('archive-health'));
-      const archived = service.archiveAnnotation(created.id, { expectedRevision: 1 });
+      const archived = service.archiveAnnotation('annotation-legacy', { expectedRevision: 1 });
       assert.equal(archived.lifecycleStatus, 'archived');
       assert.equal(archivedCallbackCount, 0);
     }

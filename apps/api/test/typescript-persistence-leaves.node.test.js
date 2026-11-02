@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { createAnnotationIdentityShadow } from '../src/modules/knowledge/application/annotation-identity-shadow.js';
 import { createPostgresCoreOperationStore } from '../src/infrastructure/postgres-core-operation-store.js';
 import { createPostgresKnowledgeExtractionCommitStore } from '../src/modules/ai/postgres-knowledge-extraction-commit-store.js';
 import { createPostgresSyncRuntime } from '../src/modules/sync/postgres-provider.js';
@@ -395,22 +394,6 @@ test('real filesystem makes parent before a first serialization failure', () =>
     createSink(file)(1n);
     assert.equal(fs.existsSync(path.dirname(file)), true);
     assert.equal(fs.existsSync(file), false);
-  }));
-test('actual annotation shadow defers the sink until commit', () =>
-  fake({ absent: true }, f => {
-    const callbacks = [];
-    const shadow = createAnnotationIdentityShadow({
-      listAnnotations: () => [],
-      sink: createSink(target),
-      afterCommit: callback => callbacks.push(callback),
-      now: () => 'fixed-time'
-    });
-    const result = shadow.observe({ id: 'note', rawMarkdown: '' }, { editorState: {} });
-    assert.notEqual(result, null);
-    assert.equal(callbacks.length, 1);
-    assert.deepEqual(f.events, []);
-    callbacks[0]();
-    assert.deepEqual(JSON.parse(f.files.get(target)), { at: 'fixed-time', noteId: 'note', ...result });
   }));
 test('transaction token remains in the global registry across reevaluation', async () => {
   assert.equal(typeof token, 'symbol');
