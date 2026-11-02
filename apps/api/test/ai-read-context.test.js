@@ -13,7 +13,7 @@ import { createAiReadContextService } from '../src/modules/ai/read-context-servi
 import { normalizeAiRequest } from '../src/modules/ai/gateway.js';
 import { createAiGateway } from '../src/modules/ai/gateway.js';
 import { outboundPayloadHash, serializedDeepSeekPayload } from '../src/modules/ai/outbound-payload.ts';
-import { hashRecord, manifestHash } from '../src/modules/ai/record-contract.js';
+import { hashRecord, manifestHash } from '../src/modules/ai/record-contract.ts';
 import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.js';
 import { aiRecords } from './ai-record-fixtures.js';
 

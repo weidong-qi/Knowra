@@ -50,7 +50,7 @@ import {
   createJsonAiConversationStore,
   createJsonAiRepository,
   validateAiState
-} from '../modules/ai/record-state.js';
+} from '../modules/ai/record-state.ts';
 import { createJsonBudgetAuthority } from '../modules/ai/budget-ledger.js';
 import {
   LOCAL_DATA_COLLECTIONS,

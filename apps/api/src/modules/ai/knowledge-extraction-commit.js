@@ -1,6 +1,6 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.js';
-import { hashRecord, manifestHash } from './record-contract.js';
+import { hashRecord, manifestHash } from './record-contract.ts';
 import { outboundPayloadHash } from './outbound-payload.ts';
 import {
   prepareKnowledgeExtractionGateway,

@@ -1,7 +1,7 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import schema from './contracts/ai-v2.schema.json' with { type: 'json' };
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 
 export const ACCESS_KINDS = Object.freeze({
   aiAccessPolicy: { collection: 'accessPolicies', id: 'policyId' },

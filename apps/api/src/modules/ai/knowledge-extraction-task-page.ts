@@ -1,4 +1,4 @@
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import { taskError, taskId } from './knowledge-extraction-task-contract.js';
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { ExtractionPage, ExtractionPageJob, ExtractionPageRow } from './knowledge-extraction-query-types.ts';

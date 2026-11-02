@@ -4,7 +4,7 @@ import {
   knowledgeExtractionCommitKey,
   validateKnowledgeExtractionCommit
 } from './knowledge-extraction-commit-contract.js';
-import { createPostgresAiRepository } from './postgres-record-repository.js';
+import { createPostgresAiRepository } from './postgres-record-repository.ts';
 import { createAsyncKnowledgeItemService } from '../knowledge/application/postgres-async/knowledge-domain-service.js';
 import { createPostgresKnowledgeItemRepository } from '../knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createPostgresKnowledgeEvidenceRepository } from '../knowledge/infrastructure/postgres/knowledge-evidence-repository.ts';

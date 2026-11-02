@@ -1,4 +1,4 @@
-import { hashRecord, manifestHash, scopeHash } from '../src/modules/ai/record-contract.js';
+import { hashRecord, manifestHash, scopeHash } from '../src/modules/ai/record-contract.ts';
 import { normalizeAiRequest } from '../src/modules/ai/gateway.js';
 import { outboundPayloadHash } from '../src/modules/ai/outbound-payload.ts';
 

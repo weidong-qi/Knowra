@@ -1,6 +1,6 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.js';
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import { createMcpReadSnapshotGuard } from './mcp-read-snapshot.js';
 import { isEvidenceUsable } from '../knowledge/domain/evidence-applicability.js';
 import {

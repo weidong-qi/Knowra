@@ -1,6 +1,6 @@
 import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import {
   assertResumableAttempts,
   validateAgentCheckpoint,

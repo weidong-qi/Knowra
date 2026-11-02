@@ -2,7 +2,7 @@ import { assertAiReadableNote } from './note-privacy.js';
 import { createActionInboxMethods, createAssistantMessageSourceGuard } from './action-inbox.js';
 import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
 import { actionError, actionIdentityKeys, DRAFT_LEASE_MS } from './action-state.js';
 import { assertBaseline, baseline, buildActionPlan, finalizePlan, image, runAsync, runSync } from './action-plan.js';

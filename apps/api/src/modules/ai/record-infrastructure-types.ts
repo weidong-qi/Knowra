@@ -74,3 +74,10 @@ export interface AiSqlEventRow {
   created_at: string;
 }
 export type AiSqlError = Omit<Partial<AppError>, 'code'> & { code?: unknown; meta?: { code?: unknown } };
+export interface RawAiEvent {
+  jobId?: unknown;
+  sequence?: unknown;
+  eventKind?: unknown;
+  safePayload?: unknown;
+  createdAt?: unknown;
+}

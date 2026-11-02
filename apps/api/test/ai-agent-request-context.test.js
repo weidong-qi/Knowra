@@ -5,7 +5,7 @@ import {
   plainHistory,
   plainMessages
 } from '../src/modules/ai/agent-request-context.ts';
-import { hashRecord } from '../src/modules/ai/record-contract.js';
+import { hashRecord } from '../src/modules/ai/record-contract.ts';
 import { PROPOSAL_GUIDANCE } from '../src/modules/ai/proposal-progress.ts';
 import { ASSISTANT_GUIDANCE } from '../src/modules/ai/assistant-tools.ts';
 

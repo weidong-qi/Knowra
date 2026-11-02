@@ -560,7 +560,7 @@ export const aiKnowledgePropose = [
           await app.coreOperationStore.get({
             ownerId: 'test',
             datasetId: identity.datasetId,
-            operationId: `knowledge-propose-${(await import('../src/modules/ai/record-contract.js')).hashRecord([origin.turnId, origin.toolCallId])}`
+            operationId: `knowledge-propose-${(await import('../src/modules/ai/record-contract.ts')).hashRecord([origin.turnId, origin.toolCallId])}`
           }),
           null
         );

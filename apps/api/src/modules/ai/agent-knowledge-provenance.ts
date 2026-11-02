@@ -1,5 +1,5 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import {
   knowledgeArtifactProvenanceId,
   hashKnowledgeArtifactProvenance,

@@ -1,7 +1,23 @@
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type {
+  AiAccessCollections,
+  AiConversationCollections,
+  AiPrivateState,
+  AiRecordFields,
+  JsonAiRepositoryOptions
+} from './record-infrastructure-types.ts';
+import type {
+  AiRecord,
+  AiRecordByKind,
+  AiRecordCollections,
+  AiRecordKind,
+  AiRecordStorage,
+  SyncAiRecordRepository
+} from './record-types.ts';
 import { emptyActionState, validateActionState } from './action-state.js';
 import { randomUUID } from 'node:crypto';
-import { AI_RECORD_KINDS, validateAiEvent, validateAiRecord } from './record-contract.js';
-import { createAiRecordRepository } from './record-repository.js';
+import { AI_RECORD_KINDS, validateAiEvent, validateAiRecord } from './record-contract.ts';
+import { createAiRecordRepository } from './record-repository.ts';
 import { validateBudgetState } from './budget-ledger.js';
 import {
   ACCESS_KINDS,
@@ -18,28 +34,20 @@ const accessCollections = Object.values(ACCESS_KINDS).map(value => value.collect
 const conversationCollections = Object.values(CONVERSATION_KINDS).map(value => value.collection);
 const v5ConversationCollections = conversationCollections.filter(name => name !== 'conversationAttachments');
 
-/** @returns {import('./record-infrastructure-types.ts').AiPrivateState} */
-export function createEmptyAiState({ datasetId = randomUUID(), datasetEpoch = randomUUID() } = {}) {
+export function createEmptyAiState({
+  datasetId = randomUUID(),
+  datasetEpoch = randomUUID()
+}: Partial<DatasetIdentity> = {}): AiPrivateState {
   return {
     version: AI_PRIVATE_STATE_VERSION,
     datasetId,
     datasetEpoch,
-    .../** @type {import('./record-types.ts').AiRecordCollections} */ (
-      /** @type {Record<string, import('./record-types.ts').AiRecord[]>} */ (
-        Object.fromEntries(collections.map(name => [name, []]))
-      )
-    ),
-    .../** @type {import('./record-infrastructure-types.ts').AiAccessCollections} */ (
-      /** @type {Record<string, import('./record-infrastructure-types.ts').AiAccessCollections[keyof import('./record-infrastructure-types.ts').AiAccessCollections]>} */ (
-        Object.fromEntries(accessCollections.map(name => [name, []]))
-      )
-    ),
-    .../** @type {import('./record-infrastructure-types.ts').AiConversationCollections} */ (
-      /** @type {Record<string, object[]>} */ (emptyConversationState())
-    ),
-    actionLedger: /** @type {import('./record-infrastructure-types.ts').AiPrivateState['actionLedger']} */ (
-      emptyActionState()
-    ),
+    ...(Object.fromEntries<AiRecord[]>(collections.map(name => [name, []])) as AiRecordCollections),
+    ...(Object.fromEntries<AiAccessCollections[keyof AiAccessCollections]>(
+      accessCollections.map(name => [name, []])
+    ) as AiAccessCollections),
+    ...(emptyConversationState() as Record<string, object[]> as AiConversationCollections),
+    actionLedger: emptyActionState() as AiPrivateState['actionLedger'],
     events: [],
     budgetDays: [],
     budgetReservations: [],
@@ -47,18 +55,17 @@ export function createEmptyAiState({ datasetId = randomUUID(), datasetEpoch = ra
   };
 }
 
-/** @returns {import('./record-infrastructure-types.ts').AiPrivateState} */
-export function validateAiState(input) {
+export function validateAiState(input: unknown): AiPrivateState {
   if (input === undefined) return createEmptyAiState();
   if (
     !input ||
     typeof input !== 'object' ||
     Array.isArray(input) ||
-    ![1, 2, 3, 4, 5, AI_PRIVATE_STATE_VERSION].includes(input.version) ||
-    typeof input.datasetId !== 'string' ||
-    !input.datasetId ||
-    typeof input.datasetEpoch !== 'string' ||
-    !input.datasetEpoch ||
+    ![1, 2, 3, 4, 5, AI_PRIVATE_STATE_VERSION].includes((input as Record<string, unknown>).version as number) ||
+    typeof (input as Record<string, unknown>).datasetId !== 'string' ||
+    !(input as Record<string, unknown>).datasetId ||
+    typeof (input as Record<string, unknown>).datasetEpoch !== 'string' ||
+    !(input as Record<string, unknown>).datasetEpoch ||
     Object.keys(input).some(
       key =>
         ![
@@ -78,7 +85,7 @@ export function validateAiState(input) {
   ) {
     throw new Error('AI 私有存储版本或结构无效，已停止加载。');
   }
-  const state = structuredClone(input);
+  const state = structuredClone(input) as Record<string, unknown>;
   if (state.version === 1) {
     if (accessCollections.some(collection => Object.hasOwn(state, collection))) {
       throw new Error('AI v1 私有状态不能包含 v2 授权记录。');
@@ -115,18 +122,18 @@ export function validateAiState(input) {
   for (const [kind, { collection, id }] of Object.entries(AI_RECORD_KINDS)) {
     if (!Array.isArray(state[collection])) throw new Error(`AI 私有集合 ${collection} 无效。`);
     const ids = new Set();
-    for (const record of state[collection]) {
-      validateAiRecord(/** @type {import('./record-types.ts').AiRecordKind} */ (kind), record);
+    for (const record of state[collection] as Record<string, unknown>[]) {
+      validateAiRecord(kind as AiRecordKind, record);
       if (ids.has(record[id])) throw new Error(`AI 私有集合 ${collection} 存在重复 ID。`);
       ids.add(record[id]);
     }
   }
   if (!Array.isArray(state.events)) throw new Error('AI 事件集合无效。');
-  state.events.forEach(validateAiEvent);
+  (state.events as unknown[]).forEach(validateAiEvent);
   for (const [kind, { collection, id }] of Object.entries(ACCESS_KINDS)) {
     if (!Array.isArray(state[collection])) throw new Error(`AI v2 私有集合 ${collection} 无效。`);
     const ids = new Set();
-    for (const record of state[collection]) {
+    for (const record of state[collection] as Record<string, unknown>[]) {
       validateAccessRecord(kind, record);
       if (ids.has(record[id])) throw new Error(`AI v2 私有集合 ${collection} 存在重复 ID。`);
       ids.add(record[id]);
@@ -134,33 +141,39 @@ export function validateAiState(input) {
   }
   validateAccessRelationships(state);
   validateConversationState(state);
-  return validateBudgetState(state);
+  return validateBudgetState(state) as AiPrivateState;
 }
 
 export { createJsonAiAccessStore, createJsonAiConversationStore };
 
-/** @param {import('./record-infrastructure-types.ts').JsonAiRepositoryOptions} options */
-export function createJsonAiRepository({ getState, runTransaction, onChange }) {
-  const adapter = {
+export function createJsonAiRepository({
+  getState,
+  runTransaction,
+  onChange
+}: JsonAiRepositoryOptions): SyncAiRecordRepository {
+  const adapter: AiRecordStorage = {
     identity() {
       const { datasetId, datasetEpoch } = getState();
       return { datasetId, datasetEpoch };
     },
-    get(kind, id) {
+    get<Kind extends AiRecordKind>(kind: Kind, id: string): AiRecordByKind[Kind] | null {
       const { collection, id: idField } = AI_RECORD_KINDS[kind];
-      return getState()[collection].find(record => record[idField] === id) ?? null;
+      return (
+        (getState()[collection] as AiRecordByKind[Kind][]).find(record => (record as AiRecordFields)[idField] === id) ??
+        null
+      );
     },
-    list(kind) {
-      return getState()[AI_RECORD_KINDS[kind].collection];
+    list<Kind extends AiRecordKind>(kind: Kind): AiRecordByKind[Kind][] {
+      return getState()[AI_RECORD_KINDS[kind].collection] as AiRecordByKind[Kind][];
     },
-    insert(kind, record) {
-      getState()[AI_RECORD_KINDS[kind].collection].push(record);
+    insert<Kind extends AiRecordKind>(kind: Kind, record: AiRecordByKind[Kind]) {
+      (getState()[AI_RECORD_KINDS[kind].collection] as AiRecordByKind[Kind][]).push(record);
       onChange();
     },
-    replace(kind, record) {
+    replace<Kind extends AiRecordKind>(kind: Kind, record: AiRecordByKind[Kind]) {
       const { collection, id } = AI_RECORD_KINDS[kind];
-      const rows = getState()[collection];
-      rows[rows.findIndex(item => item[id] === record[id])] = record;
+      const rows = getState()[collection] as AiRecordByKind[Kind][];
+      rows[rows.findIndex(item => (item as AiRecordFields)[id] === (record as AiRecordFields)[id])] = record;
       onChange();
     },
     listEvents(jobId) {

@@ -2,7 +2,7 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { aiRecords } from '../ai-record-fixtures.js';
 import { createAiGateway } from '../../src/modules/ai/gateway.js';
 import { createMockAiAdapter } from '../../src/modules/ai/infrastructure/providers/mock-adapter.ts';
-import { manifestHash, scopeHash, hashRecord } from '../../src/modules/ai/record-contract.js';
+import { manifestHash, scopeHash, hashRecord } from '../../src/modules/ai/record-contract.ts';
 import { prepareKnowledgeExtractionGateway } from '../../src/modules/ai/knowledge-extraction-gateway.js';
 
 /** 三驱动共用合成资料；通过已有范围/版本服务和真实 Mock Gateway 构造待接纳的任务。 */

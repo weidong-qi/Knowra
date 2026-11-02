@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { hashRecord, manifestHash } from './record-contract.js';
+import { hashRecord, manifestHash } from './record-contract.ts';
 import { beijingDay } from './budget-ledger.js';
 import { evaluateAlerts, periodOf } from './budget-alerts.js';
 import { usageCsv } from './usage-export.ts';

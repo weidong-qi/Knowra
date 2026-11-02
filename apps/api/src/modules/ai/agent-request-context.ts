@@ -1,4 +1,4 @@
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import { PROPOSAL_GUIDANCE } from './proposal-progress.ts';
 import { ASSISTANT_GUIDANCE } from './assistant-tools.ts';
 import type { AppError } from '../../errors/app-error.ts';
