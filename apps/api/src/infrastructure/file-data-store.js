@@ -30,8 +30,8 @@ import { writeJsonFileAtomically } from './atomic-json-file.ts';
 import { withDataFileWriteLock } from './data-file-write-lock.ts';
 import { cloneJsonData } from './json-clone.ts';
 import { readJsonFileSync } from './json-file-reader.ts';
-import { coreOperationKey, validateCoreOperationState } from './core-operation-contract.js';
-import { createSyncCoreOperationStore } from './core-operation-store.js';
+import { coreOperationKey, validateCoreOperationState } from './core-operation-contract.ts';
+import { createSyncCoreOperationStore } from './core-operation-store.ts';
 import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts

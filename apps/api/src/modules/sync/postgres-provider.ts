@@ -34,7 +34,7 @@ import {
   changedHistoryNoteIds,
   HISTORY_RETENTION_COLLECTIONS
 } from '../knowledge/domain/history-retention.js';
-import { readPostgresHistoryRetentionReferences } from '../../infrastructure/history-retention-references.js';
+import { readPostgresHistoryRetentionReferences } from '../../infrastructure/history-retention-references.ts';
 import { assertSnapshotBinding, snapshotBinding } from './protocol-contract.ts';
 import { createBatchSyncService } from './batch-service.ts';
 import { applyPostgresState } from './postgres-batch.ts';

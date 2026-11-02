@@ -6,7 +6,7 @@ import { hashRecord } from './record-contract.js';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
 import { actionError, actionIdentityKeys, DRAFT_LEASE_MS } from './action-state.js';
 import { assertBaseline, baseline, buildActionPlan, finalizePlan, image, runAsync, runSync } from './action-plan.js';
-import { reuseCoreOperationReceipt } from '../../infrastructure/core-operation-contract.js';
+import { reuseCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';
 
 const id = value => typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value;
 const rowFor = (state, actionId, ownerId) => {
