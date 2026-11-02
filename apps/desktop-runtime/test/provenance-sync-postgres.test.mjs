@@ -7,7 +7,7 @@ import { createAppContext } from '../../api/src/app.factory.js';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
 import { createPostgresAiRepository } from '../../api/src/modules/ai/postgres-record-repository.js';
 import { createServer } from '../../api/src/server.js';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { requestHash } from '../../api/src/modules/sync/journal.ts';
 import { createKnowledgeExtractionJobFixture } from '../../api/test/fixtures/knowledge-extraction-job.fixture.js';

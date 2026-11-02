@@ -6,7 +6,7 @@ import { createAppContext } from '../../api/src/app.factory.js';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createServer } from '../../api/src/server.js';
 import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createNoteLinkUrl } from '@study-accelerator/content-anchor';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { temporaryDirectory, openWorkspace } from './helpers.mjs';

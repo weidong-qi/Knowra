@@ -6,7 +6,7 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createServer } from '../../api/src/server.js';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import {
   assertSyncContract,
   KNOWLEDGE_MCP_PROVENANCE_SYNC_CAPABILITY,

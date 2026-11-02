@@ -1,12 +1,14 @@
+import type { SyncRouteDependencies } from './service-types.ts';
+import type { SyncAwaitable } from './domain-types.ts';
 import { requestBodyLimit } from '@study-accelerator/shared/http-limits';
 import { parseBody, toQueryObject } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
 import { syncError } from './journal.ts';
 
-export async function handleSyncRoute({ request, response, url, sync }) {
+export async function handleSyncRoute({ request, response, url, sync }: SyncRouteDependencies): Promise<boolean> {
   if (!url.pathname.startsWith('/api/sync/')) return false;
   if (!sync) throw syncError('SYNC_UNAVAILABLE', '此运行服务尚未启用云端同步存储。', 503);
-  const handlers = {
+  const handlers: Record<string, () => SyncAwaitable<object>> = {
     'GET /api/sync/device': () => sync.device(toQueryObject(url)),
     'GET /api/sync/status': () => sync.status(),
     'POST /api/sync/bootstrap': async () => sync.bootstrap(await parseBody(request)),

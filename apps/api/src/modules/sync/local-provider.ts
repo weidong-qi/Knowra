@@ -8,12 +8,16 @@ import type {
   SyncNoteOperation,
   SyncNoteService
 } from './domain-types.ts';
-import { createSyncService } from './service.js';
+import { createSyncService } from './service.ts';
 import { createBatchSyncService } from './batch-service.ts';
 import { thenResult } from './journal.ts';
 import { compactSnapshotEntries, readCompactSnapshot } from './compact-snapshot.ts';
 
-export function applyNoteOperation(service: SyncNoteService, operation: SyncNoteOperation, current: Note | null) {
+export function applyNoteOperation(
+  service: SyncNoteService,
+  operation: SyncNoteOperation,
+  current: Pick<Note, 'deleted'> | null
+) {
   const { deleted, ...fields } = operation.value;
   if (!current)
     return thenResult(service.createNote({ id: operation.noteId, ...fields }), () =>
@@ -59,5 +63,8 @@ export function createLocalSyncService(
     },
     applyNote: (operation, current) => applyNoteOperation(noteService, operation, current)
   };
-  return { ...createSyncService(provider, ownerId), ...createBatchSyncService<'local'>(provider, ownerId, transfer) };
+  return {
+    ...createSyncService<'local'>(provider, ownerId),
+    ...createBatchSyncService<'local'>(provider, ownerId, transfer)
+  };
 }

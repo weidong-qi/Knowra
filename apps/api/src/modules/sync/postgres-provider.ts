@@ -1,3 +1,32 @@
+import type {
+  SyncBatchProvider,
+  SyncCollection,
+  SyncStoredState,
+  SyncStoredEntity,
+  SyncNoteService,
+  SyncAttachmentTransfer
+} from './domain-types.ts';
+import type { SyncNoteProvider } from './service-types.ts';
+import type { SyncMappedEntityMap } from './postgres-state-types.ts';
+import type {
+  SyncModelNames,
+  SyncPostgresClient,
+  SyncPostgresTransaction,
+  SyncRawRow,
+  SyncReadOptions,
+  SyncReadCall,
+  SyncIdentityReadCall,
+  SyncDelegateName,
+  SyncDelegateMethods,
+  SyncReadMapper,
+  SyncRowMapper,
+  SyncSnapshotSqlRow,
+  SyncTouched,
+  SyncTransactionContext,
+  SyncJournalEpoch,
+  SyncSqlBindingCheck,
+  SyncSqlBindingProjection
+} from './postgres-types.ts';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../knowledge/domain/knowledge-artifact-provenance-state.js';
 import {
   planHistoryRetention,
@@ -8,15 +37,17 @@ import {
 import { readPostgresHistoryRetentionReferences } from '../../infrastructure/history-retention-references.js';
 import { assertSnapshotBinding, snapshotBinding } from './protocol-contract.ts';
 import { createBatchSyncService } from './batch-service.ts';
-import { applyPostgresState } from './postgres-batch.js';
+import { applyPostgresState } from './postgres-batch.ts';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction-context.ts';
 import * as maps from '../knowledge/infrastructure/postgres/mappers.js';
 import { appendChanges, createJournal, loadJournal, syncError } from './journal.ts';
-import { createSyncService } from './service.js';
+import { createSyncService } from './service.ts';
 import { applyNoteOperation } from './local-provider.ts';
 
-const collections = {
+const collections: {
+  [Collection in SyncCollection]: readonly [SyncModelNames[Collection], SyncReadMapper<Collection>?];
+} = {
   spaces: ['knowledgeSpace', 'mapSpace'],
   folders: ['folder', 'mapFolder'],
   tags: ['tag', 'mapTag'],
@@ -39,47 +70,64 @@ const collections = {
   knowledgeArtifactProvenance: ['knowledgeArtifactProvenance', 'mapKnowledgeArtifactProvenance']
 };
 
-async function readCollection(db, collection, ids) {
+async function readCollection<Collection extends SyncCollection>(
+  db: SyncPostgresTransaction,
+  collection: Collection,
+  ids?: string[]
+): Promise<SyncMappedEntityMap[Collection][]> {
   const [model, mapper] = collections[collection];
-  const rows = await db[model].findMany({
+  const rows: SyncRawRow<Collection>[] = await (
+    db[model].findMany as (typeof db)[typeof model]['findMany'] & SyncReadCall<Collection>
+  )({
     ...(ids ? { where: { id: { in: ids } } } : {}),
     orderBy: { id: 'asc' },
     ...(model === 'note' ? { include: { noteTags: { orderBy: { tagId: 'asc' } } } } : {})
-  });
-  return rows.map(row => (mapper ? maps[mapper](row) : JSON.parse(JSON.stringify(row))));
+  } as SyncReadOptions<Collection>);
+  return rows.map(row =>
+    mapper
+      ? (maps[mapper] as SyncRowMapper<Collection>)(row)
+      : (JSON.parse(JSON.stringify(row)) as SyncMappedEntityMap[Collection])
+  );
 }
 
-async function snapshot(db) {
-  const result = {};
-  for (const collection of Object.keys(collections)) result[collection] = await readCollection(db, collection);
-  return result;
+async function snapshot(db: SyncPostgresTransaction): Promise<SyncStoredState> {
+  const result: Partial<Record<SyncCollection, SyncStoredEntity[]>> = {};
+  for (const collection of Object.keys(collections) as SyncCollection[])
+    result[collection] = await readCollection(db, collection);
+  return result as SyncStoredState;
 }
 
 // 批量写入只触及已知 ID：未触及的集合与行沿用事务开头的状态，仅按 ID 重读被写入的行。
-async function scopedSnapshot(db, before, touched) {
-  const result = {};
-  for (const collection of Object.keys(collections)) {
+async function scopedSnapshot(
+  db: SyncPostgresTransaction,
+  before: SyncStoredState,
+  touched: SyncTouched
+): Promise<SyncStoredState> {
+  const result: Partial<Record<SyncCollection, SyncStoredEntity[]>> = {};
+  for (const collection of Object.keys(collections) as SyncCollection[]) {
     const ids = touched[collection];
     if (!ids?.size) {
       result[collection] = [...before[collection]];
       continue;
     }
-    const fresh = new Map((await readCollection(db, collection, [...ids])).map(item => [item.id, item]));
+    const fresh = new Map<string, SyncStoredEntity>(
+      (await readCollection(db, collection, [...ids])).map(item => [item.id, item])
+    );
     const kept = before[collection].flatMap(item =>
-      !ids.has(item.id) ? [item] : fresh.has(item.id) ? [fresh.get(item.id)] : []
+      !ids.has(item.id) ? [item] : fresh.has(item.id) ? [fresh.get(item.id)!] : []
     );
     const known = new Set(before[collection].map(item => item.id));
     result[collection] = [...kept, ...[...fresh.values()].filter(item => !known.has(item.id))];
   }
-  return result;
+  return result as SyncStoredState;
 }
 
 // 校验开关：同时全表读取并与按 ID 重建的后像逐项比对，供测试证明两者等价。
-async function assertScopedMatchesFull(db, scoped) {
+async function assertScopedMatchesFull(db: SyncPostgresTransaction, scoped: SyncStoredState): Promise<void> {
   const full = await snapshot(db);
-  for (const collection of Object.keys(collections)) {
-    const left = new Map(scoped[collection].map(item => [item.id, JSON.stringify(item)]));
-    const right = new Map(full[collection].map(item => [item.id, JSON.stringify(item)]));
+  for (const collection of Object.keys(collections) as SyncCollection[]) {
+    const left = new Map(scoped[collection].map(item => [item.id, JSON.stringify(item)] as const));
+    const right = new Map(full[collection].map(item => [item.id, JSON.stringify(item)] as const));
     if (left.size !== right.size || [...right].some(([id, value]) => left.get(id) !== value)) {
       throw new Error(`同步后像按 ID 重建与全表读取不一致：${collection}`);
     }
@@ -87,32 +135,48 @@ async function assertScopedMatchesFull(db, scoped) {
 }
 
 // 维护世代重建只需主体身份；不读取正文/文件，也不改变业务表。
-export async function loadPostgresSyncIdentityState(db) {
+export async function loadPostgresSyncIdentityState(db: SyncPostgresTransaction) {
   return Object.fromEntries(
     await Promise.all(
-      Object.entries(collections).map(async ([collection, [model]]) => [
-        collection,
-        await db[model].findMany({ select: { id: true } })
-      ])
+      (Object.entries(collections) as [SyncCollection, readonly [SyncModelNames[SyncCollection], string?]][]).map(
+        async ([collection, [model]]) => [
+          collection,
+          await (db[model].findMany as (typeof db)[typeof model]['findMany'] & SyncIdentityReadCall)({
+            select: { id: true }
+          })
+        ]
+      )
     )
   );
 }
 
 // 所有 repository 共用当前事务连接；业务、派生来源和同步日志一次提交。
-export function createPostgresSyncRuntime(client, ownerId) {
-  const scope = new AsyncLocalStorage();
+export function createPostgresSyncRuntime<Client extends SyncPostgresClient>(client: Client, ownerId: string) {
+  const scope = new AsyncLocalStorage<SyncTransactionContext>();
   /** @type {Set<PropertyKey>} */
-  const modelNames = new Set([...Object.values(collections).map(([model]) => model), 'noteTag', 'user']);
+  const modelNames: Set<PropertyKey> = new Set([
+    ...Object.values(collections).map(([model]) => model),
+    'noteTag',
+    'user'
+  ]);
   /** @type {Set<PropertyKey>} */
-  const mutations = new Set(['create', 'createMany', 'update', 'updateMany', 'upsert', 'delete', 'deleteMany']);
-  async function historyReferences(tx) {
+  const mutations: Set<PropertyKey> = new Set([
+    'create',
+    'createMany',
+    'update',
+    'updateMany',
+    'upsert',
+    'delete',
+    'deleteMany'
+  ]);
+  async function historyReferences(tx: SyncPostgresTransaction): Promise<unknown[] | null> {
     try {
       return await readPostgresHistoryRetentionReferences(tx, ownerId);
     } catch {
       return null;
     } // 私有扩展异常时停止淘汰，核心保存仍可继续。
   }
-  async function transaction(operation) {
+  async function transaction<Result>(operation: (connection: Client) => Result | PromiseLike<Result>): Promise<Result> {
     if (scope.getStore()) return operation(proxy);
     return client.$transaction(
       async tx => {
@@ -120,7 +184,13 @@ export function createPostgresSyncRuntime(client, ownerId) {
         const before = await snapshot(tx);
         const row = await tx.syncJournal.findUnique({ where: { ownerId } });
         // version 随每次写入递增；after 仅在其后无写入时可复用，避免同一事务重复全表读取。
-        const context = { tx, before, journal: loadJournal(row?.payload, before), version: 0, after: null };
+        const context: SyncTransactionContext = {
+          tx,
+          before,
+          journal: loadJournal(row?.payload, before),
+          version: 0,
+          after: null
+        };
         return scope.run(context, async () => {
           const result = await operation(proxy);
           // 事务内没有任何写入时后像即前像；批量写入后的后像已由 preview 按 ID 重建。
@@ -139,7 +209,9 @@ export function createPostgresSyncRuntime(client, ownerId) {
                 planHistoryRetention(after, { noteIds, externalReferences: references })
               );
               if (
-                HISTORY_RETENTION_COLLECTIONS.some(name => (retained[name]?.length ?? 0) !== (after[name]?.length ?? 0))
+                HISTORY_RETENTION_COLLECTIONS.some(
+                  name => (retained[name]?.length ?? 0) !== (after[name as SyncCollection]?.length ?? 0)
+                )
               ) {
                 await applyPostgresState(tx, after, retained);
                 after = retained;
@@ -150,8 +222,9 @@ export function createPostgresSyncRuntime(client, ownerId) {
           // 整库导入删除日志行；用新世代重新建立基线。
           const exists = await tx.syncJournal.findUnique({ where: { ownerId } });
           const journal =
-            exists?.payload?.epoch && exists.payload.epoch !== context.journal.epoch
-              ? loadJournal(exists.payload, after)
+            (exists?.payload as SyncJournalEpoch | null)?.epoch &&
+            (exists!.payload as SyncJournalEpoch).epoch !== context.journal.epoch
+              ? loadJournal(exists!.payload, after)
               : row && !exists
                 ? createJournal(after)
                 : appendChanges(context.journal, before, after);
@@ -168,12 +241,12 @@ export function createPostgresSyncRuntime(client, ownerId) {
       { isolationLevel: 'ReadCommitted', maxWait: 10000, timeout: 60000 }
     );
   }
-  const delegates = new Map();
+  const delegates = new Map<PropertyKey, object>();
   const proxy = new Proxy(client, {
     get(_target, key) {
       if (key === PERSISTENCE_TRANSACTION_ACTIVE) return Boolean(scope.getStore());
       if (key === '$transaction')
-        return operation => {
+        return <Result>(operation: (connection: Client) => Result | PromiseLike<Result>) => {
           if (typeof operation !== 'function') throw new TypeError('同步持久化需要交互式事务。');
           return transaction(operation);
         };
@@ -186,11 +259,14 @@ export function createPostgresSyncRuntime(client, ownerId) {
               {
                 get:
                   (_model, method) =>
-                  (...args) => {
+                  (...args: unknown[]) => {
                     const invoke = () => {
                       const context = scope.getStore();
                       if (context && mutations.has(method)) context.version++;
-                      return (context?.tx ?? client)[key][method](...args);
+                      return (
+                        (context?.tx ?? client)[key as SyncDelegateName] as (typeof client)[SyncDelegateName] &
+                          SyncDelegateMethods
+                      )[method](...args);
                     };
                     return mutations.has(method) && !scope.getStore() ? transaction(invoke) : invoke();
                   }
@@ -201,11 +277,11 @@ export function createPostgresSyncRuntime(client, ownerId) {
       }
       const context = scope.getStore();
       const target = context?.tx ?? client;
-      const value = target[key];
+      const value: unknown = target[key as keyof typeof target];
       if (typeof value !== 'function') return value;
       // 原生 SQL 可能写入任意表：保守视为有写入，后像回到全表读取。
       if (context && typeof key === 'string' && /^\$(execute|query)Raw/.test(key))
-        return (...args) => {
+        return (...args: unknown[]) => {
           context.version++;
           return value.apply(target, args);
         };
@@ -214,18 +290,19 @@ export function createPostgresSyncRuntime(client, ownerId) {
   });
   return {
     client: proxy,
-    service(noteService, transfer) {
-      const access = callback => transaction(async () => callback(scope.getStore().before, scope.getStore().journal));
-      const read = async callback => {
+    service(noteService: SyncNoteService, transfer?: SyncAttachmentTransfer) {
+      const access: SyncBatchProvider<'postgres'>['mutate'] = callback =>
+        transaction(async () => callback(scope.getStore()!.before, scope.getStore()!.journal));
+      const read: SyncBatchProvider<'postgres'>['read'] = async callback => {
         const row = await client.syncJournal.findUnique({ where: { ownerId } });
         return row ? callback(null, loadJournal(row.payload, {})) : access(callback);
       };
-      const provider = {
-        historyReferences: () => historyReferences(scope.getStore().tx),
+      const provider: SyncNoteProvider<'postgres'> = {
+        historyReferences: () => historyReferences(scope.getStore()!.tx),
         read,
         mutate: access,
         snapshotPage: async ({ snapshotId, start, size, contract, ownerId: requestedOwner }) => {
-          const [row] = await client.$queryRawUnsafe(
+          const [row] = await client.$queryRawUnsafe<SyncSnapshotSqlRow[]>(
             `SELECT
             payload ->> 'epoch' AS epoch,
             (payload -> 'snapshots' -> $2) - 'entries' AS binding,
@@ -240,18 +317,23 @@ export function createPostgresSyncRuntime(client, ownerId) {
           );
           if (!row?.expires || Number(row.expires) < Date.now())
             throw syncError('CURSOR_EXPIRED', '初始化快照已过期。');
-          const binding = assertSnapshotBinding(row.binding, contract, requestedOwner, row.epoch);
+          const binding = (assertSnapshotBinding as SyncSqlBindingCheck)(
+            row.binding,
+            contract,
+            requestedOwner,
+            row.epoch
+          );
           if (binding.snapshotId !== snapshotId || binding.count !== row.count)
             throw syncError('SYNC_SNAPSHOT_CONTRACT_MISMATCH', '初始化快照绑定不一致。');
-          if (start > row.count) throw syncError('CURSOR_INVALID', '快照分页无效。', 422);
+          if (start > row.count!) throw syncError('CURSOR_INVALID', '快照分页无效。', 422);
           return {
-            ...snapshotBinding(binding),
+            ...(snapshotBinding as SyncSqlBindingProjection)(binding),
             entries: row.entries,
-            nextOffset: start + size < row.count ? start + size : null
+            nextOffset: start + size < row.count! ? start + size : null
           };
         },
         preview: async () => {
-          const context = scope.getStore();
+          const context = scope.getStore()!;
           let state = context.after?.version === context.version ? context.after.state : null;
           if (!state && context.touched && context.touchedVersion === context.version) {
             state = await scopedSnapshot(context.tx, context.before, context.touched);
@@ -264,14 +346,17 @@ export function createPostgresSyncRuntime(client, ownerId) {
         applyNote: (operation, current) => applyNoteOperation(noteService, operation, current),
         // 批量写入前事务内尚无其他写入，事务开头读取的状态即当前状态。
         applyState: async next => {
-          const context = scope.getStore();
+          const context = scope.getStore()!;
           if (context.version) throw new Error('同步批量写入必须发生在事务内其他写入之前。');
           context.version++;
           context.touched = await applyPostgresState(context.tx, context.before, next);
           context.touchedVersion = context.version;
         }
       };
-      return { ...createSyncService(provider, ownerId), ...createBatchSyncService(provider, ownerId, transfer) };
+      return {
+        ...createSyncService<'postgres'>(provider, ownerId),
+        ...createBatchSyncService<'postgres'>(provider, ownerId, transfer)
+      };
     }
   };
 }

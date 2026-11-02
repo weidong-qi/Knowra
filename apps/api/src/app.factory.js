@@ -1,7 +1,7 @@
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createTaskWorkspaceFiles } from './infrastructure/task-workspace-files.ts';
 import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-state.js';
-import { createAttachmentTransfer } from './modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createKnowledgeModule } from './modules/knowledge/index.js';

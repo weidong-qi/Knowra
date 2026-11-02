@@ -8,7 +8,7 @@ import { createFileDataStore } from '../../api/src/infrastructure/file-data-stor
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { noteContent } from '../../api/src/modules/sync/journal.ts';
 import { writeJsonFileAtomically } from '../../api/src/infrastructure/atomic-json-file.ts';

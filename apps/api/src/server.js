@@ -8,7 +8,7 @@ import { sendError, sendJson } from './http/response.ts';
 import { handleStorageRoute } from './http/storage-routes.ts';
 import { handleKnowledgeRoute } from './modules/knowledge/http/knowledge-routes.js';
 import { AppError } from './errors/app-error.js';
-import { handleSyncRoute } from './modules/sync/routes.js';
+import { handleSyncRoute } from './modules/sync/routes.ts';
 import { handleModelSettingsRoute } from './modules/ai/model-settings-routes.js';
 import { handleAiFeatureRoute } from './modules/ai/feature-settings-routes.js';
 import { handleBudgetRoute } from './modules/ai/budget-routes.js';

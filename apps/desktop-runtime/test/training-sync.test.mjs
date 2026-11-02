@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { nextEntityUpload, acknowledgeEntityUpload } from '../src/entity-sync-state.mjs';
 import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
