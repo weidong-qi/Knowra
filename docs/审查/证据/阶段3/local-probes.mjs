@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createFileDataStore } from '../../../../apps/api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../../../apps/api/src/app.factory.js';
-import { writeJsonFileAtomically } from '../../../../apps/api/src/infrastructure/atomic-json-file.js';
+import { writeJsonFileAtomically } from '../../../../apps/api/src/infrastructure/atomic-json-file.ts';
 const results=[];
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'knowra-review3-'));
 function fixture(name){

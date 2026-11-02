@@ -1,4 +1,4 @@
-import { withPostgresErrors } from '../../../../infrastructure/postgres-errors.js';
+import { withPostgresErrors } from '../../../../infrastructure/postgres-errors.ts';
 
 export const noteWithTags = { noteTags: true };
 
@@ -28,12 +28,14 @@ export function buildNoteWhere(options = {}) {
   if (booleanOption(options.favoriteOnly)) where.favorite = true;
   const tagIds = Array.isArray(options.tagIds)
     ? options.tagIds.filter(Boolean)
-    : typeof options.tagIds === 'string' ? options.tagIds.split(',').filter(Boolean) : [];
+    : typeof options.tagIds === 'string'
+      ? options.tagIds.split(',').filter(Boolean)
+      : [];
   if (tagIds.length > 0) {
     if ((options.match ?? options.tagMatch) === 'any') {
       where.noteTags = { some: { tagId: { in: tagIds } } };
     } else {
-      where.AND = tagIds.map((tagId) => ({ noteTags: { some: { tagId } } }));
+      where.AND = tagIds.map(tagId => ({ noteTags: { some: { tagId } } }));
     }
   } else if (options.tagId) {
     where.noteTags = { some: { tagId: options.tagId } };
@@ -53,7 +55,7 @@ export async function replaceNoteTags(tx, noteId, tagIds = []) {
   await tx.noteTag.deleteMany({ where: { noteId } });
   if (tagIds.length > 0) {
     await tx.noteTag.createMany({
-      data: [...new Set(tagIds)].map((tagId) => ({ noteId, tagId }))
+      data: [...new Set(tagIds)].map(tagId => ({ noteId, tagId }))
     });
   }
 }

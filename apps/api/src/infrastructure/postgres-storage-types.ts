@@ -1,5 +1,5 @@
 import type { PostgresTransactionHost } from './postgres-transaction-port.ts';
-import type { createMaintenanceGate } from './maintenance-gate.js';
+import type { createMaintenanceGate } from './maintenance-gate.ts';
 import type { createPostgresAttachmentStore } from './postgres-attachment-store.js';
 import type { createPostgresAttachmentRepository } from '../modules/knowledge/infrastructure/postgres/attachment-repository.js';
 import type { loadPostgresAttachmentReferenceState } from './attachment-deletion-preflight.js';

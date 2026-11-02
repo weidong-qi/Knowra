@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { jsonChunks } from '../src/infrastructure/json-chunks.js';
-import { cloneJsonData } from '../src/infrastructure/json-clone.js';
-import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.js';
+import { jsonChunks } from '../src/infrastructure/json-chunks.ts';
+import { cloneJsonData } from '../src/infrastructure/json-clone.ts';
+import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import {
   appendChanges,
   cloneJournalForChanges,

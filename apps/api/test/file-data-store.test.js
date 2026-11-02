@@ -18,7 +18,14 @@ export const fileDataStoreTests = [
           assert.deepEqual(calls, []);
         });
         assert.deepEqual(calls, ['inner', 'outer']);
-        assert.throws(() => store.runTransaction(() => { store.afterCommit(() => calls.push('rolled-back')); throw new Error('回滚'); }), /回滚/);
+        assert.throws(
+          () =>
+            store.runTransaction(() => {
+              store.afterCommit(() => calls.push('rolled-back'));
+              throw new Error('回滚');
+            }),
+          /回滚/
+        );
         store.afterCommit(() => calls.push('immediate'));
         assert.deepEqual(calls, ['inner', 'outer', 'immediate']);
       } finally {
@@ -58,9 +65,7 @@ export const fileDataStoreTests = [
   {
     name: 'file data store exports versioned snapshots and imports legacy v1 data',
     async run() {
-      const { createFileDataStore } = await import(
-        '../src/infrastructure/file-data-store.js'
-      );
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
 
@@ -79,23 +84,29 @@ export const fileDataStoreTests = [
           version: 'v1-local-json',
           data: createSnapshotData({
             spaces: [createSpace('space-2')],
-            folders: [{
-              id: 'folder-1',
-              spaceId: 'space-2',
-              name: 'Imported Folder'
-            }],
-            tags: [{
-              id: 'tag-1',
-              spaceId: 'space-2',
-              name: 'Imported Tag'
-            }],
+            folders: [
+              {
+                id: 'folder-1',
+                spaceId: 'space-2',
+                name: 'Imported Folder'
+              }
+            ],
+            tags: [
+              {
+                id: 'tag-1',
+                spaceId: 'space-2',
+                name: 'Imported Tag'
+              }
+            ],
             notes: [createNote('note-2', 'Imported note')],
-            contentAnnotations: [{
-              id: 'annotation-1',
-              spaceId: 'space-2',
-              noteId: 'note-2',
-              quoteText: 'Imported annotation'
-            }]
+            contentAnnotations: [
+              {
+                id: 'annotation-1',
+                spaceId: 'space-2',
+                noteId: 'note-2',
+                quoteText: 'Imported annotation'
+              }
+            ]
           })
         });
 
@@ -114,12 +125,8 @@ export const fileDataStoreTests = [
   {
     name: 'file data store rejects unsupported versions and malformed collections before replacement',
     async run() {
-      const { createFileDataStore } = await import(
-        '../src/infrastructure/file-data-store.js'
-      );
-      const tempDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-store-schema-')
-      );
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-schema-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
 
       try {
@@ -129,21 +136,23 @@ export const fileDataStoreTests = [
         const persistedBefore = fs.readFileSync(filePath, 'utf8');
 
         assert.throws(
-          () => store.importSnapshot({
-            version: 'v99-local-json',
-            data: createSnapshotData()
-          }),
-          (error) => error.code === 'STORAGE_SNAPSHOT_VERSION_UNSUPPORTED'
+          () =>
+            store.importSnapshot({
+              version: 'v99-local-json',
+              data: createSnapshotData()
+            }),
+          error => error.code === 'STORAGE_SNAPSHOT_VERSION_UNSUPPORTED'
         );
         assert.throws(
-          () => store.importSnapshot({
-            version: 'v1-local-json',
-            data: {
-              ...createSnapshotData(),
-              notes: {}
-            }
-          }),
-          (error) => error.code === 'STORAGE_SNAPSHOT_INVALID'
+          () =>
+            store.importSnapshot({
+              version: 'v1-local-json',
+              data: {
+                ...createSnapshotData(),
+                notes: {}
+              }
+            }),
+          error => error.code === 'STORAGE_SNAPSHOT_INVALID'
         );
 
         assert.equal(store.state.spaces[0].id, 'space-current');
@@ -156,79 +165,97 @@ export const fileDataStoreTests = [
   {
     name: 'file data store rejects broken cross references and folder cycles',
     async run() {
-      const { createFileDataStore } = await import(
-        '../src/infrastructure/file-data-store.js'
-      );
-      const tempDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-store-references-')
-      );
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-references-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
 
       try {
         const store = createFileDataStore(filePath);
-        const snapshot = (overrides) => ({
+        const snapshot = overrides => ({
           version: 'v1-local-json',
           data: createSnapshotData(overrides)
         });
         const expectInvalid = (payload, message) => {
           assert.throws(
             () => store.prepareImport(payload),
-            (error) => (
-              error.code === 'STORAGE_SNAPSHOT_INVALID'
-              && error.message.includes(message)
-            )
+            error => error.code === 'STORAGE_SNAPSHOT_INVALID' && error.message.includes(message)
           );
         };
 
-        expectInvalid(snapshot({
-          spaces: [createSpace('space-1')],
-          folders: [{
-            id: 'folder-a',
-            spaceId: 'space-1',
-            parentId: 'folder-b',
-            name: 'A'
-          }, {
-            id: 'folder-b',
-            spaceId: 'space-1',
-            parentId: 'folder-a',
-            name: 'B'
-          }]
-        }), 'cycle');
+        expectInvalid(
+          snapshot({
+            spaces: [createSpace('space-1')],
+            folders: [
+              {
+                id: 'folder-a',
+                spaceId: 'space-1',
+                parentId: 'folder-b',
+                name: 'A'
+              },
+              {
+                id: 'folder-b',
+                spaceId: 'space-1',
+                parentId: 'folder-a',
+                name: 'B'
+              }
+            ]
+          }),
+          'cycle'
+        );
 
-        expectInvalid(snapshot({
-          spaces: [createSpace('space-1'), createSpace('space-2')],
-          tags: [{
-            id: 'tag-2',
-            spaceId: 'space-2',
-            name: 'Other space'
-          }],
-          notes: [createNote('note-1', 'Cross tag', {
-            spaceId: 'space-1',
-            tagIds: ['tag-2']
-          })]
-        }), 'must belong to the same space');
+        expectInvalid(
+          snapshot({
+            spaces: [createSpace('space-1'), createSpace('space-2')],
+            tags: [
+              {
+                id: 'tag-2',
+                spaceId: 'space-2',
+                name: 'Other space'
+              }
+            ],
+            notes: [
+              createNote('note-1', 'Cross tag', {
+                spaceId: 'space-1',
+                tagIds: ['tag-2']
+              })
+            ]
+          }),
+          'must belong to the same space'
+        );
 
-        expectInvalid(snapshot({
-          spaces: [createSpace('space-1')],
-          attachments: [{
-            id: 'attachment-orphan',
-            noteId: 'note-missing',
-            fileName: 'orphan.txt'
-          }]
-        }), 'references unknown note');
+        expectInvalid(
+          snapshot({
+            spaces: [createSpace('space-1')],
+            attachments: [
+              {
+                id: 'attachment-orphan',
+                noteId: 'note-missing',
+                fileName: 'orphan.txt'
+              }
+            ]
+          }),
+          'references unknown note'
+        );
 
-        expectInvalid(snapshot({
-          spaces: [createSpace('space-1'), createSpace('space-2')],
-          notes: [createNote('note-1', 'Annotation source', {
-            spaceId: 'space-1'
-          })],
-          contentAnnotations: [{
-            id: 'annotation-1',
-            spaceId: 'space-2',
-            noteId: 'note-1',
-            quoteText: 'quote'
-          }]
-        }), 'must belong to the same space');
+        expectInvalid(
+          snapshot({
+            spaces: [createSpace('space-1'), createSpace('space-2')],
+            notes: [
+              createNote('note-1', 'Annotation source', {
+                spaceId: 'space-1'
+              })
+            ],
+            contentAnnotations: [
+              {
+                id: 'annotation-1',
+                spaceId: 'space-2',
+                noteId: 'note-1',
+                quoteText: 'quote'
+              }
+            ]
+          }),
+          'must belong to the same space'
+        );
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
@@ -237,12 +264,8 @@ export const fileDataStoreTests = [
   {
     name: 'file data store keeps memory and disk unchanged when import persistence fails',
     async run() {
-      const { createFileDataStore } = await import(
-        '../src/infrastructure/file-data-store.js'
-      );
-      const tempDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-store-failure-')
-      );
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-failure-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
       fs.writeFileSync(
         filePath,
@@ -265,13 +288,14 @@ export const fileDataStoreTests = [
 
       try {
         assert.throws(
-          () => store.importSnapshot({
-            data: createSnapshotData({
-              spaces: [createSpace('space-imported')],
-              notes: [createNote('note-imported', 'Imported')]
-            })
-          }),
-          (error) => error.code === 'STORAGE_WRITE_FAILED'
+          () =>
+            store.importSnapshot({
+              data: createSnapshotData({
+                spaces: [createSpace('space-imported')],
+                notes: [createNote('note-imported', 'Imported')]
+              })
+            }),
+          error => error.code === 'STORAGE_WRITE_FAILED'
         );
 
         assert.equal(store.state.spaces[0].id, 'space-current');
@@ -285,12 +309,8 @@ export const fileDataStoreTests = [
   {
     name: 'file data store commits a local transaction once and restores memory when persistence fails',
     async run() {
-      const { createFileDataStore } = await import(
-        '../src/infrastructure/file-data-store.js'
-      );
-      const tempDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-store-transaction-')
-      );
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-transaction-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
       let writeCount = 0;
 
@@ -319,20 +339,21 @@ export const fileDataStoreTests = [
 
         const stableWriteCount = writeCount;
         assert.throws(
-          () => store.runTransaction(() => {
-            store.state.notes.push(
-              createNote('note-rollback', 'Rollback note', {
-                spaceId: 'space-transaction'
-              })
-            );
-            store.flush();
-            throw new Error('abort transaction');
-          }),
+          () =>
+            store.runTransaction(() => {
+              store.state.notes.push(
+                createNote('note-rollback', 'Rollback note', {
+                  spaceId: 'space-transaction'
+                })
+              );
+              store.flush();
+              throw new Error('abort transaction');
+            }),
           /abort transaction/
         );
         assert.equal(writeCount, stableWriteCount);
         assert.equal(
-          store.state.notes.some((note) => note.id === 'note-rollback'),
+          store.state.notes.some(note => note.id === 'note-rollback'),
           false
         );
       } finally {
@@ -343,22 +364,15 @@ export const fileDataStoreTests = [
   {
     name: 'atomic JSON replacement restores the old file when fallback replacement fails',
     async run() {
-      const { writeJsonFileAtomically } = await import(
-        '../src/infrastructure/atomic-json-file.js'
-      );
-      const tempDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-atomic-json-')
-      );
+      const { writeJsonFileAtomically } = await import('../src/infrastructure/atomic-json-file.ts');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-atomic-json-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
       fs.writeFileSync(filePath, '{"value":"old"}');
       let temporaryReplaceAttempts = 0;
       const fileSystem = {
         ...fs,
         renameSync(sourcePath, targetPath) {
-          if (
-            targetPath === filePath
-            && path.basename(sourcePath).endsWith('.tmp')
-          ) {
+          if (targetPath === filePath && path.basename(sourcePath).endsWith('.tmp')) {
             temporaryReplaceAttempts += 1;
             const error = new Error('simulated rename failure');
             error.code = temporaryReplaceAttempts === 1 ? 'EPERM' : 'EIO';
@@ -370,14 +384,15 @@ export const fileDataStoreTests = [
 
       try {
         assert.throws(
-          () => writeJsonFileAtomically(
-            filePath,
-            { value: 'new' },
-            {
-              fileSystem,
-              createUniqueId: () => 'test-id'
-            }
-          ),
+          () =>
+            writeJsonFileAtomically(
+              filePath,
+              { value: 'new' },
+              {
+                fileSystem,
+                createUniqueId: () => 'test-id'
+              }
+            ),
           /simulated rename failure/
         );
         assert.equal(fs.readFileSync(filePath, 'utf8'), '{"value":"old"}');

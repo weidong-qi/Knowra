@@ -8,7 +8,7 @@ import {
   changedHistoryNoteIds,
   HISTORY_RETENTION_COLLECTIONS
 } from '../../api/src/modules/knowledge/domain/history-retention.js';
-import { cloneJsonData } from '../../api/src/infrastructure/json-clone.js';
+import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import {
   validateSqliteDeletionFacts,
   initializeDeletionFacts,

@@ -5,7 +5,7 @@ import {
   createEmptyLocalState
 } from '../../../infrastructure/local-data-schema.js';
 import { assertNoInsecureImageUrls } from './note-content-policy.js';
-import { assertSpacesOwnedBy } from '../../../infrastructure/owner-boundary.js';
+import { assertSpacesOwnedBy } from '../../../infrastructure/owner-boundary.ts';
 
 export function createKnowledgeBaseSnapshotService({
   dataStore,
@@ -23,9 +23,18 @@ export function createKnowledgeBaseSnapshotService({
     inspectAttachmentDeletion,
     deleteAttachment,
     retryAttachmentCleanup,
-    verifyAttachment: (params) => { requireAttachmentStore(); return attachmentStore.verifyAttachment(params.id); },
-    restoreAttachment: (params, body) => { requireAttachmentStore(); return attachmentStore.restoreAttachment(params.id, body); },
-    listAttachmentCleanup: () => { requireAttachmentStore(); return attachmentStore.listAttachmentCleanup(); }
+    verifyAttachment: params => {
+      requireAttachmentStore();
+      return attachmentStore.verifyAttachment(params.id);
+    },
+    restoreAttachment: (params, body) => {
+      requireAttachmentStore();
+      return attachmentStore.restoreAttachment(params.id, body);
+    },
+    listAttachmentCleanup: () => {
+      requireAttachmentStore();
+      return attachmentStore.listAttachmentCleanup();
+    }
   };
 
   function exportKnowledgeBase() {
@@ -44,27 +53,18 @@ export function createKnowledgeBaseSnapshotService({
 
   function importKnowledgeBase(body) {
     if (!dataStore) {
-      throw createAppError(
-        'STORAGE_NOT_CONFIGURED',
-        'Persistent storage is not configured',
-        503
-      );
+      throw createAppError('STORAGE_NOT_CONFIGURED', 'Persistent storage is not configured', 503);
     }
 
     const preparedSnapshot = dataStore.prepareImport(body);
     assertSpacesOwnedBy(preparedSnapshot.data.spaces, ownerId);
     validateImportedNoteContent(preparedSnapshot.data.notes);
-    const attachmentTransaction = prepareAttachmentImport(
-      body,
-      preparedSnapshot
-    );
+    const attachmentTransaction = prepareAttachmentImport(body, preparedSnapshot);
 
     try {
       attachmentTransaction?.commit();
       if (attachmentTransaction) {
-        preparedSnapshot.data.attachments = structuredClone(
-          attachmentTransaction.records
-        );
+        preparedSnapshot.data.attachments = structuredClone(attachmentTransaction.records);
       }
       dataStore.commitImport(preparedSnapshot);
       attachmentTransaction?.finalize();
@@ -79,24 +79,15 @@ export function createKnowledgeBaseSnapshotService({
   function prepareAttachmentImport(body, preparedSnapshot) {
     const attachmentFiles = body?.attachmentFiles ?? [];
     if (!attachmentStore?.prepareAttachmentsSnapshot) {
-      if (
-        preparedSnapshot.data.attachments.length > 0
-        || attachmentFiles.length > 0
-      ) {
-        throw createAppError(
-          'ATTACHMENT_STORAGE_NOT_CONFIGURED',
-          'Attachment storage is not configured',
-          503
-        );
+      if (preparedSnapshot.data.attachments.length > 0 || attachmentFiles.length > 0) {
+        throw createAppError('ATTACHMENT_STORAGE_NOT_CONFIGURED', 'Attachment storage is not configured', 503);
       }
       return null;
     }
 
     return attachmentStore.prepareAttachmentsSnapshot(attachmentFiles, {
       expectedMetadata: preparedSnapshot.data.attachments,
-      noteIds: new Set(
-        preparedSnapshot.data.notes.map((note) => note.id)
-      )
+      noteIds: new Set(preparedSnapshot.data.notes.map(note => note.id))
     });
   }
 
@@ -137,11 +128,7 @@ export function createKnowledgeBaseSnapshotService({
 
   function requireAttachmentStore() {
     if (!attachmentStore) {
-      throw createAppError(
-        'ATTACHMENT_STORAGE_NOT_CONFIGURED',
-        'Attachment storage is not configured',
-        503
-      );
+      throw createAppError('ATTACHMENT_STORAGE_NOT_CONFIGURED', 'Attachment storage is not configured', 503);
     }
   }
 }

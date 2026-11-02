@@ -27,7 +27,7 @@ import { createInMemoryNoteRepository } from '../knowledge/infrastructure/note-r
 import { createInMemoryNoteVersionRepository } from '../knowledge/infrastructure/note-version-repository.js';
 import { createInMemoryAnnotationRevisionRepository } from '../knowledge/infrastructure/annotation-support-repositories.js';
 import { validateSyncBatchState, LOCAL_DATA_SCHEMA_VERSION } from '../../infrastructure/local-data-schema.js';
-import { cloneJsonData } from '../../infrastructure/json-clone.js';
+import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertNoInsecureImageUrls } from '../knowledge/application/note-content-policy.js';
 import { inspectAttachmentDeletion } from '../../infrastructure/attachment-deletion-preflight.js';
 import { calculateContentHash, resolveAnchor } from '@study-accelerator/content-anchor';

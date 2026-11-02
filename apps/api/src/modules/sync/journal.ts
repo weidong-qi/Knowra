@@ -1,7 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { LOCAL_DATA_COLLECTIONS } from '../../infrastructure/local-data-schema.js';
 import { createAppError } from '../../errors/app-error.ts';
-import { cloneJsonData } from '../../infrastructure/json-clone.js';
+import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import type { Note } from '../knowledge/domain/note.ts';
 import type { SyncSnapshotBinding } from './protocol-contract.ts';
 

@@ -53,7 +53,7 @@ import { createAsyncQuestionService } from './application/postgres-async/questio
 import { createTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
 import { createWorkspaceQueryService } from './application/workspace-query-service.js';
 import { conflictError, validationError } from './application/knowledge-errors.js';
-import { withPostgresErrors } from '../../infrastructure/postgres-errors.js';
+import { withPostgresErrors } from '../../infrastructure/postgres-errors.ts';
 import { withLearningObjectiveReviewErrors } from './application/learning-objective-concurrency.js';
 
 /** @param {import('./application/postgres-async/service-dependencies.ts').PostgresModuleDependencies} dependencies */

@@ -46,7 +46,7 @@ import {
   transformTagGroup,
   validateDatabaseConstraints
 } from './json-transformers.js';
-import { createPostgresAdvisoryLock } from '../postgres-advisory-lock.js';
+import { createPostgresAdvisoryLock } from '../postgres-advisory-lock.ts';
 import { findInsecureImageUrls } from '../../modules/knowledge/application/note-content-policy.js';
 import { createJournal, loadJournal, syncKey } from '../../modules/sync/journal.ts';
 import {

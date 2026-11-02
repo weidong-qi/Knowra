@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.js';
+import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { createTaskWorkspaceService } from '../src/modules/task-workspaces/service.ts';
 

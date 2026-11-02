@@ -10,7 +10,7 @@ import { assertSnapshotBinding, snapshotBinding } from './protocol-contract.ts';
 import { createBatchSyncService } from './batch-service.js';
 import { applyPostgresState } from './postgres-batch.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction-context.js';
+import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction-context.ts';
 import * as maps from '../knowledge/infrastructure/postgres/mappers.js';
 import { appendChanges, createJournal, loadJournal, syncError } from './journal.ts';
 import { createSyncService } from './service.js';
