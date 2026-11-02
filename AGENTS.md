@@ -34,6 +34,7 @@
 - 唯一可启动前端是 `apps/web-v4`（React、TypeScript、Vite、Zustand、CSS Modules、hash 路由）；`apps/web` 只保留 V3 源码和回归测试。V4 不得导入 V3 模块或资源。
 - `react-aria-components` 只由 V4 的 `src/components/ui/` 包装层直接导入。`packages/web-core` 保持框架、CSS 和 DOM 无关；边界由 `scripts/check-v4-boundaries.mjs` 检查。
 - API 运行入口使用 `node:http`；路由 → 应用服务 → repository，依赖在 `apps/api/src/app.factory.js` 装配。NestJS 依赖不代表运行中的框架。
+- `apps/api` 正在从 JS 渐进迁移到 TS：新建后端文件用 `.ts`，迁移旧文件按 [迁移规范](docs/后端TS迁移/迁移规范.md) 执行（按目录成批、只用现有测试验收、进度每批一行）。
 - API 成功封装为 `{ data: ... }`，失败为 `{ error: { code, message } }`。保持 DTO 和共享契约一致。
 - 默认 `PERSISTENCE_DRIVER=local-json`；PostgreSQL 已实现，需显式选择 `postgres`、提供 `DATABASE_URL` 并应用迁移，失败不得静默回退 JSON。
 - `STORAGE_MODE` 默认 `local-first`；上传、导出、临时目录通过 `STORAGE_UPLOADS_DIR` / `STORAGE_EXPORTS_DIR` / `STORAGE_TEMP_DIR` 配置。
