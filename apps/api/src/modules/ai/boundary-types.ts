@@ -159,7 +159,7 @@ export interface ProviderMessage {
   type: string;
   id?: number;
   request?: Parameters<
-    ReturnType<typeof import('./infrastructure/providers/deepseek-adapter.js').createDeepSeekAdapter>['complete']
+    ReturnType<typeof import('./infrastructure/providers/deepseek-adapter.ts').createDeepSeekAdapter>['complete']
   >[0];
   result?: unknown;
   error?: { code?: string; message?: string; retryable?: boolean; httpStatus?: number };
@@ -196,7 +196,7 @@ export interface ToolOutcome {
   hint?: string;
 }
 export interface GatewayOptions {
-  adapter: ReturnType<typeof import('./infrastructure/providers/deepseek-adapter.js').createDeepSeekAdapter>;
+  adapter: ReturnType<typeof import('./infrastructure/providers/deepseek-adapter.ts').createDeepSeekAdapter>;
   resolveCredential?: (reference: string) => Promise<{ apiKey: string; modelId: string }>;
   authorizePaidCall?: (request: { budgetAttemptId?: string }) => boolean | Promise<boolean>;
 }

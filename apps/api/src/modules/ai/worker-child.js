@@ -1,6 +1,6 @@
 import { createAiWorker } from './worker.js';
 import { createAiGateway } from './gateway.js';
-import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.js';
+import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.ts';
 
 let nextId = 0;
 const pending = new Map();

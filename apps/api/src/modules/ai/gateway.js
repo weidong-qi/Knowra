@@ -14,6 +14,11 @@ const TOOL_NAMES = new Set([
 ]);
 
 export class AiGatewayError extends Error {
+  /**
+   * @param {string} code
+   * @param {string} message
+   * @param {{retryable?: boolean, httpStatus?: number | null}} [options]
+   */
   constructor(code, message, { retryable = false, httpStatus = null } = {}) {
     super(message);
     this.name = 'AiGatewayError';
