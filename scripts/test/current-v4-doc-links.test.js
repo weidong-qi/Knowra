@@ -8,7 +8,7 @@ const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)),
 const currentEntryDocuments = [
   'deploy/isolated-test/README.md',
   'deploy/README.md',
-  'docs/任务盘点与验收索引.md',
+  'docs/已归档/任务盘点与验收索引.md',
   'docs/离线编辑与同步/同步世代重建与删除事实保护.md',
   'docs/离线编辑与同步/2026-10-01-当前阶段恢复中断补验.md',
   'docs/资产生命周期任务/README.md',
