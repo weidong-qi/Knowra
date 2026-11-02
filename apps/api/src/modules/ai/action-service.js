@@ -1,6 +1,6 @@
 import { assertAiReadableNote } from './note-privacy.js';
 import { createActionInboxMethods, createAssistantMessageSourceGuard } from './action-inbox.js';
-import { validateWriteIntent } from './note-write-intent.js';
+import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.js';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';

@@ -6,7 +6,7 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
 import { buildKnowledgeProposalPlan, proposeKnowledge } from '../src/modules/ai/knowledge-propose-tool.js';
-import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.js';
+import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.ts';
 import { proposalProgress } from '../src/modules/ai/agent-worker.js';
 import { anchorForBlock, projectMarkdown } from '@study-accelerator/content-anchor';
 import { createAgentKnowledgeCommitService } from '../src/modules/ai/agent-knowledge-commit.js';

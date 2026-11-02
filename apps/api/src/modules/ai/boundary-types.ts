@@ -97,7 +97,7 @@ export interface AgentWorkerOptions {
   logger?: Pick<Console, 'warn' | 'error'>;
   retrievalCandidates?: CandidateSource;
   actions?: ReturnType<typeof createNoteActionService>;
-  webSearchAdapter?: Parameters<typeof import('./assistant-tools.js').createAssistantWebSearch>[0];
+  webSearchAdapter?: Parameters<typeof import('./assistant-tools.ts').createAssistantWebSearch>[0];
   annotations?: ReturnType<typeof createKnowledgeModule>['repositories']['contentAnnotationRepository'];
   knowledgeProposals?: boolean | (() => boolean);
   knowledgeCommit?: ReturnType<typeof createAgentKnowledgeCommitService>;
@@ -191,7 +191,7 @@ export interface ToolOutcome {
   actionId?: string;
   catalog?: boolean;
   progress?: boolean;
-  external?: { hits: object[] };
+  external?: { hits: unknown };
   errorCode?: string;
   hint?: string;
 }

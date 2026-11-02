@@ -1,9 +1,9 @@
-import { validateWriteIntent } from './note-write-intent.js';
+import { validateWriteIntent } from './note-write-intent.ts';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import schema from './contracts/ai-conversation-v2.schema.json' with { type: 'json' };
 import { hashRecord } from './record-contract.js';
-import { validateAgentCheckpoint, validateDurableModelResult, REJECTED_RESPONSE_CODES } from './agent-checkpoint.js';
+import { validateAgentCheckpoint, validateDurableModelResult, REJECTED_RESPONSE_CODES } from './agent-checkpoint.ts';
 
 // 会话持久记录的纯契约：不读写存储，不推进任务状态。
 export const CONVERSATION_KINDS = Object.freeze({
