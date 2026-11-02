@@ -1,6 +1,6 @@
 import { prepareAnnotationChange } from '../annotation-change-context.js';
 import { Note } from '../../domain/note.js';
-import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.js';
+import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.ts';
 import { createNoteSummary } from '../note-summary.js';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 import { createAsyncNoteAssociationOperations } from './note-association-operations.js';

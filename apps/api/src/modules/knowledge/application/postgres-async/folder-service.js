@@ -1,5 +1,5 @@
 import { Folder } from '../../domain/folder.js';
-import { buildCreateFolderDto, buildUpdateFolderDto } from '../dto/folder.dto.js';
+import { buildCreateFolderDto, buildUpdateFolderDto } from '../dto/folder.dto.ts';
 import { conflictError, notFoundError } from '../knowledge-errors.js';
 
 /** @param {import('./service-dependencies.ts').FolderDependencies} dependencies */

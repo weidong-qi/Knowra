@@ -1,5 +1,5 @@
 import { TagGroup } from '../../domain/tag-group.js';
-import { buildCreateTagGroupDto, buildUpdateTagGroupDto } from '../dto/tag-group.dto.js';
+import { buildCreateTagGroupDto, buildUpdateTagGroupDto } from '../dto/tag-group.dto.ts';
 import { conflictError, notFoundError } from '../knowledge-errors.js';
 
 import type { TagGroupDtoInput } from '../dto/tag-group.dto.ts';

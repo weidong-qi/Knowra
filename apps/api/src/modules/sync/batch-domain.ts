@@ -32,10 +32,10 @@ import {
   validateKnowledgeLifecycleChange
 } from './knowledge-batch-domain.ts';
 import { normalizeTrainingChange, reconcileTrainingChanges, validateTrainingBatch } from './training-batch-domain.ts';
-import { buildCreateNoteDto } from '../knowledge/application/dto/note.dto.js';
-import { buildCreateFolderDto } from '../knowledge/application/dto/folder.dto.js';
-import { buildCreateTagDto } from '../knowledge/application/dto/tag.dto.js';
-import { buildCreateTagGroupDto } from '../knowledge/application/dto/tag-group.dto.js';
+import { buildCreateNoteDto } from '../knowledge/application/dto/note.dto.ts';
+import { buildCreateFolderDto } from '../knowledge/application/dto/folder.dto.ts';
+import { buildCreateTagDto } from '../knowledge/application/dto/tag.dto.ts';
+import { buildCreateTagGroupDto } from '../knowledge/application/dto/tag-group.dto.ts';
 import { reconcileSyncedSourceStates } from '../../infrastructure/local-data-relations.js';
 import { createHash } from 'node:crypto';
 import { Note } from '../knowledge/domain/note.js';

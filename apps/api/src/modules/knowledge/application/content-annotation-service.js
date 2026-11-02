@@ -19,7 +19,7 @@ import {
   buildCreateContentAnnotationDto,
   buildUpdateAnnotationAnchorDto,
   buildUpdateContentAnnotationDto
-} from './dto/content-annotation-dto.js';
+} from './dto/content-annotation-dto.ts';
 import { createInMemoryContentAnnotationRepository } from '../infrastructure/content-annotation-repository.js';
 
 const contentHash = calculateContentHash;
@@ -272,7 +272,10 @@ export function createContentAnnotationService({
       const annotation = requireAnnotation(id);
       assertNotTextOwned(annotation);
       const dto = buildUpdateAnnotationAnchorDto(input);
-      if (annotation.scopeType === 'list' && dto.anchor?.scopeType !== 'list')
+      if (
+        annotation.scopeType === 'list' &&
+        /** @type {{scopeType?: unknown} | null | undefined} */ (dto.anchor)?.scopeType !== 'list'
+      )
         throw fail('ANNOTATION_RANGE_INVALID', '列表重点的新来源必须是完整列表项', 409);
       assertRevision(annotation, dto.expectedRevision);
       const note = assertCurrentNote({ ...annotation, ...dto });

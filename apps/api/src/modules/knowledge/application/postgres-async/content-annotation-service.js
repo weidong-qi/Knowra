@@ -18,7 +18,7 @@ import {
   buildCreateContentAnnotationDto,
   buildUpdateAnnotationAnchorDto,
   buildUpdateContentAnnotationDto
-} from '../dto/content-annotation-dto.js';
+} from '../dto/content-annotation-dto.ts';
 
 const fail = (code, message, statusCode = 400) => createAppError(code, message, statusCode);
 const requestHash = value => calculateContentHash(JSON.stringify(value));
@@ -262,7 +262,10 @@ export function createAsyncContentAnnotationService({
       const annotation = await requireAnnotation(id);
       assertNotTextOwned(annotation);
       const dto = buildUpdateAnnotationAnchorDto(input);
-      if (annotation.scopeType === 'list' && dto.anchor?.scopeType !== 'list')
+      if (
+        annotation.scopeType === 'list' &&
+        /** @type {{scopeType?: unknown} | null | undefined} */ (dto.anchor)?.scopeType !== 'list'
+      )
         throw fail('ANNOTATION_RANGE_INVALID', '列表重点的新来源必须是完整列表项', 409);
       assertRevision(annotation, dto.expectedRevision);
       const note = await assertCurrentNote({ ...annotation, ...dto });

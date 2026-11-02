@@ -8,7 +8,7 @@ import {
   buildCreateKnowledgeEvidenceDto,
   buildCreateKnowledgeItemDto,
   buildUpdateKnowledgeItemDto
-} from './dto/knowledge-item.dto.js';
+} from './dto/knowledge-item.dto.ts';
 import { assertKnowledgeItemConfirmable } from './formal-asset-validation.js';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 

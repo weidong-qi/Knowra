@@ -1,5 +1,5 @@
 import { KnowledgeSpace } from '../../domain/knowledge-space.js';
-import { buildDefaultKnowledgeSpaceDto } from '../dto/knowledge-space.dto.js';
+import { buildDefaultKnowledgeSpaceDto } from '../dto/knowledge-space.dto.ts';
 import { TagGroup } from '../../domain/tag-group.js';
 import { buildDefaultTagGroups } from '../../domain/default-tag-groups.js';
 import { randomUUID } from 'node:crypto';

@@ -21,9 +21,13 @@ interface TransactionDependencies {
   getTombstone?: (collection: string, id: string) => object | null;
   runTransaction?: <T>(operation: () => T) => T;
 }
+export interface AssessmentWritePort<Record, Result = Record> {
+  create?: (record: Record) => Result;
+  save: (record: Record) => Result;
+}
 export interface AssessmentContextDependencies extends TransactionDependencies {
-  examProfileRepository?: AssessmentCollectionRepository<ExamProfile>;
-  examFocusRepository?: ExamFocusRepository<ExamFocus>;
+  examProfileRepository?: AssessmentCollectionRepository<ExamProfile<unknown, unknown>>;
+  examFocusRepository?: ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>;
   learningObjectiveRepository?: AssessmentCollectionRepository<LearningObjective>;
 }
 export interface LearningObjectiveDependencies extends TransactionDependencies {
@@ -40,11 +44,11 @@ export interface KnowledgeItemDependencies extends TransactionDependencies {
   onItemInvalidated?: (id: string) => void;
 }
 export interface QuestionDependencies extends TransactionDependencies {
-  repository?: AssessmentCollectionRepository<Question>;
+  repository?: AssessmentCollectionRepository<Question<unknown, unknown, unknown, unknown>>;
   questionObjectiveRepository?: QuestionObjectiveRepository;
   questionSourceRepository?: QuestionSourceRepository;
   learningObjectiveRepository?: AssessmentCollectionRepository<LearningObjective>;
-  examFocusRepository?: ExamFocusRepository<ExamFocus>;
+  examFocusRepository?: ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>;
   knowledgeItemRepository?: Pick<KnowledgeItemRepository, 'findById'>;
   noteRepository?: Pick<NoteRepository, 'findById'>;
   noteVersionRepository?: NoteVersionRepository;
