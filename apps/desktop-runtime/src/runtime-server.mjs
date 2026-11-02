@@ -478,6 +478,7 @@ export async function startLocalRuntime({
     if (closeHttp) await closeHttp();
     const results = await Promise.allSettled([sync?.close(), closeAi?.()]);
     const failed = results.find(result => result.status === 'rejected');
+    // eslint-disable-next-line preserve-caught-error -- 原异常已保留在 AggregateError.errors，规则仅识别 cause。
     if (failed) throw new AggregateError([error, failed.reason], '本地服务启动和关闭失败。');
     store?.close();
     // 关闭失败时保留目录锁，避免尚存的 SQLite owner 与重试启动共用资料库。
