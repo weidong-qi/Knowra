@@ -11,14 +11,14 @@ import { loadPostgresAttachmentReferenceState } from './infrastructure/attachmen
 import { createPostgresSnapshotService } from './infrastructure/postgres-snapshot-service.js';
 import { createPostgresKnowledgeModule } from './modules/knowledge/postgres-async-module.js';
 import { createPostgresKnowledgeHttpHandlers } from './modules/knowledge/http/postgres-async-handlers.js';
-import { createPostgresNoteRepository } from './modules/knowledge/infrastructure/postgres/note-repository.js';
+import { createPostgresNoteRepository } from './modules/knowledge/infrastructure/postgres/note-repository.ts';
 import { createPostgresFolderRepository } from './modules/knowledge/infrastructure/postgres/folder-repository.ts';
 import { createPostgresTagRepository } from './modules/knowledge/infrastructure/postgres/tag-repository.ts';
 import { createPostgresTagGroupRepository } from './modules/knowledge/infrastructure/postgres/tag-group-repository.ts';
 import { createPostgresKnowledgeSpaceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-space-repository.ts';
-import { createPostgresContentAnnotationRepository } from './modules/knowledge/infrastructure/postgres/content-annotation-repository.js';
-import { createPostgresAttachmentRepository } from './modules/knowledge/infrastructure/postgres/attachment-repository.js';
-import { createPostgresNoteVersionRepository } from './modules/knowledge/infrastructure/postgres/note-version-repository.js';
+import { createPostgresContentAnnotationRepository } from './modules/knowledge/infrastructure/postgres/content-annotation-repository.ts';
+import { createPostgresAttachmentRepository } from './modules/knowledge/infrastructure/postgres/attachment-repository.ts';
+import { createPostgresNoteVersionRepository } from './modules/knowledge/infrastructure/postgres/note-version-repository.ts';
 import { createPostgresKnowledgeItemRepository } from './modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createPostgresKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-evidence-repository.ts';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
@@ -33,7 +33,7 @@ import {
   createPostgresAnalysisScopeRepository,
   createPostgresAnnotationExclusionRepository,
   createPostgresAnnotationRevisionRepository
-} from './modules/knowledge/infrastructure/postgres/annotation-support-repositories.js';
+} from './modules/knowledge/infrastructure/postgres/annotation-support-repositories.ts';
 import { createAsyncNoteDeletionCoordinator } from './modules/knowledge/application/postgres-async/note-deletion-coordinator.js';
 import { withPostgresErrors } from './infrastructure/postgres-errors.ts';
 import { notFoundError } from './modules/knowledge/application/knowledge-errors.js';

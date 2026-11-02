@@ -1,5 +1,25 @@
 import type { Note } from '../../domain/note.ts';
 import type { NoteVersion } from '../../domain/note-version.ts';
+type SavedNote = Note | import('../../../sync/postgres-state-types.ts').SyncMappedEntityMap['notes'];
+/** SDK JSON 没有锚点校验；只在既有动态属性读取与原生调用位置使用。 */
+export interface RawStoredAnchorView {
+  noteVersionId?: unknown;
+  pending?: unknown;
+  scopeType?: unknown;
+  unresolved?: unknown;
+}
+export interface RawStoredAnchorResolver {
+  <Anchor>(
+    markdown: string,
+    anchor: Anchor
+  ): Omit<ReturnType<typeof import('@study-accelerator/content-anchor').resolveAnchor>, 'anchor'> & { anchor?: Anchor };
+}
+export type StoredAnchorReconciliation = Omit<
+  ReturnType<typeof import('../reconcile-annotation-source.js').reconcileAnnotationSource>,
+  'anchor'
+> & {
+  anchor?: import('@prisma/client').Prisma.JsonValue | import('@study-accelerator/content-anchor').ContentAnchor;
+};
 export interface PostgresRepositories {
   tagRepository: ReturnType<
     typeof import('../../infrastructure/postgres/tag-repository.ts').createPostgresTagRepository
@@ -17,28 +37,28 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/tag-group-repository.ts').createPostgresTagGroupRepository
   >;
   attachmentRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/attachment-repository.js').createPostgresAttachmentRepository
+    typeof import('../../infrastructure/postgres/attachment-repository.ts').createPostgresAttachmentRepository
   >;
   examFocusRepository: ReturnType<
     typeof import('../../infrastructure/postgres/exam-focus-repository.ts').createPostgresExamFocusRepository
   >;
   noteVersionRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/note-version-repository.js').createPostgresNoteVersionRepository
+    typeof import('../../infrastructure/postgres/note-version-repository.ts').createPostgresNoteVersionRepository
   >;
   questionSourceRepository: ReturnType<
     typeof import('../../infrastructure/postgres/question-source-repository.ts').createPostgresQuestionSourceRepository
   >;
   contentAnnotationRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/content-annotation-repository.js').createPostgresContentAnnotationRepository
+    typeof import('../../infrastructure/postgres/content-annotation-repository.ts').createPostgresContentAnnotationRepository
   >;
   annotationExclusionRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/annotation-support-repositories.js').createPostgresAnnotationExclusionRepository
+    typeof import('../../infrastructure/postgres/annotation-support-repositories.ts').createPostgresAnnotationExclusionRepository
   >;
   annotationRevisionRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/annotation-support-repositories.js').createPostgresAnnotationRevisionRepository
+    typeof import('../../infrastructure/postgres/annotation-support-repositories.ts').createPostgresAnnotationRevisionRepository
   >;
   analysisScopeRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/annotation-support-repositories.js').createPostgresAnalysisScopeRepository
+    typeof import('../../infrastructure/postgres/annotation-support-repositories.ts').createPostgresAnalysisScopeRepository
   >;
   knowledgeEvidenceRepository: ReturnType<
     typeof import('../../infrastructure/postgres/knowledge-evidence-repository.ts').createPostgresKnowledgeEvidenceRepository
@@ -50,7 +70,7 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/knowledge-item-repository.ts').createPostgresKnowledgeItemRepository
   >;
   noteRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/note-repository.js').createPostgresNoteRepository
+    typeof import('../../infrastructure/postgres/note-repository.ts').createPostgresNoteRepository
   >;
   learningObjectiveRepository: ReturnType<
     typeof import('../../infrastructure/postgres/learning-objective-repository.ts').createPostgresLearningObjectiveRepository
@@ -90,12 +110,12 @@ interface NoteTransactionContext extends Partial<PostgresRepositories> {
   annotationRepository?: PostgresRepositories['contentAnnotationRepository'] | null;
   noteVersionService?: ReturnType<typeof import('../note-version-service.js').createAsyncNoteVersionService>;
   onNoteContentChanged?: (
-    note: Note,
+    note: SavedNote,
     version: NoteVersion,
     change: ReturnType<typeof import('../annotation-change-context.js').prepareAnnotationChange>
   ) => void | Promise<void | AnnotationReconciliation>;
   onNoteIdentityChanged?: (
-    note: import('../../domain/note.ts').Note,
+    note: SavedNote,
     change: ReturnType<typeof import('../annotation-change-context.js').prepareAnnotationChange>
   ) => void | AnnotationRecord[] | Promise<void | AnnotationRecord[]>;
   onNoteDeleted?: (
@@ -202,7 +222,13 @@ export interface PostgresModuleDependencies extends Partial<PostgresRepositories
       import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ItemRepositoryOptions['db'] &
       import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').EvidenceRepositoryOptions['db'] &
       import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ProvenanceRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').QuestionRepositoryOptions['db']
+      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').QuestionRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/note-repository.ts').NoteRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/note-version-repository.ts').NoteVersionRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/content-annotation-repository.ts').ContentAnnotationRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationExclusionRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationRevisionRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/annotation-support-repositories.ts').AnalysisScopeRepositoryOptions['db']
   >;
   getPurgeTombstone?: TransactionDependencies['getTombstone'];
   readPurgeTaskState?: ReturnType<

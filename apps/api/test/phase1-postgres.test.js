@@ -409,7 +409,7 @@ export const phase1PostgresTests = [
     name: 'PostgreSQL note repository rejects a lost-update race',
     async run() {
       const { createPostgresNoteRepository } =
-        await import('../src/modules/knowledge/infrastructure/postgres/note-repository.js');
+        await import('../src/modules/knowledge/infrastructure/postgres/note-repository.ts');
       const existing = {
         id: 'note-race',
         spaceId: 'space-demo',

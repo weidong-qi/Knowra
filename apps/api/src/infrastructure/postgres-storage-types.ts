@@ -1,7 +1,7 @@
 import type { PostgresTransactionHost } from './postgres-transaction-port.ts';
 import type { createMaintenanceGate } from './maintenance-gate.ts';
 import type { createPostgresAttachmentStore } from './postgres-attachment-store.js';
-import type { createPostgresAttachmentRepository } from '../modules/knowledge/infrastructure/postgres/attachment-repository.js';
+import type { createPostgresAttachmentRepository } from '../modules/knowledge/infrastructure/postgres/attachment-repository.ts';
 import type { loadPostgresAttachmentReferenceState } from './attachment-deletion-preflight.ts';
 
 export interface PostgresAttachmentStoreOptions {
@@ -27,7 +27,7 @@ export interface PostgresSnapshotOptions {
 export interface SnapshotRepositories {
   noteRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/note-repository.js').createPostgresNoteRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/note-repository.ts').createPostgresNoteRepository
     >,
     'list'
   >;
@@ -57,31 +57,31 @@ export interface SnapshotRepositories {
   >;
   contentAnnotationRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/content-annotation-repository.js').createPostgresContentAnnotationRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/content-annotation-repository.ts').createPostgresContentAnnotationRepository
     >,
     'list'
   >;
   annotationExclusionRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/annotation-support-repositories.js').createPostgresAnnotationExclusionRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/annotation-support-repositories.ts').createPostgresAnnotationExclusionRepository
     >,
     'list'
   >;
   annotationRevisionRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/annotation-support-repositories.js').createPostgresAnnotationRevisionRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/annotation-support-repositories.ts').createPostgresAnnotationRevisionRepository
     >,
     'list'
   >;
   analysisScopeRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/annotation-support-repositories.js').createPostgresAnalysisScopeRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/annotation-support-repositories.ts').createPostgresAnalysisScopeRepository
     >,
     'list'
   >;
   noteVersionRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/note-version-repository.js').createPostgresNoteVersionRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/note-version-repository.ts').createPostgresNoteVersionRepository
     >,
     'list'
   >;

@@ -24,10 +24,10 @@ import { buildNoteVersionPrunePreview } from './application/note-version-prune-p
 import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.js';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
 import { createAsyncSearchService } from './application/postgres-async/search-service.js';
-import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.js';
+import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.ts';
 import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.ts';
-import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.js';
-import { createPostgresNoteVersionRepository } from './infrastructure/postgres/note-version-repository.js';
+import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.ts';
+import { createPostgresNoteVersionRepository } from './infrastructure/postgres/note-version-repository.ts';
 import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres/knowledge-item-repository.ts';
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from './infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
@@ -42,7 +42,7 @@ import {
   createPostgresAnalysisScopeRepository,
   createPostgresAnnotationExclusionRepository,
   createPostgresAnnotationRevisionRepository
-} from './infrastructure/postgres/annotation-support-repositories.js';
+} from './infrastructure/postgres/annotation-support-repositories.ts';
 import { createAsyncAnnotationScopeService } from './application/postgres-async/annotation-scope-service.js';
 import { createPostgresKnowledgeSpaceRepository } from './infrastructure/postgres/knowledge-space-repository.ts';
 import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-group-repository.ts';
@@ -558,7 +558,11 @@ export function createPostgresKnowledgeModule({
       const snapshots = await analysisScopeRepository.list();
       if (
         snapshots.some(snapshot =>
-          snapshot.noteVersions?.some(version => version.noteId === noteId || versionIds.has(version.noteVersionId))
+          /** @type {import('./application/postgres-async/note-dependency-lifecycle.ts').DependencyScopeSnapshot['noteVersions']} */ (
+            snapshot.noteVersions
+          )?.some(
+            version => version.noteId === noteId || /** @type {Set<unknown>} */ (versionIds).has(version.noteVersionId)
+          )
         )
       ) {
         throw conflictError(

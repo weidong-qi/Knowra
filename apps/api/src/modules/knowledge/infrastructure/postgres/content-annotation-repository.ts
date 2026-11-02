@@ -1,14 +1,82 @@
 import { Prisma } from '@prisma/client';
+import type * as Models from '@prisma/client';
+import type { ContentAnnotation } from '../../domain/content-annotation.ts';
+import type { CreateContentAnnotationDto } from '../../application/dto/content-annotation-dto.ts';
 import { mapAnnotation, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 
-export function createPostgresContentAnnotationRepository({ db }) {
+type AnnotationWriteData<Input extends Pick<ContentAnnotation, 'identityBinding'>> = Omit<
+  Input,
+  'createdAt' | 'updatedAt' | 'deletedAt' | 'identityBinding'
+> & {
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  identityBinding: NonNullable<Input['identityBinding']> | Prisma.NullTypes.DbNull;
+};
+interface AnnotationWhere {
+  id?: { in: string[] };
+  noteId?: string | { in: string[] };
+  spaceId?: string;
+  kind?: CreateContentAnnotationDto['kind'];
+  scopeType?: CreateContentAnnotationDto['scopeType'];
+  anchorStatus?: string;
+  lifecycleStatus?: string;
+  anchorFingerprint?: string;
+  quoteText?: string;
+  fromPosition?: number;
+  toPosition?: number;
+  noteContentHash?: { not: string };
+  schemaVersion?: { not: number };
+}
+interface ContentAnnotationDelegate {
+  upsert<Input extends Pick<ContentAnnotation, 'identityBinding'>>(input: {
+    where: { id: string };
+    create: AnnotationWriteData<Input>;
+    update: Omit<AnnotationWriteData<Input>, 'id' | 'createdAt'>;
+  }): PromiseLike<Models.ContentAnnotation>;
+  findUnique(input: {
+    where: { id: string } | { noteId_idempotencyKey: { noteId: string; idempotencyKey: string } };
+  }): PromiseLike<Models.ContentAnnotation | null>;
+  findFirst(input: { where: AnnotationWhere }): PromiseLike<Models.ContentAnnotation | null>;
+  findMany(input: { where: AnnotationWhere; orderBy?: { updatedAt: 'desc' } }): PromiseLike<Models.ContentAnnotation[]>;
+  deleteMany(input: { where: { noteId: { in: string[] } } }): PromiseLike<{ count: number }>;
+  updateMany(input: {
+    where: { id: { in: string[] } };
+    data: {
+      status: string;
+      anchorStatus: string;
+      anchorReason: string;
+      revision: { increment: number };
+      updatedAt: Date;
+    };
+  }): PromiseLike<{ count: number }>;
+}
+export interface ContentAnnotationRepositoryOptions {
+  db: { contentAnnotation: ContentAnnotationDelegate };
+}
+interface AnnotationListOptions {
+  noteId?: string;
+  spaceId?: string;
+  includeDeleted?: boolean;
+  kind?: string;
+  scopeType?: string;
+  anchorStatus?: string;
+}
+type AnnotationDuplicateInput = Pick<
+  CreateContentAnnotationDto,
+  'noteId' | 'kind' | 'scopeType' | 'anchorFingerprint' | 'quoteText' | 'fromPosition' | 'toPosition'
+>;
+
+export function createPostgresContentAnnotationRepository({ db }: ContentAnnotationRepositoryOptions) {
   if (!db?.contentAnnotation) {
     throw new TypeError('PostgreSQL annotation repository requires db.contentAnnotation');
   }
 
   return {
-    async save(annotation) {
+    async save<Kind, SourceMode, ScopeType, Importance, HeadingPath, Anchor>(
+      annotation: ContentAnnotation<Kind, SourceMode, ScopeType, Importance, HeadingPath, Anchor>
+    ) {
       const data = {
         id: annotation.id,
         spaceId: annotation.spaceId,
@@ -46,7 +114,7 @@ export function createPostgresContentAnnotationRepository({ db }) {
       };
       return withRepositoryErrors(async () =>
         mapAnnotation(
-          await db.contentAnnotation.upsert({
+          await db.contentAnnotation.upsert<typeof annotation>({
             where: { id: data.id },
             create: data,
             update: (() => {
@@ -57,10 +125,10 @@ export function createPostgresContentAnnotationRepository({ db }) {
         )
       );
     },
-    async findById(id) {
+    async findById(id: string) {
       return withRepositoryErrors(async () => mapAnnotation(await db.contentAnnotation.findUnique({ where: { id } })));
     },
-    async findByIdempotencyKey(noteId, idempotencyKey) {
+    async findByIdempotencyKey(noteId: string, idempotencyKey: string) {
       return withRepositoryErrors(async () =>
         mapAnnotation(
           await db.contentAnnotation.findUnique({
@@ -69,7 +137,15 @@ export function createPostgresContentAnnotationRepository({ db }) {
         )
       );
     },
-    async findDuplicate({ noteId, kind, scopeType, anchorFingerprint, quoteText, fromPosition, toPosition }) {
+    async findDuplicate({
+      noteId,
+      kind,
+      scopeType,
+      anchorFingerprint,
+      quoteText,
+      fromPosition,
+      toPosition
+    }: AnnotationDuplicateInput) {
       return withRepositoryErrors(async () =>
         mapAnnotation(
           await db.contentAnnotation.findFirst({
@@ -83,8 +159,7 @@ export function createPostgresContentAnnotationRepository({ db }) {
         )
       );
     },
-    /** @param {{ noteId?: string, spaceId?: string, includeDeleted?: boolean, kind?: string, scopeType?: string, anchorStatus?: string }} options */
-    async list({ noteId, spaceId, includeDeleted = false, kind, scopeType, anchorStatus } = {}) {
+    async list({ noteId, spaceId, includeDeleted = false, kind, scopeType, anchorStatus }: AnnotationListOptions = {}) {
       const where = {
         ...(noteId ? { noteId } : {}),
         ...(spaceId ? { spaceId } : {}),
@@ -102,7 +177,7 @@ export function createPostgresContentAnnotationRepository({ db }) {
         ).map(mapAnnotation)
       );
     },
-    async deleteByNoteIds(noteIds) {
+    async deleteByNoteIds(noteIds: string[]) {
       if (!noteIds.length) return [];
       const existing = await withRepositoryErrors(() =>
         db.contentAnnotation.findMany({
@@ -116,7 +191,7 @@ export function createPostgresContentAnnotationRepository({ db }) {
       );
       return existing.map(mapAnnotation);
     },
-    async markStaleByNoteId(noteId, currentContentHash) {
+    async markStaleByNoteId(noteId: string, currentContentHash: string) {
       return withRepositoryErrors(async () => {
         const rows = await db.contentAnnotation.findMany({
           // v3（内联重点）的位置在正文标记里，不按正文哈希判定过期。

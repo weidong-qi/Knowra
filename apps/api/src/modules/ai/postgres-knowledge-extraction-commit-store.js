@@ -9,10 +9,10 @@ import { createAsyncKnowledgeItemService } from '../knowledge/application/postgr
 import { createPostgresKnowledgeItemRepository } from '../knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createPostgresKnowledgeEvidenceRepository } from '../knowledge/infrastructure/postgres/knowledge-evidence-repository.ts';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from '../knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
-import { createPostgresNoteRepository } from '../knowledge/infrastructure/postgres/note-repository.js';
-import { createPostgresNoteVersionRepository } from '../knowledge/infrastructure/postgres/note-version-repository.js';
+import { createPostgresNoteRepository } from '../knowledge/infrastructure/postgres/note-repository.ts';
+import { createPostgresNoteVersionRepository } from '../knowledge/infrastructure/postgres/note-version-repository.ts';
 import { createPostgresKnowledgeSpaceRepository } from '../knowledge/infrastructure/postgres/knowledge-space-repository.ts';
-import { createPostgresAnalysisScopeRepository } from '../knowledge/infrastructure/postgres/annotation-support-repositories.js';
+import { createPostgresAnalysisScopeRepository } from '../knowledge/infrastructure/postgres/annotation-support-repositories.ts';
 
 export function createPostgresKnowledgeExtractionCommitStore({ client, ownerId }) {
   return {

@@ -330,6 +330,7 @@ export function createAsyncContentAnnotationService({
           continue;
         }
         const oldVersion = await noteVersionRepository?.findById(annotation.noteVersionId);
+        /** @type {import('./service-dependencies.ts').StoredAnchorReconciliation} */
         let result = reconcileAnnotationSource(annotation, note, oldVersion, context);
         if (context?.edits?.at(-1)?.history && version) {
           const revisions = (await revisionRepository?.list({ annotationId: annotation.id })) ?? [];
@@ -338,11 +339,22 @@ export function createAsyncContentAnnotationService({
             ...revisions.flatMap(item => [item.newAnchor, item.oldAnchor]).reverse()
           ].find(
             candidate =>
-              candidate?.noteVersionId === version.id &&
-              !candidate.pending &&
-              resolveAnchor(note.rawMarkdown, candidate).status === 'resolved'
+              /** @type {import('./service-dependencies.ts').RawStoredAnchorView} */ (candidate)?.noteVersionId ===
+                version.id &&
+              !(/** @type {import('./service-dependencies.ts').RawStoredAnchorView} */ (candidate).pending) &&
+              /** @type {import('./service-dependencies.ts').RawStoredAnchorResolver} */ (resolveAnchor)(
+                note.rawMarkdown,
+                candidate
+              ).status === 'resolved'
           );
-          if (historical) result = { ...resolveAnchor(note.rawMarkdown, historical), anchor: historical };
+          if (historical)
+            result = {
+              .../** @type {import('./service-dependencies.ts').RawStoredAnchorResolver} */ (resolveAnchor)(
+                note.rawMarkdown,
+                historical
+              ),
+              anchor: historical
+            };
         }
         const fields = reconciledAnnotationFields(annotation, note, version, result);
         if (result.status !== 'resolved' || fields.resolvedContentHash !== annotation.resolvedContentHash)
@@ -354,9 +366,13 @@ export function createAsyncContentAnnotationService({
           const resolution = reconcileAnnotationSource(
             {
               ...annotation,
-              scopeType: exclusion.anchor.scopeType,
+              scopeType: /** @type {import('./service-dependencies.ts').RawStoredAnchorView} */ (exclusion.anchor)
+                .scopeType,
               anchor: exclusion.anchor,
-              anchorStatus: exclusion.anchor.unresolved ? 'needsReview' : 'resolved'
+              anchorStatus: /** @type {import('./service-dependencies.ts').RawStoredAnchorView} */ (exclusion.anchor)
+                .unresolved
+                ? 'needsReview'
+                : 'resolved'
             },
             note,
             exclusionVersion,
@@ -366,12 +382,14 @@ export function createAsyncContentAnnotationService({
             ...exclusion,
             revision: exclusion.revision + 1,
             anchor: {
-              ...(resolution.anchor ?? exclusion.anchor),
+              .../** @type {object} */ (resolution.anchor ?? exclusion.anchor),
               unresolved:
                 resolution.status !== 'resolved' ||
                 !parentRange ||
-                (resolution.anchor ?? exclusion.anchor).sourceStart < parentRange.sourceStart ||
-                (resolution.anchor ?? exclusion.anchor).sourceEnd > parentRange.sourceEnd
+                /** @type {{ sourceStart?: number }} */ (resolution.anchor ?? exclusion.anchor).sourceStart <
+                  parentRange.sourceStart ||
+                /** @type {{ sourceEnd?: number }} */ (resolution.anchor ?? exclusion.anchor).sourceEnd >
+                  parentRange.sourceEnd
             },
             ...(resolution.status === 'resolved' ? { noteVersionId: version.id } : {})
           });

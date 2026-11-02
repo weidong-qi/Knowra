@@ -59,7 +59,7 @@ export interface NoteVersionDependencies {
 }
 export interface AsyncNoteVersionDependencies {
   repository?: ReturnType<
-    typeof import('../infrastructure/postgres/note-version-repository.js').createPostgresNoteVersionRepository
+    typeof import('../infrastructure/postgres/note-version-repository.ts').createPostgresNoteVersionRepository
   >;
 }
 export interface ContentAnnotationNoteRepository {
