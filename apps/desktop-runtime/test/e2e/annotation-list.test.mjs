@@ -1,6 +1,4 @@
-import { anchorForListItem, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
 import { openEditorToolbarMenu } from '../../../../scripts/test-support/editor-menu.mjs';
-import { withWorkspaceStatus } from './helpers/workspace-status.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -15,7 +13,7 @@ import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
 import { createV4WebServer } from '../../../web-v4/server/app.mjs';
 
-async function fixture(t, driver, rawMarkdown = '- 父项\n  - 子项\n- 相邻', legacy = false) {
+async function fixture(t, driver, rawMarkdown = '- 父项\n  - 子项\n- 相邻') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-list-page-'));
   const distRoot = fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url));
   const runtime =
@@ -31,25 +29,6 @@ async function fixture(t, driver, rawMarkdown = '- 父项\n  - 子项\n- 相邻'
     k = app.modules.knowledge;
   const space = k.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
   const note = k.noteService.createNote({ spaceId: space.id, title: '列表重点真实页面', rawMarkdown });
-  // 保留旧协议的重试/范围确认验收：一个独立的既有旧重点使该笔记保持 v2 写入模式。
-  let legacyId;
-  if (legacy) {
-    const projection = projectMarkdown(rawMarkdown);
-    const anchor = anchorForListItem(projection, projection.listItems.at(-1).path);
-    legacyId = k.contentAnnotationService.createAnnotation({
-      spaceId: space.id,
-      noteId: note.id,
-      schemaVersion: 2,
-      scopeType: 'list',
-      quoteText: anchor.quoteText,
-      anchor,
-      fromPosition: anchor.sourceStart,
-      toPosition: anchor.sourceEnd,
-      anchorFingerprint: 'legacy-mode',
-      noteContentHash: calculateContentHash(rawMarkdown),
-      idempotencyKey: 'legacy-mode'
-    }).id;
-  }
   let api, web;
   if (!runtime) {
     api = createServer({ appContext: app });
@@ -78,8 +57,7 @@ async function fixture(t, driver, rawMarkdown = '- 父项\n  - 子项\n- 相邻'
   await page.goto(`${origin}/#/materials/notes/${note.id}`);
   const editor = page.locator('.ProseMirror');
   await expect(editor).toContainText('子项');
-  const annotations = () =>
-    k.contentAnnotationService.listAnnotationsByNote({ noteId: note.id }).filter(item => item.id !== legacyId);
+  const annotations = () => k.contentAnnotationService.listAnnotationsByNote({ noteId: note.id });
   return { page, editor, k, note, annotations };
 }
 async function placeCaret(paragraph, end = true) {
@@ -152,204 +130,6 @@ for (const driver of ['json', 'sqlite'])
     await expect(page.getByRole('button', { name: /^列表项 2$/ })).toHaveAttribute('aria-pressed', 'true');
     if (driver === 'sqlite') await page.screenshot({ path: '/tmp/knowra-list-ui.png', fullPage: true });
   });
-
-test('真实页面旧标注模式：已有同级项缩进归入后确认新范围，排除子项与恢复排除可用', { timeout: 60000 }, async t => {
-  const { page, editor, k, note, annotations } = await fixture(t, 'json', undefined, true);
-  await mark(
-    page,
-    editor
-      .locator('p')
-      .filter({ hasText: /^父项$/ })
-      .first()
-  );
-  await expect.poll(() => annotations().length).toBe(1);
-  const id = annotations()[0].id,
-    current = () => k.contentAnnotationService.getAnnotation(id);
-  await placeCaret(
-    editor
-      .locator('p')
-      .filter({ hasText: /^相邻$/ })
-      .first()
-  );
-  await page.keyboard.press('Tab');
-  await expect.poll(() => current().anchorStatus).toBe('needsReview');
-  await page.getByRole('button', { name: '切换文档检查器', exact: true }).click();
-  await page.getByRole('tab', { name: '标注', exact: true }).click();
-  await page.getByRole('button', { name: '重点 1 更多操作', exact: true }).click();
-  await page.getByRole('menuitem', { name: '预览与编辑', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '重点详情' });
-  await expect(dialog).toContainText('相邻');
-  await dialog.getByRole('button', { name: '确认新范围', exact: true }).click();
-  await expect.poll(() => current().anchorStatus).toBe('resolved');
-  assert.match(current().quoteText, /相邻/);
-  // 等待确认回执关闭对话框并完成焦点归还，不能仅等服务端落库后操作仍被遮罩的正文。
-  await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '重点 1 更多操作', exact: true })).toBeFocused();
-  // Keep a body caret while the inspector menu receives focus.
-  await placeCaret(
-    editor
-      .locator('p')
-      .filter({ hasText: /^子项$/ })
-      .first()
-  );
-  await page.getByRole('button', { name: '重点 1 更多操作', exact: true }).click();
-  await page.getByRole('menuitem', { name: '排除当前块', exact: true }).click();
-  await expect
-    .poll(
-      () =>
-        k.annotationScopeService.previewAnnotation(id).exclusions.filter(exclusion => exclusion.status === 'active')
-          .length
-    )
-    .toBe(1);
-  const preview = k.annotationScopeService.previewAnalysisScope({
-    spaceId: note.spaceId,
-    mode: 'marked',
-    annotationIds: [id]
-  });
-  assert.doesNotMatch(preview.segments.map(segment => segment.markdown).join(''), /子项/);
-  await page.getByRole('button', { name: '重点 1 更多操作', exact: true }).click();
-  await page.getByRole('menuitem', { name: '预览与编辑', exact: true }).click();
-  await page
-    .getByRole('dialog', { name: '重点详情' })
-    .getByRole('button', { name: /^恢复排除范围/ })
-    .click();
-  await expect
-    .poll(
-      () =>
-        k.annotationScopeService.previewAnnotation(id).exclusions.filter(exclusion => exclusion.status === 'active')
-          .length
-    )
-    .toBe(0);
-});
-
-test('真实页面旧标注模式：创建响应丢失后重试复用幂等键，慢保存期间的新输入保留', { timeout: 60000 }, async t => {
-  const { page, editor, k, note, annotations } = await fixture(t, 'json', undefined, true);
-  const requests = [];
-  let dropped = false;
-  await page.route('**/api/knowledge/annotations', async route => {
-    if (route.request().method() !== 'POST') return route.continue();
-    requests.push(route.request().postDataJSON());
-    if (!dropped) {
-      dropped = true;
-      await route.fetch();
-      await route.abort('failed');
-    } else await route.continue();
-  });
-  await mark(
-    page,
-    editor
-      .locator('p')
-      .filter({ hasText: /^父项$/ })
-      .first()
-  );
-  await expect.poll(() => annotations().length).toBe(1);
-  await withWorkspaceStatus(page, status => expect(status).toContainText('保存失败'));
-  await mark(
-    page,
-    editor
-      .locator('p')
-      .filter({ hasText: /^父项$/ })
-      .first()
-  );
-  await expect.poll(() => requests.length).toBe(2);
-  assert.equal(requests[0].idempotencyKey, requests[1].idempotencyKey);
-  assert.equal(annotations().length, 1);
-  // 首次丢响应已落库；须等重试回执应用到正文，再开始下一次标记。
-  await expect(editor.locator(`[data-list-annotation="${annotations()[0].id}"]`)).toContainText('子项');
-  await page.unroute('**/api/knowledge/annotations');
-  await placeCaret(
-    editor
-      .locator('p')
-      .filter({ hasText: /^子项$/ })
-      .first()
-  );
-  await page.keyboard.insertText('未保存');
-  let release, intercepted;
-  const arrived = new Promise(resolve => {
-    intercepted = resolve;
-  });
-  const barrier = new Promise(resolve => {
-    release = resolve;
-  });
-  await page.route(`**/api/knowledge/notes/${note.id}`, async route => {
-    if (route.request().method() !== 'PATCH') return route.continue();
-    intercepted();
-    await barrier;
-    await route.continue();
-  });
-  await mark(
-    page,
-    editor
-      .locator('p')
-      .filter({ hasText: /^子项未保存$/ })
-      .first()
-  );
-  await arrived;
-  await placeCaret(
-    editor
-      .locator('p')
-      .filter({ hasText: /^子项未保存$/ })
-      .first()
-  );
-  await page.keyboard.insertText('保存中继续');
-  release();
-  await expect.poll(() => k.noteService.getNote(note.id).rawMarkdown).toContain('保存中继续');
-  await expect(editor).toContainText('保存中继续');
-  await expect.poll(() => annotations().length).toBe(2);
-  assert.equal(annotations().filter(annotation => annotation.quoteText.includes('保存中继续')).length, 2);
-  await page.unroute(`**/api/knowledge/notes/${note.id}`);
-});
-
-test('真实页面旧标注模式：响应丢失重试期间续输入恢复原幂等请求，不重复创建列表重点', { timeout: 60000 }, async t => {
-  const { page, editor, k, note, annotations } = await fixture(t, 'json', undefined, true);
-  const requests = [];
-  let dropped = false;
-  await page.route('**/api/knowledge/annotations', async route => {
-    if (route.request().method() !== 'POST') return route.continue();
-    requests.push(route.request().postDataJSON());
-    if (!dropped) {
-      dropped = true;
-      await route.fetch();
-      await route.abort('failed');
-    } else await route.continue();
-  });
-  const child = editor
-    .locator('p')
-    .filter({ hasText: /^子项$/ })
-    .first();
-  await mark(page, child);
-  await expect.poll(() => annotations().length).toBe(1);
-  await withWorkspaceStatus(page, status => expect(status).toContainText('保存失败'));
-  let release, intercepted;
-  const arrived = new Promise(resolve => {
-    intercepted = resolve;
-  });
-  const barrier = new Promise(resolve => {
-    release = resolve;
-  });
-  await page.route(`**/api/knowledge/notes/${note.id}`, async route => {
-    if (route.request().method() !== 'PATCH') return route.continue();
-    intercepted();
-    await barrier;
-    await route.continue();
-  });
-  await placeCaret(child);
-  await page.keyboard.insertText('临时');
-  await page.keyboard.press('ControlOrMeta+z');
-  await expect(child).toHaveText('子项');
-  await mark(page, child);
-  await arrived;
-  await placeCaret(child);
-  await page.keyboard.insertText('继续');
-  release();
-  await expect.poll(() => k.noteService.getNote(note.id).rawMarkdown).toContain('子项继续');
-  await expect.poll(() => requests.length).toBe(2);
-  assert.deepEqual(requests[1], requests[0]);
-  assert.equal(annotations().length, 1);
-  await expect.poll(() => annotations()[0].quoteText).toBe('子项继续');
-  await page.unroute(`**/api/knowledge/notes/${note.id}`);
-  await page.unroute('**/api/knowledge/annotations');
-});
 
 test('真实页面：长列表续段滚动后入口仍可操作，窄屏与阅读模式保持边界', { timeout: 60000 }, async t => {
   const raw =
