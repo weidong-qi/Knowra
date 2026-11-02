@@ -1,7 +1,7 @@
 import { requestBodyLimit } from '@study-accelerator/shared/http-limits';
 import { parseBody, toQueryObject } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { syncError } from './journal.js';
+import { syncError } from './journal.ts';
 
 export async function handleSyncRoute({ request, response, url, sync }) {
   if (!url.pathname.startsWith('/api/sync/')) return false;

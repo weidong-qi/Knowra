@@ -204,8 +204,8 @@ export function planHistoryRetention(
   input,
   {
     now = Date.now(),
-    noteIds = null,
-    externalReferences = [],
+    noteIds = /** @type {Set<string | null | undefined> | null} */ (null),
+    externalReferences = /** @type {object[]} */ ([]),
     protectedVersionIds = new Set(),
     protectedRevisionIds = new Set(),
     canDiscard = /** @type {(collection: string, record: { id: string }) => boolean} */ (() => true),

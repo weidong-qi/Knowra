@@ -44,7 +44,7 @@ import {
   cloneJournalForChanges,
   loadJournal,
   syncKey
-} from '../modules/sync/journal.js';
+} from '../modules/sync/journal.ts';
 import {
   createJsonAiAccessStore,
   createJsonAiConversationStore,
