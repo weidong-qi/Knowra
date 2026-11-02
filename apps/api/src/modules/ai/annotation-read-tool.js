@@ -24,6 +24,7 @@ export const ANNOTATIONS_TOOL = Object.freeze({
 });
 
 function invalid(message = '重点参数无效。') {
+  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
   const error = new Error(message);
   error.code = 'AI_TOOL_ARGUMENTS_INVALID';
   return error;

@@ -3,25 +3,44 @@ import { AiGatewayError } from './gateway.js';
 import { watchChildResources } from './process-resource-guard.js';
 
 export const AI_PROCESS_LIMITS = Object.freeze({
-  concurrency: 2, queue: 8, wallMs: 100_000, heapMb: 128,
-  cpuMs: 20_000, rssBytes: 201_326_592,
-  requestBytes: 1_048_576, responseBytes: 4_194_304
+  concurrency: 2,
+  queue: 8,
+  wallMs: 100_000,
+  heapMb: 128,
+  cpuMs: 20_000,
+  rssBytes: 201_326_592,
+  requestBytes: 1_048_576,
+  responseBytes: 4_194_304
 });
 
 /** 仅供应商网络调用进入子进程；业务读写、授权及预算始终留在宿主。 */
 export function createIsolatedDeepSeekAdapter({
   childUrl = new URL('./provider-child.js', import.meta.url),
-  limits = AI_PROCESS_LIMITS, spawn = fork
+  limits = AI_PROCESS_LIMITS,
+  spawn = fork
 } = {}) {
   let active = 0;
   const waiting = [];
-  const capabilities = () => ({ provider: 'deepseek', protocol: 'chat-completions', advertised: {
-    text: true, streaming: true, toolCalls: true, jsonObject: true, cancel: true, usage: true
-  }, verified: false });
+  const capabilities = () => ({
+    provider: 'deepseek',
+    protocol: 'chat-completions',
+    advertised: {
+      text: true,
+      streaming: true,
+      toolCalls: true,
+      jsonObject: true,
+      cancel: true,
+      usage: true
+    },
+    verified: false
+  });
 
   function enter(signal) {
     if (signal?.aborted) return Promise.reject(new AiGatewayError('AI_CANCELLED', '模型请求已取消。'));
-    if (active < limits.concurrency) { active++; return Promise.resolve(); }
+    if (active < limits.concurrency) {
+      active++;
+      return Promise.resolve();
+    }
     if (waiting.length >= limits.queue) return Promise.reject(new AiGatewayError('AI_QUEUE_FULL', 'AI 请求队列已满。'));
     return new Promise((resolve, reject) => {
       const item = { resolve, reject, signal, abort: null };
@@ -36,12 +55,15 @@ export function createIsolatedDeepSeekAdapter({
   }
   function leave() {
     const item = waiting.shift();
-    if (item) { item.signal?.removeEventListener('abort', item.abort); item.resolve(); }
-    else active--;
+    if (item) {
+      item.signal?.removeEventListener('abort', item.abort);
+      item.resolve();
+    } else active--;
   }
 
   return {
-    provider: 'deepseek', capabilities,
+    provider: 'deepseek',
+    capabilities,
     async complete(request) {
       // 信号不可通过 IPC 克隆；其余字段必须有上限，防止子进程内存积压。
       const { signal, ...payload } = request;
@@ -57,7 +79,9 @@ export function createIsolatedDeepSeekAdapter({
             stdio: ['ignore', 'ignore', 'ignore', 'ipc']
           });
           let finished = false;
-          const guard = watchChildResources(child, limits, () => finish(new AiGatewayError('AI_PROCESS_LIMIT', '模型执行进程超出资源限额。')));
+          const guard = watchChildResources(child, limits, () =>
+            finish(new AiGatewayError('AI_PROCESS_LIMIT', '模型执行进程超出资源限额。'))
+          );
           const finish = (error, result) => {
             if (finished) return;
             finished = true;
@@ -65,31 +89,47 @@ export function createIsolatedDeepSeekAdapter({
             guard.close();
             signal?.removeEventListener('abort', abort);
             child.kill('SIGKILL');
-            if (error) reject(error); else resolve(result);
+            if (error) reject(error);
+            else resolve(result);
           };
           const abort = () => finish(new AiGatewayError('AI_CANCELLED', '模型请求已取消。'));
-          const timer = setTimeout(() => finish(new AiGatewayError('AI_PROCESS_TIMEOUT', '模型执行进程超时。', { retryable: true })), limits.wallMs);
+          const timer = setTimeout(
+            () => finish(new AiGatewayError('AI_PROCESS_TIMEOUT', '模型执行进程超时。', { retryable: true })),
+            limits.wallMs
+          );
           signal?.addEventListener('abort', abort, { once: true });
           child.on('error', () => finish(new AiGatewayError('AI_PROCESS_FAILED', '模型执行进程启动失败。')));
-          child.on('exit', () => finish(new AiGatewayError('AI_PROCESS_FAILED', '模型执行进程异常退出。', { retryable: true })));
-          child.on('message', message => {
+          child.on('exit', () =>
+            finish(new AiGatewayError('AI_PROCESS_FAILED', '模型执行进程异常退出。', { retryable: true }))
+          );
+          child.on('message', rawMessage => {
+            const message = /** @type {import('./boundary-types.ts').ProviderMessage} */ (rawMessage);
             if (message?.type === 'resource') {
               guard.report(message);
               return;
             }
             if (message?.id !== 1) return;
             if (Buffer.byteLength(JSON.stringify(message)) > limits.responseBytes) {
-              finish(new AiGatewayError('AI_RESPONSE_TOO_LARGE', '模型进程响应超过上限。')); return;
+              finish(new AiGatewayError('AI_RESPONSE_TOO_LARGE', '模型进程响应超过上限。'));
+              return;
             }
             if (message.type === 'result') finish(null, message.result);
-            else if (message.type === 'error') finish(new AiGatewayError(message.error?.code ?? 'AI_PROCESS_FAILED',
-              message.error?.message ?? '模型执行失败。', { retryable: message.error?.retryable, httpStatus: message.error?.httpStatus }));
+            else if (message.type === 'error')
+              finish(
+                new AiGatewayError(
+                  message.error?.code ?? 'AI_PROCESS_FAILED',
+                  message.error?.message ?? '模型执行失败。',
+                  { retryable: message.error?.retryable, httpStatus: message.error?.httpStatus }
+                )
+              );
           });
           child.send({ type: 'complete', id: 1, request: payload }, error => {
             if (error) finish(new AiGatewayError('AI_PROCESS_FAILED', '模型请求无法发送至执行进程。'));
           });
         });
-      } finally { leave(); }
+      } finally {
+        leave();
+      }
     },
     async *stream() {
       throw new AiGatewayError('AI_STREAM_UNAVAILABLE', '隔离执行器尚未启用流式响应。');

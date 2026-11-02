@@ -31,7 +31,9 @@ const API_BASE = 'https://api.deepseek.com';
 const defaultFile = path.join(os.homedir(), '.config', 'knowra', 'ai-provider.json');
 const modelError = (code, status = 400) => createAppError(code, MODEL_SETTINGS_ERRORS[code], status);
 const supported = modelId => SUPPORTED_MODEL_IDS.includes(modelId);
-const requireSupported = modelId => { if (!supported(modelId)) throw modelError('MODEL_NOT_SUPPORTED', 422); };
+const requireSupported = modelId => {
+  if (!supported(modelId)) throw modelError('MODEL_NOT_SUPPORTED', 422);
+};
 
 export function validateModelSettings(input, { allowEmptyKey = false } = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw modelError('MODEL_SETTINGS_INVALID');
@@ -39,7 +41,8 @@ export function validateModelSettings(input, { allowEmptyKey = false } = {}) {
   const apiKey = typeof input.apiKey === 'string' ? input.apiKey.trim() : '';
   if (!/^[a-zA-Z0-9._-]{1,80}$/.test(modelId)) throw modelError('MODEL_ID_INVALID');
   requireSupported(modelId);
-  if ((!allowEmptyKey && !apiKey) || apiKey.length > 512 || /[\r\n]/.test(apiKey)) throw modelError('MODEL_KEY_INVALID');
+  if ((!allowEmptyKey && !apiKey) || apiKey.length > 512 || /[\r\n]/.test(apiKey))
+    throw modelError('MODEL_KEY_INVALID');
   return { modelId, apiKey };
 }
 
@@ -48,14 +51,23 @@ export async function checkDeepSeekModel({ apiKey, modelId, fetchImpl = fetch })
   let response;
   try {
     response = await fetchImpl(`${API_BASE}/models`, {
-      method: 'GET', redirect: 'error', headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10000)
+      method: 'GET',
+      redirect: 'error',
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000)
     });
-  } catch { throw modelError('MODEL_PROVIDER_UNAVAILABLE', 502); }
+  } catch {
+    throw modelError('MODEL_PROVIDER_UNAVAILABLE', 502);
+  }
   if (response?.status === 401 || response?.status === 403) throw modelError('MODEL_KEY_REJECTED', 422);
   if (response?.status === 429) throw modelError('MODEL_RATE_LIMITED', 429);
   if (!response?.ok) throw modelError('MODEL_PROVIDER_FAILED', 502);
   let body;
-  try { body = await response.json(); } catch { /* 不读取或回显供应商原始错误。 */ }
+  try {
+    body = await response.json();
+  } catch {
+    /* 不读取或回显供应商原始错误。 */
+  }
   if (!Array.isArray(body?.data)) throw modelError('MODEL_RESPONSE_INVALID', 502);
   if (!body.data.some(item => item?.id === modelId)) throw modelError('MODEL_NOT_AVAILABLE', 422);
   return { connected: true, modelAvailable: true, checkedAt: new Date().toISOString() };
@@ -66,6 +78,10 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
   let operations = Promise.resolve();
   let revision = 0;
   let latestCheck = 0;
+  /** @template T
+   * @param {() => Promise<T>} operation
+   * @returns {Promise<T>}
+   */
   function queued(operation) {
     const result = operations.then(operation);
     operations = result.catch(() => undefined);
@@ -77,23 +93,39 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
     try {
       handle = await fs.open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
       const stat = await handle.stat();
-      if (!stat.isFile() || (stat.mode & 0o077) !== 0 || (typeof process.getuid === 'function' && stat.uid !== process.getuid())) {
+      if (
+        !stat.isFile() ||
+        (stat.mode & 0o077) !== 0 ||
+        (typeof process.getuid === 'function' && stat.uid !== process.getuid())
+      ) {
         throw modelError('MODEL_SETTINGS_UNAVAILABLE', 500);
       }
       const value = JSON.parse(await handle.readFile('utf8'));
-      if (!value || typeof value.apiKey !== 'string' || typeof value.modelId !== 'string'
-        || (value.credentialRef !== undefined && typeof value.credentialRef !== 'string')) throw modelError('MODEL_SETTINGS_UNAVAILABLE', 500);
+      if (
+        !value ||
+        typeof value.apiKey !== 'string' ||
+        typeof value.modelId !== 'string' ||
+        (value.credentialRef !== undefined && typeof value.credentialRef !== 'string')
+      )
+        throw modelError('MODEL_SETTINGS_UNAVAILABLE', 500);
       return value;
     } catch (error) {
       if (error.code === 'ENOENT') return null;
       throw modelError('MODEL_SETTINGS_UNAVAILABLE', 500);
-    } finally { await handle?.close().catch(() => undefined); }
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
   }
 
   function publicStatus(value) {
     const modelId = value?.modelId ?? DEFAULT_MODEL_ID;
-    return { provider: 'deepseek', modelId, configured: Boolean(value),
-      supportedModelIds: [...SUPPORTED_MODEL_IDS], modelSupported: supported(modelId) };
+    return {
+      provider: 'deepseek',
+      modelId,
+      configured: Boolean(value),
+      supportedModelIds: [...SUPPORTED_MODEL_IDS],
+      modelSupported: supported(modelId)
+    };
   }
 
   async function write(value) {
@@ -103,8 +135,11 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
       await fs.mkdir(directory, { recursive: true, mode: 0o700 });
       await fs.writeFile(temp, JSON.stringify(value), { mode: 0o600, flag: 'wx' });
       await fs.rename(temp, filePath);
-    } catch { throw modelError('MODEL_SETTINGS_WRITE_FAILED', 500); }
-    finally { await fs.rm(temp, { force: true }).catch(() => undefined); }
+    } catch {
+      throw modelError('MODEL_SETTINGS_WRITE_FAILED', 500);
+    } finally {
+      await fs.rm(temp, { force: true }).catch(() => undefined);
+    }
   }
 
   async function referencedValue() {
@@ -117,22 +152,31 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
   }
 
   return {
-    status() { return queued(async () => publicStatus(await read())); },
+    status() {
+      return queued(async () => publicStatus(await read()));
+    },
     save(input) {
       revision++;
       return queued(async () => {
         const previous = await read();
         const { modelId, apiKey } = validateModelSettings(input, { allowEmptyKey: Boolean(previous) });
-        await write({ modelId, apiKey: apiKey || previous.apiKey,
-          credentialRef: !apiKey && previous?.modelId === modelId ? previous.credentialRef ?? randomUUID() : randomUUID() });
+        await write({
+          modelId,
+          apiKey: apiKey || previous.apiKey,
+          credentialRef:
+            !apiKey && previous?.modelId === modelId ? (previous.credentialRef ?? randomUUID()) : randomUUID()
+        });
         return publicStatus({ modelId });
       });
     },
     remove() {
       revision++;
       return queued(async () => {
-        try { await fs.rm(filePath, { force: true }); }
-        catch { throw modelError('MODEL_SETTINGS_WRITE_FAILED', 500); }
+        try {
+          await fs.rm(filePath, { force: true });
+        } catch {
+          throw modelError('MODEL_SETTINGS_WRITE_FAILED', 500);
+        }
         return publicStatus(null);
       });
     },
@@ -145,13 +189,22 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
       if (!value) throw modelError('MODEL_NOT_CONFIGURED', 409);
       requireSupported(value.modelId);
       let result, failure;
-      try { result = await checkDeepSeekModel({ ...value, fetchImpl }); }
-      catch (error) { failure = error; }
+      try {
+        result = await checkDeepSeekModel({ ...value, fetchImpl });
+      } catch (error) {
+        failure = error;
+      }
       return queued(async () => {
         if (checkId !== latestCheck || checkRevision !== revision) throw modelError('MODEL_CHECK_STALE', 409);
         const current = await read();
-        if (checkId !== latestCheck || checkRevision !== revision || !current
-          || current.modelId !== value.modelId || current.apiKey !== value.apiKey || current.credentialRef !== value.credentialRef) {
+        if (
+          checkId !== latestCheck ||
+          checkRevision !== revision ||
+          !current ||
+          current.modelId !== value.modelId ||
+          current.apiKey !== value.apiKey ||
+          current.credentialRef !== value.credentialRef
+        ) {
           throw modelError('MODEL_CHECK_STALE', 409);
         }
         if (failure) throw failure;
