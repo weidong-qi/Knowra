@@ -23,12 +23,12 @@ import { createPostgresKnowledgeItemRepository } from './modules/knowledge/infra
 import { createPostgresKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-evidence-repository.js';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.js';
 import { migratePostgresKnowledgeArtifactProvenance } from './infrastructure/migration/postgres-knowledge-artifact-provenance.js';
-import { createPostgresLearningObjectiveRepository } from './modules/knowledge/infrastructure/postgres/learning-objective-repository.js';
-import { createPostgresExamProfileRepository } from './modules/knowledge/infrastructure/postgres/exam-profile-repository.js';
-import { createPostgresExamFocusRepository } from './modules/knowledge/infrastructure/postgres/exam-focus-repository.js';
+import { createPostgresLearningObjectiveRepository } from './modules/knowledge/infrastructure/postgres/learning-objective-repository.ts';
+import { createPostgresExamProfileRepository } from './modules/knowledge/infrastructure/postgres/exam-profile-repository.ts';
+import { createPostgresExamFocusRepository } from './modules/knowledge/infrastructure/postgres/exam-focus-repository.ts';
 import { createPostgresQuestionRepository } from './modules/knowledge/infrastructure/postgres/question-repository.js';
-import { createPostgresQuestionObjectiveRepository } from './modules/knowledge/infrastructure/postgres/question-objective-repository.js';
-import { createPostgresQuestionSourceRepository } from './modules/knowledge/infrastructure/postgres/question-source-repository.js';
+import { createPostgresQuestionObjectiveRepository } from './modules/knowledge/infrastructure/postgres/question-objective-repository.ts';
+import { createPostgresQuestionSourceRepository } from './modules/knowledge/infrastructure/postgres/question-source-repository.ts';
 import {
   createPostgresAnalysisScopeRepository,
   createPostgresAnnotationExclusionRepository,

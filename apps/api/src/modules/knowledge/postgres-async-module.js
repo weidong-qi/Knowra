@@ -32,12 +32,12 @@ import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from './infrastructure/postgres/knowledge-artifact-provenance-repository.js';
 import { createPostgresKnowledgeEvidenceRepository } from './infrastructure/postgres/knowledge-evidence-repository.js';
-import { createPostgresLearningObjectiveRepository } from './infrastructure/postgres/learning-objective-repository.js';
-import { createPostgresExamProfileRepository } from './infrastructure/postgres/exam-profile-repository.js';
-import { createPostgresExamFocusRepository } from './infrastructure/postgres/exam-focus-repository.js';
+import { createPostgresLearningObjectiveRepository } from './infrastructure/postgres/learning-objective-repository.ts';
+import { createPostgresExamProfileRepository } from './infrastructure/postgres/exam-profile-repository.ts';
+import { createPostgresExamFocusRepository } from './infrastructure/postgres/exam-focus-repository.ts';
 import { createPostgresQuestionRepository } from './infrastructure/postgres/question-repository.js';
-import { createPostgresQuestionObjectiveRepository } from './infrastructure/postgres/question-objective-repository.js';
-import { createPostgresQuestionSourceRepository } from './infrastructure/postgres/question-source-repository.js';
+import { createPostgresQuestionObjectiveRepository } from './infrastructure/postgres/question-objective-repository.ts';
+import { createPostgresQuestionSourceRepository } from './infrastructure/postgres/question-source-repository.ts';
 import {
   createPostgresAnalysisScopeRepository,
   createPostgresAnnotationExclusionRepository,

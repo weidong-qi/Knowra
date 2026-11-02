@@ -1,17 +1,22 @@
+import type {
+  ObjectiveRelationRepositoryOptions,
+  RelationIds,
+  MappedObjectiveProjection
+} from './assessment-repository-types.ts';
 import { mapQuestionObjective, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 import { questionObjectiveRecords } from '../question-objective-identity.js';
 
-export function createPostgresQuestionObjectiveRepository({ db }) {
+export function createPostgresQuestionObjectiveRepository({ db }: ObjectiveRelationRepositoryOptions) {
   if (!db?.questionObjective)
     throw new TypeError('PostgreSQL QuestionObjective repository requires db.questionObjective');
   return {
-    async deleteByQuestionId(questionId) {
+    async deleteByQuestionId(questionId: string) {
       return withRepositoryErrors(() =>
         db.questionObjective.deleteMany({ where: { questionId } }).then(result => result.count)
       );
     },
-    async listByQuestionIds(questionIds = []) {
+    async listByQuestionIds(questionIds: RelationIds = []) {
       if (!questionIds.length) return [];
       return withRepositoryErrors(() =>
         db.questionObjective
@@ -19,21 +24,23 @@ export function createPostgresQuestionObjectiveRepository({ db }) {
           .then(rows => rows.map(mapQuestionObjective))
       );
     },
-    async listByObjectiveId(learningObjectiveId) {
+    async listByObjectiveId(learningObjectiveId: string) {
       return withRepositoryErrors(() =>
         db.questionObjective
           .findMany({ where: { learningObjectiveId }, orderBy: { order: 'asc' } })
           .then(rows => rows.map(mapQuestionObjective))
       );
     },
-    async replaceForQuestion(questionId, objectiveIds = []) {
+    async replaceForQuestion(questionId: string, objectiveIds: RelationIds = []) {
       return withRepositoryErrors(async () => {
         const previous = await db.questionObjective.findMany({ where: { questionId } });
         await db.questionObjective.deleteMany({ where: { questionId } });
         if (!objectiveIds.length) return [];
         const records = questionObjectiveRecords(questionId, objectiveIds, previous, new Date());
         await db.questionObjective.createMany({ data: records });
-        return records.map(mapQuestionObjective);
+        return records.map(
+          mapQuestionObjective as (row: (typeof records)[number]) => MappedObjectiveProjection<(typeof records)[number]>
+        );
       });
     },
     supportsAsync: true

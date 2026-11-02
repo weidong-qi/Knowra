@@ -1,9 +1,16 @@
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
+import type {
+  FocusRepositoryOptions,
+  FocusWriteInput,
+  FocusListOptions,
+  FocusWhere
+} from './assessment-repository-types.ts';
 import { mapExamFocus, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
-export function createPostgresExamFocusRepository({ db }) {
+export function createPostgresExamFocusRepository({ db }: FocusRepositoryOptions) {
   if (!db?.examFocus) throw new TypeError('PostgreSQL ExamFocus repository requires db.examFocus');
-  function toData(focus) {
+  function toData(focus: FocusWriteInput) {
     return {
       id: focus.id,
       examProfileId: focus.examProfileId,
@@ -19,16 +26,14 @@ export function createPostgresExamFocusRepository({ db }) {
       updatedAt: toDate(focus.updatedAt)
     };
   }
-  /** @param {{ examProfileId?: string, learningObjectiveId?: string, reviewStatus?: string, includeArchived?: boolean, includeDeleted?: boolean }} options */
   function whereFor({
     examProfileId,
     learningObjectiveId,
     reviewStatus,
     includeArchived = false,
     includeDeleted = false
-  } = {}) {
-    /** @type {import("@prisma/client").Prisma.ExamFocusWhereInput} */
-    const where = {
+  }: FocusListOptions = {}) {
+    const where: FocusWhere = {
       ...(examProfileId ? { examProfileId } : {}),
       ...(learningObjectiveId ? { learningObjectiveId } : {})
     };
@@ -38,7 +43,7 @@ export function createPostgresExamFocusRepository({ db }) {
     return where;
   }
   return {
-    async create(focus) {
+    async create(focus: FocusWriteInput) {
       return withRepositoryErrors(() =>
         db.examFocus
           .create({
@@ -47,7 +52,7 @@ export function createPostgresExamFocusRepository({ db }) {
           .then(mapExamFocus)
       );
     },
-    async save(focus) {
+    async save(focus: FocusWriteInput) {
       const data = toData(focus);
       return withRepositoryErrors(() =>
         db.examFocus
@@ -62,24 +67,26 @@ export function createPostgresExamFocusRepository({ db }) {
           .then(mapExamFocus)
       );
     },
-    async findById(id) {
-      return withRepositoryErrors(() => db.examFocus.findUnique({ where: { id } }).then(mapExamFocus));
+    async findById(id: string) {
+      return withRepositoryErrors(() =>
+        db.examFocus.findUnique({ where: { id } }).then<SyncMappedEntityMap['examFocuses'] | null>(mapExamFocus)
+      );
     },
-    async findByProfileAndObjective(examProfileId, learningObjectiveId) {
+    async findByProfileAndObjective(examProfileId: string, learningObjectiveId: string) {
       return withRepositoryErrors(() =>
         db.examFocus
           .findUnique({ where: { examProfileId_learningObjectiveId: { examProfileId, learningObjectiveId } } })
-          .then(mapExamFocus)
+          .then<SyncMappedEntityMap['examFocuses'] | null>(mapExamFocus)
       );
     },
-    list(options = {}) {
+    list(options: FocusListOptions = {}) {
       return withRepositoryErrors(() =>
         db.examFocus
           .findMany({ where: whereFor(options), orderBy: [{ priority: 'asc' }, { updatedAt: 'desc' }] })
           .then(rows => rows.map(mapExamFocus))
       );
     },
-    async delete(id) {
+    async delete(id: string) {
       return withRepositoryErrors(() => db.examFocus.delete({ where: { id } }).then(mapExamFocus));
     },
     supportsAsync: true

@@ -1,3 +1,9 @@
+import type {
+  ObjectiveProjection,
+  MappedObjectiveProjection,
+  SourceProjection,
+  MappedSourceProjection
+} from './assessment-repository-types.ts';
 import crypto from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type * as Models from '@prisma/client';
@@ -361,13 +367,11 @@ export function mapQuestion(row: Models.Question | null | undefined): SyncMapped
   };
 }
 
-export function mapQuestionObjective<Row extends Models.QuestionObjective | null | undefined>(
+export function mapQuestionObjective<Row extends ObjectiveProjection | null | undefined>(
   row: Row
-): Mapped<Row, SyncMappedEntityMap['questionObjectives']>;
+): Mapped<Row, MappedObjectiveProjection<Extract<Row, ObjectiveProjection>>>;
 export function mapQuestionObjective(row: Models.QuestionObjective): SyncMappedEntityMap['questionObjectives'];
-export function mapQuestionObjective(
-  row: Models.QuestionObjective | null | undefined
-): SyncMappedEntityMap['questionObjectives'] | null {
+export function mapQuestionObjective(row: ObjectiveProjection | null | undefined): MappedObjectiveProjection | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -379,13 +383,11 @@ export function mapQuestionObjective(
   };
 }
 
-export function mapQuestionSource<Row extends Models.QuestionSource | null | undefined>(
+export function mapQuestionSource<Row extends SourceProjection | null | undefined>(
   row: Row
-): Mapped<Row, SyncMappedEntityMap['questionSources']>;
+): Mapped<Row, MappedSourceProjection<Extract<Row, SourceProjection>>>;
 export function mapQuestionSource(row: Models.QuestionSource): SyncMappedEntityMap['questionSources'];
-export function mapQuestionSource(
-  row: Models.QuestionSource | null | undefined
-): SyncMappedEntityMap['questionSources'] | null {
+export function mapQuestionSource(row: SourceProjection | null | undefined): MappedSourceProjection | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -393,7 +395,7 @@ export function mapQuestionSource(
     sourceType: row.sourceType,
     sourceId: row.sourceId ?? null,
     quote: row.quote ?? '',
-    locator: row.locator === null || row.locator === undefined ? null : structuredClone(row.locator),
+    locator: row.locator === null || row.locator === undefined ? null : structuredClone(row.locator as unknown),
     contentHash: row.contentHash ?? null,
     status: row.status ?? 'active',
     createdAt: toIso(row.createdAt),

@@ -1,24 +1,33 @@
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
+import type {
+  SourceRepositoryOptions,
+  RelationIds,
+  SourceWriteInput,
+  SourceProjection,
+  MappedSourceProjection
+} from './assessment-repository-types.ts';
 import { mapQuestionSource, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
-export function createPostgresQuestionSourceRepository({ db }) {
+export function createPostgresQuestionSourceRepository({ db }: SourceRepositoryOptions) {
   if (!db?.questionSource) throw new TypeError('PostgreSQL QuestionSource repository requires db.questionSource');
   return {
-    async deleteByQuestionId(questionId) {
+    async deleteByQuestionId(questionId: string) {
       return withRepositoryErrors(() =>
         db.questionSource.deleteMany({ where: { questionId } }).then(result => result.count)
       );
     },
-    async findById(id) {
+    // assertSourceIdsAvailable 在 QuestionSource 构造和字段校验前检查 DTO 原始 ID。
+    async findById(id: unknown) {
       return withRepositoryErrors(() =>
         db.questionSource
           .findUnique({
             where: { id }
           })
-          .then(mapQuestionSource)
+          .then<SyncMappedEntityMap['questionSources'] | null>(mapQuestionSource)
       );
     },
-    async listByQuestionIds(questionIds = []) {
+    async listByQuestionIds(questionIds: RelationIds = []) {
       if (!questionIds.length) return [];
       return withRepositoryErrors(() =>
         db.questionSource
@@ -26,15 +35,14 @@ export function createPostgresQuestionSourceRepository({ db }) {
           .then(rows => rows.map(mapQuestionSource))
       );
     },
-    /** @param {{ questionId?: string }} options */
-    async list({ questionId } = {}) {
+    async list({ questionId }: { questionId?: string } = {}) {
       return withRepositoryErrors(() =>
         db.questionSource
           .findMany({ where: questionId ? { questionId } : {}, orderBy: { createdAt: 'asc' } })
           .then(rows => rows.map(mapQuestionSource))
       );
     },
-    async replaceForQuestion(questionId, sources = []) {
+    async replaceForQuestion(questionId: string, sources: readonly SourceWriteInput[] = []) {
       return withRepositoryErrors(async () => {
         await db.questionSource.deleteMany({ where: { questionId } });
         if (!sources.length) return [];
@@ -51,13 +59,13 @@ export function createPostgresQuestionSourceRepository({ db }) {
           updatedAt: toDate(source.updatedAt)
         }));
         await db.questionSource.createMany({ data });
-        return data.map(mapQuestionSource);
+        return data.map(mapQuestionSource as (row: SourceProjection) => MappedSourceProjection);
       });
     },
-    async markBySourceId(sourceType, sourceId, status = 'stale') {
+    async markBySourceId(sourceType: string, sourceId: string, status = 'stale') {
       return this.markBySourceIds(sourceType, [sourceId], status);
     },
-    async markBySourceIds(sourceType, sourceIds = [], status = 'stale') {
+    async markBySourceIds(sourceType: string, sourceIds: RelationIds = [], status = 'stale') {
       if (!sourceIds.length) return [];
       return withRepositoryErrors(async () => {
         const rows = await db.questionSource.findMany({

@@ -1,9 +1,11 @@
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
+import type { ProfileRepositoryOptions, ProfileWriteInput, ReviewListOptions } from './assessment-repository-types.ts';
 import { mapExamProfile, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
-export function createPostgresExamProfileRepository({ db }) {
+export function createPostgresExamProfileRepository({ db }: ProfileRepositoryOptions) {
   if (!db?.examProfile) throw new TypeError('PostgreSQL ExamProfile repository requires db.examProfile');
-  function toData(profile) {
+  function toData(profile: ProfileWriteInput) {
     return {
       id: profile.id,
       name: profile.name,
@@ -19,7 +21,7 @@ export function createPostgresExamProfileRepository({ db }) {
     };
   }
   return {
-    async create(profile) {
+    async create(profile: ProfileWriteInput) {
       return withRepositoryErrors(() =>
         db.examProfile
           .create({
@@ -28,7 +30,7 @@ export function createPostgresExamProfileRepository({ db }) {
           .then(mapExamProfile)
       );
     },
-    async save(profile) {
+    async save(profile: ProfileWriteInput) {
       const data = toData(profile);
       return withRepositoryErrors(() =>
         db.examProfile
@@ -43,10 +45,12 @@ export function createPostgresExamProfileRepository({ db }) {
           .then(mapExamProfile)
       );
     },
-    async findById(id) {
-      return withRepositoryErrors(() => db.examProfile.findUnique({ where: { id } }).then(mapExamProfile));
+    async findById(id: string) {
+      return withRepositoryErrors(() =>
+        db.examProfile.findUnique({ where: { id } }).then<SyncMappedEntityMap['examProfiles'] | null>(mapExamProfile)
+      );
     },
-    list({ includeArchived = false, includeDeleted = false } = {}) {
+    list({ includeArchived = false, includeDeleted = false }: ReviewListOptions = {}) {
       const where = {
         ...(includeArchived ? {} : { archivedAt: null }),
         ...(includeDeleted ? {} : { deletedAt: null })
@@ -55,7 +59,7 @@ export function createPostgresExamProfileRepository({ db }) {
         db.examProfile.findMany({ where, orderBy: { updatedAt: 'desc' } }).then(rows => rows.map(mapExamProfile))
       );
     },
-    async delete(id) {
+    async delete(id: string) {
       return withRepositoryErrors(() => db.examProfile.delete({ where: { id } }).then(mapExamProfile));
     },
     supportsAsync: true
