@@ -7,17 +7,8 @@ import {
   writeFileAtomically
 } from './local-attachment-store-utils.js';
 
-export function createLocalAttachmentUpload({
-  dataStore,
-  fileManager,
-  flush
-}) {
-  return function uploadAttachment({
-    noteId,
-    fileName,
-    mimeType = 'application/octet-stream',
-    contentBase64
-  }) {
+export function createLocalAttachmentUpload({ dataStore, fileManager, flush }) {
+  return function uploadAttachment({ noteId, fileName, mimeType = 'application/octet-stream', contentBase64 }) {
     if (!noteId?.trim()) {
       throw new Error('Attachment noteId is required');
     }
@@ -33,10 +24,7 @@ export function createLocalAttachmentUpload({
     const buffer = decodeAttachmentBytes(contentBase64);
     const contentSha256 = sha256Buffer(buffer);
     const storagePath = fileManager.buildStoragePath(id, safeName);
-    const absoluteFilePath = fileManager.resolveManagedAbsolutePath(
-      id,
-      safeName
-    );
+    const absoluteFilePath = fileManager.resolveManagedAbsolutePath(id, safeName);
     let attachment = {
       id,
       noteId,
@@ -44,7 +32,7 @@ export function createLocalAttachmentUpload({
       mimeType,
       size: buffer.byteLength,
       sha256: contentSha256,
-      status: ATTACHMENT_STATUS.PENDING,
+      status: /** @type {import('./attachment-status.ts').AttachmentStatus} */ (ATTACHMENT_STATUS.PENDING),
       storagePath,
       verifiedAt: null,
       createdAt: new Date().toISOString()

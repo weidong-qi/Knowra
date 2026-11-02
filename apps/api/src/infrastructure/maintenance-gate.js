@@ -82,23 +82,35 @@ export function createMaintenanceGate() {
   };
 }
 
+/**
+ * @template {object} T
+ * @typedef {{[K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : T[K]}} GatedHandlers
+ */
+/**
+ * @template {object} T
+ * @param {T} handlers
+ * @param {ReturnType<typeof createMaintenanceGate>} maintenanceGate
+ * @returns {GatedHandlers<T>}
+ */
 export function wrapHandlersWithMaintenanceGate(
   handlers,
   maintenanceGate,
   /** @type {{getAccess?: ((name: string) => unknown) | undefined}} */
   { getAccess = getKnowledgeOperationAccess } = {}
 ) {
-  return Object.fromEntries(
-    Object.entries(handlers).map(([name, handler]) => {
-      if (typeof handler !== 'function') return [name, handler];
-      const access = getAccess(name);
-      return [
-        name,
-        (...args) =>
-          access === 'mutation'
-            ? maintenanceGate.runMutation(() => handler(...args))
-            : maintenanceGate.runOperation(() => handler(...args))
-      ];
-    })
+  return /** @type {GatedHandlers<T>} */ (
+    Object.fromEntries(
+      Object.entries(handlers).map(([name, handler]) => {
+        if (typeof handler !== 'function') return [name, handler];
+        const access = getAccess(name);
+        return [
+          name,
+          (...args) =>
+            access === 'mutation'
+              ? maintenanceGate.runMutation(() => handler(...args))
+              : maintenanceGate.runOperation(() => handler(...args))
+        ];
+      })
+    )
   );
 }
