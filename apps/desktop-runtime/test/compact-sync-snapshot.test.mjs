@@ -4,7 +4,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
-import { createLocalSyncService } from '../../api/src/modules/sync/local-provider.js';
+import { createLocalSyncService } from '../../api/src/modules/sync/local-provider.ts';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { entriesFor } from '../../api/src/modules/sync/journal.ts';
 import { writeJsonFileAtomically } from '../../api/src/infrastructure/atomic-json-file.ts';

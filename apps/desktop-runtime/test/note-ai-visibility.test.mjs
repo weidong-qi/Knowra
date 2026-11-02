@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildCreateNoteDto, buildUpdateNoteDto } from '../../api/src/modules/knowledge/application/dto/note.dto.js';
-import { applyNoteOperation } from '../../api/src/modules/sync/local-provider.js';
+import { applyNoteOperation } from '../../api/src/modules/sync/local-provider.ts';
 import { assertSyncContract, syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { createNoteService } from '../../api/src/modules/knowledge/application/note-service.js';
 import { noteContent } from '../../api/src/modules/sync/journal.ts';

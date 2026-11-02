@@ -31,7 +31,7 @@ export interface SyncReferenceEntity {
   rawMarkdown?: string;
   sourceId?: string | null;
   sourceType?: string;
-  contentHash?: string;
+  contentHash?: string | null;
   content?: string;
   noteVersions?: AnalysisScopeVersionBinding[];
   annotationRevisions?: Array<{ annotationId: string }>;

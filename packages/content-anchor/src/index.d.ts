@@ -104,22 +104,25 @@ export function anchorForSourceRange(
 ): ContentAnchor;
 export function anchorForBlock(projection: MarkdownProjection, blockIndex: number): ContentAnchor;
 export function anchorForSection(projection: MarkdownProjection, headingIndex: number): ContentAnchor;
-export function resolveAnchor(
-  markdown: string,
-  anchor: ContentAnchor
-): {
+type AnchorResolution<Anchor = ContentAnchor> = {
   status: 'resolved' | 'needsReview' | 'missing';
   reason: string | null;
-  anchor?: ContentAnchor;
+  anchor?: Anchor;
   projection: MarkdownProjection;
   quoteText?: string;
   segments?: AnchorSegment[];
 };
+export function resolveAnchor(markdown: string, anchor: ContentAnchor): AnchorResolution;
+export function resolveAnchor(
+  markdown: string,
+  anchor: Partial<ContentAnchor>
+): AnchorResolution<Partial<ContentAnchor>>;
+
 export function relocateAnchor(
   markdown: string,
   anchor: ContentAnchor
-): ReturnType<typeof resolveAnchor> & { candidates?: ContentAnchor[] };
-export function followSectionAnchor(markdown: string, anchor: ContentAnchor): ReturnType<typeof resolveAnchor>;
+): AnchorResolution & { candidates?: ContentAnchor[] };
+export function followSectionAnchor(markdown: string, anchor: ContentAnchor): AnchorResolution;
 export function headingPathForSourceOffset(projection: MarkdownProjection, sourceOffset: number): string[];
 
 export interface SourceEdit {
@@ -259,7 +262,7 @@ export function followAnchorChanges(
   after: string,
   anchor: ContentAnchor,
   edits?: SourceEdit[] | null
-): ReturnType<typeof resolveAnchor>;
+): AnchorResolution;
 export function updateStructure(
   before: string,
   after: string,
@@ -273,7 +276,7 @@ export function anchorForListItem(
   itemPath: string,
   allowEmpty?: boolean
 ): ContentAnchor;
-export function followListAnchor(markdown: string, anchor: ContentAnchor): ReturnType<typeof resolveAnchor>;
+export function followListAnchor(markdown: string, anchor: ContentAnchor): AnchorResolution;
 export function listTracking(
   projection: MarkdownProjection,
   anchor: ContentAnchor,
@@ -285,7 +288,7 @@ export function followListAnchorChanges(
   anchor: ContentAnchor,
   edits?: SourceEdit[] | null,
   structures?: { before?: AnnotationStructure | null; after?: AnnotationStructure | null }
-): ReturnType<typeof resolveAnchor>;
+): AnchorResolution;
 
 /** 块内偏移模型：与 parseIdentityBlocks 同序，非文本块为 null。 */
 export interface InlineOffsetModel {

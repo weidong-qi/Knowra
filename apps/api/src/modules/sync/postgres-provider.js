@@ -7,14 +7,14 @@ import {
 } from '../knowledge/domain/history-retention.js';
 import { readPostgresHistoryRetentionReferences } from '../../infrastructure/history-retention-references.js';
 import { assertSnapshotBinding, snapshotBinding } from './protocol-contract.ts';
-import { createBatchSyncService } from './batch-service.js';
+import { createBatchSyncService } from './batch-service.ts';
 import { applyPostgresState } from './postgres-batch.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction-context.ts';
 import * as maps from '../knowledge/infrastructure/postgres/mappers.js';
 import { appendChanges, createJournal, loadJournal, syncError } from './journal.ts';
 import { createSyncService } from './service.js';
-import { applyNoteOperation } from './local-provider.js';
+import { applyNoteOperation } from './local-provider.ts';
 
 const collections = {
   spaces: ['knowledgeSpace', 'mapSpace'],

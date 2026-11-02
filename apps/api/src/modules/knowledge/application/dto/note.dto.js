@@ -1,10 +1,4 @@
-import {
-  createPrefixedId,
-  normalizeIdList,
-  normalizeOptionalId,
-  requireText,
-  trimIfString
-} from './_shared.js';
+import { createPrefixedId, normalizeIdList, normalizeOptionalId, requireText, trimIfString } from './_shared.js';
 import { assertNoInsecureImageUrls } from '../note-content-policy.js';
 import { validationError } from '../knowledge-errors.js';
 
@@ -27,14 +21,19 @@ function deriveTitleFromMarkdown(markdown) {
 
   const firstLine = markdown
     .split('\n')
-    .map((line) => line.trim())
+    .map(line => line.trim())
     .find(Boolean);
 
   if (!firstLine) {
     return null;
   }
 
-  return firstLine.replace(/^[-*>\d.\s]+/, '').trim().slice(0, 80) || null;
+  return (
+    firstLine
+      .replace(/^[-*>\d.\s]+/, '')
+      .trim()
+      .slice(0, 80) || null
+  );
 }
 
 function createNoteId({ id, title, rawMarkdown }) {
@@ -42,12 +41,10 @@ function createNoteId({ id, title, rawMarkdown }) {
     return requireText(id, 'NOTE_ID_INVALID', 'Note id is invalid');
   }
 
-  return createPrefixedId(
-    'note',
-    title || deriveTitleFromMarkdown(rawMarkdown) || 'item'
-  );
+  return createPrefixedId('note', title || deriveTitleFromMarkdown(rawMarkdown) || 'item');
 }
 
+/** @param {Partial<Omit<import('../../domain/note.ts').Note, 'tagIds'>> & {tagIds?: unknown}} input */
 export function buildCreateNoteDto(input = {}) {
   if (typeof input.rawMarkdown !== 'string') {
     throw validationError('NOTE_CONTENT_REQUIRED', 'Note rawMarkdown is required');
@@ -84,14 +81,8 @@ export function buildUpdateNoteDto(input = {}) {
 
   if (input.expectedUpdatedAt !== undefined) {
     const expectedUpdatedAt = new Date(input.expectedUpdatedAt);
-    if (
-      typeof input.expectedUpdatedAt !== 'string'
-      || Number.isNaN(expectedUpdatedAt.getTime())
-    ) {
-      throw validationError(
-        'NOTE_EXPECTED_UPDATED_AT_INVALID',
-        'Note expectedUpdatedAt is invalid'
-      );
+    if (typeof input.expectedUpdatedAt !== 'string' || Number.isNaN(expectedUpdatedAt.getTime())) {
+      throw validationError('NOTE_EXPECTED_UPDATED_AT_INVALID', 'Note expectedUpdatedAt is invalid');
     }
     dto.expectedUpdatedAt = expectedUpdatedAt.toISOString();
   }
