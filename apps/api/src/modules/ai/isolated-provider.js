@@ -131,6 +131,7 @@ export function createIsolatedDeepSeekAdapter({
         leave();
       }
     },
+    // eslint-disable-next-line require-yield -- 保留异步生成器协议，在消费时明确拒绝尚不支持的流式调用。
     async *stream() {
       throw new AiGatewayError('AI_STREAM_UNAVAILABLE', '隔离执行器尚未启用流式响应。');
     }
