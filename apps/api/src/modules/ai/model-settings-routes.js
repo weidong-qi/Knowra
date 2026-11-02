@@ -1,5 +1,5 @@
-import { parseBody } from '../../http/request.js';
-import { sendJson } from '../../http/response.js';
+import { parseBody } from '../../http/request.ts';
+import { sendJson } from '../../http/response.ts';
 import { createAppError } from '../../errors/app-error.js';
 
 export async function handleModelSettingsRoute({ request, response, url, modelSettings }) {

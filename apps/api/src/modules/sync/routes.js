@@ -1,6 +1,6 @@
 import { requestBodyLimit } from '@study-accelerator/shared/http-limits';
-import { parseBody, toQueryObject } from '../../http/request.js';
-import { sendJson } from '../../http/response.js';
+import { parseBody, toQueryObject } from '../../http/request.ts';
+import { sendJson } from '../../http/response.ts';
 import { syncError } from './journal.js';
 
 export async function handleSyncRoute({ request, response, url, sync }) {
@@ -14,8 +14,10 @@ export async function handleSyncRoute({ request, response, url, sync }) {
     'GET /api/sync/snapshot': () => sync.snapshot(toQueryObject(url)),
     'POST /api/sync/snapshot-release': async () => sync.releaseSnapshot(await parseBody(request)),
     'GET /api/sync/changes': () => sync.changes(toQueryObject(url)),
-    'POST /api/sync/batch': async () => sync.pushBatch(await parseBody(request, { limitBytes: requestBodyLimit(request.method, url.pathname) })),
-    'POST /api/sync/blobs': async () => sync.uploadBlob(await parseBody(request, { limitBytes: requestBodyLimit(request.method, url.pathname) })),
+    'POST /api/sync/batch': async () =>
+      sync.pushBatch(await parseBody(request, { limitBytes: requestBodyLimit(request.method, url.pathname) })),
+    'POST /api/sync/blobs': async () =>
+      sync.uploadBlob(await parseBody(request, { limitBytes: requestBodyLimit(request.method, url.pathname) })),
     'POST /api/sync/push': async () => sync.push(await parseBody(request))
   };
   const handler = handlers[`${request.method} ${url.pathname}`];

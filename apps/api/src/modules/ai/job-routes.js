@@ -1,8 +1,12 @@
-import { parseBody } from '../../http/request.js';
-import { sendJson } from '../../http/response.js';
+import { parseBody } from '../../http/request.ts';
+import { sendJson } from '../../http/response.ts';
 import { extractionHttpError } from './knowledge-extraction-http-errors.js';
 
-const invalid = () => { throw extractionHttpError({ code: 'KNOWLEDGE_EXTRACTION_REQUEST_INVALID' }); };
+/** @type {() => never} */
+const invalid = () => {
+  throw extractionHttpError({ code: 'KNOWLEDGE_EXTRACTION_REQUEST_INVALID' });
+};
+/** @param {unknown} value @returns {value is Record<string, unknown>} */
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 
 export async function handleAiJobRoute({ request, response, url, extraction }) {
@@ -12,41 +16,62 @@ export async function handleAiJobRoute({ request, response, url, extraction }) {
   if (!capability && url.pathname !== root && !match) return false;
   response.setHeader('Cache-Control', 'no-store');
   if (request.method === 'GET' && capability) {
-    sendJson(response, 200, { data: await extraction.capabilities() }); return true;
+    sendJson(response, 200, { data: await extraction.capabilities() });
+    return true;
   }
   if (request.method === 'GET' && url.pathname === root) {
     const allowed = ['kind', 'spaceId', 'limit', 'cursor', 'idempotencyKey'];
-    if ([...url.searchParams.keys()].some(key => !allowed.includes(key) || url.searchParams.getAll(key).length !== 1)
-      || url.searchParams.get('kind') !== 'knowledgeExtraction') invalid();
+    if (
+      [...url.searchParams.keys()].some(key => !allowed.includes(key) || url.searchParams.getAll(key).length !== 1) ||
+      url.searchParams.get('kind') !== 'knowledgeExtraction'
+    )
+      invalid();
     const input = { spaceId: url.searchParams.get('spaceId') };
-    for (const key of ['cursor', 'idempotencyKey']) if (url.searchParams.has(key)) input[key] = url.searchParams.get(key);
+    for (const key of ['cursor', 'idempotencyKey'])
+      if (url.searchParams.has(key)) input[key] = url.searchParams.get(key);
     if (url.searchParams.has('limit')) {
       const value = url.searchParams.get('limit');
       if (!/^[1-9][0-9]?$/.test(value)) invalid();
       input.limit = Number(value);
     }
-    sendJson(response, 200, { data: await extraction.list(input) }); return true;
+    sendJson(response, 200, { data: await extraction.list(input) });
+    return true;
   }
   let jobId;
   if (match) {
-    try { jobId = decodeURIComponent(match[1]); } catch { invalid(); }
+    try {
+      jobId = decodeURIComponent(match[1]);
+    } catch {
+      invalid();
+    }
     if (url.search) invalid();
   }
   if (request.method === 'GET' && match && !match[2]) {
-    sendJson(response, 200, { data: await extraction.get(jobId) }); return true;
+    sendJson(response, 200, { data: await extraction.get(jobId) });
+    return true;
   }
-  if (request.method !== 'POST' || capability || match && !match[2]) return false;
+  if (request.method !== 'POST' || capability || (match && !match[2])) return false;
   if (url.search) invalid();
   if (request.headers['x-knowra-ai-job'] !== '1') {
     throw extractionHttpError({ code: 'KNOWLEDGE_EXTRACTION_REQUEST_REJECTED' });
   }
   const input = await parseBody(request, { limitBytes: 2048 });
   if (url.pathname === root) {
-    if (!object(input) || Object.keys(input).length !== 3 || input.kind !== 'knowledgeExtraction'
-      || !Object.hasOwn(input, 'scopeId') || !Object.hasOwn(input, 'idempotencyKey')) invalid();
-    sendJson(response, 202, { data: await extraction.start({ scopeId: input.scopeId, idempotencyKey: input.idempotencyKey }) }); return true;
+    if (
+      !object(input) ||
+      Object.keys(input).length !== 3 ||
+      input.kind !== 'knowledgeExtraction' ||
+      !Object.hasOwn(input, 'scopeId') ||
+      !Object.hasOwn(input, 'idempotencyKey')
+    )
+      invalid();
+    sendJson(response, 202, {
+      data: await extraction.start({ scopeId: input.scopeId, idempotencyKey: input.idempotencyKey })
+    });
+    return true;
   }
   if (!object(input) || Object.keys(input).length) invalid();
   const data = await extraction[match[2]](jobId);
-  sendJson(response, match[2] === 'retry' ? 202 : 200, { data }); return true;
+  sendJson(response, match[2] === 'retry' ? 202 : 200, { data });
+  return true;
 }
