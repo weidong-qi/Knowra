@@ -208,7 +208,7 @@ export function planHistoryRetention(
     externalReferences = [],
     protectedVersionIds = new Set(),
     protectedRevisionIds = new Set(),
-    canDiscard = () => true,
+    canDiscard = /** @type {(collection: string, record: { id: string }) => boolean} */ (() => true),
     notePolicy = NOTE_VERSION_RETENTION,
     annotationPolicy = ANNOTATION_REVISION_RETENTION,
     deletedAnnotationRetentionMs = DELETED_ANNOTATION_RETENTION_MS
@@ -294,12 +294,12 @@ export function planHistoryRetention(
       removedVersions.add(id);
   }
   const summary = {};
-  for (const [collection, removed] of [
+  for (const [collection, removed] of /** @type {[string, Set<string>][]} */ ([
     ['annotationRevisions', removedRevisions],
     ['noteVersions', removedVersions],
     ['contentAnnotations', pruned.annotations],
     ['annotationExclusions', pruned.exclusions]
-  ]) {
+  ])) {
     const records = input[collection] ?? [];
     summary[collection] = {
       before: records.length,

@@ -1,20 +1,14 @@
 import { createAppError } from '../errors/app-error.js';
 import { ATTACHMENT_STATUS } from './attachment-status.js';
-import {
-  sanitizeFileName,
-  sha256Buffer
-} from './local-attachment-store-utils.js';
+import { sanitizeFileName, sha256Buffer } from './local-attachment-store-utils.js';
 
 const SAFE_ATTACHMENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-export function validateAttachmentSnapshotItems(
-  items,
-  fileManager,
-  {
-    expectedMetadata,
-    noteIds
-  } = {}
-) {
+/**
+ * @param items
+ * @param fileManager
+ * @param {{expectedMetadata?: {id: string, noteId: string, fileName: string}[], noteIds?: Set<string>}} options */
+export function validateAttachmentSnapshotItems(items, fileManager, { expectedMetadata, noteIds } = {}) {
   if (!Array.isArray(items)) {
     invalidAttachmentSnapshot('Attachment snapshot must be an array');
   }
@@ -23,14 +17,10 @@ export function validateAttachmentSnapshotItems(
   const preparedItems = items.map((item, index) => {
     const prepared = prepareSnapshotItem(item, index, fileManager);
     if (ids.has(prepared.id)) {
-      invalidAttachmentSnapshot(
-        `Attachment snapshot contains duplicate id: ${prepared.id}`
-      );
+      invalidAttachmentSnapshot(`Attachment snapshot contains duplicate id: ${prepared.id}`);
     }
     if (noteIds && !noteIds.has(prepared.noteId)) {
-      invalidAttachmentSnapshot(
-        `Attachment ${prepared.id} references an unknown note`
-      );
+      invalidAttachmentSnapshot(`Attachment ${prepared.id} references an unknown note`);
     }
     ids.add(prepared.id);
     return prepared;
@@ -46,10 +36,7 @@ function prepareSnapshotItem(item, index, fileManager) {
   if (!item || typeof item !== 'object' || Array.isArray(item)) {
     invalidAttachmentSnapshot(`attachmentFiles[${index}] must be an object`);
   }
-  if (
-    typeof item.id !== 'string'
-    || !SAFE_ATTACHMENT_ID_PATTERN.test(item.id)
-  ) {
+  if (typeof item.id !== 'string' || !SAFE_ATTACHMENT_ID_PATTERN.test(item.id)) {
     invalidAttachmentSnapshot(`attachmentFiles[${index}].id is invalid`);
   }
   if (typeof item.noteId !== 'string' || !item.noteId.trim()) {
@@ -63,9 +50,7 @@ function prepareSnapshotItem(item, index, fileManager) {
   const fileName = sanitizeFileName(item.fileName);
   const contentSha256 = sha256Buffer(content);
   if (item.sha256 && item.sha256.toLowerCase() !== contentSha256) {
-    invalidAttachmentSnapshot(
-      `attachmentFiles[${index}].sha256 does not match content`
-    );
+    invalidAttachmentSnapshot(`attachmentFiles[${index}].sha256 does not match content`);
   }
   return {
     id: item.id,
@@ -88,53 +73,35 @@ function validateExpectedMetadata(preparedItems, expectedMetadata) {
     invalidAttachmentSnapshot('attachments metadata must be an array');
   }
 
-  const expectedById = new Map(
-    expectedMetadata.map((item) => [item?.id, item])
-  );
+  const expectedById = new Map(expectedMetadata.map(item => [item?.id, item]));
   if (expectedById.size !== preparedItems.length) {
-    invalidAttachmentSnapshot(
-      'attachments metadata and attachmentFiles must contain the same ids'
-    );
+    invalidAttachmentSnapshot('attachments metadata and attachmentFiles must contain the same ids');
   }
 
   for (const prepared of preparedItems) {
     const expected = expectedById.get(prepared.id);
-    if (
-      !expected
-      || expected.noteId !== prepared.noteId
-      || sanitizeFileName(expected.fileName) !== prepared.fileName
-    ) {
-      invalidAttachmentSnapshot(
-        `Attachment metadata does not match file payload: ${prepared.id}`
-      );
+    if (!expected || expected.noteId !== prepared.noteId || sanitizeFileName(expected.fileName) !== prepared.fileName) {
+      invalidAttachmentSnapshot(`Attachment metadata does not match file payload: ${prepared.id}`);
     }
   }
 }
 
 function decodeBase64(value, index) {
   if (
-    typeof value !== 'string'
-    || value.length % 4 !== 0
-    || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)
+    typeof value !== 'string' ||
+    value.length % 4 !== 0 ||
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)
   ) {
-    invalidAttachmentSnapshot(
-      `attachmentFiles[${index}].contentBase64 is invalid`
-    );
+    invalidAttachmentSnapshot(`attachmentFiles[${index}].contentBase64 is invalid`);
   }
 
   const content = Buffer.from(value, 'base64');
   if (content.toString('base64') !== value) {
-    invalidAttachmentSnapshot(
-      `attachmentFiles[${index}].contentBase64 is invalid`
-    );
+    invalidAttachmentSnapshot(`attachmentFiles[${index}].contentBase64 is invalid`);
   }
   return content;
 }
 
 function invalidAttachmentSnapshot(message) {
-  throw createAppError(
-    'STORAGE_ATTACHMENT_SNAPSHOT_INVALID',
-    message,
-    422
-  );
+  throw createAppError('STORAGE_ATTACHMENT_SNAPSHOT_INVALID', message, 422);
 }

@@ -22,19 +22,34 @@ import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-ext
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.js';
 import { isWriteMethod, writeOriginDecision } from '@study-accelerator/shared/http-origin';
 
-export function createServer({ appContext, cors = {}, logger = console }) {
+export function createServer({ appContext, cors = /** @type {{allowedOrigins?: string[]}} */ ({}), logger = console }) {
   const taskWorkspaces = appContext.taskWorkspaces ?? createTaskWorkspaceService({ store: null });
-  const taskWorkspaceContext = appContext.taskWorkspaceContext ?? (() => ({ actor: { kind: 'user', id: 'unavailable' } }));
+  const taskWorkspaceContext =
+    appContext.taskWorkspaceContext ?? (() => ({ actor: { kind: 'user', id: 'unavailable' } }));
   const allowedOrigins = cors.allowedOrigins ?? [];
-  const extraction = createKnowledgeExtractionHttpService({ tasks: appContext.knowledgeExtractionTasks,
-    location: appContext.aiLocation ?? 'server', logger });
-  const assistant = appContext.ai && appContext.aiOwnerId
-    ? createAiAssistantService({ getRuntime: () => appContext.ai, ownerId: appContext.aiOwnerId,
-      location: appContext.aiLocation ?? 'server', logger }) : null;
+  const extraction = createKnowledgeExtractionHttpService({
+    tasks: appContext.knowledgeExtractionTasks,
+    location: appContext.aiLocation ?? 'server',
+    logger
+  });
+  const assistant =
+    appContext.ai && appContext.aiOwnerId
+      ? createAiAssistantService({
+          getRuntime: () => appContext.ai,
+          ownerId: appContext.aiOwnerId,
+          location: appContext.aiLocation ?? 'server',
+          logger
+        })
+      : null;
   const aiLifecycle = aiRuntimeLifecycle(appContext.ai);
-  const aiRecovery = appContext.aiLocation === 'local' ? Promise.resolve() : aiLifecycle.recover()
-    .catch(error => logger.warn?.('AI task recovery failed', { code: error.code ?? 'AI_RECOVERY_FAILED' }));
+  const aiRecovery =
+    appContext.aiLocation === 'local'
+      ? Promise.resolve()
+      : aiLifecycle
+          .recover()
+          .catch(error => logger.warn?.('AI task recovery failed', { code: error.code ?? 'AI_RECOVERY_FAILED' }));
 
+  /** @type {http.Server & {closeAi?: typeof aiLifecycle.close}} */
   const server = http.createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://localhost');
@@ -68,7 +83,16 @@ export function createServer({ appContext, cors = {}, logger = console }) {
         return;
       }
 
-      if (await handleTaskWorkspaceRoute({ request, response, url, service: taskWorkspaces, context: taskWorkspaceContext })) return;
+      if (
+        await handleTaskWorkspaceRoute({
+          request,
+          response,
+          url,
+          service: taskWorkspaces,
+          context: taskWorkspaceContext
+        })
+      )
+        return;
 
       if (await handleStorageRoute({ request, response, url, storage })) {
         return;
@@ -76,14 +100,26 @@ export function createServer({ appContext, cors = {}, logger = console }) {
 
       if (await handleSyncRoute({ request, response, url, sync: appContext.http.sync })) return;
 
-      if (await handleModelSettingsRoute({ request, response, url, modelSettings: appContext.http.modelSettings })) return;
+      if (await handleModelSettingsRoute({ request, response, url, modelSettings: appContext.http.modelSettings }))
+        return;
       if (await handleAiFeatureRoute({ request, response, url, features: appContext.http.aiFeatures })) return;
-      if (await handleBudgetRoute({ request, response, url, authority: appContext.http.aiBudget, policy: appContext.ai?.budgetPolicy ?? null })) return;
+      if (
+        await handleBudgetRoute({
+          request,
+          response,
+          url,
+          authority: appContext.http.aiBudget,
+          policy: appContext.ai?.budgetPolicy ?? null
+        })
+      )
+        return;
       if (await handleAiJobRoute({ request, response, url, extraction })) return;
       if (await handleAiAccessRoute({ request, response, url, access: appContext.ai?.access })) return;
       if (await handleActionRoute({ request, response, url, actions: appContext.ai?.actions })) return;
-      if (url.pathname.startsWith('/api/ai/conversations/') && url.pathname.split('/')[5] === 'attachments') await aiRecovery;
-      if (await handleConversationAttachmentRoute({ request, response, url, attachments: appContext.ai?.attachments })) return;
+      if (url.pathname.startsWith('/api/ai/conversations/') && url.pathname.split('/')[5] === 'attachments')
+        await aiRecovery;
+      if (await handleConversationAttachmentRoute({ request, response, url, attachments: appContext.ai?.attachments }))
+        return;
       if (await handleConversationRoute({ request, response, url, conversation: appContext.ai?.conversation })) return;
       if (url.pathname.startsWith('/api/ai/assistant')) await aiRecovery;
       if (url.pathname.startsWith('/api/ai/conversations')) await aiRecovery;
@@ -105,14 +141,10 @@ export function createServer({ appContext, cors = {}, logger = console }) {
         return;
       }
 
-      if (request.url?.startsWith('/api/sync/')) logger.error?.('Sync request failed', { code: error.code ?? 'INTERNAL_SERVER_ERROR' });
+      if (request.url?.startsWith('/api/sync/'))
+        logger.error?.('Sync request failed', { code: error.code ?? 'INTERNAL_SERVER_ERROR' });
       else logger.error?.('Unhandled request error', error);
-      sendError(
-        response,
-        500,
-        'INTERNAL_SERVER_ERROR',
-        'Internal server error'
-      );
+      sendError(response, 500, 'INTERNAL_SERVER_ERROR', 'Internal server error');
     }
   });
   // 原生 close/close 事件仍只表示网络关闭；持库宿主另等 closeAi 或 context.close。

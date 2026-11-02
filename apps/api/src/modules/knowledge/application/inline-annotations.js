@@ -300,7 +300,10 @@ export function marksOnlyDependencies(dependencies) {
 }
 
 /** 装配层包装：只改标记时走 marksOnlyLifecycle；级联完成后派生内联重点行。 */
-export function withInlineAnnotations(lifecycle, { repository, revisionRepository, marksOnlyLifecycle = null, now }) {
+export function withInlineAnnotations(
+  lifecycle,
+  { repository, revisionRepository, marksOnlyLifecycle = null, now = undefined }
+) {
   return {
     ...lifecycle,
     onNoteContentChanged: (note, version, annotationChange) => {

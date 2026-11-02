@@ -1,14 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  ATTACHMENT_STATUS,
-  normalizeAttachmentStatus
-} from './attachment-status.js';
-import {
-  normalizeSha256
-} from './attachment-record-reconciliation.js';
+import { ATTACHMENT_STATUS, normalizeAttachmentStatus } from './attachment-status.js';
+import { normalizeSha256 } from './attachment-record-reconciliation.js';
 import { sha256FileSync } from './local-attachment-store-utils.js';
 
+/** @param {{attachments?: {id: string, storagePath?: string, size?: number, sha256?: string, status?: string, verifiedAt?: string}[], fileManager?: ReturnType<typeof import('./local-attachment-file-manager.js').createLocalAttachmentFileManager>, generatedAt?: string}} options */
 export function inspectAttachmentIntegrity({
   attachments = [],
   fileManager,
@@ -35,9 +31,10 @@ export function inspectAttachmentIntegrity({
     warnings.push(...item.warnings);
   }
 
-  const orphanFiles = listManagedFiles(fileManager.getManagedUploadsDirectory())
-    .filter((fileName) => !expectedFileNames.has(fileName));
-  orphanFiles.forEach((fileName) => {
+  const orphanFiles = listManagedFiles(fileManager.getManagedUploadsDirectory()).filter(
+    fileName => !expectedFileNames.has(fileName)
+  );
+  orphanFiles.forEach(fileName => {
     warnings.push({
       code: 'ATTACHMENT_ORPHAN_FILE',
       message: 'Managed uploads directory contains an unreferenced file',
@@ -49,11 +46,7 @@ export function inspectAttachmentIntegrity({
   counts.orphanFiles = orphanFiles.length;
   return {
     generatedAt,
-    status: errors.length
-      ? 'degraded'
-      : warnings.length
-        ? 'needs-repair'
-        : 'ready',
+    status: errors.length ? 'degraded' : warnings.length ? 'needs-repair' : 'ready',
     canServe: errors.length === 0,
     counts,
     items,
@@ -63,11 +56,7 @@ export function inspectAttachmentIntegrity({
   };
 }
 
-export function buildAttachmentRepairRecord(
-  attachment,
-  item,
-  { verifiedAt = new Date().toISOString() } = {}
-) {
+export function buildAttachmentRepairRecord(attachment, item, { verifiedAt = new Date().toISOString() } = {}) {
   const repaired = { ...attachment };
   if (item.observedStatus === ATTACHMENT_STATUS.READY) {
     repaired.size = item.actualSize;
@@ -82,9 +71,7 @@ export function buildAttachmentRepairRecord(
 }
 
 function inspectAttachment(attachment, filePath, generatedAt) {
-  const expectedSize = Number.isInteger(Number(attachment.size))
-    ? Number(attachment.size)
-    : null;
+  const expectedSize = Number.isInteger(Number(attachment.size)) ? Number(attachment.size) : null;
   const expectedSha256 = normalizeSha256(attachment.sha256);
   const storedStatus = normalizeAttachmentStatus(attachment.status);
   const base = {
@@ -96,7 +83,7 @@ function inspectAttachment(attachment, filePath, generatedAt) {
     storedStatus,
     actualSize: null,
     actualSha256: null,
-    observedStatus: ATTACHMENT_STATUS.MISSING,
+    observedStatus: /** @type {import('./attachment-status.ts').AttachmentStatus} */ (ATTACHMENT_STATUS.MISSING),
     errors: [],
     warnings: []
   };
@@ -172,14 +159,11 @@ function countStatuses(items) {
     repairable: 0,
     orphanFiles: 0
   };
-  items.forEach((item) => {
+  items.forEach(item => {
     counts[item.observedStatus] = (counts[item.observedStatus] ?? 0) + 1;
     if (
-      item.observedStatus !== item.storedStatus
-      || (
-        item.observedStatus === ATTACHMENT_STATUS.READY
-        && item.warnings.length > 0
-      )
+      item.observedStatus !== item.storedStatus ||
+      (item.observedStatus === ATTACHMENT_STATUS.READY && item.warnings.length > 0)
     ) {
       counts.repairable += 1;
     }
@@ -198,7 +182,8 @@ function isRegularFile(filePath) {
 
 function listManagedFiles(directoryPath) {
   if (!directoryPath || !fs.existsSync(directoryPath)) return [];
-  return fs.readdirSync(directoryPath, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name);
+  return fs
+    .readdirSync(directoryPath, { withFileTypes: true })
+    .filter(entry => entry.isFile())
+    .map(entry => entry.name);
 }

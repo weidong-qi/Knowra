@@ -2,23 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { TASK_WORKSPACE_COLLECTIONS } from '../modules/task-workspaces/repository-port.js';
 import { validateTaskWorkspaceSnapshot } from '../modules/task-workspaces/storage-validation.js';
 import { fail } from '../modules/task-workspaces/contract.js';
-export function createEmptyTaskWorkspaceSnapshot(
-  datasetId = randomUUID(),
-  datasetEpoch = randomUUID(),
-) {
+export function createEmptyTaskWorkspaceSnapshot(datasetId = randomUUID(), datasetEpoch = randomUUID()) {
   return {
     version: 1,
     datasetId,
     datasetEpoch,
-    ...Object.fromEntries(TASK_WORKSPACE_COLLECTIONS.map((k) => [k, []])),
+    ...Object.fromEntries(TASK_WORKSPACE_COLLECTIONS.map(k => [k, []]))
   };
 }
 /** Host fileDataStore supplies its existing locked atomic transaction and extension persistence. */
-export function createJsonTaskWorkspaceStore({
-  readState,
-  writeState,
-  transaction,
-}) {
+export function createJsonTaskWorkspaceStore({ readState, writeState, transaction }) {
   const port = (state, writable, lifetime) => {
     const assertActive = () => {
       if (!lifetime.active) fail('FORBIDDEN');
@@ -31,7 +24,7 @@ export function createJsonTaskWorkspaceStore({
       get(kind, id) {
         assertActive();
         collection(kind);
-        return structuredClone(state[kind].find((r) => r.id === id) ?? null);
+        return structuredClone(state[kind].find(r => r.id === id) ?? null);
       },
       list(kind) {
         assertActive();
@@ -42,25 +35,21 @@ export function createJsonTaskWorkspaceStore({
         assertActive();
         collection(kind);
         if (!writable) fail('FORBIDDEN');
-        if (state[kind].some((r) => r.id === row.id)) fail('CONFLICT');
+        if (state[kind].some(r => r.id === row.id)) fail('CONFLICT');
         state[kind].push(structuredClone(row));
       },
       replace(kind, row, expectedRevision) {
         assertActive();
         collection(kind);
         if (!writable) fail('FORBIDDEN');
-        const at = state[kind].findIndex((r) => r.id === row.id);
-        if (
-          at < 0 ||
-          (expectedRevision !== undefined &&
-            state[kind][at].revision !== expectedRevision)
-        )
+        const at = state[kind].findIndex(r => r.id === row.id);
+        if (at < 0 || (expectedRevision !== undefined && state[kind][at].revision !== expectedRevision))
           fail('CONFLICT');
         state[kind][at] = structuredClone(row);
-      },
+      }
     };
   };
-  const collection = (kind) => {
+  const collection = kind => {
     if (!TASK_WORKSPACE_COLLECTIONS.includes(kind)) fail();
   };
   return {
@@ -78,6 +67,9 @@ export function createJsonTaskWorkspaceStore({
         lifetime.active = false;
       }
     },
+    /**
+     * @param callback
+     * @param {{beforeCommit?: () => (boolean & {then?: never}) | undefined | PromiseLike<boolean | void>}} options */
     runTransaction(callback, { beforeCommit } = {}) {
       const lifetime = { active: true };
       const finalGuard = () => {
@@ -98,17 +90,15 @@ export function createJsonTaskWorkspaceStore({
             writeState(structuredClone(next));
             return detachedResult;
           },
-          { beforeCommit: finalGuard },
+          { beforeCommit: finalGuard }
         );
       } catch (error) {
-        if ((error?.cause?.code ?? error?.code) === 'STORAGE_EXTERNAL_CHANGE')
-          fail('CONFLICT');
-        if ((error?.cause?.code ?? error?.code) === 'STORAGE_MAINTENANCE_BUSY')
-          fail('UNAVAILABLE');
+        if ((error?.cause?.code ?? error?.code) === 'STORAGE_EXTERNAL_CHANGE') fail('CONFLICT');
+        if ((error?.cause?.code ?? error?.code) === 'STORAGE_MAINTENANCE_BUSY') fail('UNAVAILABLE');
         throw error;
       } finally {
         lifetime.active = false;
       }
-    },
+    }
   };
 }

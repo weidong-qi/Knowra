@@ -1,5 +1,10 @@
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../knowledge/domain/knowledge-artifact-provenance-state.js';
-import { planHistoryRetention, applyHistoryRetentionPlan, changedHistoryNoteIds, HISTORY_RETENTION_COLLECTIONS } from '../knowledge/domain/history-retention.js';
+import {
+  planHistoryRetention,
+  applyHistoryRetentionPlan,
+  changedHistoryNoteIds,
+  HISTORY_RETENTION_COLLECTIONS
+} from '../knowledge/domain/history-retention.js';
 import { readPostgresHistoryRetentionReferences } from '../../infrastructure/history-retention-references.js';
 import { assertSnapshotBinding, snapshotBinding } from './protocol-contract.js';
 import { createBatchSyncService } from './batch-service.js';
@@ -12,23 +17,36 @@ import { createSyncService } from './service.js';
 import { applyNoteOperation } from './local-provider.js';
 
 const collections = {
-  spaces: ['knowledgeSpace', 'mapSpace'], folders: ['folder', 'mapFolder'],
-  tags: ['tag', 'mapTag'], tagGroups: ['tagGroup', 'mapTagGroup'], notes: ['note', 'mapNote'],
-  noteVersions: ['noteVersion', 'mapNoteVersion'], attachments: ['attachment', 'mapAttachment'],
-  contentAnnotations: ['contentAnnotation', 'mapAnnotation'], knowledgeItems: ['knowledgeItem', 'mapKnowledgeItem'],
-  knowledgeEvidence: ['knowledgeEvidence', 'mapKnowledgeEvidence'], learningObjectives: ['learningObjective', 'mapLearningObjective'],
-  examProfiles: ['examProfile', 'mapExamProfile'], examFocuses: ['examFocus', 'mapExamFocus'],
-  questions: ['question', 'mapQuestion'], questionObjectives: ['questionObjective', 'mapQuestionObjective'],
-  questionSources: ['questionSource', 'mapQuestionSource'], annotationExclusions: ['annotationExclusion'],
-  annotationRevisions: ['annotationRevision'], analysisScopeSnapshots: ['analysisScopeSnapshot'],
+  spaces: ['knowledgeSpace', 'mapSpace'],
+  folders: ['folder', 'mapFolder'],
+  tags: ['tag', 'mapTag'],
+  tagGroups: ['tagGroup', 'mapTagGroup'],
+  notes: ['note', 'mapNote'],
+  noteVersions: ['noteVersion', 'mapNoteVersion'],
+  attachments: ['attachment', 'mapAttachment'],
+  contentAnnotations: ['contentAnnotation', 'mapAnnotation'],
+  knowledgeItems: ['knowledgeItem', 'mapKnowledgeItem'],
+  knowledgeEvidence: ['knowledgeEvidence', 'mapKnowledgeEvidence'],
+  learningObjectives: ['learningObjective', 'mapLearningObjective'],
+  examProfiles: ['examProfile', 'mapExamProfile'],
+  examFocuses: ['examFocus', 'mapExamFocus'],
+  questions: ['question', 'mapQuestion'],
+  questionObjectives: ['questionObjective', 'mapQuestionObjective'],
+  questionSources: ['questionSource', 'mapQuestionSource'],
+  annotationExclusions: ['annotationExclusion'],
+  annotationRevisions: ['annotationRevision'],
+  analysisScopeSnapshots: ['analysisScopeSnapshot'],
   knowledgeArtifactProvenance: ['knowledgeArtifactProvenance', 'mapKnowledgeArtifactProvenance']
 };
 
 async function readCollection(db, collection, ids) {
   const [model, mapper] = collections[collection];
-  const rows = await db[model].findMany({ ...(ids ? { where: { id: { in: ids } } } : {}), orderBy: { id: 'asc' },
-    ...(model === 'note' ? { include: { noteTags: { orderBy: { tagId: 'asc' } } } } : {}) });
-  return rows.map(row => mapper ? maps[mapper](row) : JSON.parse(JSON.stringify(row)));
+  const rows = await db[model].findMany({
+    ...(ids ? { where: { id: { in: ids } } } : {}),
+    orderBy: { id: 'asc' },
+    ...(model === 'note' ? { include: { noteTags: { orderBy: { tagId: 'asc' } } } } : {})
+  });
+  return rows.map(row => (mapper ? maps[mapper](row) : JSON.parse(JSON.stringify(row))));
 }
 
 async function snapshot(db) {
@@ -42,9 +60,14 @@ async function scopedSnapshot(db, before, touched) {
   const result = {};
   for (const collection of Object.keys(collections)) {
     const ids = touched[collection];
-    if (!ids?.size) { result[collection] = [...before[collection]]; continue; }
+    if (!ids?.size) {
+      result[collection] = [...before[collection]];
+      continue;
+    }
     const fresh = new Map((await readCollection(db, collection, [...ids])).map(item => [item.id, item]));
-    const kept = before[collection].flatMap(item => !ids.has(item.id) ? [item] : fresh.has(item.id) ? [fresh.get(item.id)] : []);
+    const kept = before[collection].flatMap(item =>
+      !ids.has(item.id) ? [item] : fresh.has(item.id) ? [fresh.get(item.id)] : []
+    );
     const known = new Set(before[collection].map(item => item.id));
     result[collection] = [...kept, ...[...fresh.values()].filter(item => !known.has(item.id))];
   }
@@ -65,72 +88,115 @@ async function assertScopedMatchesFull(db, scoped) {
 
 // 维护世代重建只需主体身份；不读取正文/文件，也不改变业务表。
 export async function loadPostgresSyncIdentityState(db) {
-  return Object.fromEntries(await Promise.all(Object.entries(collections).map(async ([collection, [model]]) =>
-    [collection, await db[model].findMany({ select: { id: true } })])));
+  return Object.fromEntries(
+    await Promise.all(
+      Object.entries(collections).map(async ([collection, [model]]) => [
+        collection,
+        await db[model].findMany({ select: { id: true } })
+      ])
+    )
+  );
 }
 
 // 所有 repository 共用当前事务连接；业务、派生来源和同步日志一次提交。
 export function createPostgresSyncRuntime(client, ownerId) {
   const scope = new AsyncLocalStorage();
+  /** @type {Set<PropertyKey>} */
   const modelNames = new Set([...Object.values(collections).map(([model]) => model), 'noteTag', 'user']);
+  /** @type {Set<PropertyKey>} */
   const mutations = new Set(['create', 'createMany', 'update', 'updateMany', 'upsert', 'delete', 'deleteMany']);
   async function historyReferences(tx) {
-    try { return await readPostgresHistoryRetentionReferences(tx, ownerId); }
-    catch { return null; } // 私有扩展异常时停止淘汰，核心保存仍可继续。
+    try {
+      return await readPostgresHistoryRetentionReferences(tx, ownerId);
+    } catch {
+      return null;
+    } // 私有扩展异常时停止淘汰，核心保存仍可继续。
   }
   async function transaction(operation) {
     if (scope.getStore()) return operation(proxy);
-    return client.$transaction(async tx => {
-      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(1266775634, 32)::text');
-      const before = await snapshot(tx);
-      const row = await tx.syncJournal.findUnique({ where: { ownerId } });
-      // version 随每次写入递增；after 仅在其后无写入时可复用，避免同一事务重复全表读取。
-      const context = { tx, before, journal: loadJournal(row?.payload, before), version: 0, after: null };
-      return scope.run(context, async () => {
-        const result = await operation(proxy);
-        // 事务内没有任何写入时后像即前像；批量写入后的后像已由 preview 按 ID 重建。
-        let after = context.version === 0 ? before : context.after?.version === context.version ? context.after.state : await snapshot(tx);
-        const noteIds = changedHistoryNoteIds(before, after);
-        if (!context.touched && noteIds.size) {
-          const references = await historyReferences(tx);
-          if (references !== null) {
-            const retained = applyHistoryRetentionPlan(after, planHistoryRetention(after, { noteIds, externalReferences: references }));
-            if (HISTORY_RETENTION_COLLECTIONS.some(name => (retained[name]?.length ?? 0) !== (after[name]?.length ?? 0))) {
-              await applyPostgresState(tx, after, retained);
-              after = retained;
+    return client.$transaction(
+      async tx => {
+        await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(1266775634, 32)::text');
+        const before = await snapshot(tx);
+        const row = await tx.syncJournal.findUnique({ where: { ownerId } });
+        // version 随每次写入递增；after 仅在其后无写入时可复用，避免同一事务重复全表读取。
+        const context = { tx, before, journal: loadJournal(row?.payload, before), version: 0, after: null };
+        return scope.run(context, async () => {
+          const result = await operation(proxy);
+          // 事务内没有任何写入时后像即前像；批量写入后的后像已由 preview 按 ID 重建。
+          let after =
+            context.version === 0
+              ? before
+              : context.after?.version === context.version
+                ? context.after.state
+                : await snapshot(tx);
+          const noteIds = changedHistoryNoteIds(before, after);
+          if (!context.touched && noteIds.size) {
+            const references = await historyReferences(tx);
+            if (references !== null) {
+              const retained = applyHistoryRetentionPlan(
+                after,
+                planHistoryRetention(after, { noteIds, externalReferences: references })
+              );
+              if (
+                HISTORY_RETENTION_COLLECTIONS.some(name => (retained[name]?.length ?? 0) !== (after[name]?.length ?? 0))
+              ) {
+                await applyPostgresState(tx, after, retained);
+                after = retained;
+              }
             }
           }
-        }
-        assertNoKnowledgeArtifactProvenanceDowngrade(before, after);
-        // 整库导入删除日志行；用新世代重新建立基线。
-        const exists = await tx.syncJournal.findUnique({ where: { ownerId } });
-        const journal = exists?.payload?.epoch && exists.payload.epoch !== context.journal.epoch
-          ? loadJournal(exists.payload, after)
-          : row && !exists ? createJournal(after) : appendChanges(context.journal, before, after);
-        // 日志载荷可达数十 MB：Prisma 的 Json 参数序列化比文本 ::jsonb 慢一个数量级，故用原生 SQL 整体替换。
-        await tx.$executeRawUnsafe(`INSERT INTO "SyncJournal" ("ownerId", payload) VALUES ($1, $2::jsonb)
-          ON CONFLICT ("ownerId") DO UPDATE SET payload = EXCLUDED.payload`, ownerId, JSON.stringify(journal));
-        return result;
-      });
-    }, { isolationLevel: 'ReadCommitted', maxWait: 10000, timeout: 60000 });
+          assertNoKnowledgeArtifactProvenanceDowngrade(before, after);
+          // 整库导入删除日志行；用新世代重新建立基线。
+          const exists = await tx.syncJournal.findUnique({ where: { ownerId } });
+          const journal =
+            exists?.payload?.epoch && exists.payload.epoch !== context.journal.epoch
+              ? loadJournal(exists.payload, after)
+              : row && !exists
+                ? createJournal(after)
+                : appendChanges(context.journal, before, after);
+          // 日志载荷可达数十 MB：Prisma 的 Json 参数序列化比文本 ::jsonb 慢一个数量级，故用原生 SQL 整体替换。
+          await tx.$executeRawUnsafe(
+            `INSERT INTO "SyncJournal" ("ownerId", payload) VALUES ($1, $2::jsonb)
+          ON CONFLICT ("ownerId") DO UPDATE SET payload = EXCLUDED.payload`,
+            ownerId,
+            JSON.stringify(journal)
+          );
+          return result;
+        });
+      },
+      { isolationLevel: 'ReadCommitted', maxWait: 10000, timeout: 60000 }
+    );
   }
   const delegates = new Map();
   const proxy = new Proxy(client, {
     get(_target, key) {
       if (key === PERSISTENCE_TRANSACTION_ACTIVE) return Boolean(scope.getStore());
-      if (key === '$transaction') return operation => {
-        if (typeof operation !== 'function') throw new TypeError('同步持久化需要交互式事务。');
-        return transaction(operation);
-      };
+      if (key === '$transaction')
+        return operation => {
+          if (typeof operation !== 'function') throw new TypeError('同步持久化需要交互式事务。');
+          return transaction(operation);
+        };
       if (modelNames.has(key)) {
-        if (!delegates.has(key)) delegates.set(key, new Proxy({}, { get: (_model, method) => (...args) => {
-          const invoke = () => {
-            const context = scope.getStore();
-            if (context && mutations.has(method)) context.version++;
-            return (context?.tx ?? client)[key][method](...args);
-          };
-          return mutations.has(method) && !scope.getStore() ? transaction(invoke) : invoke();
-        } }));
+        if (!delegates.has(key))
+          delegates.set(
+            key,
+            new Proxy(
+              {},
+              {
+                get:
+                  (_model, method) =>
+                  (...args) => {
+                    const invoke = () => {
+                      const context = scope.getStore();
+                      if (context && mutations.has(method)) context.version++;
+                      return (context?.tx ?? client)[key][method](...args);
+                    };
+                    return mutations.has(method) && !scope.getStore() ? transaction(invoke) : invoke();
+                  }
+              }
+            )
+          );
         return delegates.get(key);
       }
       const context = scope.getStore();
@@ -138,7 +204,11 @@ export function createPostgresSyncRuntime(client, ownerId) {
       const value = target[key];
       if (typeof value !== 'function') return value;
       // 原生 SQL 可能写入任意表：保守视为有写入，后像回到全表读取。
-      if (context && typeof key === 'string' && /^\$(execute|query)Raw/.test(key)) return (...args) => { context.version++; return value.apply(target, args); };
+      if (context && typeof key === 'string' && /^\$(execute|query)Raw/.test(key))
+        return (...args) => {
+          context.version++;
+          return value.apply(target, args);
+        };
       return value.bind(target);
     }
   });
@@ -152,21 +222,33 @@ export function createPostgresSyncRuntime(client, ownerId) {
       };
       const provider = {
         historyReferences: () => historyReferences(scope.getStore().tx),
-        read, mutate: access,
+        read,
+        mutate: access,
         snapshotPage: async ({ snapshotId, start, size, contract, ownerId: requestedOwner }) => {
-          const [row] = await client.$queryRawUnsafe(`SELECT
+          const [row] = await client.$queryRawUnsafe(
+            `SELECT
             payload ->> 'epoch' AS epoch,
             (payload -> 'snapshots' -> $2) - 'entries' AS binding,
             payload -> 'snapshots' -> $2 ->> 'cursor' AS cursor,
             payload -> 'snapshots' -> $2 ->> 'expiresAt' AS expires,
             jsonb_array_length(payload -> 'snapshots' -> $2 -> 'entries') AS count,
             jsonb_path_query_array(payload -> 'snapshots' -> $2, $3::jsonpath) AS entries
-            FROM "SyncJournal" WHERE "ownerId" = $1`, ownerId, String(snapshotId), `$.entries[${start} to ${start + size - 1}]`);
-          if (!row?.expires || Number(row.expires) < Date.now()) throw syncError('CURSOR_EXPIRED', '初始化快照已过期。');
+            FROM "SyncJournal" WHERE "ownerId" = $1`,
+            ownerId,
+            String(snapshotId),
+            `$.entries[${start} to ${start + size - 1}]`
+          );
+          if (!row?.expires || Number(row.expires) < Date.now())
+            throw syncError('CURSOR_EXPIRED', '初始化快照已过期。');
           const binding = assertSnapshotBinding(row.binding, contract, requestedOwner, row.epoch);
-          if (binding.snapshotId !== snapshotId || binding.count !== row.count) throw syncError('SYNC_SNAPSHOT_CONTRACT_MISMATCH', '初始化快照绑定不一致。');
+          if (binding.snapshotId !== snapshotId || binding.count !== row.count)
+            throw syncError('SYNC_SNAPSHOT_CONTRACT_MISMATCH', '初始化快照绑定不一致。');
           if (start > row.count) throw syncError('CURSOR_INVALID', '快照分页无效。', 422);
-          return { ...snapshotBinding(binding), entries: row.entries, nextOffset: start + size < row.count ? start + size : null };
+          return {
+            ...snapshotBinding(binding),
+            entries: row.entries,
+            nextOffset: start + size < row.count ? start + size : null
+          };
         },
         preview: async () => {
           const context = scope.getStore();
