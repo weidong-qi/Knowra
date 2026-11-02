@@ -9,10 +9,10 @@ import { beijingDay } from './budget-ledger.js';
 import { actualCostMicrounits, quoteWorstCase } from './worker.js';
 import { hashRecord } from './record-contract.js';
 import { createAuthorizedRetrieval } from './retrieval.js';
-import { createAiRecoveryScope } from './recovery-scope.js';
+import { createAiRecoveryScope } from './recovery-scope.ts';
 import { emptyAgentCheckpoint } from './agent-checkpoint.js';
 import { ANNOTATIONS_TOOL, listAnnotatedRanges } from './annotation-read-tool.js';
-import { FOLDERS_LIST_TOOL, NOTES_LIST_TOOL, CATALOG_TOOL_NAMES, catalogSpecsFromCalls } from './catalog-tool.js';
+import { FOLDERS_LIST_TOOL, NOTES_LIST_TOOL, CATALOG_TOOL_NAMES, catalogSpecsFromCalls } from './catalog-tool.ts';
 import { KNOWLEDGE_PROPOSE_TOOL, proposeKnowledge } from './knowledge-propose-tool.js';
 import {
   WEB_SEARCH_TOOL,

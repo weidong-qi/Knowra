@@ -3,7 +3,7 @@ import { hashRecord } from './record-contract.js';
 import { createAiWorker } from './worker.js';
 import { AI_PROCESS_LIMITS } from './isolated-provider.js';
 import { watchChildResources } from './process-resource-guard.js';
-import { createAiRecoveryScope } from './recovery-scope.js';
+import { createAiRecoveryScope } from './recovery-scope.ts';
 
 const kinds = new Set(['aiJob', 'aiJobAttempt', 'aiUsageRecord', 'aiGrant', 'contextManifest']);
 const code = error =>

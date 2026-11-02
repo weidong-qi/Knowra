@@ -9,10 +9,10 @@ import { createSqliteDataStore } from './sqlite-data-store.mjs';
 import { createSyncEngine } from './sync-engine.mjs';
 import { createNoteVersionDiscardGate } from './note-version-discard-gate.mjs';
 import { createOptionalAiRuntime, createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
-import { aiRuntimeLifecycle } from '../../api/src/modules/ai/runtime-lifecycle.js';
-import { reviewedDeepSeekPriceProfile } from '../../api/src/modules/ai/reviewed-price-profile.js';
+import { aiRuntimeLifecycle } from '../../api/src/modules/ai/runtime-lifecycle.ts';
+import { reviewedDeepSeekPriceProfile } from '../../api/src/modules/ai/reviewed-price-profile.ts';
 import { createLocalBudgetAuthority } from './local-budget-authority.mjs';
-import { createAiFeatureSettings } from '../../api/src/modules/ai/feature-settings.js';
+import { createAiFeatureSettings } from '../../api/src/modules/ai/feature-settings.ts';
 
 /** 每次切换资料库都重建应用服务，避免 repository 留存旧 SQLite/内存引用。 */
 export function createRuntimeServices({

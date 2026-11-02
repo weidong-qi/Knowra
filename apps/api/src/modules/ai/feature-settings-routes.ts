@@ -1,8 +1,17 @@
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
 import { createAppError } from '../../errors/app-error.js';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createAiFeatureSettings } from './feature-settings.ts';
 
-export async function handleAiFeatureRoute({ request, response, url, features }) {
+interface AiFeatureRouteContext {
+  request: IncomingMessage;
+  response: ServerResponse;
+  url: Pick<URL, 'pathname'>;
+  features?: Pick<ReturnType<typeof createAiFeatureSettings>, 'get' | 'set'> | null;
+}
+
+export async function handleAiFeatureRoute({ request, response, url, features }: AiFeatureRouteContext) {
   if (url.pathname !== '/api/ai/features' || !features) return false;
   response.setHeader('Cache-Control', 'no-store');
   if (request.method === 'GET') {

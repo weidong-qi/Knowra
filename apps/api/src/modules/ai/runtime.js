@@ -13,8 +13,8 @@ import { createAiAgentWorker } from './agent-worker.js';
 import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.js';
 import { createConversationAttachmentService } from './conversation-attachments.js';
 import { createBalanceService } from './balance-service.js';
-import { createBudgetSettingsStore } from './budget-settings.js';
-import { createBudgetPolicy } from './budget-policy.js';
+import { createBudgetSettingsStore } from './budget-settings.ts';
+import { createBudgetPolicy } from './budget-policy.ts';
 import { createBudgetAlertStore } from './budget-alerts.js';
 
 /** 生成入口由 AI-01-04 的预算服务注入 authorizePaidCall 后才可启用。 */

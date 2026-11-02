@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
 import { hashRecord } from './record-contract.js';
 import { accessError } from './access-records.js';
-import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.js';
+import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
 import { normalizeAiRequest } from './gateway.js';
-import { normalizeCatalogSpec, MAX_CATALOG_SPECS } from './catalog-tool.js';
+import { normalizeCatalogSpec, MAX_CATALOG_SPECS } from './catalog-tool.ts';
 const MIN_CATALOG_ITEMS = 5;
 import {
   isAiReadableNote,

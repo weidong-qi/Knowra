@@ -2,8 +2,8 @@ import type { createAiAccessService } from './access-service.js';
 import type { createAiGateway } from './gateway.js';
 import type { createAiRecordRepository } from './record-repository.js';
 import type { createJsonBudgetAuthority } from './budget-ledger.js';
-import type { createBudgetPolicy } from './budget-policy.js';
-import type { createModelSettingsService } from './model-settings.js';
+import type { createBudgetPolicy } from './budget-policy.ts';
+import type { createModelSettingsService } from './model-settings.ts';
 import type { createAiConversationStore } from './conversation-store.js';
 import type { createNoteActionService } from './action-service.js';
 import type { createAgentKnowledgeCommitService } from './agent-knowledge-commit.js';
@@ -19,7 +19,7 @@ export interface PriceProfile {
   expiresAt: string;
   inputMicrounitsPerMillion: number;
   outputMicrounitsPerMillion: number;
-  inputCacheHitMicrounitsPerMillion?: number;
+  inputCacheHitMicrounitsPerMillion?: number | null;
 }
 export interface BudgetLimits {
   daily: number | null;

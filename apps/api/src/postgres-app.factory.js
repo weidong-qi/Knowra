@@ -43,11 +43,11 @@ import {
   createPostgresAdvisoryLock,
   wrapHandlersWithPostgresAdvisoryLock
 } from './infrastructure/postgres-advisory-lock.ts';
-import { createModelSettingsService } from './modules/ai/model-settings.js';
+import { createModelSettingsService } from './modules/ai/model-settings.ts';
 import { createOptionalAiRuntime } from './modules/ai/runtime.js';
-import { createAiFeatureSettings } from './modules/ai/feature-settings.js';
-import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.js';
-import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.js';
+import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
+import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
+import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { createPostgresAiRepository } from './modules/ai/postgres-record-repository.js';
 import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.js';
 import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.js';
