@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { calculateContentHash } from '../../src/modules/knowledge/domain/note-version.js';
+import { calculateContentHash } from '../../src/modules/knowledge/domain/note-version.ts';
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from '../../src/modules/ai/record-contract.ts';
 import { finalizePlan } from '../../src/modules/ai/action-plan.js';

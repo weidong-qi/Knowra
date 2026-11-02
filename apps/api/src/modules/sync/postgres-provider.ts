@@ -27,13 +27,13 @@ import type {
   SyncSqlBindingCheck,
   SyncSqlBindingProjection
 } from './postgres-types.ts';
-import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../knowledge/domain/knowledge-artifact-provenance-state.js';
+import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../knowledge/domain/knowledge-artifact-provenance-state.ts';
 import {
   planHistoryRetention,
   applyHistoryRetentionPlan,
   changedHistoryNoteIds,
   HISTORY_RETENTION_COLLECTIONS
-} from '../knowledge/domain/history-retention.js';
+} from '../knowledge/domain/history-retention.ts';
 import { readPostgresHistoryRetentionReferences } from '../../infrastructure/history-retention-references.ts';
 import { assertSnapshotBinding, snapshotBinding } from './protocol-contract.ts';
 import { createBatchSyncService } from './batch-service.ts';

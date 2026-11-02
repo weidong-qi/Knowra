@@ -1,5 +1,5 @@
-import { ExamProfile } from '../domain/exam-profile.js';
-import { ExamFocus } from '../domain/exam-focus.js';
+import { ExamProfile } from '../domain/exam-profile.ts';
+import { ExamFocus } from '../domain/exam-focus.ts';
 import {
   buildCreateExamFocusDto,
   buildCreateExamProfileDto,

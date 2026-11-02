@@ -1,6 +1,6 @@
 import Ajv2020 from 'ajv/dist/2020.js';
 import schema from './contracts/note-actions-v1.schema.json' with { type: 'json' };
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { hashRecord } from './record-contract.ts';
 import { validateCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';
 import { createAppError } from '../../errors/app-error.js';

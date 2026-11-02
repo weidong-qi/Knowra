@@ -3,7 +3,7 @@ import {
   createLegacyKnowledgeArtifactProvenance,
   validateKnowledgeArtifactProvenance,
   resolveKnowledgeArtifactProvenanceSource
-} from './knowledge-artifact-provenance-contract.js';
+} from './knowledge-artifact-provenance-contract.ts';
 
 import type {
   ProvenanceEvidence,

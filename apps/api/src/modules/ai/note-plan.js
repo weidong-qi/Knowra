@@ -2,7 +2,7 @@ import { assertAiReadableNote } from './note-privacy.js';
 import Ajv2020 from 'ajv/dist/2020.js';
 import schema from './contracts/note-tools-v1.schema.json' with { type: 'json' };
 import { hashRecord } from './record-contract.ts';
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { buildCreateNoteDto, buildUpdateNoteDto } from '../knowledge/application/dto/note.dto.ts';
 
 const descriptions = {

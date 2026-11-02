@@ -3,7 +3,7 @@ import { createActionInboxMethods, createAssistantMessageSourceGuard } from './a
 import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.ts';
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { actionError, actionIdentityKeys, DRAFT_LEASE_MS } from './action-state.js';
 import { assertBaseline, baseline, buildActionPlan, finalizePlan, image, runAsync, runSync } from './action-plan.js';
 import { reuseCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';

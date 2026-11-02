@@ -1,6 +1,6 @@
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
-import { Question } from '../../domain/question.js';
-import { QuestionSource } from '../../domain/question-source.js';
+import { Question } from '../../domain/question.ts';
+import { QuestionSource } from '../../domain/question-source.ts';
 import { buildCreateQuestionDto, buildUpdateQuestionDto } from '../dto/assessment.dto.ts';
 import { assertQuestionConfirmable, deriveQuestionSourceStatus } from '../formal-asset-validation.js';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';

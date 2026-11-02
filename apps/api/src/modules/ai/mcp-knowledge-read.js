@@ -2,11 +2,11 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.js';
 import { hashRecord } from './record-contract.ts';
 import { createMcpReadSnapshotGuard } from './mcp-read-snapshot.js';
-import { isEvidenceUsable } from '../knowledge/domain/evidence-applicability.js';
+import { isEvidenceUsable } from '../knowledge/domain/evidence-applicability.ts';
 import {
   validateKnowledgeArtifactProvenance,
   resolveKnowledgeArtifactProvenanceSource
-} from '../knowledge/domain/knowledge-artifact-provenance-contract.js';
+} from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
 const STATUSES = new Set(['candidate', 'confirmed', 'needsRevision', 'archived']);
 const TYPES = new Set(['concept', 'fact', 'principle', 'process', 'algorithm', 'formula', 'comparison', 'application']);

@@ -1,4 +1,4 @@
-import { Tag } from '../domain/tag.js';
+import { Tag } from '../domain/tag.ts';
 import { buildCreateTagDto, buildUpdateTagDto } from './dto/tag.dto.ts';
 import { createInMemoryTagRepository } from '../infrastructure/tag-repository.js';
 import { conflictError, notFoundError } from './knowledge-errors.js';

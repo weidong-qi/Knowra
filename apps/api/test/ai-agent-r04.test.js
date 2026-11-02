@@ -7,7 +7,7 @@ import { createInMemoryNoteRepository } from '../src/modules/knowledge/infrastru
 import { createInMemoryNoteVersionRepository } from '../src/modules/knowledge/infrastructure/note-version-repository.js';
 import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrastructure/folder-repository.js';
 import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge/infrastructure/knowledge-space-repository.js';
-import { NoteVersion } from '../src/modules/knowledge/domain/note-version.js';
+import { NoteVersion } from '../src/modules/knowledge/domain/note-version.ts';
 import { createAiAccessService } from '../src/modules/ai/access-service.js';
 import { createAiAgentWorker } from '../src/modules/ai/agent-worker.js';
 import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.js';
@@ -15,7 +15,7 @@ import { createAiConversationService } from '../src/modules/ai/conversation-serv
 import { beijingDay } from '../src/modules/ai/budget-ledger.js';
 import { createServer } from '../src/server.js';
 import { createPersistentAppContext } from '../src/app.factory.js';
-import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.js';
+import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 import { createEmptyAiState, validateAiState } from '../src/modules/ai/record-state.ts';
 
 const priceProfile = {

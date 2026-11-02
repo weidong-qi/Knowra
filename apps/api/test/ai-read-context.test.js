@@ -8,7 +8,7 @@ import { createInMemoryNoteRepository } from '../src/modules/knowledge/infrastru
 import { createInMemoryNoteVersionRepository } from '../src/modules/knowledge/infrastructure/note-version-repository.js';
 import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrastructure/folder-repository.js';
 import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge/infrastructure/knowledge-space-repository.js';
-import { NoteVersion } from '../src/modules/knowledge/domain/note-version.js';
+import { NoteVersion } from '../src/modules/knowledge/domain/note-version.ts';
 import { createAiReadContextService } from '../src/modules/ai/read-context-service.js';
 import { normalizeAiRequest } from '../src/modules/ai/gateway.js';
 import { createAiGateway } from '../src/modules/ai/gateway.js';

@@ -13,9 +13,9 @@ import type { NoteRepository } from '../infrastructure/note-repository.ts';
 import type { NoteVersionRepository } from '../infrastructure/note-version-repository.ts';
 import type { ContentAnchor } from '@study-accelerator/content-anchor';
 import type { LearningObjective } from '../domain/learning-objective.ts';
-import type { ExamProfile } from '../domain/exam-profile.js';
-import type { ExamFocus } from '../domain/exam-focus.js';
-import type { Question } from '../domain/question.js';
+import type { ExamProfile } from '../domain/exam-profile.ts';
+import type { ExamFocus } from '../domain/exam-focus.ts';
+import type { Question } from '../domain/question.ts';
 
 interface TransactionDependencies {
   getTombstone?: (collection: string, id: string) => object | null;

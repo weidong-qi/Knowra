@@ -1,6 +1,6 @@
 import { hasAttachmentReference } from '@study-accelerator/shared/attachments';
 import { LOCAL_DATA_COLLECTIONS } from './local-data-schema.js';
-import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import type { AttachmentDeletionPreflight } from '../../../../packages/web-core/src/workspace/types.ts';
 import type { AttachmentFileMetadata } from './local-attachment-types.ts';
 

@@ -1,5 +1,5 @@
 import { prepareAnnotationChange } from './annotation-change-context.js';
-import { Note } from '../domain/note.js';
+import { Note } from '../domain/note.ts';
 import { buildCreateNoteDto, buildUpdateNoteDto } from './dto/note.dto.ts';
 import { createNoteSummary } from './note-summary.js';
 import { createInMemoryNoteRepository } from '../infrastructure/note-repository.js';

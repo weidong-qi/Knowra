@@ -1,8 +1,9 @@
-import { planHistoryRetention, applyHistoryRetentionPlan } from '../knowledge/domain/history-retention.js';
+import { planHistoryRetention, applyHistoryRetentionPlan } from '../knowledge/domain/history-retention.ts';
 import type { SyncReferenceChange } from './entity-contract.ts';
+import type { HistoryWritableState } from '../knowledge/domain/history-retention-types.ts';
 
-interface SyncRetentionState {
-  contentAnnotations: Array<{ id: string; noteId?: string | null }>;
+interface SyncRetentionState extends HistoryWritableState {
+  contentAnnotations: NonNullable<HistoryWritableState['contentAnnotations']>;
 }
 
 /** 云端是已同步历史的淘汰权威；删除与批次一起提交，设备经普通拉取收到墓碑。 */

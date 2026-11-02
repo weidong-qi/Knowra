@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import { Note } from '../../api/src/modules/knowledge/domain/note.js';
+import { Note } from '../../api/src/modules/knowledge/domain/note.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { writeMeta } from '../src/sync-state.mjs';
 import { openWorkspace } from './helpers.mjs';

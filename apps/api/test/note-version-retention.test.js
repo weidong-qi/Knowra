@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import {
   selectVersionsToPrune,
   NOTE_VERSION_RETENTION
-} from '../src/modules/knowledge/domain/note-version-retention.js';
+} from '../src/modules/knowledge/domain/note-version-retention.ts';
 import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.ts';
-import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.js';
+import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 
 const HOUR = 3600 * 1000;
 const DAY = 24 * HOUR;

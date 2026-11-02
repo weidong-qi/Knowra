@@ -1,7 +1,7 @@
 import { stripKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import crypto from 'node:crypto';
-import { validateKnowledgeArtifactProvenanceRelations } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.js';
-import { resolveAnalysisScopeNoteVersion } from '../../modules/knowledge/domain/analysis-scope-version-alias.js';
+import { validateKnowledgeArtifactProvenanceRelations } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
+import { resolveAnalysisScopeNoteVersion } from '../../modules/knowledge/domain/analysis-scope-version-alias.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ATTACHMENT_STATUS } from '../attachment-status.ts';

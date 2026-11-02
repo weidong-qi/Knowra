@@ -1,6 +1,6 @@
 import { inspectSpaceDeletion, assertSpaceDeletionAllowed } from '../space-deletion-preflight.js';
 import { inspectSpaceMigration, assertSpaceMigrationAllowed } from '../space-migration.js';
-import { buildDefaultTagGroups } from '../../domain/default-tag-groups.js';
+import { buildDefaultTagGroups } from '../../domain/default-tag-groups.ts';
 import { validationError } from '../knowledge-errors.js';
 
 export function createAsyncSpaceAssetLifecycle({

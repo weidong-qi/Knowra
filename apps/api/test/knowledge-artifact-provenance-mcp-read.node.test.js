@@ -7,7 +7,7 @@ import { createMcpKnowledgeReadService } from '../src/modules/ai/mcp-knowledge-r
 import {
   createLegacyKnowledgeArtifactProvenance,
   hashKnowledgeArtifactProvenance
-} from '../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+} from '../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
 const copy = value => structuredClone(value);
 const hidden = {

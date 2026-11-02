@@ -1,4 +1,4 @@
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 
 /** 笔记固有隐私是 AI 读取的上限，授权策略不能覆盖它。旧资料缺省为普通。 */
 export function isAiReadableNote(note) {

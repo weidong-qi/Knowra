@@ -38,11 +38,11 @@ import { buildCreateTagDto } from '../knowledge/application/dto/tag.dto.ts';
 import { buildCreateTagGroupDto } from '../knowledge/application/dto/tag-group.dto.ts';
 import { reconcileSyncedSourceStates } from '../../infrastructure/local-data-relations.js';
 import { createHash } from 'node:crypto';
-import { Note } from '../knowledge/domain/note.js';
-import { Folder } from '../knowledge/domain/folder.js';
-import { Tag } from '../knowledge/domain/tag.js';
-import { TagGroup } from '../knowledge/domain/tag-group.js';
-import { ContentAnnotation } from '../knowledge/domain/content-annotation.js';
+import { Note } from '../knowledge/domain/note.ts';
+import { Folder } from '../knowledge/domain/folder.ts';
+import { Tag } from '../knowledge/domain/tag.ts';
+import { TagGroup } from '../knowledge/domain/tag-group.ts';
+import { ContentAnnotation } from '../knowledge/domain/content-annotation.ts';
 import { createContentAnnotationService } from '../knowledge/application/content-annotation-service.js';
 import { createInMemoryContentAnnotationRepository } from '../knowledge/infrastructure/content-annotation-repository.js';
 import { createInMemoryNoteRepository } from '../knowledge/infrastructure/note-repository.js';
@@ -55,7 +55,7 @@ import { inspectAttachmentDeletion } from '../../infrastructure/attachment-delet
 import { calculateContentHash, resolveAnchor } from '@study-accelerator/content-anchor';
 import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contract.ts';
 import { syncError } from './journal.ts';
-import { validateKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.js';
+import { validateKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { addedNoteLinkTargets } from '../knowledge/application/note-link-relations.js';
 import {
   applyInlineAnnotationChanges,

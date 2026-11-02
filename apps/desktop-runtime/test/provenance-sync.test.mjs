@@ -10,7 +10,7 @@ import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { requestHash } from '../../api/src/modules/sync/journal.ts';
 import { createKnowledgeExtractionJobFixture } from '../../api/test/fixtures/knowledge-extraction-job.fixture.js';
 import { assertMinimalProvenanceTransport } from '../../api/test/fixtures/knowledge-artifact-provenance.fixture.js';
-import { createLegacyKnowledgeArtifactProvenance } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+import { createLegacyKnowledgeArtifactProvenance } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { applyEntityRemote, nextEntityUpload } from '../src/entity-sync-state.mjs';
 import { readMeta, writeMeta } from '../src/sync-state.mjs';

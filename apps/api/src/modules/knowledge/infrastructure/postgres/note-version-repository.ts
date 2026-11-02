@@ -3,7 +3,7 @@ import type { NoteVersion } from '../../domain/note-version.ts';
 import type { VersionPageCursor } from '../../domain/note-version-page.ts';
 import { mapNoteVersion, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
-import { versionPage } from '../../domain/note-version-page.js';
+import { versionPage } from '../../domain/note-version-page.ts';
 
 type VersionIdRow = Pick<Models.NoteVersion, 'id'>;
 type VersionPageRow = Omit<Models.NoteVersion, 'content'>;

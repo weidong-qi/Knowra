@@ -1,5 +1,5 @@
 import { SYNC_CLIENT_BATCH_BODY_LIMIT_BYTES } from '@study-accelerator/shared/http-limits';
-import { calculateContentHash } from '../../api/src/modules/knowledge/domain/note-version.js';
+import { calculateContentHash } from '../../api/src/modules/knowledge/domain/note-version.ts';
 import { syncKey } from '../../api/src/modules/sync/journal.ts';
 import {
   referencesFor,

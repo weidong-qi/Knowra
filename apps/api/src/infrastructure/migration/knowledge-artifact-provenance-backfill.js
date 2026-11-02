@@ -5,8 +5,8 @@ import {
   hashKnowledgeArtifactProvenance,
   validateKnowledgeArtifactProvenance,
   resolveKnowledgeArtifactProvenanceSource
-} from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
-import { migrateLegacyKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.js';
+} from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
+import { migrateLegacyKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import { assertProvenanceWrite } from '../../modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.js';
 
 /**

@@ -12,8 +12,8 @@ import {
   planHistoryRetention,
   applyHistoryRetentionPlan,
   ANNOTATION_REVISION_RETENTION
-} from '../apps/api/src/modules/knowledge/domain/history-retention.js';
-import { NOTE_VERSION_RETENTION } from '../apps/api/src/modules/knowledge/domain/note-version-retention.js';
+} from '../apps/api/src/modules/knowledge/domain/history-retention.ts';
+import { NOTE_VERSION_RETENTION } from '../apps/api/src/modules/knowledge/domain/note-version-retention.ts';
 
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export async function fileDigest(file) {

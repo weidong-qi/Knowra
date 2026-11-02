@@ -6,8 +6,8 @@ import {
   validateLocalDataRelations
 } from './local-data-relations.js';
 import { isAttachmentStatus } from './attachment-status.ts';
-import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
-import { migrateLegacyKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.js';
+import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
+import { migrateLegacyKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 
 export const LOCAL_DATA_SCHEMA_VERSION = 7;
 export const LOCAL_SNAPSHOT_VERSION = 'v1-local-json';
