@@ -272,7 +272,7 @@
     0 4px 8px -5px #0007, 0 24px 46px -19px #000c;
 }
 
-/* 触屏顶栏容纳原有 44px 按钮，桌面外栏则使用更紧凑的尺寸。 */
-@media (max-width: 767px), (any-pointer: coarse) {
+/* 手机顶栏容纳 44px 按钮；平板与桌面（含触屏）使用更紧凑的尺寸。 */
+@media (max-width: 767px) {
   :root { --topbar-size: 44px; }
 }

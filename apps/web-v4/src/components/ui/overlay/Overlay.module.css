@@ -442,7 +442,7 @@
   }
 }
 
-@media (max-width: 767px), (any-pointer: coarse) {
+@media (max-width: 767px) {
   .item { min-height: 44px; }
 }
 

@@ -94,7 +94,7 @@
 @media (max-width: 1050px) { .toolbarSelect { flex: 1 1 180px; } }
 @media (max-width: 760px) { .toolbarSelect { flex-basis: 145px; } }
 @media (max-width: 480px) { .toolbarSelect { flex: 1 1 100%; } }
-@media (max-width: 767px), (any-pointer: coarse) {
+@media (max-width: 767px) {
   .inputShell, .selectTrigger { min-height: 44px; }
   .input, .textarea { font-size: max(16px, 1em); }
 }

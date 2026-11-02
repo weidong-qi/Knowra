@@ -66,8 +66,8 @@ body {
   scroll-behavior: auto !important;
 }
 
-/* 移动端最小心智目标：所有 button / role=button 至少 36×36，移动端 44×44。 */
-@media (max-width: 767px), (any-pointer: coarse) {
+/* 手机（宽度 ≤767px）的最小点击目标：所有 button / role=button 至少 44px 高；平板与桌面（含触屏）沿用组件自身尺寸。 */
+@media (max-width: 767px) {
   :where(button, [role="button"], summary, [role="tab"]) {
     min-height: 44px;
   }
