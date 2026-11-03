@@ -25,7 +25,7 @@
 - 各 runner 的回环地址和文件系统相互隔离，不共享 SQLite 文件或 PostgreSQL 实例。桌面及浏览器使用 `--test-concurrency=1`，API 注册 runner 串行；调整分组时不顺带改测试内部并发、断言、重试或超时。
 - 各分组以相同检出 SHA 独立构建生产 V4，并验证 release identity 与 source map 缺失。构建约 5 秒，因此选择简单重建，不引入跨作业产物传递或基于 lockfile 的 dist 缓存。
 - npm 缓存由 setup-node 按 lockfile 管理；每次 `npm ci --ignore-scripts`，不缓存 `node_modules`、Prisma 生成物或数据库。Chromium 安装包含系统依赖，不缓存浏览器。
-- 快检（空白检查、V4 架构边界、迁移后的 API TypeScript、CI 契约回归和生产依赖审计）独立执行，不等待长测试。
+- 快检（空白检查、V4 架构边界、迁移后的 API TypeScript、CI 契约回归和生产依赖审计）独立执行，不等待长测试。 API 类型契约引用生成的 Prisma 类型，快检在类型检查前显式生成 Client，不连接数据库。
 - 矩阵 `fail-fast: false`，某组失败仍收集其他组结果。隔离容器 smoke 是独立作业。
 
 ## 汇总与发布安全

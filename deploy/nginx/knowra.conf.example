@@ -41,6 +41,45 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # PDF 与同步原文件独立二进制限额；普通 JSON 仍由应用保留原有限制。
+    location ~ ^/(api/storage/pdf-(imports|files/[^/]+)|api/sync/blob-stream)$ {
+        client_max_body_size 50m;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ZIP 包流式校验；应用逐文件检查大小、哈希及整包容量。
+    location = /api/storage/archive/inspect {
+        client_max_body_size 0;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/storage/archive {
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
