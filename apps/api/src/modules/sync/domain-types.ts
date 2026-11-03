@@ -214,19 +214,25 @@ export interface SyncBatchOperation extends SyncContract {
   dependencies: SyncDependency[];
 }
 export interface PreparedSyncAttachment {
-  id: string;
-  fileName: string;
-  sha256: string;
-  size: number;
+  id: unknown;
+  fileName: unknown;
+  sha256: unknown;
+  size: unknown;
   storagePath: string;
 }
-export interface SyncBlobInput extends SyncContract {
-  deviceId?: string;
-  attachment: SyncAttachment;
-  contentBase64: string;
+export interface SyncTransferRecord {
+  id?: unknown;
+  fileName?: unknown;
+  sha256?: unknown;
+  size?: unknown;
+}
+export interface SyncBlobInput {
+  deviceId?: unknown;
+  attachment?: SyncTransferRecord | null;
+  contentBase64?: unknown;
 }
 export interface SyncAttachmentTransfer {
-  verify(record: SyncAttachment): PreparedSyncAttachment;
+  verify(record: SyncTransferRecord | null | undefined): PreparedSyncAttachment;
   put(input: SyncBlobInput): PreparedSyncAttachment;
 }
 export type SyncAwaitable<Value> = Value | PromiseLike<Value>;
@@ -247,16 +253,20 @@ export interface SyncBatchProvider<Backend extends SyncBackend = 'local'> {
 }
 export interface SyncNoteOperation {
   noteId: string;
-  value: SyncNoteContent & { deleted: boolean };
+  value: SyncIncomingNoteContent & { title: string; rawMarkdown: string; deleted: boolean; tagIds: unknown[] };
 }
+/** HTTP 只校验这些笔记字段的结构；其他字段继续交给原服务/DTO 处理。 */
+export type SyncIncomingNoteContent = { [Field in keyof SyncNoteContent]?: unknown };
 export interface SyncNoteMutationResult {
   id: string;
   title: string;
   rawMarkdown: string;
 }
 export interface SyncNoteService {
-  createNote(input: SyncNoteContent & { id: string }): SyncAwaitable<SyncNoteMutationResult>;
-  updateNote(id: string, input: SyncNoteContent): SyncAwaitable<SyncNoteMutationResult>;
+  createNote(
+    input: Omit<SyncNoteOperation['value'], 'deleted'> & { id: string }
+  ): SyncAwaitable<SyncNoteMutationResult>;
+  updateNote(id: string, input: Omit<SyncNoteOperation['value'], 'deleted'>): SyncAwaitable<SyncNoteMutationResult>;
   deleteNote(id: string): SyncAwaitable<SyncNoteMutationResult>;
   restoreNote(id: string): SyncAwaitable<SyncNoteMutationResult>;
 }
@@ -275,6 +285,9 @@ export interface LocalSyncProvider extends SyncBatchProvider<'local'> {
     journal: SyncJournal
   ): { entriesEncoding: string; entryPageSize: number; entryPages: string[]; count: number };
   readSnapshotEntries(snapshot: SyncSnapshot, start: number, end: number): SyncEntry[];
-  applyNote(operation: SyncNoteOperation, current: Note | null): SyncAwaitable<SyncNoteMutationResult | void>;
+  applyNote(
+    operation: SyncNoteOperation,
+    current: Pick<Note, 'deleted'> | null
+  ): SyncAwaitable<SyncNoteMutationResult | void>;
 }
 export type SyncBatchResult = SyncReceiptResult;

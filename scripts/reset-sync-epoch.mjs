@@ -9,7 +9,7 @@ import {
 } from '../apps/api/src/infrastructure/local-data-schema.js';
 import { writeJsonFileAtomically } from '../apps/api/src/infrastructure/atomic-json-file.ts';
 import { resetJournalKeepingTombstones } from '../apps/api/src/modules/sync/journal.ts';
-import { loadPostgresSyncIdentityState } from '../apps/api/src/modules/sync/postgres-provider.js';
+import { loadPostgresSyncIdentityState } from '../apps/api/src/modules/sync/postgres-provider.ts';
 import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.js';
 
 const { values } = parseArgs({ options: { driver: { type: 'string' }, 'data-file': { type: 'string' } } });

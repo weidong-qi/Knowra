@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { syncContract, syncContractQuery } from '../../api/src/modules/sync/protocol-contract.ts';
 import { requestHash } from '../../api/src/modules/sync/journal.ts';
 import { syntheticProvenanceFixture } from '../../api/test/fixtures/knowledge-artifact-provenance.fixture.js';

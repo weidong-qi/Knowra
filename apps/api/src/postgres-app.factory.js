@@ -1,10 +1,10 @@
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createPostgresPurgeTaskReader } from './infrastructure/asset-purge-task-state.js';
 import { createPostgresActionStore } from './modules/ai/postgres-action-store.js';
-import { createAttachmentTransfer } from './modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts';
 import { createPostgresCoreOperationStore } from './infrastructure/postgres-core-operation-store.js';
 import path from 'node:path';
-import { createPostgresSyncRuntime } from './modules/sync/postgres-provider.js';
+import { createPostgresSyncRuntime } from './modules/sync/postgres-provider.ts';
 import { createPrismaRuntime } from './infrastructure/prisma-client.js';
 import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.js';
 import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.js';

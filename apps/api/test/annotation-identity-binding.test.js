@@ -14,7 +14,7 @@ import {
   sourceEdit
 } from '@study-accelerator/content-anchor';
 import { prepareBatchState } from '../src/modules/sync/batch-domain.ts';
-import { applyPostgresState } from '../src/modules/sync/postgres-batch.js';
+import { applyPostgresState } from '../src/modules/sync/postgres-batch.ts';
 import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
 import { nextIdentityBindings } from '../src/modules/knowledge/application/annotation-identity-binding.js';
 import { createAppContext } from '../src/app.factory.js';

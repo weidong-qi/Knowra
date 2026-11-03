@@ -1,3 +1,13 @@
+import type { SyncJournal } from './journal.ts';
+import type { SyncBackend } from './domain-types.ts';
+import type {
+  SyncNoteProvider,
+  SyncPageQuery,
+  SyncPushRequest,
+  SyncRawPushRequest,
+  SyncPushHandler,
+  SyncReleaseHandler
+} from './service-types.ts';
 import {
   assertSyncContract,
   assertSnapshotBinding,
@@ -18,8 +28,11 @@ import {
   NOTE_FIELDS
 } from './journal.ts';
 
-export function createSyncService(provider, ownerId) {
-  const describe = journal => ({
+export function createSyncService<Backend extends SyncBackend = 'local'>(
+  provider: SyncNoteProvider<Backend>,
+  ownerId: string
+) {
+  const describe = (journal: SyncJournal) => ({
     protocolVersion: 1,
     ...syncContract(),
     requiredCapabilities: [...REQUIRED_SYNC_CAPABILITIES],
@@ -30,10 +43,10 @@ export function createSyncService(provider, ownerId) {
     cursor: cursorFor(journal, ownerId)
   });
   return {
-    device: ({ deviceId }) =>
+    device: ({ deviceId }: SyncPageQuery) =>
       provider.read((_state, journal) => ({ sequence: journal.deviceSequences?.[String(deviceId)] ?? 0 })),
     status: () => provider.read((_state, journal) => describe(journal)),
-    bootstrap: input => {
+    bootstrap: (input: unknown) => {
       const contract = assertSyncContract(input);
       return (provider.mutateJournal ?? provider.mutate)((state, journal) => {
         for (const [id, snapshot] of Object.entries(journal.snapshots))
@@ -59,20 +72,21 @@ export function createSyncService(provider, ownerId) {
         return { ...describe(journal), ...snapshotBinding(journal.snapshots[id]) };
       });
     },
-    releaseSnapshot: ({ snapshotId }) =>
+    releaseSnapshot: (({ snapshotId }: { snapshotId?: unknown }) =>
       (provider.mutateJournal ?? provider.mutate)((_state, journal) => {
-        delete journal.snapshots[snapshotId];
+        delete journal.snapshots[snapshotId as string];
         return { released: true };
-      }),
-    snapshot: input => {
+      })) as SyncReleaseHandler,
+    snapshot: (input: SyncPageQuery) => {
       const contract = assertSyncContract(input, { query: true });
       const { snapshotId, offset = 0, limit = 200 } = input;
       const start = Number(offset);
       const size = pageSize(limit);
       if (!Number.isSafeInteger(start) || start < 0) throw syncError('CURSOR_INVALID', '快照分页无效。', 422);
-      if (provider.snapshotPage) return provider.snapshotPage({ snapshotId, start, size, contract, ownerId });
+      if (provider.snapshotPage)
+        return provider.snapshotPage({ snapshotId: snapshotId!, start, size, contract, ownerId });
       return provider.read((_state, journal) => {
-        const snapshot = journal.snapshots[snapshotId];
+        const snapshot = journal.snapshots[snapshotId!];
         if (!snapshot || snapshot.expiresAt < Date.now()) throw syncError('CURSOR_EXPIRED', '初始化快照已过期。');
         assertSnapshotBinding(snapshot, contract, ownerId, journal.epoch);
         if (
@@ -87,12 +101,12 @@ export function createSyncService(provider, ownerId) {
           throw syncError('CURSOR_INVALID', '快照分页无效。', 422);
         const end = Math.min(snapshot.count, start + pageSize(limit));
         const entries = snapshot.entriesEncoding
-          ? provider.readSnapshotEntries(snapshot, start, end)
-          : snapshot.entries.slice(start, end);
+          ? provider.readSnapshotEntries!(snapshot, start, end)
+          : snapshot.entries!.slice(start, end);
         return { ...snapshotBinding(snapshot), entries, nextOffset: end < snapshot.count ? end : null };
       });
     },
-    changes: input => {
+    changes: (input: SyncPageQuery) => {
       const contract = assertSyncContract(input, { query: true });
       const { cursor, limit = 50 } = input;
       return provider.read((_state, journal) => {
@@ -109,7 +123,7 @@ export function createSyncService(provider, ownerId) {
         };
       });
     },
-    operationReceipt: input => {
+    operationReceipt: (input: SyncPageQuery) => {
       assertSyncContract(input, { query: true });
       if (
         ![input.deviceId, input.operationId].every(
@@ -127,12 +141,12 @@ export function createSyncService(provider, ownerId) {
           ...syncContract(),
           datasetEpoch: journal.epoch,
           status: saved ? 'found' : 'missing',
-          lastSequence: journal.deviceSequences?.[input.deviceId] ?? 0,
+          lastSequence: journal.deviceSequences?.[input.deviceId!] ?? 0,
           ...(saved ? { result: structuredClone(saved.result) } : {})
         };
       });
     },
-    push: operation => {
+    push: ((operation: SyncRawPushRequest) => {
       assertSyncContract(operation);
       return provider.mutate((state, journal) => {
         validateOperation(operation);
@@ -182,18 +196,18 @@ export function createSyncService(provider, ownerId) {
           })
         );
       });
-    }
+    }) as SyncPushHandler
   };
 }
 
-function pageSize(value) {
+function pageSize(value: string | number) {
   const size = Number(value);
   if (!Number.isSafeInteger(size) || size < 1 || size > 500)
     throw syncError('SYNC_LIMIT_INVALID', '同步分页大小无效。', 422);
   return size;
 }
 
-function validateOperation(op) {
+function validateOperation(op: SyncRawPushRequest): asserts op is SyncPushRequest {
   if (!op || op.protocolVersion !== 1) throw syncError('PROTOCOL_UNSUPPORTED', '请升级同步客户端。', 422);
   if (
     ![op.deviceId, op.operationId, op.noteId, op.datasetEpoch].every(
@@ -201,7 +215,7 @@ function validateOperation(op) {
     )
   )
     throw syncError('SYNC_OPERATION_INVALID', '操作标识无效。', 422);
-  if (op.baseRevision !== null && (!Number.isSafeInteger(op.baseRevision) || op.baseRevision < 1))
+  if (op.baseRevision !== null && (!Number.isSafeInteger(op.baseRevision) || (op.baseRevision as number) < 1))
     throw syncError('SYNC_OPERATION_INVALID', '基线修订无效。', 422);
   if (
     !op.value ||
@@ -209,7 +223,7 @@ function validateOperation(op) {
     typeof op.value.rawMarkdown !== 'string' ||
     typeof op.value.deleted !== 'boolean' ||
     !Array.isArray(op.value.tagIds) ||
-    (op.value.aiVisibility !== undefined && !['normal', 'private'].includes(op.value.aiVisibility)) ||
+    (op.value.aiVisibility !== undefined && !['normal', 'private'].includes(op.value.aiVisibility as string)) ||
     Object.keys(op.value).some(key => !NOTE_FIELDS.includes(key))
   )
     throw syncError('SYNC_OPERATION_INVALID', '笔记同步内容无效。', 422);
