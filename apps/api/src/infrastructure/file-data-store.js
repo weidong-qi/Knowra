@@ -2,7 +2,7 @@ import { createEmptyTaskWorkspaceSnapshot, createJsonTaskWorkspaceStore } from '
 import {
   validateTaskWorkspaceSnapshot,
   rebindTaskWorkspaceSnapshot
-} from '../modules/task-workspaces/storage-validation.js';
+} from '../modules/task-workspaces/storage-validation.ts';
 import { createJsonActionStore } from '../modules/ai/action-state.js';
 import {
   planHistoryRetention,

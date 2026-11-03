@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { TASK_WORKSPACE_COLLECTIONS } from '../modules/task-workspaces/repository-port.js';
-import { validateTaskWorkspaceSnapshot } from '../modules/task-workspaces/storage-validation.js';
-import { fail } from '../modules/task-workspaces/contract.js';
+import { TASK_WORKSPACE_COLLECTIONS } from '../modules/task-workspaces/repository-port.ts';
+import { validateTaskWorkspaceSnapshot } from '../modules/task-workspaces/storage-validation.ts';
+import { fail } from '../modules/task-workspaces/contract.ts';
 export function createEmptyTaskWorkspaceSnapshot(datasetId = randomUUID(), datasetEpoch = randomUUID()) {
   return {
     version: 1,

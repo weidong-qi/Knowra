@@ -1,4 +1,4 @@
-import { createTaskWorkspaceService } from './modules/task-workspaces/service.js';
+import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createPostgresPurgeTaskReader } from './infrastructure/asset-purge-task-state.js';
 import { createPostgresActionStore } from './modules/ai/postgres-action-store.js';
 import { createAttachmentTransfer } from './modules/sync/attachment-transfer.js';
@@ -38,10 +38,7 @@ import { createAsyncNoteDeletionCoordinator } from './modules/knowledge/applicat
 import { withPostgresErrors } from './infrastructure/postgres-errors.js';
 import { notFoundError } from './modules/knowledge/application/knowledge-errors.js';
 import { assertPostgresOwnerBoundary } from './infrastructure/owner-boundary.js';
-import {
-  createMaintenanceGate,
-  wrapHandlersWithMaintenanceGate
-} from './infrastructure/maintenance-gate.js';
+import { createMaintenanceGate, wrapHandlersWithMaintenanceGate } from './infrastructure/maintenance-gate.js';
 import {
   createPostgresAdvisoryLock,
   wrapHandlersWithPostgresAdvisoryLock
@@ -55,7 +52,10 @@ import { createPostgresAiRepository } from './modules/ai/postgres-record-reposit
 import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.js';
 import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.js';
 import { createPostgresKnowledgeExtractionTaskStore } from './modules/ai/postgres-knowledge-extraction-task-store.js';
-import { createPostgresKnowledgeExtractionCommitStore, createPostgresKnowledgeExtractionContext } from './modules/ai/postgres-knowledge-extraction-commit-store.js';
+import {
+  createPostgresKnowledgeExtractionCommitStore,
+  createPostgresKnowledgeExtractionContext
+} from './modules/ai/postgres-knowledge-extraction-commit-store.js';
 import { createPostgresAiAccessStore } from './modules/ai/postgres-access-store.js';
 import { createPostgresAiConversationStore } from './modules/ai/postgres-conversation-store.js';
 import { createPostgresBudgetAuthority } from './modules/ai/postgres-budget-authority.js';
@@ -83,8 +83,12 @@ export async function createPostgresAppContext({
   const syncRuntime = createPostgresSyncRuntime(db, normalizedOwnerId);
   db = syncRuntime.client;
   const maintenanceGate = createMaintenanceGate();
-  try { await maintenanceGate.runMaintenance(() => migratePostgresKnowledgeArtifactProvenance(db, normalizedOwnerId)); }
-  catch (error) { await runtime.disconnect(); throw error; }
+  try {
+    await maintenanceGate.runMaintenance(() => migratePostgresKnowledgeArtifactProvenance(db, normalizedOwnerId));
+  } catch (error) {
+    await runtime.disconnect();
+    throw error;
+  }
   const advisoryLock = createPostgresAdvisoryLock(db);
   const aiBudget = createPostgresBudgetAuthority(db);
 
@@ -110,9 +114,12 @@ export async function createPostgresAppContext({
     questionObjectiveRepository: createPostgresQuestionObjectiveRepository({ db }),
     questionSourceRepository: createPostgresQuestionSourceRepository({ db })
   };
-  const knowledge = createPostgresKnowledgeModule({ ...repositories, client: db,
+  const knowledge = createPostgresKnowledgeModule({
+    ...repositories,
+    client: db,
     readPurgeTaskState: createPostgresPurgeTaskReader(db, normalizedOwnerId),
-    getPurgeDatasetEpoch: async () => (await db.syncJournal.findUnique({ where: { ownerId: normalizedOwnerId } }))?.payload?.epoch,
+    getPurgeDatasetEpoch: async () =>
+      (await db.syncJournal.findUnique({ where: { ownerId: normalizedOwnerId } }))?.payload?.epoch,
     getPurgeTombstone: async (collection, id) => {
       const journal = await db.syncJournal.findUnique({ where: { ownerId: normalizedOwnerId } });
       return journal?.payload?.tombstones?.[JSON.stringify([collection, id])] ?? null;
@@ -124,8 +131,8 @@ export async function createPostgresAppContext({
     storageRootDir,
     legacyUploadsDirs,
     loadReferenceState: () => loadPostgresAttachmentReferenceState(db),
-    runTransaction: (operation) => db.$transaction(operation),
-    validateAttachmentNote: async (noteId) => {
+    runTransaction: operation => db.$transaction(operation),
+    validateAttachmentNote: async noteId => {
       const note = await repositories.noteRepository.findById(noteId);
       if (!note || note.deleted) throw notFoundError('NOTE_NOT_FOUND', 'Note not found');
       const space = await repositories.knowledgeSpaceRepository.findById(note.spaceId);
@@ -140,7 +147,7 @@ export async function createPostgresAppContext({
     noteService: knowledge.noteService,
     noteRepository: repositories.noteRepository,
     attachmentStore,
-    runTransaction: (operation) => db.$transaction(operation)
+    runTransaction: operation => db.$transaction(operation)
   });
 
   const knowledgeHandlers = createPostgresKnowledgeHttpHandlers({
@@ -152,22 +159,59 @@ export async function createPostgresAppContext({
   const modelSettings = createModelSettingsService();
   const aiFeatures = createAiFeatureSettings({ filePath: path.join(storageRootDir, 'ai-features.json') });
   const aiRepository = createPostgresAiRepository({ client: db, ownerId: normalizedOwnerId });
-  const aiAccessStore = createPostgresAiAccessStore({ client: db, repository: aiRepository, ownerId: normalizedOwnerId });
-  const aiConversationStore = createPostgresAiConversationStore({ client: db, repository: aiRepository, ownerId: normalizedOwnerId });
-  const ai = createOptionalAiRuntime({ modelSettings, repository: aiRepository, accessStore: aiAccessStore,
-    uploadsDir, balanceFile: path.join(storageRootDir, 'ai-balance.json'), budgetSettingsFile: path.join(storageRootDir, 'ai-budget-settings.json'), budgetAlertsFile: path.join(storageRootDir, 'ai-budget-alerts.json'),
-    conversationStore: aiConversationStore, actionStore: createPostgresActionStore({ client: db, repository: aiRepository, ownerId: normalizedOwnerId }),
-    coreOperationStore: createPostgresCoreOperationStore({ client: db, ownerId: normalizedOwnerId }), knowledge: { ...knowledge, repositories }, asyncDomain: true, maintenanceGate, budgetAuthority: aiBudget,
-    priceProfile: reviewedDeepSeekPriceProfile, allowExternal: process.env.KNOWRA_AI_EGRESS_ENABLED !== '0',
+  const aiAccessStore = createPostgresAiAccessStore({
+    client: db,
+    repository: aiRepository,
+    ownerId: normalizedOwnerId
+  });
+  const aiConversationStore = createPostgresAiConversationStore({
+    client: db,
+    repository: aiRepository,
+    ownerId: normalizedOwnerId
+  });
+  const ai = createOptionalAiRuntime({
+    modelSettings,
+    repository: aiRepository,
+    accessStore: aiAccessStore,
+    uploadsDir,
+    balanceFile: path.join(storageRootDir, 'ai-balance.json'),
+    budgetSettingsFile: path.join(storageRootDir, 'ai-budget-settings.json'),
+    budgetAlertsFile: path.join(storageRootDir, 'ai-budget-alerts.json'),
+    conversationStore: aiConversationStore,
+    actionStore: createPostgresActionStore({ client: db, repository: aiRepository, ownerId: normalizedOwnerId }),
+    coreOperationStore: createPostgresCoreOperationStore({ client: db, ownerId: normalizedOwnerId }),
+    knowledge: { ...knowledge, repositories },
+    asyncDomain: true,
+    maintenanceGate,
+    budgetAuthority: aiBudget,
+    priceProfile: reviewedDeepSeekPriceProfile,
+    allowExternal: process.env.KNOWRA_AI_EGRESS_ENABLED !== '0',
     knowledgeProposals: async () => (await aiFeatures.get()).knowledgeProposals,
-    contextSources: { ...repositories, spaceRepository: repositories.knowledgeSpaceRepository, ownerId: normalizedOwnerId } });
+    contextSources: {
+      ...repositories,
+      spaceRepository: repositories.knowledgeSpaceRepository,
+      ownerId: normalizedOwnerId
+    }
+  });
   const extractionContext = tx => createPostgresKnowledgeExtractionContext(tx, normalizedOwnerId);
   const extractionReceipts = createPostgresKnowledgeExtractionCommitStore({ client: db, ownerId: normalizedOwnerId });
-  const knowledgeExtractionCommit = createKnowledgeExtractionCommitService({ ownerId: normalizedOwnerId,
-    store: extractionReceipts, createContext: extractionContext, clock: knowledgeExtractionMock?.clock });
-  const knowledgeExtractionTasks = knowledgeExtractionMock ? createKnowledgeExtractionTaskService({ ...knowledgeExtractionMock,
-    ownerId: normalizedOwnerId, maintenanceGate, createContext: extractionContext, commit: knowledgeExtractionCommit,
-    receiptStore: extractionReceipts, store: createPostgresKnowledgeExtractionTaskStore({ client: db, ownerId: normalizedOwnerId }) }) : null;
+  const knowledgeExtractionCommit = createKnowledgeExtractionCommitService({
+    ownerId: normalizedOwnerId,
+    store: extractionReceipts,
+    createContext: extractionContext,
+    clock: knowledgeExtractionMock?.clock
+  });
+  const knowledgeExtractionTasks = knowledgeExtractionMock
+    ? createKnowledgeExtractionTaskService({
+        ...knowledgeExtractionMock,
+        ownerId: normalizedOwnerId,
+        maintenanceGate,
+        createContext: extractionContext,
+        commit: knowledgeExtractionCommit,
+        receiptStore: extractionReceipts,
+        store: createPostgresKnowledgeExtractionTaskStore({ client: db, ownerId: normalizedOwnerId })
+      })
+    : null;
   let closing;
   const context = {
     // V1 不把本地域隐式回退到 JSON，也不扩充 PostgreSQL 的普通笔记协议。
@@ -178,14 +222,16 @@ export async function createPostgresAppContext({
     driver: 'postgres',
     coreOperationStore: createPostgresCoreOperationStore({ client: db, ownerId: normalizedOwnerId }),
     prisma: db,
-    close: () => closing ??= (async () => {
-      const results = await Promise.allSettled([
-        aiRuntimeLifecycle(context.ai).close(), context.knowledgeExtractionTasks?.close()
-      ]);
-      const failed = results.find(result => result.status === 'rejected');
-      if (failed) throw failed.reason;
-      await runtime.disconnect();
-    })(),
+    close: () =>
+      (closing ??= (async () => {
+        const results = await Promise.allSettled([
+          aiRuntimeLifecycle(context.ai).close(),
+          context.knowledgeExtractionTasks?.close()
+        ]);
+        const failed = results.find(result => result.status === 'rejected');
+        if (failed) throw failed.reason;
+        await runtime.disconnect();
+      })()),
     modules: { knowledge },
     ai,
     aiOwnerId: normalizedOwnerId,
@@ -195,9 +241,13 @@ export async function createPostgresAppContext({
       modelSettings,
       aiFeatures,
       aiBudget,
-      sync: wrapHandlersWithMaintenanceGate(syncRuntime.service(knowledge.noteService, createAttachmentTransfer({ uploadsDir, storageRootDir })), maintenanceGate, {
-        getAccess: name => ['push', 'pushBatch', 'uploadBlob', 'bootstrap'].includes(name) ? 'mutation' : 'read'
-      }),
+      sync: wrapHandlersWithMaintenanceGate(
+        syncRuntime.service(knowledge.noteService, createAttachmentTransfer({ uploadsDir, storageRootDir })),
+        maintenanceGate,
+        {
+          getAccess: name => (['push', 'pushBatch', 'uploadBlob', 'bootstrap'].includes(name) ? 'mutation' : 'read')
+        }
+      ),
       storage: createPostgresSnapshotService({
         client: db,
         repositories,
@@ -208,10 +258,7 @@ export async function createPostgresAppContext({
         aiRepository
       }),
       knowledge: wrapHandlersWithMaintenanceGate(
-        wrapHandlersWithPostgresAdvisoryLock(
-          knowledgeHandlers,
-          advisoryLock
-        ),
+        wrapHandlersWithPostgresAdvisoryLock(knowledgeHandlers, advisoryLock),
         maintenanceGate
       )
     }
@@ -220,15 +267,17 @@ export async function createPostgresAppContext({
 }
 
 async function ensureOwner(db, ownerId) {
-  await withPostgresErrors(() => db.user.upsert({
-    where: { id: ownerId },
-    create: {
-      id: ownerId,
-      email: null,
-      passwordHash: null,
-      nickname: null,
-      status: 'active'
-    },
-    update: { status: 'active' }
-  }));
+  await withPostgresErrors(() =>
+    db.user.upsert({
+      where: { id: ownerId },
+      create: {
+        id: ownerId,
+        email: null,
+        passwordHash: null,
+        nickname: null,
+        status: 'active'
+      },
+      update: { status: 'active' }
+    })
+  );
 }

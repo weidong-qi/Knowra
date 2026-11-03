@@ -1,5 +1,20 @@
 import { createHash } from 'node:crypto';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
+import type {
+  AttemptDTO,
+  DocumentDTO,
+  TaskSummary
+} from '../../../../../packages/web-core/src/task-workspaces/types.ts';
+import type {
+  AttachmentRecord,
+  AttemptRecord,
+  DocumentRecord,
+  TaskRecord,
+  TaskWorkspaceContext,
+  TaskWorkspaceTransaction,
+  WorkspaceRecord
+} from './repository-port.ts';
+type HashValue = object | string | number | boolean | null | undefined;
 export const LIMITS = Object.freeze({
   markdown: 256 * 1024,
   pageText: 16 * 1024,
@@ -17,8 +32,7 @@ const messages = {
   CURSOR_INVALID: '列表已变化，请从第一页重新加载。',
   LIMIT: '内容超过任务工作区限制。'
 };
-/** @returns {never} */
-export function fail(code = 'INVALID') {
+export function fail(code: keyof typeof messages = 'INVALID'): never {
   throw createAppError(
     `TASK_WORKSPACE_${code}`,
     messages[code] ?? messages.INVALID,
@@ -33,20 +47,20 @@ export function fail(code = 'INVALID') {
     }[code] ?? 422
   );
 }
-export const hash = value =>
+export const hash = (value: HashValue) =>
   createHash('sha256')
-    .update(typeof value === 'string' || Buffer.isBuffer(value) ? value : stable(value))
+    .update(typeof value === 'string' || Buffer.isBuffer(value) ? value : stable(value)!)
     .digest('hex');
-export function stable(value) {
+export function stable(value: HashValue): string | undefined {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
   if (value && typeof value === 'object')
     return `{${Object.keys(value)
       .sort()
-      .map(k => `${JSON.stringify(k)}:${stable(value[k])}`)
+      .map(k => `${JSON.stringify(k)}:${stable((value as Record<string, HashValue>)[k])}`)
       .join(',')}}`;
   return JSON.stringify(value);
 }
-export function uuid(value) {
+export function uuid(value: unknown): string {
   if (
     typeof value !== 'string' ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -54,16 +68,20 @@ export function uuid(value) {
     fail();
   return value;
 }
-export function text(value, max = 1024, empty = false) {
+export function text(value: unknown, max = 1024, empty = false): string {
   if (typeof value !== 'string' || (!empty && !value.trim())) fail();
   if (Buffer.byteLength(value) > max) fail('LIMIT');
   return value;
 }
-export function revision(value) {
-  if (!Number.isSafeInteger(value) || value < 1) fail();
-  return value;
+export function revision(value: unknown): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 1) fail();
+  return value as number;
 }
-export function fields(value, allowed, required = []) {
+export function fields<T extends object = object>(
+  value: unknown,
+  allowed: readonly string[],
+  required: readonly string[] = []
+): asserts value is T {
   if (
     !value ||
     typeof value !== 'object' ||
@@ -73,7 +91,7 @@ export function fields(value, allowed, required = []) {
   )
     fail();
 }
-export function identity(tx, ctx) {
+export function identity(tx: TaskWorkspaceTransaction, ctx: TaskWorkspaceContext) {
   const current = tx.identity();
   if (
     !ctx ||
@@ -86,20 +104,28 @@ export function identity(tx, ctx) {
     fail('FORBIDDEN');
   return current;
 }
-export function imageUri(workspaceId, documentId, attachmentId) {
+export function imageUri(workspaceId: string, documentId: string, attachmentId: string) {
   return `/api/task-workspaces/${workspaceId}/documents/${documentId}/attachments/${attachmentId}/content`;
 }
 /** No raw HTML, reference-style or encoded image targets: one canonical owned namespace only. */
-export function imageReferences(markdown, workspaceId, documentId, attachments) {
+export function imageReferences(
+  markdown: string,
+  workspaceId: string,
+  documentId: string,
+  attachments: AttachmentRecord[]
+) {
   text(markdown, LIMITS.markdown, true);
   if (/<\s*\/?\s*(?:img|picture|source|svg|iframe|object|embed|video|audio)\b/i.test(markdown)) fail();
-  const found = new Set();
-  const stripped = markdown.replace(/!\[([^\]\n]*)\]\(([^\s()]+)(?:\s+"[^"\n]*")?\)/g, (all, alt, target) => {
-    const item = attachments.find(a => target === imageUri(workspaceId, documentId, a.id));
-    if (!item) fail();
-    found.add(item.id);
-    return '';
-  });
+  const found = new Set<string>();
+  const stripped = markdown.replace(
+    /!\[([^\]\n]*)\]\(([^\s()]+)(?:\s+"[^"\n]*")?\)/g,
+    (all: string, alt: string, target: string) => {
+      const item = attachments.find(a => target === imageUri(workspaceId, documentId, a.id));
+      if (!item) fail();
+      found.add(item.id);
+      return '';
+    }
+  );
   if (/!\[/.test(stripped)) fail();
   // Canonical attachment links cannot smuggle other workspaces or private-note paths.
   const refs = markdown.match(/\/api\/[^\s<>"')]+/g) ?? [];
@@ -107,7 +133,7 @@ export function imageReferences(markdown, workspaceId, documentId, attachments) 
     if (ref.includes('attachment') && !attachments.some(a => ref === imageUri(workspaceId, documentId, a.id))) fail();
   return found;
 }
-export function safeAttachment(a) {
+export function safeAttachment(a: AttachmentRecord) {
   const { id, documentId, fileName, mimeType, size, sha256, status, createdAt } = a;
   return {
     id,
@@ -120,11 +146,11 @@ export function safeAttachment(a) {
     createdAt
   };
 }
-export function safeWorkspace(w) {
+export function safeWorkspace(w: WorkspaceRecord) {
   const { id, name, description, archivedAt, revision, createdAt, updatedAt } = w;
   return { id, name, description, archivedAt, revision, createdAt, updatedAt };
 }
-export function safeDocument(d, versionId, start = 0) {
+export function safeDocument(d: DocumentRecord, versionId?: string, start = 0): DocumentDTO {
   const v = d.versions.find(v => v.id === (versionId ?? d.currentVersionId));
   if (!v) fail('FORBIDDEN');
   if (
@@ -151,7 +177,7 @@ export function safeDocument(d, versionId, start = 0) {
     attachments: d.attachments.map(safeAttachment)
   };
 }
-export function safeAttempt(a) {
+export function safeAttempt(a: AttemptRecord | null): AttemptDTO | null {
   if (!a) return null;
   const {
     id,
@@ -182,13 +208,13 @@ export function safeAttempt(a) {
     finishedAt
   };
 }
-function progressPreview(value) {
+function progressPreview(value: string) {
   // Imported records are also bounded at projection time; never split a surrogate pair.
   let end = Math.min(value.length, 1024);
   if (end < value.length && /[\uDC00-\uDFFF]/.test(value[end])) end--;
   return value.slice(0, end);
 }
-export function taskSummary(t, tx, now, canExecute = false) {
+export function taskSummary(t: TaskRecord, tx: TaskWorkspaceTransaction, now: number, canExecute = false): TaskSummary {
   const a = t.activeAttemptId ? tx.get('attempts', t.activeAttemptId) : null;
   return {
     id: t.id,
@@ -214,8 +240,10 @@ export function taskSummary(t, tx, now, canExecute = false) {
           updatedAt: a.progress.updatedAt
         }
       : null,
-    leaseExpired: t.status === 'running' && Boolean(a?.leaseExpiresAt) && Date.parse(a.leaseExpiresAt) <= now,
-    claimable: canExecute && (t.status === 'ready' || (t.status === 'running' && Date.parse(a?.leaseExpiresAt) <= now)),
+    leaseExpired: t.status === 'running' && Boolean(a?.leaseExpiresAt) && Date.parse(a!.leaseExpiresAt!) <= now,
+    claimable:
+      canExecute &&
+      (t.status === 'ready' || (t.status === 'running' && Date.parse(a?.leaseExpiresAt as string) <= now)),
     updatedAt: t.updatedAt
   };
 }
