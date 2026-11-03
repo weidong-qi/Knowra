@@ -66,7 +66,7 @@ test('post-deploy fails before build and restart when attachment integrity is de
     assert.notEqual(result.status, 0);
     assert.match(calls, /^npm run check:attachments /m);
     assert.doesNotMatch(calls, /^npm run build:web$/m);
-    assert.doesNotMatch(calls, /^pm2 /m);
+    assert.doesNotMatch(calls, /^pm2 (?:delete|start|save)(?: |$)/m);
   } finally {
     fixture.cleanup();
   }
@@ -114,7 +114,7 @@ function createFixture({ missingProcess = '', failingNpmCommand = '' } = {}) {
     '  exit 1',
     'fi',
     'if [[ "$1" == jlist ]]; then',
-    `  node -e 'const fs = require("node:fs"); const path = require("node:path"); const root = fs.realpathSync(process.env.DEPLOY_TEST_WORKSPACE_ROOT); console.log(JSON.stringify([["knowra-api", "apps/api/src/main.js"], ["knowra-web", "apps/web/server.mjs"]].map(([name, script]) => ({ name, pm2_env: { status: "online", pm_cwd: root, pm_exec_path: path.join(root, script) } }))));'`,
+    `  node -e 'const fs = require("node:fs"); const path = require("node:path"); const root = fs.realpathSync(process.env.DEPLOY_TEST_WORKSPACE_ROOT); console.log(JSON.stringify(require(path.join(root, "deploy/ecosystem.config.cjs")).apps.map(app => ({ name: app.name, pm2_env: { ...process.env, ...app.env, status: "online", pm_cwd: root, pm_exec_path: path.join(root, app.script) } }))));'`,
     'fi'
   ]);
 

@@ -58,14 +58,17 @@ test('应急部署在附件校验后重建 PM2，并在实际入口核验后才�
   const attachmentCheckIndex = postDeploy.indexOf('npm run check:attachments');
   const deleteIndex = postDeploy.indexOf('pm2 delete knowra-api knowra-web');
   const startIndex = postDeploy.indexOf('pm2 start "$ROOT_DIR/deploy/ecosystem.config.cjs" --update-env');
-  const verifyIndex = postDeploy.indexOf('pm2 jlist');
+  const preflightIndex = postDeploy.indexOf('verify_pm2_runtime before');
+  const verifyIndex = postDeploy.indexOf('verify_pm2_runtime after');
   const saveIndex = postDeploy.indexOf('pm2 save');
   assert.notEqual(attachmentCheckIndex, -1);
   assert.notEqual(deleteIndex, -1);
   assert.notEqual(startIndex, -1);
   assert.notEqual(verifyIndex, -1);
+  assert.notEqual(preflightIndex, -1);
   assert.notEqual(saveIndex, -1);
   assert.ok(attachmentCheckIndex < deleteIndex);
+  assert.ok(preflightIndex < attachmentCheckIndex);
   assert.ok(deleteIndex < startIndex && startIndex < verifyIndex && verifyIndex < saveIndex);
   assert.doesNotMatch(postDeploy, /pm2 startOrReload/);
 });
