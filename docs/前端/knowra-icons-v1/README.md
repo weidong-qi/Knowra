@@ -7,7 +7,7 @@
 把 `src/` 复制到：
 
 ```text
-apps/web-v4/src/components/icons/knowra/
+apps/web/src/components/icons/knowra/
 ```
 
 然后直接引用：

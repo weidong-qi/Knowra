@@ -1,0 +1,1 @@
+Knowra 自研图标库的 SVG 导出：24 × 24 网格、1.6px 圆头描边（加粗、斜体等少数图标更粗）。墨色写死为 `text-primary`（#17181b），带强调色的部分为 `accent`（#f26b1d）；在代码里请用 `@/components/icons/knowra` 的 React 组件，它们用 `currentColor` 与 `--knowra-icon-accent` 着色。文件名对应组件名去掉 `Icon` 后缀（`solid-folder.svg` ↔ `SolidFolderIcon`）。`ParagraphAddIcon` 带参数，未导出。

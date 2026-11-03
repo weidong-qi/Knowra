@@ -1,0 +1,19 @@
+<!-- @dsCard group="表单" height=210 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>FileDropField</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [files, setFiles] = useState([]);
+  return h('div', { className: 'kn-col' },
+    h(K.FileDropField, { accept: '.md,.pdf,image/*', multiple: true, label: '把文件拖到这里', description: '支持 Markdown、PDF、图片，单个不超过 50 MB', onSelect: setFiles }),
+    h('span', { style: { fontSize: 12, color: 'var(--text-secondary)' } }, files.length ? '已选择：' + files.map((f) => f.name).join('、') : '还没有选择文件'));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

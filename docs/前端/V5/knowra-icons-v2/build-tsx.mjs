@@ -1,4 +1,4 @@
-// 把 icons-v2.mjs 生成为项目组件：apps/web-v4/src/components/icons/knowra/icons/*.tsx
+// 把 icons-v2.mjs 生成为项目组件：apps/web-v5/src/components/icons/knowra/icons/*.tsx
 // 用法：node docs/前端/V5/knowra-icons-v2/build-tsx.mjs
 // 修改图标请改 icons-v2.mjs 后重新生成，不要手改生成的 tsx。
 import fs from 'node:fs';
@@ -8,7 +8,7 @@ import { GROUPS } from './icons-v2.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../../..');
-const outDir = path.join(root, 'apps/web-v4/src/components/icons/knowra/icons');
+const outDir = path.join(root, 'apps/web-v5/src/components/icons/knowra/icons');
 const DEFAULT_STROKE = 1.6;
 
 const toJsx = (svg) => svg

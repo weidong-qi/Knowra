@@ -1,0 +1,30 @@
+<!-- @dsCard group="操作" height=140 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Button</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [saving, setSaving] = useState(false);
+  const save = () => { setSaving(true); setTimeout(() => setSaving(false), 1200); };
+  return h('div', { className: 'kn-col' },
+    h('div', { className: 'kn-row', style: { padding: 0 } },
+      h(K.Button, { variant: 'primary', icon: h(I.PlusIcon, { size: 14 }) }, '新建笔记'),
+      h(K.Button, null, '导入'),
+      h(K.Button, { variant: 'ghost' }, '取消'),
+      h(K.Button, { variant: 'danger', icon: h(I.DeleteIcon, { size: 14 }) }, '删除'),
+      h(K.Button, { emphasis: 'soft', size: 'compact' }, '查看')),
+    h('div', { className: 'kn-row', style: { padding: 0 } },
+      h(K.Button, { variant: 'primary', isPending: saving, onPress: save }, saving ? '正在保存…' : '保存（点我）'),
+      h(K.Button, { isDisabled: true }, '已禁用'),
+      h(K.Button, { size: 'toolbar', shape: 'square', icon: h(I.DisplayOptionsIcon, { size: 14 }) }, '显示'),
+      h(K.Button, { size: 'workspace', 'aria-pressed': true }, '知识库'),
+      h(K.Button, { size: 'mini' }, '更多')));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

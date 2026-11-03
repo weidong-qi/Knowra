@@ -15,7 +15,7 @@ const ignores = [
   'storage/**',
   'apps/api/storage/**',
   'apps/android/**',
-  'apps/web/**',
+  'apps/web-legacy/**',
   'tunnel-client-v0/**',
   'docs/**',
   '.worktrees/**',
@@ -46,11 +46,11 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-require-imports': 'off' }
   },
   {
-    files: ['apps/web-v4/**/*.{ts,tsx}', 'packages/web-core/src/**/*.ts'],
+    files: ['apps/web/**/*.{ts,tsx}', 'packages/web-core/src/**/*.ts'],
     languageOptions: { globals: { ...globals.browser } }
   },
   {
-    files: ['apps/web-v4/src/**/*.{ts,tsx}'],
+    files: ['apps/web/src/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: {
       'react-hooks/rules-of-hooks': 'error',

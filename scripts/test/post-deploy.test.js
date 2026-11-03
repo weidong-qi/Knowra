@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -28,13 +37,20 @@ test('post-deploy builds and restarts the production PM2 processes', () => {
     );
     assert.match(calls, /^pm2 describe knowra-api$/m);
     assert.match(calls, /^pm2 describe knowra-web$/m);
-    assert.match(calls, /^pm2 startOrReload deploy\/ecosystem\.config\.cjs --update-env$/m);
+    assert.match(calls, /^pm2 delete knowra-api knowra-web$/m);
+    assert.ok(
+      calls.includes(`pm2 start ${toGitBashPath(path.join(workspaceRoot, 'deploy/ecosystem.config.cjs'))} --update-env`)
+    );
+    assert.match(calls, /^pm2 jlist$/m);
     assert.match(calls, /^pm2 save$/m);
     assert.doesNotMatch(calls, /study-web/);
     assert.equal(readFileSync(path.join(fixture.distDirectory, 'index.html'), 'utf8'), 'new-index\n');
     assert.equal(readFileSync(path.join(fixture.distDirectory, 'assets', 'old.js'), 'utf8'), 'old\n');
     assert.equal(readFileSync(path.join(fixture.distDirectory, 'assets', 'new.js'), 'utf8'), 'new\n');
-    assert.equal(readdirSync(fixture.root).some((name) => name.startsWith('dist.staging.')), false);
+    assert.equal(
+      readdirSync(fixture.root).some(name => name.startsWith('dist.staging.')),
+      false
+    );
   } finally {
     fixture.cleanup();
   }
@@ -50,7 +66,7 @@ test('post-deploy fails before build and restart when attachment integrity is de
     assert.notEqual(result.status, 0);
     assert.match(calls, /^npm run check:attachments /m);
     assert.doesNotMatch(calls, /^npm run build:web$/m);
-    assert.doesNotMatch(calls, /^pm2 startOrReload /m);
+    assert.doesNotMatch(calls, /^pm2 (?:delete|start|save)(?: |$)/m);
   } finally {
     fixture.cleanup();
   }
@@ -65,7 +81,7 @@ test('post-deploy fails before restart when a production PM2 process is missing'
 
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /未找到 PM2 进程 knowra-api/);
-    assert.doesNotMatch(calls, /^pm2 restart /m);
+    assert.doesNotMatch(calls, /^pm2 (?:delete|start|save)(?: |$)/m);
   } finally {
     fixture.cleanup();
   }
@@ -96,6 +112,9 @@ function createFixture({ missingProcess = '', failingNpmCommand = '' } = {}) {
     'printf "pm2 %s\\n" "$*" >> "$DEPLOY_TEST_LOG"',
     'if [[ "$1" == "describe" && "$2" == "$DEPLOY_TEST_MISSING_PROCESS" ]]; then',
     '  exit 1',
+    'fi',
+    'if [[ "$1" == jlist ]]; then',
+    `  node -e 'const fs = require("node:fs"); const path = require("node:path"); const root = fs.realpathSync(process.env.DEPLOY_TEST_WORKSPACE_ROOT); console.log(JSON.stringify(require(path.join(root, "deploy/ecosystem.config.cjs")).apps.map(app => ({ name: app.name, pm2_env: { ...process.env, ...app.env, status: "online", pm_cwd: root, pm_exec_path: path.join(root, app.script) } }))));'`,
     'fi'
   ]);
 
@@ -120,9 +139,7 @@ function writeExecutable(filePath, lines) {
 function runDeployScript(fixture) {
   const bashCommand = resolveBashCommand();
   const isWindows = process.platform === 'win32';
-  const gitBashRoot = isWindows && path.isAbsolute(bashCommand)
-    ? resolveGitBashRoot(bashCommand)
-    : null;
+  const gitBashRoot = isWindows && path.isAbsolute(bashCommand) ? resolveGitBashRoot(bashCommand) : null;
   const shellPathEntries = [fixture.binDir];
 
   if (gitBashRoot) {
@@ -139,10 +156,15 @@ function runDeployScript(fixture) {
       DEPLOY_TEST_LOG: isWindows ? toGitBashPath(fixture.logFile) : fixture.logFile,
       DEPLOY_TEST_MISSING_PROCESS: fixture.missingProcess,
       DEPLOY_TEST_FAILING_NPM_COMMAND: fixture.failingNpmCommand,
-      KNOWRA_V4_DIST_DIR: isWindows ? toGitBashPath(path.join(fixture.binDir, '..', 'dist')) : path.join(fixture.binDir, '..', 'dist'),
-      KNOWRA_DEPLOY_REPORT_DIR: isWindows ? toGitBashPath(path.join(fixture.binDir, '..', 'reports')) : path.join(fixture.binDir, '..', 'reports'),
+      DEPLOY_TEST_WORKSPACE_ROOT: workspaceRoot,
+      KNOWRA_V4_DIST_DIR: isWindows
+        ? toGitBashPath(path.join(fixture.binDir, '..', 'dist'))
+        : path.join(fixture.binDir, '..', 'dist'),
+      KNOWRA_DEPLOY_REPORT_DIR: isWindows
+        ? toGitBashPath(path.join(fixture.binDir, '..', 'reports'))
+        : path.join(fixture.binDir, '..', 'reports'),
       PATH: shellPathEntries
-        .map((entry) => isWindows ? toGitBashPath(entry) : entry)
+        .map(entry => (isWindows ? toGitBashPath(entry) : entry))
         .join(isWindows ? ':' : path.delimiter)
     }
   });
@@ -162,15 +184,13 @@ function resolveBashCommand() {
     path.join(process.env.LOCALAPPDATA ?? '', 'Programs', 'Git', 'bin', 'bash.exe')
   ].filter(Boolean);
 
-  return candidates.find((candidate) => existsSync(candidate)) ?? 'bash';
+  return candidates.find(candidate => existsSync(candidate)) ?? 'bash';
 }
 
 function resolveGitBashRoot(bashCommand) {
   const bashDirectory = path.dirname(bashCommand);
   const parentDirectory = path.basename(path.dirname(bashDirectory)).toLowerCase();
-  return parentDirectory === 'usr'
-    ? path.resolve(bashDirectory, '..', '..')
-    : path.resolve(bashDirectory, '..');
+  return parentDirectory === 'usr' ? path.resolve(bashDirectory, '..', '..') : path.resolve(bashDirectory, '..');
 }
 
 function toGitBashPath(filePath) {

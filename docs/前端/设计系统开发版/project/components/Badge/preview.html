@@ -1,0 +1,22 @@
+<!-- @dsCard group="状态" height=76 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Badge</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  return h('div', { className: 'kn-row' },
+    h(K.Badge, { tone: 'neutral' }, '草稿'),
+    h(K.Badge, { tone: 'accent' }, '进行中'),
+    h(K.Badge, { tone: 'success' }, '已完成'),
+    h(K.Badge, { tone: 'warning' }, '待复习'),
+    h(K.Badge, { tone: 'danger' }, '同步失败'),
+    h(K.Badge, { hideDot: true }, 'v2.14'));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

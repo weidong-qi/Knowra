@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-const directory = resolve(import.meta.dirname, '../../apps/web-v4/src/components/ui');
+const directory = resolve(import.meta.dirname, '../../apps/web/src/components/ui');
 const readCss = file => readFileSync(join(directory, file), 'utf8');
 
 const css = {

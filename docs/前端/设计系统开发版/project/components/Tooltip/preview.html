@@ -1,0 +1,23 @@
+<!-- @dsCard group="浮层" height=110 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Tooltip</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  return h('div', { className: 'kn-row', style: { paddingTop: 48 } },
+    h(K.TooltipTrigger, { delay: 200 },
+      h(K.IconButton, { 'aria-label': '新建笔记' }, h(I.PlusIcon, { size: 16 })),
+      h(K.Tooltip, null, '新建笔记 ⌘N')),
+    h(K.TooltipTrigger, { delay: 200 },
+      h(K.IconButton, { 'aria-label': '已同步' }, h(I.RefreshIcon, { size: 16 })),
+      h(K.Tooltip, null, '已同步到本机')),
+    h('span', { style: { color: 'var(--text-muted)', fontSize: 12 } }, '悬停或用 Tab 聚焦图标'));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

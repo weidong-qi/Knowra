@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# post-deploy.sh — 部署/拉取代码后构建 V4 并刷新正式进程
+# post-deploy.sh — 人工应急构建并重新建立正式进程
 
 set -euo pipefail
 
@@ -8,7 +8,27 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$ROOT_DIR"
 
-V4_DIST_DIR="${KNOWRA_V4_DIST_DIR:-apps/web-v4/dist}"
+verify_pm2_runtime() {
+  if ! pm2 jlist | node "$ROOT_DIR/scripts/verify-pm2-runtime.mjs" "$1" "$ROOT_DIR"; then
+    printf '%s\n' '✗ post-deploy: PM2 运行配置或实际入口核验失败，部署已停止。' >&2
+    return 1
+  fi
+}
+
+# 旧进程可能独有数据库/存储配置；在检查附件、发布资源或删除进程前拒绝配置漂移。
+PM2_MANAGED=0
+if command -v pm2 >/dev/null 2>&1; then
+  for process_name in knowra-api knowra-web; do
+    if ! pm2 describe "$process_name" >/dev/null 2>&1; then
+      printf '✗ post-deploy: 未找到 PM2 进程 %s\n' "$process_name" >&2
+      exit 1
+    fi
+  done
+  verify_pm2_runtime before
+  PM2_MANAGED=1
+fi
+
+V4_DIST_DIR="${KNOWRA_V4_DIST_DIR:-apps/web/dist}"
 if [[ "$V4_DIST_DIR" = /* ]]; then
   V4_DIST_ROOT="$V4_DIST_DIR"
 else
@@ -38,6 +58,11 @@ test -f "$V4_BUILD_DIR/index.html"
 if find "$V4_BUILD_DIR" -type f -name '*.map' -print -quit | grep -q .; then
   printf '%s\n' '✗ post-deploy: V4 生产产物不应包含 Source Map' >&2
   exit 1
+fi
+
+# 构建期间旧进程的配置也可能被其他操作更新；发布资源前重新检查。
+if [[ "$PM2_MANAGED" == 1 ]]; then
+  verify_pm2_runtime before
 fi
 
 publish_v4_file() {
@@ -78,16 +103,12 @@ if find "$V4_DIST_ROOT" -type f -name '*.map' -print -quit | grep -q .; then
 fi
 
 # 如果用 PM2 管理进程，校验并重启正式服务（dev 模式无需）
-if command -v pm2 >/dev/null 2>&1; then
-  for process_name in knowra-api knowra-web; do
-    if ! pm2 describe "$process_name" >/dev/null 2>&1; then
-      printf '✗ post-deploy: 未找到 PM2 进程 %s\n' "$process_name" >&2
-      exit 1
-    fi
-  done
-
-  echo "▶ post-deploy: 将 PM2 入口刷新为 API + V4 Web..."
-  pm2 startOrReload deploy/ecosystem.config.cjs --update-env
+if [[ "$PM2_MANAGED" == 1 ]]; then
+  # startOrReload 可能保留旧 pm_exec_path/cwd；重建这两个进程的定义后再核验。
+  echo "▶ post-deploy: 重建 API + Web 的 PM2 进程定义..."
+  pm2 delete knowra-api knowra-web
+  pm2 start "$ROOT_DIR/deploy/ecosystem.config.cjs" --update-env
+  verify_pm2_runtime after
   pm2 save
 fi
 

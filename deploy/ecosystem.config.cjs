@@ -19,7 +19,7 @@ module.exports = {
     {
       name: 'knowra-web',
       cwd: workspaceRoot,
-      script: 'apps/web-v4/server.mjs',
+      script: 'apps/web/server.mjs',
       env: {
         NODE_ENV: 'production',
         PORT: runtimeEnv.webPort,

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const v4Root = path.join(workspaceRoot, 'apps', 'web-v4');
+const v4Root = path.join(workspaceRoot, 'apps', 'web');
 const v4Source = path.join(v4Root, 'src');
 const webCoreSource = path.join(workspaceRoot, 'packages', 'web-core', 'src');
 const violations = [];
@@ -16,7 +16,9 @@ for (const root of [v4Source, webCoreSource]) {
     const stem = filePath.replace(/\.[cm]?[jt]sx?$/, '').toLowerCase();
     const previous = modules.get(stem);
     if (previous) {
-      violations.push(`Case-insensitive module collision: ${toWorkspacePath(previous)} and ${toWorkspacePath(filePath)}`);
+      violations.push(
+        `Case-insensitive module collision: ${toWorkspacePath(previous)} and ${toWorkspacePath(filePath)}`
+      );
     } else {
       modules.set(stem, filePath);
     }
@@ -32,10 +34,7 @@ for (const filePath of collectSourceFiles(v4Source)) {
       violations.push(`${relativeFile}: V4 must not import V3 module or asset: ${specifier}`);
     }
 
-    if (
-      specifier === 'react-aria-components'
-      && !isWithin(filePath, path.join(v4Source, 'components', 'ui'))
-    ) {
+    if (specifier === 'react-aria-components' && !isWithin(filePath, path.join(v4Source, 'components', 'ui'))) {
       violations.push(`${relativeFile}: react-aria-components is restricted to src/components/ui`);
     }
   }
@@ -60,12 +59,12 @@ if (fs.existsSync(webCoreSource)) {
 
     for (const specifier of collectImportSpecifiers(source)) {
       if (
-        specifier === 'react'
-        || specifier === 'react-dom'
-        || specifier.startsWith('react/')
-        || specifier.startsWith('react-dom/')
-        || /\.css(?:$|\?)/.test(specifier)
-        || isWorkspaceAppImport(filePath, specifier)
+        specifier === 'react' ||
+        specifier === 'react-dom' ||
+        specifier.startsWith('react/') ||
+        specifier.startsWith('react-dom/') ||
+        /\.css(?:$|\?)/.test(specifier) ||
+        isWorkspaceAppImport(filePath, specifier)
       ) {
         violations.push(`${relativeFile}: web-core must remain framework and CSS independent: ${specifier}`);
       }
@@ -93,7 +92,7 @@ if (violations.length > 0) {
 function collectSourceFiles(root) {
   if (!fs.existsSync(root)) return [];
 
-  return fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+  return fs.readdirSync(root, { withFileTypes: true }).flatMap(entry => {
     const entryPath = path.join(root, entry.name);
     if (entry.isDirectory()) return collectSourceFiles(entryPath);
     return /\.(?:[cm]?[jt]sx?)$/.test(entry.name) && !entry.name.includes('.test.') ? [entryPath] : [];
@@ -115,12 +114,12 @@ function stripCommentsAndLiterals(source) {
 }
 
 function isV3Import(importer, specifier) {
-  if (specifier === '@study-accelerator/web' || specifier.startsWith('@study-accelerator/web/')) {
+  if (specifier === '@study-accelerator/web-legacy' || specifier.startsWith('@study-accelerator/web-legacy/')) {
     return true;
   }
   if (!specifier.startsWith('.')) return false;
   const resolved = path.resolve(path.dirname(importer), specifier);
-  const v3Root = path.join(workspaceRoot, 'apps', 'web');
+  const v3Root = path.join(workspaceRoot, 'apps', 'web-legacy');
   return isWithin(resolved, v3Root);
 }
 

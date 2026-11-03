@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import http from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { resolveAssetPath, serveV4Asset } from '../../web-v4/server/static-assets.mjs';
+import { resolveAssetPath, serveV4Asset } from '../../web/server/static-assets.mjs';
 import { lockDataDirectory } from './data-directory.mjs';
 import {
   createRuntimeBackup,

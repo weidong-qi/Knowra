@@ -1,0 +1,23 @@
+<!-- @dsCard group="容器" height=330 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>EmptyState</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  return h('div', { style: { padding: 16 } },
+    h(K.EmptyState, {
+      icon: h(K.EmptyArt, { variant: 'note' }),
+      title: '这个文件夹还没有笔记',
+      description: '新建一篇，或把 Markdown、PDF 拖进来导入。',
+      primaryAction: h(K.Button, { variant: 'primary', icon: h(I.PlusIcon, { size: 14 }) }, '新建笔记'),
+      secondaryAction: h(K.Button, null, '导入资料'),
+    }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

@@ -23,10 +23,10 @@ apps/api/storage/exports/
 apps/api/storage/temp/
 tmp-*.log
 *.log
-apps/web/lib/editor/milkdown-bundle.js
-apps/web/lib/editor/milkdown-bundle.css
-apps/web/lib/editor/milkdown-bundle.js.map
-apps/web/lib/editor/milkdown-bundle.css.map
+apps/web-legacy/lib/editor/milkdown-bundle.js
+apps/web-legacy/lib/editor/milkdown-bundle.css
+apps/web-legacy/lib/editor/milkdown-bundle.js.map
+apps/web-legacy/lib/editor/milkdown-bundle.css.map
 .worktrees/
 .superpowers/
 .claude/
@@ -36,8 +36,8 @@ apps/api/storage/data/knowledge-base.json
 docs/前端重构/audit-资料库索引/
 
 # 浏览器测试临时输出
-apps/web-v4/test-results/
-apps/web-v4/playwright-report/
+apps/web/test-results/
+apps/web/playwright-report/
 
 # 个人 Mac 应用产物
 *.app/
