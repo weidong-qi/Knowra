@@ -107,7 +107,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
         title="知境工作区"
         onPress={onReturnHome}
       >
-        <span className={styles.railIcon}><HomeIcon size={18} /></span>
+        <span className={styles.railIcon}><HomeIcon size={21} /></span>
       </PressableButton>
 
       <div className={styles.railGroup} role="group" aria-label="主要工作域">
@@ -125,7 +125,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
         <PressableButton type="button" className={styles.railItem} onPress={onOpenAssistant}
           aria-label="AI 助手" title="AI 助手" aria-current={isAssistantActive ? 'page' : undefined}
           isDisabled={!onOpenAssistant}>
-          <span className={styles.railIcon}><SparkIcon size={18} /></span>
+          <span className={styles.railIcon}><SparkIcon size={21} /></span>
         </PressableButton>
         <RailActionButton
           label="通知"
@@ -143,7 +143,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
           isDisabled={!onOpenSettings}
         >
           <span className={styles.railIcon}>
-            <SettingsIcon size={18} />
+            <SettingsIcon size={21} />
           </span>
         </PressableButton>
         {UTILITY_ITEMS.map((item) => (
@@ -179,7 +179,7 @@ function RailButton({ item, isActive, onClick }: RailButtonProps) {
         title={`${label}：${description}`}
       >
         <span className={styles.railIcon}>
-          <Icon size={18} />
+          <Icon size={21} />
         </span>
       </PressableButton>
     );
@@ -195,7 +195,7 @@ function RailButton({ item, isActive, onClick }: RailButtonProps) {
       title={`${label}：${description}`}
     >
       <span className={styles.railIcon}>
-        <Icon size={18} />
+        <Icon size={21} />
       </span>
     </PressableButton>
   );
@@ -219,7 +219,7 @@ function RailActionButton({ label, title, Icon, onClick }: RailActionButtonProps
       isDisabled={!onClick}
     >
       <span className={styles.railIcon}>
-        <Icon size={18} />
+        <Icon size={21} />
       </span>
     </PressableButton>
   );

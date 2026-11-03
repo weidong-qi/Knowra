@@ -104,7 +104,7 @@ function FolderBranch({ folder, notes, query, level, canWrite, onAction, onOpenI
           data-folder-toggle={folder.id}
           onClick={() => toggleFolder(folder.id)}
         >
-          <ChevronRightIcon size={14} data-open={expanded || undefined} />
+          <ChevronRightIcon size={15} data-open={expanded || undefined} />
         </button>
         <div className={styles.entryDragArea}
           draggable={canWrite}
@@ -128,7 +128,7 @@ function FolderBranch({ folder, notes, query, level, canWrite, onAction, onOpenI
               onOpenIndex?.();
             }}
           >
-            {expanded ? <SolidExpandedFolderIcon size={16} /> : <SolidFolderIcon size={16} />}
+            {expanded ? <SolidExpandedFolderIcon size={18} /> : <SolidFolderIcon size={18} />}
             <span>{folder.name}</span>
             <small>{countFolderNotes(folder, notes)}</small>
           </PressableButton>
@@ -188,7 +188,7 @@ function SidebarNoteRow({ note, selected, canWrite, onAction, onOpenNote }: {
         onOpenNote?.(note.id);
       }}
     >
-      <NoteIcon size={15} />
+      <NoteIcon size={18} />
       <span>{note.title || '未命名笔记'}</span>
     </PressableButton>
   </NoteContextMenu>

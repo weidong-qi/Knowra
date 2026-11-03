@@ -123,7 +123,7 @@ export function NotesContextSidebar({
         <span className={styles.title}>笔记</span>
         <MenuTrigger>
           <IconButton aria-label="笔记更多操作" title="更多操作">
-            <MoreHorizontalIcon size={16} />
+            <MoreHorizontalIcon size={18} />
           </IconButton>
           <MenuPopover>
             <Menu
@@ -145,10 +145,10 @@ export function NotesContextSidebar({
           </MenuPopover>
         </MenuTrigger>
         <IconButton aria-label="搜索笔记" title="搜索笔记" onPress={onOpenSearch} disabled={!onOpenSearch}>
-          <SearchIcon size={16} />
+          <SearchIcon size={18} />
         </IconButton>
         <CreateEntryMenu canWrite={canWrite} onCreate={mode => treeOperations.openCreate(mode, selectedFolderId)}>
-          <IconButton tone="floating" aria-label="新建" title="新建" disabled={!canWrite}><EditIcon size={16} /></IconButton>
+          <IconButton tone="floating" aria-label="新建" title="新建" disabled={!canWrite}><EditIcon size={18} /></IconButton>
         </CreateEntryMenu>
       </header>
 
@@ -163,7 +163,7 @@ export function NotesContextSidebar({
               <SideNavItem
                 key={entry.scope}
                 density="compact"
-                icon={<entry.Icon size={15} />}
+                icon={<entry.Icon size={18} />}
                 label={entry.label}
                 count={getScopeCount(entry.scope, serverData.notes)}
                 aria-current={current ? 'page' : undefined}
@@ -187,7 +187,7 @@ export function NotesContextSidebar({
               disabled={!canWrite}
               onClick={() => treeOperations.openCreate('folder', selectedFolderId)}
             >
-              <PlusIcon size={16} />
+              <PlusIcon size={18} />
             </IconButton>
           )}
         >
@@ -223,7 +223,7 @@ export function NotesContextSidebar({
           />
         </SidebarSection>
 
-        <SidebarSection id="tags" title={`标签 ${serverData.tags.length}`} collapsible expanded={tagsExpanded} onExpandedChange={setTagsExpanded} action={<div className={styles.tagHeaderActions}><IconButton size={24} aria-label="新建标签" title="新建标签" disabled={!canWrite} onClick={() => setCreateTagOpen(true)}><PlusIcon size={16} /></IconButton><MenuTrigger><IconButton size={24} aria-label="标签更多操作" title="更多"><MoreVerticalIcon size={16} /></IconButton><MenuPopover><Menu ariaLabel="标签操作" onAction={(key) => { if (key === 'manage') navigate('/materials/tags'); if (key === 'expand') setTagsExpanded(true); if (key === 'collapse') setTagsExpanded(false); }}><MenuItem id="manage">管理标签</MenuItem><MenuItem id="expand">展开全部</MenuItem><MenuItem id="collapse">收起全部</MenuItem></Menu></MenuPopover></MenuTrigger></div>}>
+        <SidebarSection id="tags" title={`标签 ${serverData.tags.length}`} collapsible expanded={tagsExpanded} onExpandedChange={setTagsExpanded} action={<div className={styles.tagHeaderActions}><IconButton size={24} aria-label="新建标签" title="新建标签" disabled={!canWrite} onClick={() => setCreateTagOpen(true)}><PlusIcon size={18} /></IconButton><MenuTrigger><IconButton size={24} aria-label="标签更多操作" title="更多"><MoreVerticalIcon size={16} /></IconButton><MenuPopover><Menu ariaLabel="标签操作" onAction={(key) => { if (key === 'manage') navigate('/materials/tags'); if (key === 'expand') setTagsExpanded(true); if (key === 'collapse') setTagsExpanded(false); }}><MenuItem id="manage">管理标签</MenuItem><MenuItem id="expand">展开全部</MenuItem><MenuItem id="collapse">收起全部</MenuItem></Menu></MenuPopover></MenuTrigger></div>}>
           <div className={styles.tags} aria-label="标签筛选">
             {visibleTags.map((tag) => tag ? (
               <TagChip
@@ -335,7 +335,7 @@ function SidebarSection({
                 onClick={() => setExpanded(!expanded)}
               >
                 <span className={styles.sectionChevron} data-expanded={expanded || undefined} aria-hidden="true">
-                  <ChevronRightIcon size={14} />
+                  <ChevronRightIcon size={15} />
                 </span>
                 <span>{title}</span>
               </button>
