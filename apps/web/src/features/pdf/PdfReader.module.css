@@ -138,30 +138,67 @@
 .viewport[data-region-tool] :global(.textLayer) {
   pointer-events: none;
 }
+/* 目录与标注面板沿用笔记检查器的卡片语言：浅灰底、细环加柔影、四周留间距，顶部标题行加渐隐分隔线。 */
 .annotations,
 .outline {
+  --panel-line: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--border-subtle) 75%, transparent) 16%,
+    color-mix(in srgb, var(--border-subtle) 75%, transparent) 84%,
+    transparent
+  );
   flex: 0 0 290px;
   width: 290px;
-  overflow: auto;
   min-height: 0;
-  margin: 12px 12px 12px 0;
-  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: var(--shell-gap, 8px) var(--shell-gap, 8px) var(--shell-gap, 8px) 0;
   border: 0;
-  border-radius: var(--radius-popover);
-  background: var(--surface-action-glass-hover, var(--surface-page));
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  backdrop-filter: blur(16px) saturate(140%);
-  box-shadow: var(--shadow-action-glass, var(--shadow-control));
+  border-radius: var(--radius-panel);
+  background:
+    var(--ni-ctx-glow, none),
+    var(--surface-card-tint, color-mix(in srgb, var(--text-primary) 4.5%, var(--surface-page)));
+  box-shadow:
+    var(--sidebar-highlight, inset 0 1px 0 transparent),
+    0 0 0 1px var(--ni-ctx-border, var(--border-subtle)),
+    0 14px 34px -16px color-mix(in srgb, #000 32%, transparent);
 }
 .outline {
   flex-basis: 210px;
   width: 210px;
-  margin: 12px 0 12px 12px;
+  margin: var(--shell-gap, 8px) 0 var(--shell-gap, 8px) var(--shell-gap, 8px);
 }
-.annotations h2,
-.outline h2 {
-  margin: 0 0 12px;
-  font-size: 15px;
+.panelHeader {
+  flex: 0 0 var(--tab-size, 44px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0 16px;
+  background: var(--panel-line) bottom / 100% 1px no-repeat;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.panelHeader small {
+  color: var(--text-secondary);
+  font: 500 12px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.panelBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+}
+.panelEmpty {
+  margin: 0;
+  padding: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
 }
 .outlineItem {
   display: block;
@@ -170,17 +207,19 @@
   text-align: left;
 }
 .markCard {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-panel);
+  border-radius: 10px;
   padding: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow-wrap: anywhere;
 }
+.markCard:hover {
+  background: var(--surface-hover);
+}
 .markCard[data-selected] {
-  border-color: var(--accent-text);
+  background: var(--surface-selected, var(--surface-hover));
 }
 .markJump {
   display: flex;
@@ -239,6 +278,7 @@
     width: min(310px, 90%);
     margin: 0;
     border-radius: 0;
+    background: var(--surface-card-tint, var(--surface-page));
     box-shadow: var(--shadow-panel);
   }
   .outline {

@@ -342,23 +342,25 @@ export function PdfReaderView({
       <div className={styles.workspace} data-panel-open={panel || undefined}>
         {showOutline ? (
           <aside className={styles.outline} aria-label="PDF 目录">
-            <h2>目录</h2>
-            {outline.length ? (
-              outline.map((item, index) => (
-                <PressableButton
-                  key={index}
-                  className={styles.outlineItem}
-                  style={{ paddingLeft: `${12 + item.depth * 12}px` }}
-                  onPress={() => {
-                    if (item.dest) void viewer.linkRef.current?.goToDestination(item.dest as string);
-                  }}
-                >
-                  {item.title}
-                </PressableButton>
-              ))
-            ) : (
-              <p>这份 PDF 没有目录。</p>
-            )}
+            <h2 className={styles.panelHeader}>目录</h2>
+            <div className={styles.panelBody}>
+              {outline.length ? (
+                outline.map((item, index) => (
+                  <PressableButton
+                    key={index}
+                    className={styles.outlineItem}
+                    style={{ paddingLeft: `${12 + item.depth * 12}px` }}
+                    onPress={() => {
+                      if (item.dest) void viewer.linkRef.current?.goToDestination(item.dest as string);
+                    }}
+                  >
+                    {item.title}
+                  </PressableButton>
+                ))
+              ) : (
+                <p className={styles.panelEmpty}>这份 PDF 没有目录。</p>
+              )}
+            </div>
           </aside>
         ) : null}
         <div className={styles.stage}>
