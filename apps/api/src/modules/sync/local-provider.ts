@@ -59,5 +59,5 @@ export function createLocalSyncService(
     },
     applyNote: (operation, current) => applyNoteOperation(noteService, operation, current)
   };
-  return { ...createSyncService(provider, ownerId), ...createBatchSyncService(provider, ownerId, transfer) };
+  return { ...createSyncService(provider, ownerId), ...createBatchSyncService<'local'>(provider, ownerId, transfer) };
 }

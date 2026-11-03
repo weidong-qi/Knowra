@@ -1,10 +1,12 @@
 import type {
   SyncCollection,
-  SyncDomainState,
+  SyncStoredState,
+  SyncStoredEntity,
   SyncEntity,
   SyncChange,
   SyncWorkingState,
-  SyncWorkingEntity
+  SyncWorkingEntity,
+  SyncRawObject
 } from './domain-types.ts';
 import { KnowledgeItem } from '../knowledge/domain/knowledge-item.js';
 import { KnowledgeEvidence } from '../knowledge/domain/knowledge-evidence.js';
@@ -19,12 +21,12 @@ import { syncError } from './journal.ts';
 export function normalizeKnowledgeChange<Collection extends SyncCollection>(
   collection: Collection,
   value: SyncWorkingEntity<Collection> | null,
-  previous?: SyncEntity<Collection>
+  previous?: SyncStoredEntity<Collection>
 ): SyncWorkingEntity<Collection> | null;
 export function normalizeKnowledgeChange(
   collection: SyncCollection,
   value: SyncWorkingEntity | null,
-  _previous?: SyncEntity
+  _previous?: SyncStoredEntity
 ): SyncWorkingEntity | null {
   if (!['knowledgeItems', 'knowledgeEvidence'].includes(collection)) return value;
   if (!value) throw syncError('SYNC_KNOWLEDGE_DELETE_UNSUPPORTED', '知识与来源不能通过同步永久删除，请使用归档。', 422);
@@ -44,7 +46,7 @@ export function normalizeKnowledgeChange(
   };
 }
 
-export function validateKnowledgeLifecycleChange(change: SyncChange, previous: SyncEntity | undefined): void {
+export function validateKnowledgeLifecycleChange(change: SyncChange, previous: SyncStoredEntity | undefined): void {
   const { collection, value, lifecycleAction } = change;
   if (!value || !previous) return;
   if (collection === 'knowledgeItems') {
@@ -70,7 +72,7 @@ export function validateKnowledgeLifecycleChange(change: SyncChange, previous: S
 }
 
 /** 来源是不可变证据，只有健康状态可由云端重算；不能用客户端 status 绕过确认门槛。 */
-export function validateKnowledgeBatch(before: SyncDomainState, state: SyncWorkingState, changes: SyncChange[]): void {
+export function validateKnowledgeBatch(before: SyncStoredState, state: SyncWorkingState, changes: SyncChange[]): void {
   for (const change of changes.filter(entry => entry.collection === 'knowledgeEvidence' && entry.value)) {
     if (before.knowledgeEvidence.some(entry => entry.id === change.id)) continue;
     const evidence = state.knowledgeEvidence.find(entry => entry.id === change.id)!;
@@ -82,13 +84,13 @@ export function validateKnowledgeBatch(before: SyncDomainState, state: SyncWorki
         ...state.annotationRevisions
           .filter(entry => entry.annotationId === evidence.annotationId)
           .map(entry => ({
-            noteVersionId: entry.newAnchor?.noteVersionId,
-            quoteText: entry.rangeSummary?.quoteText
+            noteVersionId: (entry.newAnchor as SyncRawObject | null)?.noteVersionId,
+            quoteText: (entry.rangeSummary as SyncRawObject | null)?.quoteText
           }))
       ].some(
         snapshot =>
-          snapshot?.noteVersionId === evidence.noteVersionId &&
-          String(snapshot.quoteText ?? '').trim() === evidence.quoteText
+          (snapshot as SyncRawObject | null)?.noteVersionId === evidence.noteVersionId &&
+          String((snapshot as SyncRawObject).quoteText ?? '').trim() === evidence.quoteText
       );
       const current =
         annotation &&

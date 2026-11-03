@@ -44,7 +44,7 @@ function createNoteId({ id, title, rawMarkdown }) {
   return createPrefixedId('note', title || deriveTitleFromMarkdown(rawMarkdown) || 'item');
 }
 
-/** @param {Partial<Omit<import('../../domain/note.ts').Note, 'tagIds'>> & {tagIds?: unknown}} input */
+/** @param {Partial<Omit<import('../../domain/note.ts').Note, 'tagIds' | 'annotationStructure'>> & {tagIds?: unknown}} input */
 export function buildCreateNoteDto(input = {}) {
   if (typeof input.rawMarkdown !== 'string') {
     throw validationError('NOTE_CONTENT_REQUIRED', 'Note rawMarkdown is required');

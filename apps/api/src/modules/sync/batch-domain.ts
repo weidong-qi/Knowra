@@ -2,7 +2,6 @@ import type { Folder as FolderEntity } from '../knowledge/domain/folder.ts';
 import type {
   PreparedSyncAttachment,
   SyncCollection,
-  SyncDomainState,
   SyncChange,
   SyncJsonValue,
   SyncWorkingEntity,
@@ -11,7 +10,15 @@ import type {
   SyncWorkingConstructors,
   SyncBatchValidator,
   SyncRawNoteReferences,
-  SyncAnnotationNoteFactory
+  SyncAnnotationNoteFactory,
+  SyncStoredState,
+  SyncWorkingRecord,
+  SyncBackend,
+  SyncProviderState,
+  SyncRawObject,
+  SyncRawStructureUpdate,
+  SyncRawAnchorResolution,
+  SyncAnnotationReconcileFactory
 } from './domain-types.ts';
 import { applyIdentityBindings } from '../knowledge/application/annotation-identity-binding.js';
 import {
@@ -84,12 +91,18 @@ const replace = <Collection extends SyncCollection>(
 };
 
 /** 只在内存中构造并校验完整事务后像；不做文件或网络 IO。 */
+export function prepareBatchState<Backend extends SyncBackend = 'local'>(
+  before: SyncProviderState<Backend>,
+  changes: SyncChange[],
+  ownerId: string,
+  preparedAttachments?: Record<string, PreparedSyncAttachment>
+): { state: SyncProviderState<Backend>; aliases: Record<string, string> };
 export function prepareBatchState(
-  before: SyncDomainState,
+  before: SyncStoredState,
   changes: SyncChange[],
   ownerId: string,
   preparedAttachments: Record<string, PreparedSyncAttachment> = {}
-): { state: SyncDomainState; aliases: Record<string, string> } {
+): { state: SyncStoredState; aliases: Record<string, string> } {
   // 不可变历史只复制集合；领域流程与最终校验均不修改旧版本/修订。
   let state: SyncWorkingState = Object.fromEntries(
     Object.entries(before).map(([collection, items]) => [
@@ -211,8 +224,8 @@ export function prepareBatchState(
         value = { ...value, ...(builders[collection] as (input: SyncWorkingEntity) => object)(value) };
       if (collection === 'notes') {
         assertNoInsecureImageUrls(value.rawMarkdown!);
-        if (value.annotationStructure?.contentHash !== trackingHash(value.rawMarkdown!)) {
-          value.annotationStructure = updateStructure(
+        if ((value.annotationStructure as SyncRawObject | null)?.contentHash !== trackingHash(value.rawMarkdown!)) {
+          value.annotationStructure = (updateStructure as typeof updateStructure & SyncRawStructureUpdate)(
             old?.rawMarkdown ?? '',
             value.rawMarkdown!,
             old?.annotationStructure
@@ -220,13 +233,18 @@ export function prepareBatchState(
         }
         // 块身份表只是可选的诊断与迁移数据：与正文不对应时丢弃，不能拒绝整批同步。
         else if (
-          value.annotationStructure?.identity &&
-          !validIdentityTable(value.rawMarkdown!, value.annotationStructure.identity)
+          (value.annotationStructure as SyncRawObject | null)?.identity &&
+          !validIdentityTable(value.rawMarkdown!, (value.annotationStructure as SyncRawObject).identity)
         ) {
-          const { identity: _invalid, ...structure } = value.annotationStructure;
-          value = { ...value, annotationStructure: structure };
+          const { identity: _invalid, ...structure } = value.annotationStructure as SyncRawObject;
+          value = { ...(value as SyncWorkingEntity<'notes'>), annotationStructure: structure };
         }
-        value = { ...value, plainText: undefined, internalLinks: undefined, contentHash: sha(value.rawMarkdown!) };
+        value = {
+          ...(value as SyncWorkingEntity<'notes'>),
+          plainText: undefined,
+          internalLinks: undefined,
+          contentHash: sha(value.rawMarkdown!)
+        };
       }
       if (constructors[collection])
         value = { ...new (constructors[collection] as new (input: SyncWorkingEntity) => SyncWorkingEntity)(value) };
@@ -294,14 +312,14 @@ export function prepareBatchState(
       'knowledgeEvidence',
       'questionSources'
     ] as const)
-      (state as Record<typeof collection, SyncWorkingEntity<typeof collection>[]>)[collection] = (
-        state[collection] as SyncWorkingEntity<typeof collection>[]
+      (state as Record<typeof collection, SyncWorkingRecord<typeof collection>[]>)[collection] = (
+        state[collection] as SyncWorkingRecord<typeof collection>[]
       ).map(remap);
   }
   for (const change of changes.filter(item => item.collection === 'contentAnnotations' && item.value)) {
     const annotation = state.contentAnnotations.find(item => item.id === change.id)!;
     const note = state.notes.find(item => item.id === annotation.noteId)!;
-    const origin = annotation.originSnapshot;
+    const origin = annotation.originSnapshot as SyncRawObject | null;
     const originVersion = state.noteVersions.find(item => item.id === origin?.noteVersionId);
     if (
       !originVersion ||
@@ -316,7 +334,7 @@ export function prepareBatchState(
       throw syncError('SYNC_IMMUTABLE', '标注原始快照不可改写。', 422);
     if (annotation.schemaVersion === 3) {
       // 内联重点：ID 与幂等键由标记 ID 确定性推出；活跃且已定位的重点，其来源版本正文里必须有这个标记。
-      const markId = annotation.anchor?.markId;
+      const markId = (annotation.anchor as SyncRawObject | null)?.markId;
       if (
         annotation.id !== inlineAnnotationId(annotation.noteId, markId) ||
         annotation.idempotencyKey !== `${INLINE_KEY_PREFIX}${markId}`
@@ -337,7 +355,10 @@ export function prepareBatchState(
       const version = state.noteVersions.find(item => item.id === annotation.noteVersionId);
       if (!version || version.noteId !== annotation.noteId || version.contentHash !== annotation.noteContentHash)
         throw syncError('ANNOTATION_VERSION_CONFLICT', '标注来源版本不匹配。', 422);
-      const resolved = resolveAnchor(version.content, annotation.anchor!);
+      const resolved = (resolveAnchor as typeof resolveAnchor & SyncRawAnchorResolution)(
+        version.content,
+        annotation.anchor!
+      );
       if (resolved.status !== 'resolved' || resolved.quoteText !== annotation.quoteText)
         throw syncError('ANNOTATION_ANCHOR_UNRESOLVED', '标注无法在来源版本中定位。', 422);
     }
@@ -370,14 +391,18 @@ export function prepareBatchState(
       !parent ||
       parent.noteId !== version.noteId ||
       parent.noteVersionId !== version.id ||
-      resolveAnchor(version.content, exclusion.anchor).status !== 'resolved' ||
-      exclusion.anchor.sourceStart < parent.anchor!.sourceStart! ||
-      exclusion.anchor.sourceEnd > parent.anchor!.sourceEnd!
+      (resolveAnchor as typeof resolveAnchor & SyncRawAnchorResolution)(version.content, exclusion.anchor).status !==
+        'resolved' ||
+      ((exclusion.anchor as SyncRawObject).sourceStart as number) <
+        ((parent.anchor as SyncRawObject).sourceStart as number) ||
+      ((exclusion.anchor as SyncRawObject).sourceEnd as number) > ((parent.anchor as SyncRawObject).sourceEnd as number)
     )
       throw syncError('ANNOTATION_EXCLUSION_CONFLICT', '排除范围与所属重点的来源不一致。', 422);
   }
   // 本次正文变化后，云端已有但本机未知的标注同样参与领域重定位。
-  const annotations = createContentAnnotationService({
+  const annotations = (
+    createContentAnnotationService as typeof createContentAnnotationService & SyncAnnotationReconcileFactory
+  )({
     repository: createInMemoryContentAnnotationRepository({ records: state.contentAnnotations }),
     noteRepository: (createInMemoryNoteRepository as typeof createInMemoryNoteRepository & SyncAnnotationNoteFactory)({
       records: state.notes
@@ -445,32 +470,32 @@ export function prepareBatchState(
   }
   const folderMap = new Map(state.folders.map(folder => [folder.id, folder]));
   for (const folder of state.folders.filter(item => item.deletionPackage)) {
-    const packet = folder.deletionPackage!;
+    const packet = folder.deletionPackage as SyncRawObject;
     if (
       !folder.deletedAt ||
       !Array.isArray(packet.folderIds) ||
       !Array.isArray(packet.noteIds) ||
       !packet.folderIds.includes(folder.id) ||
-      !['keep', 'with-content'].includes(packet.mode)
+      !(['keep', 'with-content'] as readonly unknown[]).includes(packet.mode)
     )
       throw syncError('SYNC_FOLDER_PACKAGE_INVALID', '文件夹删除包不完整。', 422);
-    if (packet.folderIds.some(id => !folderMap.get(id)?.deletedAt))
+    if (packet.folderIds.some((id: unknown) => !(folderMap as ReadonlyMap<unknown, typeof folder>).get(id)?.deletedAt))
       throw syncError('SYNC_FOLDER_PACKAGE_INVALID', '删除包中的子文件夹尚未进入回收站。', 422);
     if (
-      packet.noteIds.some(id => {
+      packet.noteIds.some((id: unknown) => {
         const note = state.notes.find(item => item.id === id);
         return (
           !note ||
           (packet.mode === 'with-content'
             ? !note.deleted || note.folderDeletionPackageId !== packet.id
-            : note.deleted || packet.folderIds.includes(note.folderId!))
+            : note.deleted || (packet.folderIds as unknown[]).includes(note.folderId!))
         );
       })
     )
       throw syncError('SYNC_FOLDER_PACKAGE_INVALID', '删除包中的笔记状态不一致。', 422);
   }
   const paths = new Map<string, string>();
-  function folderPath(folder: FolderEntity, visiting = new Set<string>()): string {
+  function folderPath(folder: Pick<FolderEntity, 'id' | 'name' | 'parentId'>, visiting = new Set<string>()): string {
     if (paths.has(folder.id)) return paths.get(folder.id)!;
     if (visiting.has(folder.id)) throw syncError('FOLDER_PARENT_CONFLICT', '目录不能循环嵌套。', 422);
     visiting.add(folder.id);
@@ -493,6 +518,6 @@ export function prepareBatchState(
   validateKnowledgeBatch(before, state, changes);
   validateTrainingBatch(before, state, changes);
   state = (validateSyncBatchState as SyncBatchValidator)({ schemaVersion: LOCAL_DATA_SCHEMA_VERSION, ...state });
-  // 既有完整快照校验已逐项验证 note.tagIds；其余集合在 working 视图中未放宽。
-  return { state: state as SyncWorkingState & Pick<SyncDomainState, 'notes'>, aliases };
+  // 仅收窄既有快照校验逐项检查的 note.tagIds；其余 JSON 字段仍保留原始表示。
+  return { state: state as SyncWorkingState & Pick<SyncStoredState, 'notes'>, aliases };
 }
