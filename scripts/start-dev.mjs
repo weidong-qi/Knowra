@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readRuntimePorts, writeRuntimePort } from './dev-runtime-ports.js';
@@ -11,6 +12,8 @@ const runtimePortsFile = path.join(workspaceRoot, 'storage', 'runtime', 'dev-por
 const webCoreCompiler = path.join(workspaceRoot, 'node_modules', 'typescript', 'bin', 'tsc');
 const webCoreTsconfig = path.join(workspaceRoot, 'packages', 'web-core', 'tsconfig.json');
 const childProcesses = [];
+// --lan：Vite 监听所有网卡供局域网设备预览；API 仍只在本机，经同源 /api 代理访问。
+const lanEnabled = process.argv.includes('--lan');
 
 const apiPort = await getFreePort(3001);
 const webPort = await getFreePort(apiPort === 3000 ? 3002 : 3000);
@@ -44,7 +47,7 @@ if (!apiReady) {
 }
 
 const webEntry = path.join(workspaceRoot, 'node_modules', 'vite', 'bin', 'vite.js');
-const webProcess = spawnNode([webEntry, '--port', String(webPort), '--strictPort'], {
+const webProcess = spawnNode([webEntry, '--port', String(webPort), '--strictPort', ...(lanEnabled ? ['--host', '0.0.0.0'] : [])], {
   env: createChildEnv({
     API_PORT: String(actualApiPort),
     STUDY_RUNTIME_PORTS_FILE: runtimePortsFile
@@ -65,6 +68,15 @@ writeRuntimePort(runtimePortsFile, 'web-v4', webPort);
 
 console.log(`Study API: http://localhost:${actualApiPort}`);
 console.log(`Study Web: http://localhost:${webPort}`);
+
+if (lanEnabled) {
+  const addresses = Object.values(os.networkInterfaces())
+    .flat()
+    .filter((entry) => entry && entry.family === 'IPv4' && !entry.internal)
+    .map((entry) => entry.address);
+  console.warn('局域网预览已开启：同一网络内任何设备都能以当前 owner 身份读写知识库，仅限可信网络。');
+  for (const address of addresses) console.log(`Study Web (LAN): http://${address}:${webPort}`);
+}
 
 process.on('SIGINT', () => shutdownChildren(0));
 process.on('SIGTERM', () => shutdownChildren(0));

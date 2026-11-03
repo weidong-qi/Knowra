@@ -28,6 +28,7 @@
     "dev:api": "npm run dev -w @study-accelerator/api",
     "start:api": "npm run dev -w @study-accelerator/api",
     "dev:all": "node scripts/start-dev.mjs",
+    "dev:lan": "node scripts/start-dev.mjs --lan",
     "build:web": "npm run build -w @study-accelerator/web",
     "build:web:v4": "npm run build:web",
     "start:web": "npm run start -w @study-accelerator/web",

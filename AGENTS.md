@@ -9,6 +9,7 @@
 | 用途 | 命令 |
 | --- | --- |
 | API + 前端开发 | `npm run dev:all` |
+| 局域网预览（无认证，仅限可信网络） | `npm run dev:lan` |
 | 单独启动 API / 前端 | `npm run dev:api` / `npm run dev:web` |
 | 前端构建 / 生产启动 | `npm run build:web` / `npm run start:web` |
 | Android 无 SDK 策略检查 | `node --test scripts/test/android-preview.test.js` |
