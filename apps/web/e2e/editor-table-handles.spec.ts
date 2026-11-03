@@ -99,19 +99,23 @@ test('键盘可聚焦手柄并用菜单移动列；阅读模式不显示手柄',
 });
 
 async function expectSelectedTableCellVisible(page: Page) {
-  await expect.poll(() => page.locator('.ProseMirror').evaluate(editor => {
-    const anchor = window.getSelection()?.anchorNode;
-    const element = anchor instanceof Element ? anchor : anchor?.parentElement;
-    const cell = element?.closest('td, th');
-    if (!cell || !editor.contains(cell)) return false;
-    // 滚动避让以光标所在文本行为准；单元格上内边距允许压在吸顶栏下。
-    const rect = (cell.querySelector('p') ?? cell).getBoundingClientRect();
-    const stage = editor.closest('[data-editor-scroll-root]')!.getBoundingClientRect();
-    const stack = document.querySelector('[data-editor-toolbar-stack]')!.getBoundingClientRect();
-    const top = stack.top <= stage.top + 1 ? stack.bottom : stage.top;
-    const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-    return rect.top >= top && rect.bottom <= stage.bottom && Boolean(hit && cell.contains(hit));
-  })).toBe(true);
+  await expect
+    .poll(() =>
+      page.locator('.ProseMirror').evaluate(editor => {
+        const anchor = window.getSelection()?.anchorNode;
+        const element = anchor instanceof Element ? anchor : anchor?.parentElement;
+        const cell = element?.closest('td, th');
+        if (!cell || !editor.contains(cell)) return false;
+        // 滚动避让以光标所在文本行为准；单元格上内边距允许压在吸顶栏下。
+        const rect = (cell.querySelector('p') ?? cell).getBoundingClientRect();
+        const stage = editor.closest('[data-editor-scroll-root]')!.getBoundingClientRect();
+        const stack = document.querySelector('[data-editor-toolbar-stack]')!.getBoundingClientRect();
+        const top = stack.top <= stage.top + 1 ? stack.bottom : stage.top;
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return rect.top >= top && rect.bottom <= stage.bottom && Boolean(hit && cell.contains(hit));
+      })
+    )
+    .toBe(true);
 }
 
 test('手机宽度下手柄为触控尺寸，菜单留在视口内，整表菜单可删除表格', async ({ page }) => {
@@ -135,8 +139,15 @@ test('手机宽度下手柄为触控尺寸，菜单留在视口内，整表菜�
   const stage = (await page.locator('[data-editor-scroll-root]').boundingBox())!;
   const toolbar = (await page.locator('[data-editor-toolbar-stack]').boundingBox())!;
   const popover = menu.locator('xpath=ancestor::*[@data-placement][1]');
-  await expect.poll(async () => (await popover.boundingBox())!.y).toBeGreaterThanOrEqual(Math.max(stage.y, toolbar.y + toolbar.height));
-  await expect.poll(async () => { const bounds = (await popover.boundingBox())!; return bounds.y + bounds.height; }).toBeLessThanOrEqual(stage.y + stage.height);
+  await expect
+    .poll(async () => (await popover.boundingBox())!.y)
+    .toBeGreaterThanOrEqual(Math.max(stage.y, toolbar.y + toolbar.height));
+  await expect
+    .poll(async () => {
+      const bounds = (await popover.boundingBox())!;
+      return bounds.y + bounds.height;
+    })
+    .toBeLessThanOrEqual(stage.y + stage.height);
   await page.screenshot({ path: test.info().outputPath('table-handles-mobile.png'), fullPage: true });
   const rect = (await menu.boundingBox())!;
   expect(rect.x).toBeGreaterThanOrEqual(0);
@@ -156,7 +167,9 @@ test('长表滚动后选区避开吸顶格式栏，滚出可视区的表格不�
   await page.goto('/#/materials/notes/note-1');
   await page.locator('.ProseMirror td').first().click();
   await expect(page.getByRole('button', { name: '第 2 行操作' })).toBeVisible();
-  await page.locator('[data-editor-scroll-root]').evaluate(stage => { stage.scrollTop = 500; });
+  await page.locator('[data-editor-scroll-root]').evaluate(stage => {
+    stage.scrollTop = 500;
+  });
   const cells = page.locator('.ProseMirror td');
   const index = await cells.evaluateAll(elements => {
     const stack = document.querySelector('[data-editor-toolbar-stack]')!.getBoundingClientRect();
@@ -206,7 +219,8 @@ test('工具栏表格按钮用网格选择行列数，键盘可调整并插入',
 test('拖动列边界调整列宽：仅本机保存、不改 Markdown，重载保留，双击恢复', async ({ page }) => {
   const saved: string[] = [];
   const table = await open(page, saved);
-  const widths = () => table.locator('th').evaluateAll(cells => cells.map(cell => Math.round(cell.getBoundingClientRect().width)));
+  const widths = () =>
+    table.locator('th').evaluateAll(cells => cells.map(cell => Math.round(cell.getBoundingClientRect().width)));
   const before = await widths();
   await table.locator('td').first().hover();
   const separator = page.getByRole('separator', { name: '调整第 1 列宽度' });
@@ -234,7 +248,12 @@ test('拖动列边界调整列宽：仅本机保存、不改 Markdown，重载�
 // 回归：单元格与外侧手柄之间有空隙，不能只以 hover()+click() 跳过真实路径。
 test('正文光标下慢速移出表格仍能抵达手柄，跨表拖动只修改起始表', async ({ page }) => {
   const saved: string[] = [];
-  await mockEditorWorkspace(page, saved, [], `正文\n\n${markdown}\n\n另一个表\n\n| B名称 | B数量 |\n| --- | --- |\n| B苹果 | 4 |\n| B梨 | 5 |`);
+  await mockEditorWorkspace(
+    page,
+    saved,
+    [],
+    `正文\n\n${markdown}\n\n另一个表\n\n| B名称 | B数量 |\n| --- | --- |\n| B苹果 | 4 |\n| B梨 | 5 |`
+  );
   await page.goto('/#/materials/notes/note-1');
   await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
   await page.locator('.ProseMirror > p').first().click();
@@ -255,6 +274,8 @@ test('正文光标下慢速移出表格仍能抵达手柄，跨表拖动只修�
   await page.mouse.up();
   await expect(table.locator('tr').nth(1)).toHaveText('梨3');
   await expect(tables.nth(1).locator('tr').nth(1)).toHaveText('B苹果4');
+  // 拖动结束在下一动画帧归还焦点，确认键盘已回到编辑器再撤销。
+  await expect(page.locator('.ProseMirror')).toBeFocused();
   await page.keyboard.press('ControlOrMeta+z');
   await expect(table.locator('tr').nth(1)).toHaveText('苹果2');
 });
@@ -265,17 +286,34 @@ test('列宽再次拖动后 Escape 取消保留上次保存比例', async ({ pag
   const separator = page.getByRole('separator', { name: '调整第 1 列宽度' });
   await separator.focus();
   await page.keyboard.press('ArrowRight');
-  const width = await table.locator('th').first().evaluate(cell => cell.getBoundingClientRect().width);
+  const width = await table
+    .locator('th')
+    .first()
+    .evaluate(cell => cell.getBoundingClientRect().width);
   const box = (await separator.boundingBox())!;
   await page.mouse.move(box.x + 3, box.y + 20);
   await page.mouse.down();
   await page.mouse.move(box.x + 50, box.y + 20, { steps: 5 });
   await page.keyboard.press('Escape');
   await page.mouse.up();
-  await expect.poll(() => table.locator('th').first().evaluate(cell => cell.getBoundingClientRect().width)).toBeCloseTo(width, 0);
+  await expect
+    .poll(() =>
+      table
+        .locator('th')
+        .first()
+        .evaluate(cell => cell.getBoundingClientRect().width)
+    )
+    .toBeCloseTo(width, 0);
   await page.reload();
   await expect(page.locator('[data-editor-ready="true"]')).toBeVisible();
-  await expect.poll(() => table.locator('th').first().evaluate(cell => cell.getBoundingClientRect().width)).toBeCloseTo(width, 0);
+  await expect
+    .poll(() =>
+      table
+        .locator('th')
+        .first()
+        .evaluate(cell => cell.getBoundingClientRect().width)
+    )
+    .toBeCloseTo(width, 0);
 });
 
 test.describe('触屏表格菜单', () => {
@@ -291,15 +329,26 @@ test.describe('触屏表格菜单', () => {
     const stage = (await page.locator('[data-editor-scroll-root]').boundingBox())!;
     const toolbar = (await page.locator('[data-editor-toolbar-stack]').boundingBox())!;
     const popover = menu.locator('xpath=ancestor::*[@data-placement][1]');
-    await expect.poll(async () => (await popover.boundingBox())!.y).toBeGreaterThanOrEqual(Math.max(stage.y, toolbar.y + toolbar.height));
-    await expect.poll(async () => { const bounds = (await popover.boundingBox())!; return bounds.y + bounds.height; }).toBeLessThanOrEqual(stage.y + stage.height);
+    await expect
+      .poll(async () => (await popover.boundingBox())!.y)
+      .toBeGreaterThanOrEqual(Math.max(stage.y, toolbar.y + toolbar.height));
+    await expect
+      .poll(async () => {
+        const bounds = (await popover.boundingBox())!;
+        return bounds.y + bounds.height;
+      })
+      .toBeLessThanOrEqual(stage.y + stage.height);
     const remove = page.getByRole('menuitem', { name: '删除列', exact: true });
     await remove.scrollIntoViewIfNeeded();
-    await expect.poll(() => remove.evaluate(element => {
-      const rect = element.getBoundingClientRect();
-      const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-      return Boolean(hit && element.contains(hit));
-    })).toBe(true);
+    await expect
+      .poll(() =>
+        remove.evaluate(element => {
+          const rect = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return Boolean(hit && element.contains(hit));
+        })
+      )
+      .toBe(true);
     await page.screenshot({ path: test.info().outputPath('table-handles-touch-menu.png'), fullPage: true });
     await remove.tap();
     await expect(table.locator('tr').first().locator('th')).toHaveCount(1);
