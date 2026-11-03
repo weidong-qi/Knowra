@@ -1,10 +1,10 @@
 import { cloneJsonData } from '../../infrastructure/json-clone.js';
-import { assertSyncContract } from './protocol-contract.js';
-import { assertSyncDeviceEnabled } from './rollout-policy.js';
-import { WRITABLE_COLLECTIONS, changeReferencesFor, sameEntity } from './entity-contract.js';
+import { assertSyncContract } from './protocol-contract.ts';
+import { assertSyncDeviceEnabled } from './rollout-policy.ts';
+import { WRITABLE_COLLECTIONS, changeReferencesFor, sameEntity } from './entity-contract.ts';
 import { prepareBatchState } from './batch-domain.js';
-import { pruneTouchedNoteVersions } from './version-retention.js';
-import { syncError, syncKey, requestHash, thenResult, rememberBatchReceipt } from './journal.js';
+import { pruneTouchedNoteVersions } from './version-retention.ts';
+import { syncError, syncKey, requestHash, thenResult, rememberBatchReceipt } from './journal.ts';
 
 export function createBatchSyncService(provider, ownerId, transfer) {
   function validate(op) {

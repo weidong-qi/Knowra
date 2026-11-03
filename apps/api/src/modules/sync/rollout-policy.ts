@@ -1,4 +1,4 @@
-import { syncError } from './journal.js';
+import { syncError } from './journal.ts';
 
 export function assertSyncDeviceEnabled(deviceId: unknown): void {
   if (process.env.KNOWRA_SYNC_PUSH_ENABLED === 'false')

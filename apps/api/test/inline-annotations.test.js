@@ -10,7 +10,7 @@ import {
 } from '../src/modules/knowledge/application/inline-annotations.js';
 import { prepareBatchState } from '../src/modules/sync/batch-domain.js';
 import { listAnnotatedRanges } from '../src/modules/ai/annotation-read-tool.js';
-import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.js';
+import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.ts';
 import { applyPostgresState } from '../src/modules/sync/postgres-batch.js';
 import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
 import { knowraCheck } from '@study-accelerator/shared/knowra-marks';

@@ -48,7 +48,7 @@ import {
 } from './json-transformers.js';
 import { createPostgresAdvisoryLock } from '../postgres-advisory-lock.js';
 import { findInsecureImageUrls } from '../../modules/knowledge/application/note-content-policy.js';
-import { createJournal, loadJournal, syncKey } from '../../modules/sync/journal.js';
+import { createJournal, loadJournal, syncKey } from '../../modules/sync/journal.ts';
 import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts

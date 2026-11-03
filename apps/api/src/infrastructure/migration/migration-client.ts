@@ -44,7 +44,7 @@ export type MigrationTransaction = {
     findMany(): Awaitable<{ ownerId: string; payload: unknown }[]>;
     deleteMany(): Awaitable<{ count: number }>;
     create(input: {
-      data: { ownerId: string; payload: ReturnType<typeof import('../../modules/sync/journal.js').createJournal> };
+      data: { ownerId: string; payload: ReturnType<typeof import('../../modules/sync/journal.ts').createJournal> };
     }): Awaitable<object>;
   };
 };
