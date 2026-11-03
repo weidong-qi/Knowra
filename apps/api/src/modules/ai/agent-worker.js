@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
 import { beijingDay } from './budget-ledger.js';
 import { actualCostMicrounits, quoteWorstCase } from './worker.js';
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import { createAuthorizedRetrieval } from './retrieval.js';
 import { createAiRecoveryScope } from './recovery-scope.ts';
 import { emptyAgentCheckpoint } from './agent-checkpoint.ts';

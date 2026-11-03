@@ -1,7 +1,8 @@
-import { manifestHash, validateAiRecord } from './record-contract.js';
+import type { AiRecordFields, AiSqlDefinition, AiSqlRow, RawAiSqlRow } from './record-infrastructure-types.ts';
+import type { AiRecord, AiRecordByKind, AiRecordKind } from './record-types.ts';
+import { manifestHash, validateAiRecord } from './record-contract.ts';
 
-/** @type {Record<import('./record-types.ts').AiRecordKind, import('./record-infrastructure-types.ts').AiSqlDefinition>} */
-export const AI_SQL_DEFINITIONS = {
+export const AI_SQL_DEFINITIONS: Record<AiRecordKind, AiSqlDefinition> = {
   scopeSnapshot: {
     table: 'ai_scope_snapshots',
     id: 'scope_snapshot_id',
@@ -113,29 +114,29 @@ export const AI_SQL_DEFINITIONS = {
   }
 };
 
-const sqlName = field => field.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-const column = field =>
-  ({ allowedTools: 'allowed_tools_json', actionKinds: 'action_kinds_json', resultJson: 'result_json' })[field] ??
-  sqlName(field);
+const sqlName = (field: string) => field.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+const column = (field: string) =>
+  (
+    ({ allowedTools: 'allowed_tools_json', actionKinds: 'action_kinds_json', resultJson: 'result_json' }) as Record<
+      string,
+      string | undefined
+    >
+  )[field] ?? sqlName(field);
 const jsonFields = new Set(['allowedTools', 'actionKinds', 'resultJson']);
 const booleanFields = new Set(['deliveryUncertain', 'usageUnknown']);
 
-/** @param {import('./record-types.ts').AiRecordKind} kind
- * @param {import('./record-infrastructure-types.ts').AiRecordFields} record
- * @returns {import('./record-infrastructure-types.ts').AiSqlRow} */
-export function encodeAiRow(kind, record) {
+export function encodeAiRow<Kind extends AiRecordKind>(kind: Kind, record: AiRecordByKind[Kind]): AiSqlRow {
   const definition = AI_SQL_DEFINITIONS[kind];
-  /** @type {import('./record-infrastructure-types.ts').AiSqlRow} */
-  const row = Object.fromEntries(
+  const row: AiSqlRow = Object.fromEntries(
     definition.fields.map(field => [
       column(field),
       jsonFields.has(field)
-        ? record[field] === undefined
+        ? (record as AiRecordFields)[field] === undefined
           ? null
-          : JSON.stringify(record[field])
+          : JSON.stringify((record as AiRecordFields)[field])
         : booleanFields.has(field)
-          ? Number(record[field])
-          : /** @type {string | number | null} */ (record[field] ?? null)
+          ? Number((record as AiRecordFields)[field])
+          : (((record as AiRecordFields)[field] ?? null) as string | number | null)
     ])
   );
   if (definition.document) row[definition.document] = JSON.stringify(record);
@@ -143,31 +144,23 @@ export function encodeAiRow(kind, record) {
   return row;
 }
 
-/** @template {import('./record-types.ts').AiRecordKind} Kind
- * @overload
- * @param {Kind} kind
- * @param {import('./record-infrastructure-types.ts').RawAiSqlRow} row
- * @returns {import('./record-types.ts').AiRecordByKind[Kind]} */
-/** @template {import('./record-types.ts').AiRecordKind} Kind
- * @overload
- * @param {Kind} kind
- * @param {import('./record-infrastructure-types.ts').RawAiSqlRow | null | undefined} row
- * @returns {import('./record-types.ts').AiRecordByKind[Kind] | null} */
-/** @param {import('./record-types.ts').AiRecordKind} kind
- * @param {import('./record-infrastructure-types.ts').RawAiSqlRow | null | undefined} row */
-export function decodeAiRow(kind, row) {
+export function decodeAiRow<Kind extends AiRecordKind>(kind: Kind, row: RawAiSqlRow): AiRecordByKind[Kind];
+export function decodeAiRow<Kind extends AiRecordKind>(
+  kind: Kind,
+  row: RawAiSqlRow | null | undefined
+): AiRecordByKind[Kind] | null;
+export function decodeAiRow(kind: AiRecordKind, row: RawAiSqlRow | null | undefined): AiRecord | null {
   if (!row) return null;
   const definition = AI_SQL_DEFINITIONS[kind];
   if (definition.document) {
-    const record = validateAiRecord(kind, JSON.parse(/** @type {string} */ (row[definition.document])));
+    const record = validateAiRecord(kind, JSON.parse(row[definition.document] as string));
     const expected = encodeAiRow(kind, record);
     if (Object.entries(expected).some(([column, value]) => row[column] !== value)) {
       throw new Error('AI 私有索引与记录正文不一致。');
     }
     return record;
   }
-  /** @type {{contractVersion: number, kind: import('./record-types.ts').AiRecordKind, question?: unknown, resultJson?: unknown}} */
-  const decoded = {
+  const decoded: { contractVersion: number; kind: AiRecordKind; question?: unknown; resultJson?: unknown } = {
     contractVersion: 1,
     kind,
     ...Object.fromEntries(
@@ -176,7 +169,7 @@ export function decodeAiRow(kind, row) {
         jsonFields.has(field)
           ? row[column(field)] === null
             ? undefined
-            : JSON.parse(/** @type {string} */ (row[column(field)]))
+            : JSON.parse(row[column(field)] as string)
           : booleanFields.has(field)
             ? Boolean(row[column(field)])
             : row[column(field)]

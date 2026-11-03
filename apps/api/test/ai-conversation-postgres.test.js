@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
-import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-repository.js';
+import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-repository.ts';
 import { createPostgresAiConversationStore } from '../src/modules/ai/postgres-conversation-store.js';
 import { emptyAgentCheckpoint } from '../src/modules/ai/agent-checkpoint.ts';
 

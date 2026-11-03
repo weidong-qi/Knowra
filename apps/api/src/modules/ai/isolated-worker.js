@@ -1,5 +1,5 @@
 import { fork } from 'node:child_process';
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import { createAiWorker } from './worker.js';
 import { AI_PROCESS_LIMITS } from './isolated-provider.js';
 import { watchChildResources } from './process-resource-guard.js';

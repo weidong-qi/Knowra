@@ -1,6 +1,6 @@
 import { assertAiReadableNote } from './note-privacy.js';
 import { createNoteWritePlan } from './note-plan.js';
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
 import { buildUpdateNoteDto } from '../knowledge/application/dto/note.dto.ts';
 import { actionError } from './action-state.js';

@@ -1,4 +1,4 @@
-import { hashRecord } from './record-contract.js';
+import { hashRecord } from './record-contract.ts';
 import type { SourceReference } from './access-service-types.ts';
 
 interface CheckpointData<Reference = unknown> {

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { hashRecord, manifestHash, scopeHash, validateAiRecord } from './record-contract.js';
+import { hashRecord, manifestHash, scopeHash, validateAiRecord } from './record-contract.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
 import {
   prepareKnowledgeExtractionGateway,

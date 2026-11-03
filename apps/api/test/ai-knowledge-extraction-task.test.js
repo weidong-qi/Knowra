@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { createMaintenanceGate } from '../src/infrastructure/maintenance-gate.ts';
-import { hashRecord } from '../src/modules/ai/record-contract.js';
+import { hashRecord } from '../src/modules/ai/record-contract.ts';
 import { createAiWorker } from '../src/modules/ai/worker.js';
 import {
   createExtractionTaskSources,

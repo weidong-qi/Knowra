@@ -1,5 +1,5 @@
-import { AI_RECORD_KINDS, validateAiRecord, hashRecord, manifestHash } from '../modules/ai/record-contract.js';
-import { AI_SQL_DEFINITIONS, decodeAiRow } from '../modules/ai/record-sql-map.js';
+import { AI_RECORD_KINDS, validateAiRecord, hashRecord, manifestHash } from '../modules/ai/record-contract.ts';
+import { AI_SQL_DEFINITIONS, decodeAiRow } from '../modules/ai/record-sql-map.ts';
 import {
   EXTRACTION_MOCK_PROFILE,
   taskKey,
