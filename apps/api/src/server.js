@@ -9,8 +9,8 @@ import { handleStorageRoute } from './http/storage-routes.ts';
 import { handleKnowledgeRoute } from './modules/knowledge/http/knowledge-routes.js';
 import { AppError } from './errors/app-error.js';
 import { handleSyncRoute } from './modules/sync/routes.ts';
-import { handleModelSettingsRoute } from './modules/ai/model-settings-routes.js';
-import { handleAiFeatureRoute } from './modules/ai/feature-settings-routes.js';
+import { handleModelSettingsRoute } from './modules/ai/model-settings-routes.ts';
+import { handleAiFeatureRoute } from './modules/ai/feature-settings-routes.ts';
 import { handleBudgetRoute } from './modules/ai/budget-routes.js';
 import { createAiAssistantService } from './modules/ai/assistant-service.js';
 import { handleAssistantRoute } from './modules/ai/assistant-routes.js';
@@ -19,7 +19,7 @@ import { handleConversationRoute } from './modules/ai/conversation-routes.js';
 import { handleConversationAttachmentRoute } from './modules/ai/conversation-attachment-routes.js';
 import { handleAiJobRoute } from './modules/ai/job-routes.js';
 import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-extraction-http-service.js';
-import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.js';
+import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { isWriteMethod, writeOriginDecision } from '@study-accelerator/shared/http-origin';
 
 export function createServer({ appContext, cors = /** @type {{allowedOrigins?: string[]}} */ ({}), logger = console }) {

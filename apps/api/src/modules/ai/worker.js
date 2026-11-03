@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.js';
 import { beijingDay } from './budget-ledger.js';
 import { normalizeAiRequest } from './gateway.js';
-import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.js';
+import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
 
 const MAX_ATTEMPTS = 4;
 const MAX_INPUT_TOKENS = 100_000;

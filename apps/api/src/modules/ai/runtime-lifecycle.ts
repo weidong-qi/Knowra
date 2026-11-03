@@ -1,4 +1,4 @@
-import { createAiRecoveryScope } from './recovery-scope.js';
+import { createAiRecoveryScope } from './recovery-scope.ts';
 
 export interface AiRuntimeLifecyclePorts {
   attachments?: { recover?(): unknown; close?(): unknown } | null;

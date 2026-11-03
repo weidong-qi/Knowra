@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { hashRecord, manifestHash } from './record-contract.js';
 import { beijingDay } from './budget-ledger.js';
 import { evaluateAlerts, periodOf } from './budget-alerts.js';
-import { usageCsv } from './usage-export.js';
+import { usageCsv } from './usage-export.ts';
 
 const PREVIEW_TTL_MS = 5 * 60_000;
 const MAX_PREVIEWS = 32;

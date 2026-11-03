@@ -35,12 +35,12 @@ import { createKnowledgeBaseSnapshotService } from './modules/knowledge/applicat
 import { createNoteDeletionCoordinator } from './modules/knowledge/application/note-deletion-coordinator.js';
 import { createStorageConfig } from './config/storage.config.js';
 import { createLocalSyncService } from './modules/sync/local-provider.ts';
-import { createModelSettingsService } from './modules/ai/model-settings.js';
-import { createAiFeatureSettings } from './modules/ai/feature-settings.js';
+import { createModelSettingsService } from './modules/ai/model-settings.ts';
+import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
 import { createOptionalAiRuntime } from './modules/ai/runtime.js';
-import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.js';
+import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { createJsonlShadowSink } from './infrastructure/annotation-shadow-log.ts';
-import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.js';
+import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.ts';
 
 const __filename = fileURLToPath(import.meta.url);

@@ -4,6 +4,35 @@ import path from 'node:path';
 import { constants } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { createAppError } from '../../errors/app-error.js';
+import type { AppError } from '../../errors/app-error.ts';
+import type { FileHandle } from 'node:fs/promises';
+
+interface ModelFetchResponse {
+  status: number;
+  ok?: boolean;
+  json?(): Promise<unknown>;
+}
+interface ModelFetch {
+  (url: string, options: RequestInit): Promise<ModelFetchResponse>;
+}
+interface ModelConnectionOptions {
+  apiKey: string;
+  modelId: string;
+  fetchImpl?: ModelFetch;
+}
+interface ModelSettingsOptions {
+  filePath?: string;
+  fetchImpl?: ModelFetch;
+}
+interface StoredModelSettings {
+  modelId: string;
+  apiKey: string;
+  credentialRef?: string;
+}
+interface SettingsQueue {
+  then<T>(operation: () => Promise<T>): Promise<T>;
+}
+type RawModelSettings = Partial<Record<keyof StoredModelSettings, unknown>>;
 
 // 桌面壳独立打包；注册契约测试校验两端、UI 与已核价模型保持一致。
 export const SUPPORTED_MODEL_IDS = Object.freeze(['deepseek-flash']);
@@ -29,16 +58,21 @@ export const MODEL_SETTINGS_ERRORS = Object.freeze({
 });
 const API_BASE = 'https://api.deepseek.com';
 const defaultFile = path.join(os.homedir(), '.config', 'knowra', 'ai-provider.json');
-const modelError = (code, status = 400) => createAppError(code, MODEL_SETTINGS_ERRORS[code], status);
-const supported = modelId => SUPPORTED_MODEL_IDS.includes(modelId);
-const requireSupported = modelId => {
+const modelError = (code: keyof typeof MODEL_SETTINGS_ERRORS, status = 400) =>
+  createAppError(code, MODEL_SETTINGS_ERRORS[code], status);
+const supported = (modelId: string) => SUPPORTED_MODEL_IDS.includes(modelId);
+const requireSupported = (modelId: string) => {
   if (!supported(modelId)) throw modelError('MODEL_NOT_SUPPORTED', 422);
 };
 
-export function validateModelSettings(input, { allowEmptyKey = false } = {}) {
+export function validateModelSettings(input: unknown, { allowEmptyKey = false } = {}) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw modelError('MODEL_SETTINGS_INVALID');
-  const modelId = typeof input.modelId === 'string' ? input.modelId.trim() : '';
-  const apiKey = typeof input.apiKey === 'string' ? input.apiKey.trim() : '';
+  const modelId =
+    typeof (input as RawModelSettings).modelId === 'string'
+      ? ((input as RawModelSettings).modelId as string).trim()
+      : '';
+  const apiKey =
+    typeof (input as RawModelSettings).apiKey === 'string' ? ((input as RawModelSettings).apiKey as string).trim() : '';
   if (!/^[a-zA-Z0-9._-]{1,80}$/.test(modelId)) throw modelError('MODEL_ID_INVALID');
   requireSupported(modelId);
   if ((!allowEmptyKey && !apiKey) || apiKey.length > 512 || /[\r\n]/.test(apiKey))
@@ -46,7 +80,7 @@ export function validateModelSettings(input, { allowEmptyKey = false } = {}) {
   return { modelId, apiKey };
 }
 
-export async function checkDeepSeekModel({ apiKey, modelId, fetchImpl = fetch }) {
+export async function checkDeepSeekModel({ apiKey, modelId, fetchImpl = fetch }: ModelConnectionOptions) {
   requireSupported(modelId);
   let response;
   try {
@@ -62,34 +96,31 @@ export async function checkDeepSeekModel({ apiKey, modelId, fetchImpl = fetch })
   if (response?.status === 401 || response?.status === 403) throw modelError('MODEL_KEY_REJECTED', 422);
   if (response?.status === 429) throw modelError('MODEL_RATE_LIMITED', 429);
   if (!response?.ok) throw modelError('MODEL_PROVIDER_FAILED', 502);
-  let body;
+  let body: { data?: unknown } | null | undefined;
   try {
-    body = await response.json();
+    body = (await response.json!()) as typeof body;
   } catch {
     /* 不读取或回显供应商原始错误。 */
   }
   if (!Array.isArray(body?.data)) throw modelError('MODEL_RESPONSE_INVALID', 502);
-  if (!body.data.some(item => item?.id === modelId)) throw modelError('MODEL_NOT_AVAILABLE', 422);
+  if (!body.data.some((item: unknown) => (item as { id?: unknown } | null | undefined)?.id === modelId))
+    throw modelError('MODEL_NOT_AVAILABLE', 422);
   return { connected: true, modelAvailable: true, checkedAt: new Date().toISOString() };
 }
 
-export function createModelSettingsService({ filePath = defaultFile, fetchImpl = fetch } = {}) {
+export function createModelSettingsService({ filePath = defaultFile, fetchImpl = fetch }: ModelSettingsOptions = {}) {
   // 本服务的凭据操作按调用次序执行，避免旧读改写在删除或换钥后复活凭据。
-  let operations = Promise.resolve();
+  let operations: SettingsQueue = Promise.resolve();
   let revision = 0;
   let latestCheck = 0;
-  /** @template T
-   * @param {() => Promise<T>} operation
-   * @returns {Promise<T>}
-   */
-  function queued(operation) {
+  function queued<T>(operation: () => Promise<T>): Promise<T> {
     const result = operations.then(operation);
     operations = result.catch(() => undefined);
     return result;
   }
 
   async function read() {
-    let handle;
+    let handle: FileHandle | undefined;
     try {
       handle = await fs.open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
       const stat = await handle.stat();
@@ -100,24 +131,25 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
       ) {
         throw modelError('MODEL_SETTINGS_UNAVAILABLE', 500);
       }
-      const value = JSON.parse(await handle.readFile('utf8'));
+      const value: unknown = JSON.parse(await handle.readFile('utf8'));
       if (
         !value ||
-        typeof value.apiKey !== 'string' ||
-        typeof value.modelId !== 'string' ||
-        (value.credentialRef !== undefined && typeof value.credentialRef !== 'string')
+        typeof (value as RawModelSettings).apiKey !== 'string' ||
+        typeof (value as RawModelSettings).modelId !== 'string' ||
+        ((value as RawModelSettings).credentialRef !== undefined &&
+          typeof (value as RawModelSettings).credentialRef !== 'string')
       )
         throw modelError('MODEL_SETTINGS_UNAVAILABLE', 500);
-      return value;
+      return value as StoredModelSettings;
     } catch (error) {
-      if (error.code === 'ENOENT') return null;
+      if ((error as Partial<AppError>).code === 'ENOENT') return null;
       throw modelError('MODEL_SETTINGS_UNAVAILABLE', 500);
     } finally {
       await handle?.close().catch(() => undefined);
     }
   }
 
-  function publicStatus(value) {
+  function publicStatus(value: Pick<StoredModelSettings, 'modelId'> | null) {
     const modelId = value?.modelId ?? DEFAULT_MODEL_ID;
     return {
       provider: 'deepseek',
@@ -128,7 +160,7 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
     };
   }
 
-  async function write(value) {
+  async function write(value: StoredModelSettings) {
     const directory = path.dirname(filePath);
     const temp = path.join(directory, `.ai-provider-${randomUUID()}.tmp`);
     try {
@@ -155,14 +187,15 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
     status() {
       return queued(async () => publicStatus(await read()));
     },
-    save(input) {
+    save(input: unknown) {
       revision++;
       return queued(async () => {
         const previous = await read();
         const { modelId, apiKey } = validateModelSettings(input, { allowEmptyKey: Boolean(previous) });
         await write({
           modelId,
-          apiKey: apiKey || previous.apiKey,
+          // previous为空时，既有校验已经要求apiKey非空，右侧不会执行。
+          apiKey: apiKey || previous!.apiKey,
           credentialRef:
             !apiKey && previous?.modelId === modelId ? (previous.credentialRef ?? randomUUID()) : randomUUID()
         });
@@ -188,7 +221,7 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
       if (checkId !== latestCheck || checkRevision !== revision) throw modelError('MODEL_CHECK_STALE', 409);
       if (!value) throw modelError('MODEL_NOT_CONFIGURED', 409);
       requireSupported(value.modelId);
-      let result, failure;
+      let result: Awaited<ReturnType<typeof checkDeepSeekModel>> | undefined, failure: unknown;
       try {
         result = await checkDeepSeekModel({ ...value, fetchImpl });
       } catch (error) {
@@ -219,7 +252,7 @@ export function createModelSettingsService({ filePath = defaultFile, fetchImpl =
         return value ? { provider: 'deepseek', modelId: value.modelId, credentialRef: value.credentialRef } : null;
       });
     },
-    resolveCredential(reference) {
+    resolveCredential(reference: string | null | undefined) {
       const requestedRevision = revision;
       return queued(async () => {
         const value = await referencedValue();

@@ -1,8 +1,17 @@
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
 import { createAppError } from '../../errors/app-error.js';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createModelSettingsService } from './model-settings.ts';
 
-export async function handleModelSettingsRoute({ request, response, url, modelSettings }) {
+interface ModelSettingsRouteContext {
+  request: IncomingMessage;
+  response: ServerResponse;
+  url: Pick<URL, 'pathname'>;
+  modelSettings?: Pick<ReturnType<typeof createModelSettingsService>, 'status' | 'save' | 'remove' | 'check'> | null;
+}
+
+export async function handleModelSettingsRoute({ request, response, url, modelSettings }: ModelSettingsRouteContext) {
   if (!url.pathname.startsWith('/api/ai/model-settings') || !modelSettings) return false;
   response.setHeader('Cache-Control', 'no-store');
   if (request.method === 'GET' && url.pathname === '/api/ai/model-settings') {

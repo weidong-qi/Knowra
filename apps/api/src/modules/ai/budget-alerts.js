@@ -7,7 +7,7 @@ const ID_PATTERN = /^(daily|monthly):(\d{4}-\d{2}(?:-\d{2})?):(\d{1,3})$/;
 const KEEP_DAYS = 70;
 const invalid = message => Object.assign(new Error(message), { code: 'AI_BUDGET_ALERT_INVALID' });
 
-export const periodOf = (rule, day) => rule === 'daily' ? day : day.slice(0, 7);
+export const periodOf = (rule, day) => (rule === 'daily' ? day : day.slice(0, 7));
 
 /**
  * 计算当前周期内已越过的提醒阈值。只看“每日”“每月”两条规则，且规则不是“关闭”时才提醒；
@@ -15,8 +15,10 @@ export const periodOf = (rule, day) => rule === 'daily' ? day : day.slice(0, 7);
  */
 export function evaluateAlerts({ settings, status, marks = {}, overrides = {}, pauses = {}, day }) {
   const alerts = [];
-  const rows = { daily: { used: status.spentMicrounits + status.heldMicrounits },
-    monthly: { used: status.monthSpentMicrounits + status.monthHeldMicrounits } };
+  const rows = {
+    daily: { used: status.spentMicrounits + status.heldMicrounits },
+    monthly: { used: status.monthSpentMicrounits + status.monthHeldMicrounits }
+  };
   for (const rule of ALERT_RULES) {
     const config = settings.rules[rule];
     if (config.mode === 'off') continue;
@@ -24,19 +26,40 @@ export function evaluateAlerts({ settings, status, marks = {}, overrides = {}, p
     for (const threshold of settings.alerts.thresholds) {
       if (rows[rule].used * 100 < threshold * config.limitMicrounits) continue;
       const id = `${rule}:${period}:${threshold}`;
-      alerts.push({ id, rule, threshold, period, mode: config.mode, usedMicrounits: rows[rule].used,
-        limitMicrounits: config.limitMicrounits, notified: Boolean(marks[id]?.notified), dismissed: Boolean(marks[id]?.dismissed) });
+      alerts.push({
+        id,
+        rule,
+        threshold,
+        period,
+        mode: config.mode,
+        usedMicrounits: rows[rule].used,
+        limitMicrounits: config.limitMicrounits,
+        notified: Boolean(marks[id]?.notified),
+        dismissed: Boolean(marks[id]?.dismissed)
+      });
     }
   }
   // 每条规则的实际拦截状态，独立于提醒阈值：只要“达到即停”且已用额不低于上限（且未放行），就是已被拦截。
   const rules = ALERT_RULES.filter(rule => settings.rules[rule].mode !== 'off').map(rule => {
     const config = settings.rules[rule];
     const allowedNow = overrides[rule] === periodOf(rule, day);
-    return { rule, mode: config.mode, period: periodOf(rule, day), usedMicrounits: rows[rule].used, limitMicrounits: config.limitMicrounits,
-      blocked: config.mode === 'stop' && !allowedNow && rows[rule].used >= config.limitMicrounits };
+    return {
+      rule,
+      mode: config.mode,
+      period: periodOf(rule, day),
+      usedMicrounits: rows[rule].used,
+      limitMicrounits: config.limitMicrounits,
+      blocked: config.mode === 'stop' && !allowedNow && rows[rule].used >= config.limitMicrounits
+    };
   });
-  const allowed = ALERT_RULES.filter(rule => overrides[rule] === periodOf(rule, day)).map(rule => ({ rule, period: overrides[rule] }));
-  const paused = ALERT_RULES.filter(rule => pauses[rule] === periodOf(rule, day)).map(rule => ({ rule, period: pauses[rule] }));
+  const allowed = ALERT_RULES.filter(rule => overrides[rule] === periodOf(rule, day)).map(rule => ({
+    rule,
+    period: overrides[rule]
+  }));
+  const paused = ALERT_RULES.filter(rule => pauses[rule] === periodOf(rule, day)).map(rule => ({
+    rule,
+    period: pauses[rule]
+  }));
   return { day, alerts, rules, overrides: allowed, pauses: paused };
 }
 
@@ -55,69 +78,105 @@ export function createBudgetAlertStore({ filePath }) {
   async function load() {
     const empty = { marks: {}, overrides: {}, pauses: {}, invalid: false };
     let raw;
-    try { raw = await fs.readFile(filePath, 'utf8'); }
-    catch (error) { return error?.code === 'ENOENT' ? empty : { ...empty, invalid: true }; }
+    try {
+      raw = await fs.readFile(filePath, 'utf8');
+    } catch (error) {
+      return error?.code === 'ENOENT' ? empty : { ...empty, invalid: true };
+    }
     try {
       const parsed = JSON.parse(raw);
       if (!plain(parsed)) throw new Error('invalid');
       // 只有“字段不存在”按空处理（旧版本文件没有 pauses）；null、数组等一律视为损坏。
-      const part = key => parsed[key] === undefined ? {} : parsed[key];
+      const part = key => (parsed[key] === undefined ? {} : parsed[key]);
       const [marks, overrides, pauses] = [part('marks'), part('overrides'), part('pauses')];
-      if (!plain(marks) || !plain(overrides) || !plain(pauses)
-        || !Object.values(overrides).every(periodValue) || !Object.values(pauses).every(periodValue)
-        || !Object.values(marks).every(plain)) throw new Error('invalid');
+      if (
+        !plain(marks) ||
+        !plain(overrides) ||
+        !plain(pauses) ||
+        !Object.values(overrides).every(periodValue) ||
+        !Object.values(pauses).every(periodValue) ||
+        !Object.values(marks).every(plain)
+      )
+        throw new Error('invalid');
       return { marks, overrides, pauses, invalid: false };
-    } catch { return { ...empty, invalid: true }; }
+    } catch {
+      return { ...empty, invalid: true };
+    }
   }
   async function save(state, today) {
     // 只保留近期周期的标记，避免文件无限增长。
     const cutoff = new Date(Date.parse(`${today}T00:00:00Z`) - KEEP_DAYS * 24 * 3600_000).toISOString().slice(0, 10);
-    const marks = Object.fromEntries(Object.entries(state.marks).filter(([id]) => {
-      const period = ID_PATTERN.exec(id)?.[2];
-      return period && `${period}${period.length === 7 ? '-31' : ''}` >= cutoff;
-    }));
+    const marks = Object.fromEntries(
+      Object.entries(state.marks).filter(([id]) => {
+        const period = ID_PATTERN.exec(id)?.[2];
+        return period && `${period}${period.length === 7 ? '-31' : ''}` >= cutoff;
+      })
+    );
     await fs.mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
     const temp = `${filePath}.${randomUUID()}.tmp`;
     try {
-      await fs.writeFile(temp, JSON.stringify({ marks, overrides: state.overrides, pauses: state.pauses }), { mode: 0o600, flag: 'wx' });
+      await fs.writeFile(temp, JSON.stringify({ marks, overrides: state.overrides, pauses: state.pauses }), {
+        mode: 0o600,
+        flag: 'wx'
+      });
       await fs.rename(temp, filePath);
-    } finally { await fs.rm(temp, { force: true }).catch(() => undefined); }
+    } finally {
+      await fs.rm(temp, { force: true }).catch(() => undefined);
+    }
   }
-  const serial = work => { const run = queue.then(work); queue = run.catch(() => undefined); return run; };
+  /** @template T @param {() => Promise<T>} work @returns {Promise<T>} */
+  const serial = work => {
+    const run = queue.then(work);
+    queue = run.catch(() => undefined);
+    return run;
+  };
   return {
     get: () => serial(load),
     /** 标记提醒：kind 为 notified（已推送系统通知）或 dismissed（已关闭横幅）。 */
-    mark: (ids, kind, today) => serial(async () => {
-      if (!Array.isArray(ids) || ids.length === 0 || ids.length > 24 || !ids.every(id => typeof id === 'string' && ID_PATTERN.test(id))
-        || !['notified', 'dismissed'].includes(kind)) throw invalid('提醒标记无效。');
-      const state = await load();
-      // 状态损坏时不能借“关闭横幅”之名悄悄覆盖文件（会同时抹掉暂停）；必须先显式重置。
-      if (state.invalid) throw Object.assign(new Error('预算提醒状态文件已损坏，请先在费用提醒处重置。'), { code: 'AI_BUDGET_ALERTS_INVALID' });
-      for (const id of ids) state.marks[id] = { ...state.marks[id], [kind]: true };
-      await save(state, today);
-    }),
+    mark: (ids, kind, today) =>
+      serial(async () => {
+        if (
+          !Array.isArray(ids) ||
+          ids.length === 0 ||
+          ids.length > 24 ||
+          !ids.every(id => typeof id === 'string' && ID_PATTERN.test(id)) ||
+          !['notified', 'dismissed'].includes(kind)
+        )
+          throw invalid('提醒标记无效。');
+        const state = await load();
+        // 状态损坏时不能借“关闭横幅”之名悄悄覆盖文件（会同时抹掉暂停）；必须先显式重置。
+        if (state.invalid)
+          throw Object.assign(new Error('预算提醒状态文件已损坏，请先在费用提醒处重置。'), {
+            code: 'AI_BUDGET_ALERTS_INVALID'
+          });
+        for (const id of ids) state.marks[id] = { ...state.marks[id], [kind]: true };
+        await save(state, today);
+      }),
     /** 放行：当前周期内不再因该规则拦截；同时解除该周期的暂停。 */
-    allow: (rule, period, today) => serial(async () => {
-      if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('放行请求无效。');
-      const state = await load();
-      state.overrides[rule] = period;
-      delete state.pauses[rule];
-      await save(state, today);
-    }),
+    allow: (rule, period, today) =>
+      serial(async () => {
+        if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('放行请求无效。');
+        const state = await load();
+        state.overrides[rule] = period;
+        delete state.pauses[rule];
+        await save(state, today);
+      }),
     /** 暂停：到当前周期结束前不再发起付费调用，周期结束自动恢复；不改写用户的预算设置。 */
-    pause: (rule, period, today) => serial(async () => {
-      if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('暂停请求无效。');
-      const state = await load();
-      state.pauses[rule] = period;
-      delete state.overrides[rule];
-      await save(state, today);
-    }),
+    pause: (rule, period, today) =>
+      serial(async () => {
+        if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('暂停请求无效。');
+        const state = await load();
+        state.pauses[rule] = period;
+        delete state.overrides[rule];
+        await save(state, today);
+      }),
     /** 恢复：提前解除当前周期的暂停。 */
-    resume: (rule, period, today) => serial(async () => {
-      if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('恢复请求无效。');
-      const state = await load();
-      delete state.pauses[rule];
-      await save(state, today);
-    })
+    resume: (rule, period, today) =>
+      serial(async () => {
+        if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('恢复请求无效。');
+        const state = await load();
+        delete state.pauses[rule];
+        await save(state, today);
+      })
   };
 }
