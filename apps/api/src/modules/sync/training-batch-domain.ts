@@ -1,3 +1,13 @@
+import type {
+  SyncCollection,
+  SyncDomainState,
+  SyncEntity,
+  SyncEntityMap,
+  SyncChange,
+  SyncWorkingState,
+  SyncWorkingEntity,
+  SyncWorkingMutation
+} from './domain-types.ts';
 import { LearningObjective } from '../knowledge/domain/learning-objective.js';
 import { ExamProfile } from '../knowledge/domain/exam-profile.js';
 import { ExamFocus } from '../knowledge/domain/exam-focus.js';
@@ -12,19 +22,35 @@ import { TRAINING_COLLECTIONS, sameEntity } from './entity-contract.ts';
 import { syncError } from './journal.ts';
 
 const subjects = new Set(['learningObjectives', 'examProfiles', 'examFocuses', 'questions']);
-const constructors = {
+type ConstructedCollection = 'learningObjectives' | 'examProfiles' | 'examFocuses' | 'questions' | 'questionSources';
+const constructors: {
+  [Collection in ConstructedCollection]: new (input: SyncEntity<Collection>) => SyncEntityMap[Collection];
+} = {
   learningObjectives: LearningObjective,
   examProfiles: ExamProfile,
   examFocuses: ExamFocus,
   questions: Question,
   questionSources: QuestionSource
 };
-const find = (state, collection, id) => state[collection].find(item => item.id === id);
-const fail = (code, message) => {
+const find = <Collection extends SyncCollection>(
+  state: SyncWorkingState,
+  collection: Collection,
+  id: string | null | undefined
+): SyncWorkingEntity<Collection> | undefined => state[collection].find(item => item.id === id);
+const fail = (code: string, message: string): never => {
   throw syncError(code, message, 422);
 };
 
-export function normalizeTrainingChange(change, previous, changes) {
+export function normalizeTrainingChange<Collection extends SyncCollection>(
+  change: SyncWorkingMutation<Collection>,
+  previous: SyncEntity<Collection> | undefined,
+  changes: SyncChange[]
+): SyncWorkingEntity<Collection> | null;
+export function normalizeTrainingChange(
+  change: SyncWorkingMutation,
+  previous: SyncEntity | undefined,
+  changes: SyncChange[]
+): SyncWorkingEntity | null {
   const { collection, value, lifecycleAction } = change;
   if (!TRAINING_COLLECTIONS.includes(collection)) return value;
   if (subjects.has(collection) && !value)
@@ -36,12 +62,16 @@ export function normalizeTrainingChange(change, previous, changes) {
       fail('SYNC_LIFECYCLE_ACTION_REQUIRED', '训练回收站操作需要显式动作和版本基线。');
   }
   const parentFields =
-    {
-      learningObjectives: ['knowledgeItemId'],
-      examFocuses: ['examProfileId', 'learningObjectiveId'],
-      questionObjectives: ['questionId', 'learningObjectiveId'],
-      questionSources: ['questionId']
-    }[collection] ?? [];
+    (
+      {
+        learningObjectives: ['knowledgeItemId'],
+        examFocuses: ['examProfileId', 'learningObjectiveId'],
+        questionObjectives: ['questionId', 'learningObjectiveId'],
+        questionSources: ['questionId']
+      } as Partial<
+        Record<SyncCollection, ('knowledgeItemId' | 'examProfileId' | 'learningObjectiveId' | 'questionId')[]>
+      >
+    )[collection] ?? [];
   if (value && previous && parentFields.some(field => value[field] !== previous[field]))
     fail('SYNC_IDENTITY_CHANGED', '不能更改训练实体所属对象，请解除旧关系并创建新关系。');
   if (['questionObjectives', 'questionSources'].includes(collection)) {
@@ -63,19 +93,19 @@ export function normalizeTrainingChange(change, previous, changes) {
   )
     fail('QUESTION_SOURCE_MODE_UNSUPPORTED', '当前只支持人工创建试题。');
   if (collection === 'questions' && previous) {
-    if (value.version < previous.version) fail('QUESTION_VERSION_CONFLICT', '试题版本不能倒退。');
-    const content = question =>
+    if (value.version! < previous.version!) fail('QUESTION_VERSION_CONFLICT', '试题版本不能倒退。');
+    const content = (question: SyncWorkingEntity) =>
       Object.fromEntries(
         Object.entries(question).filter(
           ([field]) => !['reviewStatus', 'deletedAt', 'createdAt', 'updatedAt', 'version'].includes(field)
         )
       );
-    if (!sameEntity(collection, content(value), content(previous)) && value.version <= previous.version)
+    if (!sameEntity(collection, content(value), content(previous)) && value.version! <= previous.version!)
       fail('QUESTION_VERSION_CONFLICT', '试题正文修改需要递增版本。');
   }
   if (
     collection === 'questionSources' &&
-    !['manual', 'knowledgeItem', 'learningObjective', 'noteVersion', 'knowledgeEvidence'].includes(value.sourceType)
+    !['manual', 'knowledgeItem', 'learningObjective', 'noteVersion', 'knowledgeEvidence'].includes(value.sourceType!)
   )
     fail('QUESTION_SOURCE_TYPE_UNSUPPORTED', '当前试题来源类型不支持写入。');
   if (collection === 'questionObjectives') {
@@ -84,17 +114,17 @@ export function normalizeTrainingChange(change, previous, changes) {
       !value.questionId?.trim() ||
       !value.learningObjectiveId?.trim() ||
       !Number.isInteger(value.order) ||
-      value.order < 0 ||
+      value.order! < 0 ||
       typeof value.isPrimary !== 'boolean'
     )
       fail('SYNC_ENTITY_INVALID', '试题目标关系字段无效。');
     return {
       id: value.id,
-      questionId: value.questionId,
-      learningObjectiveId: value.learningObjectiveId,
-      order: value.order,
-      isPrimary: value.isPrimary,
-      createdAt: value.createdAt
+      questionId: value.questionId!,
+      learningObjectiveId: value.learningObjectiveId!,
+      order: value.order!,
+      isPrimary: value.isPrimary!,
+      createdAt: value.createdAt!
     };
   }
   const fields =
@@ -103,12 +133,22 @@ export function normalizeTrainingChange(change, previous, changes) {
       : collection === 'examFocuses'
         ? buildUpdateExamFocusDto(value)
         : {};
-  return { ...new constructors[collection]({ ...value, ...fields }) };
+  return {
+    ...new (
+      constructors[collection as ConstructedCollection] as new (
+        input: SyncEntity<ConstructedCollection>
+      ) => SyncEntityMap[ConstructedCollection]
+    )({ ...(value as SyncEntity<ConstructedCollection>), ...fields })
+  };
 }
 
 /** 未在本机出现的已确认下游也必须随内容变化失效；显式提交的最终确认可包含离线重新核对。 */
-export function reconcileTrainingChanges(before, state, changes) {
-  const submitted = (collection, id) =>
+export function reconcileTrainingChanges(
+  before: SyncDomainState,
+  state: SyncWorkingState,
+  changes: SyncChange[]
+): SyncWorkingState {
+  const submitted = (collection: SyncCollection, id: string) =>
     changes.some(entry => entry.collection === collection && entry.id === id && entry.value);
   const changedKnowledge = new Set(
     changes
@@ -120,8 +160,8 @@ export function reconcileTrainingChanges(before, state, changes) {
       )
       .map(entry => entry.id)
   );
-  const affected = new Set();
-  const downgrade = value => {
+  const affected = new Set<string>();
+  const downgrade = (value: SyncWorkingEntity<'learningObjectives' | 'questions'>) => {
     if (value.reviewStatus === 'confirmed') {
       value.reviewStatus = 'candidate';
       value.updatedAt = new Date(Math.max(Date.now(), Date.parse(value.updatedAt) + 1 || 0)).toISOString();
@@ -145,9 +185,9 @@ export function reconcileTrainingChanges(before, state, changes) {
   return state;
 }
 
-export function validateTrainingBatch(before, state, changes) {
+export function validateTrainingBatch(before: SyncDomainState, state: SyncWorkingState, changes: SyncChange[]): void {
   for (const change of changes.filter(entry => TRAINING_COLLECTIONS.includes(entry.collection) && entry.value)) {
-    const value = find(state, change.collection, change.id);
+    const value = find(state, change.collection, change.id)!;
     const previous = find(before, change.collection, change.id);
     if (
       change.collection === 'questions' &&
@@ -157,7 +197,7 @@ export function validateTrainingBatch(before, state, changes) {
           ['questionObjectives', 'questionSources'].includes(entry.collection) &&
           (entry.value?.questionId ?? find(before, entry.collection, entry.id)?.questionId) === value.id
       ) &&
-      value.version <= previous.version
+      value.version! <= previous.version!
     )
       fail('QUESTION_VERSION_CONFLICT', '试题关联修改需要递增版本。');
     if (change.collection === 'learningObjectives') {
@@ -167,20 +207,20 @@ export function validateTrainingBatch(before, state, changes) {
         (!parent || parent.deletedAt || (!previous && parent.reviewStatus === 'archived'))
       )
         fail('KNOWLEDGE_ITEM_NOT_ACTIVE', '学习目标创建和恢复需要可用所属知识。');
-      if (change.value.reviewStatus === 'confirmed' && !value.deletedAt)
+      if (change.value!.reviewStatus === 'confirmed' && !value.deletedAt)
         assertLearningObjectiveConfirmable(value, parent);
     }
     if (change.collection === 'examFocuses') {
       const profile = find(state, 'examProfiles', value.examProfileId);
       const objective = find(state, 'learningObjectives', value.learningObjectiveId);
       const confirming =
-        change.value.reviewStatus === 'confirmed' && (!previous || previous.reviewStatus !== 'confirmed');
+        change.value!.reviewStatus === 'confirmed' && (!previous || previous.reviewStatus !== 'confirmed');
       if (!previous || (!value.deletedAt && previous.deletedAt) || confirming) {
         if (!profile || profile.deletedAt || ((!previous || confirming) && profile.archivedAt))
           fail('EXAM_PROFILE_NOT_ACTIVE', '考点需要可用考试配置。');
-        if (!objective || objective.deletedAt || ((!previous || confirming) && objective.reviewStatus === 'archived'))
+        if (!objective || objective.deletedAt || ((!previous || confirming) && objective!.reviewStatus === 'archived'))
           fail('LEARNING_OBJECTIVE_NOT_ACTIVE', '考点需要可用学习目标。');
-        if (change.value.reviewStatus === 'confirmed' && objective.reviewStatus !== 'confirmed')
+        if (change.value!.reviewStatus === 'confirmed' && objective!.reviewStatus !== 'confirmed')
           fail('LEARNING_OBJECTIVE_NOT_CONFIRMED', '考点确认需要已确认学习目标。');
       }
     }
@@ -193,12 +233,14 @@ export function validateTrainingBatch(before, state, changes) {
       change.collection === 'questionSources' &&
       (!previous || previous.sourceId !== value.sourceId || previous.sourceType !== value.sourceType)
     ) {
-      const collection = {
-        knowledgeItem: 'knowledgeItems',
-        learningObjective: 'learningObjectives',
-        noteVersion: 'noteVersions',
-        knowledgeEvidence: 'knowledgeEvidence'
-      }[value.sourceType];
+      const collection = (
+        {
+          knowledgeItem: 'knowledgeItems',
+          learningObjective: 'learningObjectives',
+          noteVersion: 'noteVersions',
+          knowledgeEvidence: 'knowledgeEvidence'
+        } as Partial<Record<string, SyncCollection>>
+      )[value.sourceType!];
       if (collection) {
         const source = find(state, collection, value.sourceId);
         if (
@@ -218,7 +260,7 @@ export function validateTrainingBatch(before, state, changes) {
       )
     )
       fail('TRAINING_ASSET_RESTORE_BLOCKED', '请先恢复题目关联的学习目标。');
-    if (change.collection === 'questions' && change.value.reviewStatus === 'confirmed' && !value.deletedAt)
+    if (change.collection === 'questions' && change.value!.reviewStatus === 'confirmed' && !value.deletedAt)
       assertQuestionConfirmable(value, {
         objectives: state.questionObjectives
           .filter(link => link.questionId === value.id)

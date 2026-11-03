@@ -57,7 +57,10 @@ export interface SyncJournal {
 export const syncKey = (collection: string, id: string) => JSON.stringify([collection, id]);
 export const syncError = (code: string, message: string, status = 409) => createAppError(code, message, status);
 export const requestHash = <T>(value: T) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-export const thenResult = <T, R>(value: T | PromiseLike<T>, callback: (value: T) => R): R | PromiseLike<R> =>
+export const thenResult = <T, R>(
+  value: T | PromiseLike<T>,
+  callback: (value: T) => R | PromiseLike<R>
+): R | PromiseLike<R> =>
   value && typeof (value as PromiseLike<T>).then === 'function'
     ? (value as PromiseLike<T>).then(callback)
     : callback(value as T);

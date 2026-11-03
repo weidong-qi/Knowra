@@ -1,13 +1,29 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type {
+  PreparedSyncAttachment,
+  SyncAttachmentTransfer,
+  SyncBatchOperation,
+  SyncBatchProvider,
+  SyncBatchResult,
+  SyncBlobInput,
+  SyncCollection,
+  SyncDomainState,
+  SyncEntity
+} from './domain-types.ts';
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertSyncContract } from './protocol-contract.ts';
 import { assertSyncDeviceEnabled } from './rollout-policy.ts';
 import { WRITABLE_COLLECTIONS, changeReferencesFor, sameEntity } from './entity-contract.ts';
-import { prepareBatchState } from './batch-domain.js';
+import { prepareBatchState } from './batch-domain.ts';
 import { pruneTouchedNoteVersions } from './version-retention.ts';
 import { syncError, syncKey, requestHash, thenResult, rememberBatchReceipt } from './journal.ts';
 
-export function createBatchSyncService(provider, ownerId, transfer) {
-  function validate(op) {
+export function createBatchSyncService(
+  provider: SyncBatchProvider,
+  ownerId: string,
+  transfer?: SyncAttachmentTransfer
+) {
+  function validate(op: SyncBatchOperation): void {
     assertSyncContract(op);
     if (
       op?.protocolVersion !== 2 ||
@@ -45,13 +61,13 @@ export function createBatchSyncService(provider, ownerId, transfer) {
     }
   }
   return {
-    uploadBlob: body => {
+    uploadBlob: (body: SyncBlobInput) => {
       assertSyncContract(body);
       assertSyncDeviceEnabled(body?.deviceId);
       if (!transfer) throw syncError('SYNC_UNAVAILABLE', '此服务未配置附件传输。', 503);
       return transfer.put(body);
     },
-    async pushBatch(op) {
+    async pushBatch(op: SyncBatchOperation): Promise<SyncBatchResult> {
       validate(op);
       const key = JSON.stringify([op.deviceId, op.operationId]);
       const hash = requestHash(op);
@@ -59,9 +75,11 @@ export function createBatchSyncService(provider, ownerId, transfer) {
       const saved = await provider.read((_state, journal) => {
         if (journal.epoch !== op.datasetEpoch) throw syncError('DATASET_CHANGED', '云端资料库已变化。');
         if (!journal.receipts[key] && (journal.deviceSequences?.[op.deviceId] ?? 0) >= op.sequence) {
-          /** @type {import('../../errors/app-error.ts').AppError & {details?: {lastSequence: number}}} */
-          const error = syncError('SYNC_OPERATION_EXPIRED', '此设备操作已过确认保留期，请重新核对云端基线。');
-          error.details = { lastSequence: journal.deviceSequences[op.deviceId] };
+          const error: AppError & { details?: { lastSequence: number } } = syncError(
+            'SYNC_OPERATION_EXPIRED',
+            '此设备操作已过确认保留期，请重新核对云端基线。'
+          );
+          error.details = { lastSequence: journal.deviceSequences![op.deviceId] };
           throw error;
         }
         return journal.receipts[key];
@@ -70,7 +88,7 @@ export function createBatchSyncService(provider, ownerId, transfer) {
         if (saved.hash !== hash) throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
         return saved.result;
       }
-      const prepared = {};
+      const prepared: Record<string, PreparedSyncAttachment> = {};
       for (const entry of op.changes)
         if (entry.collection === 'attachments' && entry.value) {
           if (!transfer) throw syncError('SYNC_UNAVAILABLE', '此服务未配置附件传输。', 503);
@@ -106,10 +124,12 @@ export function createBatchSyncService(provider, ownerId, transfer) {
           return result;
         }
         // 仅供引用查找的后像不修改记录；替换受影响集合，避免复制所有历史正文。
-        const referenceState = { ...state };
+        const referenceState: SyncDomainState = { ...state };
         for (const entry of op.changes) {
-          referenceState[entry.collection] = referenceState[entry.collection].filter(value => value.id !== entry.id);
-          if (entry.value) referenceState[entry.collection].push(entry.value);
+          (referenceState as Record<SyncCollection, SyncEntity[]>)[entry.collection] = (
+            referenceState[entry.collection] as SyncEntity[]
+          ).filter(value => value.id !== entry.id);
+          if (entry.value) (referenceState[entry.collection] as SyncEntity[]).push(entry.value);
         }
         for (const entry of op.changes)
           for (const ref of changeReferencesFor(entry, state, referenceState)) {
@@ -117,11 +137,11 @@ export function createBatchSyncService(provider, ownerId, transfer) {
             if (!changes.has(refKey) && !dependencies.has(refKey))
               throw syncError('SYNC_DEPENDENCY_REQUIRED', '同步事务缺少引用对象的基线。', 422);
           }
-        let next, aliases;
+        let next: SyncDomainState, aliases: Record<string, string>;
         try {
           ({ state: next, aliases } = prepareBatchState(state, op.changes, ownerId, prepared));
         } catch (failure) {
-          if (failure.statusCode) throw failure;
+          if ((failure as AppError).statusCode) throw failure;
           throw syncError('SYNC_ENTITY_INVALID', '同步实体字段无效，请导出恢复记录并核对资料。', 422);
         }
         return thenResult(provider.historyReferences ? provider.historyReferences() : [], references => {

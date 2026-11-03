@@ -1,3 +1,11 @@
+import type {
+  SyncCollection,
+  SyncDomainState,
+  SyncEntity,
+  SyncChange,
+  SyncWorkingState,
+  SyncWorkingEntity
+} from './domain-types.ts';
 import { KnowledgeItem } from '../knowledge/domain/knowledge-item.js';
 import { KnowledgeEvidence } from '../knowledge/domain/knowledge-evidence.js';
 import {
@@ -8,16 +16,35 @@ import { assertKnowledgeItemConfirmable } from '../knowledge/application/formal-
 import { sameEntity } from './entity-contract.ts';
 import { syncError } from './journal.ts';
 
-export function normalizeKnowledgeChange(collection, value, previous) {
+export function normalizeKnowledgeChange<Collection extends SyncCollection>(
+  collection: Collection,
+  value: SyncWorkingEntity<Collection> | null,
+  previous?: SyncEntity<Collection>
+): SyncWorkingEntity<Collection> | null;
+export function normalizeKnowledgeChange(
+  collection: SyncCollection,
+  value: SyncWorkingEntity | null,
+  _previous?: SyncEntity
+): SyncWorkingEntity | null {
   if (!['knowledgeItems', 'knowledgeEvidence'].includes(collection)) return value;
   if (!value) throw syncError('SYNC_KNOWLEDGE_DELETE_UNSUPPORTED', '知识与来源不能通过同步永久删除，请使用归档。', 422);
   if (collection === 'knowledgeItems') {
-    return { ...new KnowledgeItem({ ...value, ...buildCreateKnowledgeItemDto(value) }) };
+    return {
+      ...new KnowledgeItem({
+        ...(value as SyncEntity<'knowledgeItems'>),
+        ...buildCreateKnowledgeItemDto(value as SyncEntity<'knowledgeItems'>)
+      })
+    };
   }
-  return { ...new KnowledgeEvidence({ ...value, ...buildCreateKnowledgeEvidenceDto(value) }) };
+  return {
+    ...new KnowledgeEvidence({
+      ...(value as SyncEntity<'knowledgeEvidence'>),
+      ...buildCreateKnowledgeEvidenceDto(value as SyncEntity<'knowledgeEvidence'>)
+    })
+  };
 }
 
-export function validateKnowledgeLifecycleChange(change, previous) {
+export function validateKnowledgeLifecycleChange(change: SyncChange, previous: SyncEntity | undefined): void {
   const { collection, value, lifecycleAction } = change;
   if (!value || !previous) return;
   if (collection === 'knowledgeItems') {
@@ -43,10 +70,10 @@ export function validateKnowledgeLifecycleChange(change, previous) {
 }
 
 /** 来源是不可变证据，只有健康状态可由云端重算；不能用客户端 status 绕过确认门槛。 */
-export function validateKnowledgeBatch(before, state, changes) {
+export function validateKnowledgeBatch(before: SyncDomainState, state: SyncWorkingState, changes: SyncChange[]): void {
   for (const change of changes.filter(entry => entry.collection === 'knowledgeEvidence' && entry.value)) {
     if (before.knowledgeEvidence.some(entry => entry.id === change.id)) continue;
-    const evidence = state.knowledgeEvidence.find(entry => entry.id === change.id);
+    const evidence = state.knowledgeEvidence.find(entry => entry.id === change.id)!;
     const annotation = state.contentAnnotations.find(entry => entry.id === evidence.annotationId);
     const version = state.noteVersions.find(entry => entry.id === evidence.noteVersionId);
     if (evidence.sourceType === 'annotation') {
@@ -87,10 +114,10 @@ export function validateKnowledgeBatch(before, state, changes) {
     }
   }
   for (const change of changes.filter(entry => entry.collection === 'knowledgeItems' && entry.value)) {
-    const item = state.knowledgeItems.find(entry => entry.id === change.id);
+    const item = state.knowledgeItems.find(entry => entry.id === change.id)!;
     const evidence = state.knowledgeEvidence.filter(entry => entry.knowledgeItemId === item.id);
     if (item.sourceMode !== 'manual' && !evidence.length)
       throw syncError('KNOWLEDGE_EVIDENCE_REQUIRED', '非手动知识必须包含来源证据。', 422);
-    if (change.value.reviewStatus === 'confirmed' && !item.deletedAt) assertKnowledgeItemConfirmable(item, evidence);
+    if (change.value!.reviewStatus === 'confirmed' && !item.deletedAt) assertKnowledgeItemConfirmable(item, evidence);
   }
 }

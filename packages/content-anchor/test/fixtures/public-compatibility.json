@@ -1,6 +1,6 @@
 {
   "baselineCommit": "5e80f09c45edd8112b9f3cdd7345bf1cfb345277",
-  "declarationsSha256": "0ca9a932ee8ecf52f4a21490b5f21cf4d46d24f6eb815c4af7628c09c7f61509",
+  "declarationsSha256": "ca174fb69ec0dde2d912bbdc24d68eb3a5074938afb2c4df439d31fa21a6cbe4",
   "packageContract": {
     "name": "@study-accelerator/content-anchor",
     "type": "module",

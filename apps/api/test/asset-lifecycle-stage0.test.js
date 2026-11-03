@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
 
-const attachmentUrl = (id) => `/api/storage/attachments/${id}/content`;
+const attachmentUrl = id => `/api/storage/attachments/${id}/content`;
 
 export const assetLifecycleStage0Tests = [
   {
@@ -24,14 +24,17 @@ export const assetLifecycleStage0Tests = [
       const before = structuredClone(state);
       const report = inspectAttachmentDeletion(id, state);
       assert.equal(report.decision, 'requires-dependency-action');
-      assert.deepEqual(report.references.map(({ category, collection, id: refId }) => [category, collection, refId]), [
-        ['shared', 'notes', 'active'],
-        ['shared', 'notes', 'trash'],
-        ['history', 'noteVersions', 'version'],
-        ['independent', 'questionSources', 'source'],
-        ['history', 'analysisScopeSnapshots', 'scope']
-      ]);
-      assert.equal(report.references.find((reference) => reference.id === 'trash').retention, 'recycle-bin');
+      assert.deepEqual(
+        report.references.map(({ category, collection, id: refId }) => [category, collection, refId]),
+        [
+          ['shared', 'notes', 'active'],
+          ['shared', 'notes', 'trash'],
+          ['history', 'noteVersions', 'version'],
+          ['independent', 'questionSources', 'source'],
+          ['history', 'analysisScopeSnapshots', 'scope']
+        ]
+      );
+      assert.equal(report.references.find(reference => reference.id === 'trash').retention, 'recycle-bin');
       assert.deepEqual(state, before);
       assert.equal(inspectAttachmentDeletion('unused', state).decision, 'can-purge-no-history');
     }
@@ -42,19 +45,28 @@ export const assetLifecycleStage0Tests = [
       const { createServer } = await import('../src/server.js');
       let reads = 0;
       const server = createServer({
-        appContext: { http: { knowledge: {}, storage: {
-          inspectAttachmentDeletion: ({ id }) => {
-            reads += 1;
-            return { asset: { type: 'attachment', id }, decision: 'requires-dependency-action', references: [] };
-          },
-          deleteAttachment: () => { throw new Error('unexpected deletion'); }
-        } } },
+        appContext: {
+          http: {
+            knowledge: {},
+            storage: {
+              inspectAttachmentDeletion: ({ id }) => {
+                reads += 1;
+                return { asset: { type: 'attachment', id }, decision: 'requires-dependency-action', references: [] };
+              },
+              deleteAttachment: () => {
+                throw new Error('unexpected deletion');
+              }
+            }
+          }
+        },
         logger: { error() {} }
       });
       server.listen(0, '127.0.0.1');
       await once(server, 'listening');
       try {
-        const response = await fetch(`http://127.0.0.1:${server.address().port}/api/storage/attachments/example/deletion-preflight`);
+        const response = await fetch(
+          `http://127.0.0.1:${server.address().port}/api/storage/attachments/example/deletion-preflight`
+        );
         assert.equal(response.status, 200);
         assert.deepEqual((await response.json()).data.asset, { type: 'attachment', id: 'example' });
         assert.equal(reads, 1);
@@ -77,7 +89,8 @@ export const assetLifecycleStage0Tests = [
           storageRootDir: root
         });
         const attachment = store.uploadAttachment({
-          noteId: 'note-1', fileName: 'keep.txt',
+          noteId: 'note-1',
+          fileName: 'keep.txt',
           contentBase64: Buffer.from('keep').toString('base64')
         });
         const file = path.join(root, 'uploads', `${attachment.id}-${attachment.fileName}`);
@@ -100,18 +113,29 @@ export const assetLifecycleStage0Tests = [
     async run() {
       const { createPostgresAttachmentStore } = await import('../src/infrastructure/postgres-attachment-store.js');
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-stage0-postgres-'));
-      const attachment = { id: 'attachment-pg', noteId: 'note-1', fileName: 'keep.txt', storagePath: 'storage/uploads/attachment-pg-keep.txt' };
+      const attachment = {
+        id: 'attachment-pg',
+        noteId: 'note-1',
+        fileName: 'keep.txt',
+        storagePath: 'storage/uploads/attachment-pg-keep.txt'
+      };
       let deleted = false;
       let transactionCount = 0;
       const state = { noteVersions: [{ id: 'version-1', content: attachmentUrl(attachment.id) }] };
       try {
         const store = createPostgresAttachmentStore({
           attachmentRepository: {
-            findById: async () => deleted ? null : attachment,
-            delete: async () => { deleted = true; return attachment; }
+            findById: async () => (deleted ? null : attachment),
+            delete: async () => {
+              deleted = true;
+              return attachment;
+            }
           },
           loadReferenceState: async () => state,
-          runTransaction: async (operation) => { transactionCount += 1; return operation(); },
+          runTransaction: async operation => {
+            transactionCount += 1;
+            return operation();
+          },
           uploadsDir: path.join(root, 'storage', 'uploads'),
           storageRootDir: root
         });
@@ -126,13 +150,18 @@ export const assetLifecycleStage0Tests = [
         const unguarded = createPostgresAttachmentStore({
           attachmentRepository: {
             findById: async () => attachment,
-            delete: async () => { deleted = true; return attachment; }
+            delete: async () => {
+              deleted = true;
+              return attachment;
+            }
           },
           loadReferenceState: async () => ({}),
           uploadsDir: path.join(root, 'storage', 'uploads'),
           storageRootDir: root
         });
-        await assert.rejects(() => unguarded.deleteAttachment(attachment.id), { code: 'ATTACHMENT_PREFLIGHT_UNAVAILABLE' });
+        await assert.rejects(() => unguarded.deleteAttachment(attachment.id), {
+          code: 'ATTACHMENT_PREFLIGHT_UNAVAILABLE'
+        });
         assert.equal(deleted, false);
         state.notes.length = 0;
         await store.deleteAttachment(attachment.id);
@@ -156,7 +185,8 @@ export const assetLifecycleStage0Tests = [
           storageRootDir: root
         });
         const attachment = store.uploadAttachment({
-          noteId: 'note-owner', fileName: 'shared.txt',
+          noteId: 'note-owner',
+          fileName: 'shared.txt',
           contentBase64: Buffer.from('shared').toString('base64')
         });
         state.notes.push({ id: 'note-other', rawMarkdown: attachmentUrl(attachment.id) });
@@ -176,21 +206,35 @@ export const assetLifecycleStage0Tests = [
         const app = createPersistentAppContext({ storageRootDir: root, ownerId: 'stage0-owner' });
         const space = app.http.knowledge.createDefaultKnowledgeSpace({});
         const owner = app.http.knowledge.createNote({
-          id: 'stage0-owner-note', spaceId: space.id, title: '附件所属', rawMarkdown: '所属正文'
+          id: 'stage0-owner-note',
+          spaceId: space.id,
+          title: '附件所属',
+          rawMarkdown: '所属正文'
         });
         const attachment = app.http.storage.uploadAttachment({
-          noteId: owner.id, fileName: 'shared.txt',
+          noteId: owner.id,
+          fileName: 'shared.txt',
           contentBase64: Buffer.from('shared').toString('base64')
         });
         app.http.knowledge.createNote({
-          id: 'stage0-other-note', spaceId: space.id, title: '其他正文',
+          id: 'stage0-other-note',
+          spaceId: space.id,
+          title: '其他正文',
           rawMarkdown: attachmentUrl(attachment.id)
         });
         app.http.knowledge.deleteNote({ id: owner.id });
-        assert.throws(() => app.http.knowledge.permanentlyDeleteNote({ id: owner.id }), { code: 'ATTACHMENT_REFERENCED' });
-        assert.equal(app.dataStore.state.notes.find((note) => note.id === owner.id).deleted, true);
-        assert.equal(app.dataStore.state.attachments.some((item) => item.id === attachment.id), true);
-        assert.equal(app.dataStore.state.noteVersions.some((version) => version.noteId === owner.id), true);
+        assert.throws(() => app.http.knowledge.permanentlyDeleteNote({ id: owner.id }), {
+          code: 'ATTACHMENT_REFERENCED'
+        });
+        assert.equal(app.dataStore.state.notes.find(note => note.id === owner.id).deleted, true);
+        assert.equal(
+          app.dataStore.state.attachments.some(item => item.id === attachment.id),
+          true
+        );
+        assert.equal(
+          app.dataStore.state.noteVersions.some(version => version.noteId === owner.id),
+          true
+        );
         assert.equal(fs.existsSync(path.join(root, attachment.storagePath)), true);
       } finally {
         fs.rmSync(root, { recursive: true, force: true });
@@ -200,24 +244,32 @@ export const assetLifecycleStage0Tests = [
   {
     name: 'PostgreSQL 笔记清理在事务内阻止其他资产共用附件',
     async run() {
-      const { createAsyncNoteDeletionCoordinator } = await import('../src/modules/knowledge/application/postgres-async/note-deletion-coordinator.js');
+      const { createAsyncNoteDeletionCoordinator } =
+        await import('../src/modules/knowledge/application/postgres-async/note-deletion-coordinator.js');
       let deleted = false;
       let includeOther = true;
       const coordinator = createAsyncNoteDeletionCoordinator({
         noteService: {
-          async permanentlyDeleteNote() { deleted = true; return { id: 'note-owner' }; }
-        },
-        attachmentStore: {
-          async listAttachments() { return [{ id: 'shared', noteId: 'note-owner' }]; },
-          async inspectAttachmentDeletion() {
-            return { references: [
-              { collection: 'notes', id: 'note-owner' },
-              { collection: 'noteVersions', id: 'version-owner', noteId: 'note-owner' },
-              ...(includeOther ? [{ collection: 'notes', id: 'note-other' }] : [])
-            ] };
+          async permanentlyDeleteNote() {
+            deleted = true;
+            return { id: 'note-owner' };
           }
         },
-        runTransaction: async (operation) => operation()
+        attachmentStore: {
+          async listAttachments() {
+            return [{ id: 'shared', noteId: 'note-owner' }];
+          },
+          async inspectAttachmentDeletion() {
+            return {
+              references: [
+                { collection: 'notes', id: 'note-owner' },
+                { collection: 'noteVersions', id: 'version-owner', noteId: 'note-owner' },
+                ...(includeOther ? [{ collection: 'notes', id: 'note-other' }] : [])
+              ]
+            };
+          }
+        },
+        runTransaction: async operation => operation()
       });
       await assert.rejects(() => coordinator.permanentlyDeleteNote('note-owner'), { code: 'ATTACHMENT_REFERENCED' });
       assert.equal(deleted, false);
@@ -230,13 +282,25 @@ export const assetLifecycleStage0Tests = [
     name: '同步批次不能删除仍被历史版本引用的附件',
     async run() {
       const { createEmptyLocalState } = await import('../src/infrastructure/local-data-schema.js');
-      const { prepareBatchState } = await import('../src/modules/sync/batch-domain.js');
+      const { prepareBatchState } = await import('../src/modules/sync/batch-domain.ts');
       const before = createEmptyLocalState();
       before.attachments.push({ id: 'attachment-sync' });
       before.noteVersions.push({ id: 'version-sync', content: attachmentUrl('attachment-sync') });
-      assert.throws(() => prepareBatchState(before, [{
-        collection: 'attachments', id: 'attachment-sync', value: null
-      }], 'demo'), { code: 'ATTACHMENT_REFERENCED' });
+      assert.throws(
+        () =>
+          prepareBatchState(
+            before,
+            [
+              {
+                collection: 'attachments',
+                id: 'attachment-sync',
+                value: null
+              }
+            ],
+            'demo'
+          ),
+        { code: 'ATTACHMENT_REFERENCED' }
+      );
       assert.equal(before.attachments.length, 1);
     }
   },
@@ -247,7 +311,10 @@ export const assetLifecycleStage0Tests = [
       const snapshots = [];
       const knowledge = createKnowledgeModule({ analysisScopeSnapshots: snapshots });
       const note = knowledge.noteService.createNote({
-        id: 'stage0-protected-note', spaceId: 'space-demo', title: '来源', rawMarkdown: '保留正文'
+        id: 'stage0-protected-note',
+        spaceId: 'space-demo',
+        title: '来源',
+        rawMarkdown: '保留正文'
       });
       const version = knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
       snapshots.push({ id: 'scope-1', noteVersions: [{ noteVersionId: version.id }] });

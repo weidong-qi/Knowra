@@ -8,7 +8,7 @@ import {
   isMarksOnlyChange,
   planInlineAnnotations
 } from '../src/modules/knowledge/application/inline-annotations.js';
-import { prepareBatchState } from '../src/modules/sync/batch-domain.js';
+import { prepareBatchState } from '../src/modules/sync/batch-domain.ts';
 import { listAnnotatedRanges } from '../src/modules/ai/annotation-read-tool.js';
 import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.ts';
 import { applyPostgresState } from '../src/modules/sync/postgres-batch.js';

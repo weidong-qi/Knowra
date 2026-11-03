@@ -9,7 +9,7 @@ import { createServer } from '../../api/src/server.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { nextEntityUpload, acknowledgeEntityUpload } from '../src/entity-sync-state.mjs';
-import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.js';
+import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
 import { TRAINING_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.ts';
 import { assertSyncContract, syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { temporaryDirectory, openWorkspace } from './helpers.mjs';

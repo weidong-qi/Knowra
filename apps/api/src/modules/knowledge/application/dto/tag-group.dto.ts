@@ -35,6 +35,10 @@ function selectionMode(value: unknown = 'multiple'): unknown {
   return value;
 }
 
+export function buildCreateTagGroupDto<Input extends TagGroupDtoInput>(
+  input: Input
+): Omit<CreateTagGroupDto, 'selectionMode'> & { selectionMode: NonNullable<Input['selectionMode']> | 'multiple' };
+export function buildCreateTagGroupDto(input?: TagGroupDtoInput): CreateTagGroupDto;
 export function buildCreateTagGroupDto(input: TagGroupDtoInput = {}): CreateTagGroupDto {
   const name = requireText(input.name, 'TAG_GROUP_NAME_REQUIRED', 'Tag group name is required');
   return {

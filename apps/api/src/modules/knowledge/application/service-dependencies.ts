@@ -58,9 +58,17 @@ export interface AsyncNoteVersionDependencies {
     typeof import('../infrastructure/postgres/note-version-repository.js').createPostgresNoteVersionRepository
   >;
 }
+export interface ContentAnnotationNoteRepository {
+  findById(
+    id: string | null | undefined
+  ): Pick<
+    import('../infrastructure/note-repository.ts').NoteRecord,
+    'id' | 'title' | 'rawMarkdown' | 'spaceId' | 'deleted' | 'contentHash' | 'annotationStructure'
+  > | null;
+}
 export interface ContentAnnotationDependencies {
   repository?: ContentAnnotationRepository;
-  noteRepository?: Pick<NoteRepository, 'findById'>;
+  noteRepository?: ContentAnnotationNoteRepository;
   noteVersionRepository?: NoteVersionRepository;
   revisionRepository?: import('../infrastructure/annotation-support-repositories.ts').AnnotationRevisionRepository<ServiceAnnotationRevision>;
   exclusionRepository?: import('../infrastructure/annotation-support-repositories.ts').AnnotationExclusionRepository<ServiceAnnotationExclusion>;
@@ -73,8 +81,8 @@ interface ServiceAnnotationRevision {
   id: string;
   annotationId: string;
   revision: number;
-  oldAnchor?: ContentAnchor & { noteVersionId?: string };
-  newAnchor?: ContentAnchor & { noteVersionId?: string };
+  oldAnchor?: (ContentAnchor & { noteVersionId?: string }) | null;
+  newAnchor?: (ContentAnchor & { noteVersionId?: string }) | null;
   operation: string;
   rangeSummary: { scopeType: string; quoteText: string };
   reason?: string | null;

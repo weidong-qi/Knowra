@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.js';
 import { createSyncService } from '../../api/src/modules/sync/service.js';
-import { createBatchSyncService } from '../../api/src/modules/sync/batch-service.js';
+import { createBatchSyncService } from '../../api/src/modules/sync/batch-service.ts';
 import { createJournal, requestHash } from '../../api/src/modules/sync/journal.ts';
 import { assertSyncContract, syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { sameEntity } from '../../api/src/modules/sync/entity-contract.ts';

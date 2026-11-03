@@ -1,9 +1,19 @@
+import type { Note } from '../knowledge/domain/note.ts';
+import type {
+  LocalSyncDataStore,
+  LocalSyncProvider,
+  SyncAttachmentTransfer,
+  SyncCollection,
+  SyncEntity,
+  SyncNoteOperation,
+  SyncNoteService
+} from './domain-types.ts';
 import { createSyncService } from './service.js';
-import { createBatchSyncService } from './batch-service.js';
+import { createBatchSyncService } from './batch-service.ts';
 import { thenResult } from './journal.ts';
 import { compactSnapshotEntries, readCompactSnapshot } from './compact-snapshot.ts';
 
-export function applyNoteOperation(service, operation, current) {
+export function applyNoteOperation(service: SyncNoteService, operation: SyncNoteOperation, current: Note | null) {
   const { deleted, ...fields } = operation.value;
   if (!current)
     return thenResult(service.createNote({ id: operation.noteId, ...fields }), () =>
@@ -17,26 +27,35 @@ export function applyNoteOperation(service, operation, current) {
   );
 }
 
-export function createLocalSyncService(dataStore, noteService, ownerId, transfer) {
+export function createLocalSyncService(
+  dataStore: LocalSyncDataStore,
+  noteService: SyncNoteService,
+  ownerId: string,
+  transfer?: SyncAttachmentTransfer
+) {
   if (!dataStore.getSyncJournal) return null;
-  const provider = {
+  const provider: LocalSyncProvider = {
     historyReferences: () => (dataStore.getHistoryRetentionReferences ? dataStore.getHistoryRetentionReferences() : []),
     snapshotEntries: compactSnapshotEntries,
     readSnapshotEntries: readCompactSnapshot,
     mutateJournal: callback =>
       dataStore.runSyncJournalTransaction
-        ? dataStore.runSyncJournalTransaction(() => callback(dataStore.state, dataStore.getSyncJournal()))
-        : dataStore.runSyncTransaction(() => callback(dataStore.state, dataStore.getSyncJournal())),
-    read: callback => callback(dataStore.state, dataStore.getSyncJournal()),
-    mutate: callback => dataStore.runSyncTransaction(() => callback(dataStore.state, dataStore.getSyncJournal())),
+        ? dataStore.runSyncJournalTransaction(() => callback(dataStore.state, dataStore.getSyncJournal!()))
+        : dataStore.runSyncTransaction(() => callback(dataStore.state, dataStore.getSyncJournal!())),
+    read: callback => callback(dataStore.state, dataStore.getSyncJournal!()),
+    mutate: callback => dataStore.runSyncTransaction(() => callback(dataStore.state, dataStore.getSyncJournal!())),
     mutateBatch: callback =>
       (dataStore.runSyncBatchTransaction ?? dataStore.runSyncTransaction)(() =>
-        callback(dataStore.state, dataStore.getSyncJournal())
+        callback(dataStore.state, dataStore.getSyncJournal!())
       ),
     preview: () => ({ state: dataStore.state, journal: dataStore.previewSyncJournal() }),
     applyState: next => {
       for (const [collection, items] of Object.entries(next))
-        dataStore.state[collection].splice(0, dataStore.state[collection].length, ...items);
+        (dataStore.state[collection as SyncCollection] as SyncEntity[]).splice(
+          0,
+          dataStore.state[collection as SyncCollection].length,
+          ...items
+        );
     },
     applyNote: (operation, current) => applyNoteOperation(noteService, operation, current)
   };
