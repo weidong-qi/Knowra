@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { hashRecord } from './record-contract.ts';
 import { accessError } from './access-records.js';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';

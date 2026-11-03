@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { _electron as electron, expect } from '@playwright/test';
-import { Note } from '../../api/src/modules/knowledge/domain/note.js';
+import { Note } from '../../api/src/modules/knowledge/domain/note.ts';
 import { openWorkspace } from '../../desktop-runtime/test/helpers.mjs';
 import { writeMeta } from '../../desktop-runtime/src/sync-state.mjs';
 import { executablePath } from './packaged-app-path.mjs';

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
-import { calculateContentHash } from '../../api/src/modules/knowledge/domain/note-version.js';
+import { calculateContentHash } from '../../api/src/modules/knowledge/domain/note-version.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 
 const sizes = process.argv.slice(2).map(Number).filter(Boolean);

@@ -6,7 +6,7 @@ import { createBatchSyncService } from '../../api/src/modules/sync/batch-service
 import { createJournal, requestHash } from '../../api/src/modules/sync/journal.ts';
 import { assertSyncContract, syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { sameEntity } from '../../api/src/modules/sync/entity-contract.ts';
-import { Note } from '../../api/src/modules/knowledge/domain/note.js';
+import { Note } from '../../api/src/modules/knowledge/domain/note.ts';
 import { reorderJsonObjectKeys } from './fixtures/sync-json-order.mjs';
 
 test('笔记实体比较忽略嵌套JSON对象键序，仍区分字段值和数组顺序且不改原请求hash', () => {

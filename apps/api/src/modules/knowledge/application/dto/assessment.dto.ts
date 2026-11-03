@@ -1,8 +1,8 @@
 import { createPrefixedId, requireText } from './_shared.ts';
 import { validationError } from '../knowledge-errors.js';
-import { QUESTION_SOURCE_TYPES } from '../../domain/question-source.js';
-import { QUESTION_TYPES, QUESTION_SOURCE_MODES, QUESTION_DIFFICULTIES } from '../../domain/question.js';
-import { EXAM_FOCUS_DIFFICULTY_HINTS } from '../../domain/exam-focus.js';
+import { QUESTION_SOURCE_TYPES } from '../../domain/question-source.ts';
+import { QUESTION_TYPES, QUESTION_SOURCE_MODES, QUESTION_DIFFICULTIES } from '../../domain/question.ts';
+import { EXAM_FOCUS_DIFFICULTY_HINTS } from '../../domain/exam-focus.ts';
 
 export interface AssessmentDtoInput {
   id?: unknown;

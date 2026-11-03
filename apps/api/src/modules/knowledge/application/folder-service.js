@@ -1,4 +1,4 @@
-import { Folder } from '../domain/folder.js';
+import { Folder } from '../domain/folder.ts';
 import { buildCreateFolderDto, buildUpdateFolderDto } from './dto/folder.dto.ts';
 import { createInMemoryFolderRepository } from '../infrastructure/folder-repository.js';
 import { conflictError, notFoundError } from './knowledge-errors.js';

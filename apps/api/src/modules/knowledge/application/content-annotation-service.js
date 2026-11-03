@@ -14,7 +14,7 @@ import {
   resolveAnchor
 } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../../errors/app-error.js';
-import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.js';
+import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
 import {
   buildCreateContentAnnotationDto,
   buildUpdateAnnotationAnchorDto,

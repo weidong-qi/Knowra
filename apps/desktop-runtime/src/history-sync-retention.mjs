@@ -1,6 +1,6 @@
 import { syncKey } from '../../api/src/modules/sync/journal.ts';
-import { createNoteVersionReferenceIndex } from '../../api/src/modules/knowledge/domain/note-version-references.js';
-import { referencedAnnotationRevisions } from '../../api/src/modules/knowledge/domain/history-retention.js';
+import { createNoteVersionReferenceIndex } from '../../api/src/modules/knowledge/domain/note-version-references.ts';
+import { referencedAnnotationRevisions } from '../../api/src/modules/knowledge/domain/history-retention.ts';
 import { readPrivateHistoryReferences } from './note-version-discard-gate.mjs';
 import { hasDeletionFact } from './sqlite-deletion-facts.mjs';
 

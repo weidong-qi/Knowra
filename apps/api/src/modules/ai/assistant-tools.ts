@@ -1,4 +1,4 @@
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import type { AppError } from '../../errors/app-error.ts';
 import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
 import type {

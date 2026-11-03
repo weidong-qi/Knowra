@@ -1,4 +1,4 @@
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 
 const fail = (code, message) => {
   /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */

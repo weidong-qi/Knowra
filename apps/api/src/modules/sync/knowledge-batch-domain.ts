@@ -8,8 +8,8 @@ import type {
   SyncWorkingEntity,
   SyncRawObject
 } from './domain-types.ts';
-import { KnowledgeItem } from '../knowledge/domain/knowledge-item.js';
-import { KnowledgeEvidence } from '../knowledge/domain/knowledge-evidence.js';
+import { KnowledgeItem } from '../knowledge/domain/knowledge-item.ts';
+import { KnowledgeEvidence } from '../knowledge/domain/knowledge-evidence.ts';
 import {
   buildCreateKnowledgeItemDto,
   buildCreateKnowledgeEvidenceDto

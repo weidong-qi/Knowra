@@ -1,5 +1,5 @@
 import { createAppError } from '../../../errors/app-error.js';
-import { validateKnowledgeArtifactProvenance } from '../domain/knowledge-artifact-provenance-contract.js';
+import { validateKnowledgeArtifactProvenance } from '../domain/knowledge-artifact-provenance-contract.ts';
 
 import type { KnowledgeArtifactProvenance } from '../domain/knowledge-artifact-provenance-contract.ts';
 

@@ -1,7 +1,7 @@
-import { KnowledgeSpace } from '../../domain/knowledge-space.js';
+import { KnowledgeSpace } from '../../domain/knowledge-space.ts';
 import { buildDefaultKnowledgeSpaceDto } from '../dto/knowledge-space.dto.ts';
-import { TagGroup } from '../../domain/tag-group.js';
-import { buildDefaultTagGroups } from '../../domain/default-tag-groups.js';
+import { TagGroup } from '../../domain/tag-group.ts';
+import { buildDefaultTagGroups } from '../../domain/default-tag-groups.ts';
 import { randomUUID } from 'node:crypto';
 import { createAppError } from '../../../../errors/app-error.js';
 

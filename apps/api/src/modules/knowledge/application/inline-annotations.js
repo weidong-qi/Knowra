@@ -7,7 +7,7 @@ import {
   stripKnowraMarksMapped
 } from '@study-accelerator/shared/knowra-marks';
 import { createInlineAnnotationSourceResolver } from './inline-annotation-ranges.js';
-import { ContentAnnotation, INLINE_ANCHOR_FORMAT, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.js';
+import { ContentAnnotation, INLINE_ANCHOR_FORMAT, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
 
 /**
  * 重点内联化 I2（《重点标记内联化方案》3.2）：正文是重点位置的唯一来源，保存时从正文标记派生元数据行。

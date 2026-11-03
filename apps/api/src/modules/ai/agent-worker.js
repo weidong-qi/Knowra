@@ -4,7 +4,7 @@ import { analyzeProposal, proposalProgress } from './proposal-progress.ts';
 export { proposalProgress } from './proposal-progress.ts';
 import { toolsForWriteIntent, toolsForAssistant } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { beijingDay } from './budget-ledger.js';
 import { actualCostMicrounits, quoteWorstCase } from './worker.js';
 import { hashRecord } from './record-contract.ts';

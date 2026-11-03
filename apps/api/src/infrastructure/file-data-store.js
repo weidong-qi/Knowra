@@ -10,7 +10,7 @@ import {
   changedHistoryNoteIds,
   historyRetentionBasis,
   HISTORY_RETENTION_COLLECTIONS
-} from '../modules/knowledge/domain/history-retention.js';
+} from '../modules/knowledge/domain/history-retention.ts';
 import { extractionPageRows } from '../modules/ai/knowledge-extraction-task-page.ts';
 import {
   taskKey,
@@ -36,7 +36,7 @@ import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts
 } from './migration/knowledge-artifact-provenance-backfill.js';
-import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.js';
+import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import {
   appendChanges,
   createJournal,

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { listAnnotatedRanges } from '../src/modules/ai/annotation-read-tool.js';
-import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.js';
+import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 import { knowraCheck, parseKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import { inlineAnnotationSourceRanges } from '../src/modules/knowledge/application/inline-annotation-ranges.js';
-import { planHistoryRetention } from '../src/modules/knowledge/domain/history-retention.js';
+import { planHistoryRetention } from '../src/modules/knowledge/domain/history-retention.ts';
 import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
 import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.ts';
 

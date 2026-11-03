@@ -10,7 +10,7 @@ import { factHash } from '../src/sqlite-deletion-facts-contract.mjs';
 import { readActiveDirectory } from '../src/restore-directory.mjs';
 import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
 import { syntheticProvenanceFixture } from '../../api/test/fixtures/knowledge-artifact-provenance.fixture.js';
-import { createLegacyKnowledgeArtifactProvenance } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+import { createLegacyKnowledgeArtifactProvenance } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { temporaryDirectory } from './helpers.mjs';
 import { mutateBackup, treeHashes } from './fixtures/extraction-backup.fixture.mjs';

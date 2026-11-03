@@ -1,4 +1,4 @@
-import { Note } from '../../domain/note.js';
+import { Note } from '../../domain/note.ts';
 import { buildUpdateNoteDto } from '../dto/note.dto.ts';
 import { validationError } from '../knowledge-errors.js';
 

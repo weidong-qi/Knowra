@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { validateKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+import { validateKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
 export function dbUser(user) {
   return {

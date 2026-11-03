@@ -7,7 +7,7 @@ import {
   hashKnowledgeArtifactProvenance,
   resolveKnowledgeArtifactProvenanceSource,
   validateKnowledgeArtifactProvenance
-} from '../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+} from '../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
 const sha = text => createHash('sha256').update(text, 'utf8').digest('hex');
 const seal = ({ provenanceHash, ...content }) => ({

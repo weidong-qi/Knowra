@@ -6,7 +6,7 @@ import { createFileDataStore } from '../../api/src/infrastructure/file-data-stor
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
-import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.js';
+import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.ts';
 import { anchorForBlock, projectMarkdown, calculateContentHash } from '../../../packages/content-anchor/src/index.js';
 import { SYNC_CLIENT_BATCH_BODY_LIMIT_BYTES } from '@study-accelerator/shared/http-limits';
 import { createSyncEngine } from '../src/sync-engine.mjs';

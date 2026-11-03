@@ -1,7 +1,7 @@
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
-import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.js';
+import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import { selectEntityBatch } from './entity-batches.mjs';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { reconcileSyncedSourceStates } from '../../api/src/infrastructure/local-data-relations.js';

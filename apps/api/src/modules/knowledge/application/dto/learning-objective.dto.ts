@@ -3,7 +3,7 @@ import {
   LEARNING_OBJECTIVE_ACTION_VERBS,
   LEARNING_OBJECTIVE_COGNITIVE_LEVELS,
   LEARNING_OBJECTIVE_DIFFICULTY_HINTS
-} from '../../domain/learning-objective.js';
+} from '../../domain/learning-objective.ts';
 import { validationError } from '../knowledge-errors.js';
 
 export interface LearningObjectiveDtoInput {

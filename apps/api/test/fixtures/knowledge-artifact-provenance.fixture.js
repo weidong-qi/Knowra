@@ -5,7 +5,7 @@ import { hashRecord } from '../../src/modules/ai/record-contract.ts';
 import { validateKnowledgeExtractionResult } from '../../src/modules/knowledge/application/knowledge-extraction-contract.js';
 import { validateKnowledgeExtractionCommit } from '../../src/modules/ai/knowledge-extraction-commit-contract.js';
 import { createKnowledgeArtifactProvenanceFromReceipt } from '../../src/infrastructure/migration/knowledge-artifact-provenance-backfill.js';
-import { validateKnowledgeArtifactProvenance } from '../../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+import { validateKnowledgeArtifactProvenance } from '../../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
 export function syntheticProvenanceFixture({ alias = false, recorded = false } = {}) {
   const time = '2026-10-02T00:00:00.000Z',

@@ -4,7 +4,7 @@ export const noteDomainTests = [
   {
     name: 'Note requires a title',
     async run() {
-      const { Note } = await import('../src/modules/knowledge/domain/note.js');
+      const { Note } = await import('../src/modules/knowledge/domain/note.ts');
 
       assert.throws(() => {
         new Note({
@@ -18,7 +18,7 @@ export const noteDomainTests = [
   {
     name: 'Note accepts an empty markdown body',
     async run() {
-      const { Note } = await import('../src/modules/knowledge/domain/note.js');
+      const { Note } = await import('../src/modules/knowledge/domain/note.ts');
 
       const note = new Note({
         id: 'note-2',
@@ -34,7 +34,7 @@ export const noteDomainTests = [
   {
     name: 'Note requires rawMarkdown to be a string',
     async run() {
-      const { Note } = await import('../src/modules/knowledge/domain/note.js');
+      const { Note } = await import('../src/modules/knowledge/domain/note.ts');
 
       assert.throws(() => {
         new Note({
@@ -48,7 +48,7 @@ export const noteDomainTests = [
   {
     name: 'Note derives plainText from rawMarkdown',
     async run() {
-      const { Note } = await import('../src/modules/knowledge/domain/note.js');
+      const { Note } = await import('../src/modules/knowledge/domain/note.ts');
 
       const note = new Note({
         id: 'note-3',
@@ -64,7 +64,7 @@ export const noteDomainTests = [
   {
     name: 'Note extracts internal note links from rawMarkdown',
     async run() {
-      const { Note } = await import('../src/modules/knowledge/domain/note.js');
+      const { Note } = await import('../src/modules/knowledge/domain/note.ts');
 
       const note = new Note({
         id: 'note-4',
@@ -79,7 +79,7 @@ export const noteDomainTests = [
   {
     name: 'Note keeps favorite status when provided',
     async run() {
-      const { Note } = await import('../src/modules/knowledge/domain/note.js');
+      const { Note } = await import('../src/modules/knowledge/domain/note.ts');
 
       const note = new Note({
         id: 'note-favorite',

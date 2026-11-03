@@ -10,11 +10,11 @@ import type {
   SyncWorkingEntity,
   SyncWorkingMutation
 } from './domain-types.ts';
-import { LearningObjective } from '../knowledge/domain/learning-objective.js';
-import { ExamProfile } from '../knowledge/domain/exam-profile.js';
-import { ExamFocus } from '../knowledge/domain/exam-focus.js';
-import { Question } from '../knowledge/domain/question.js';
-import { QuestionSource } from '../knowledge/domain/question-source.js';
+import { LearningObjective } from '../knowledge/domain/learning-objective.ts';
+import { ExamProfile } from '../knowledge/domain/exam-profile.ts';
+import { ExamFocus } from '../knowledge/domain/exam-focus.ts';
+import { Question } from '../knowledge/domain/question.ts';
+import { QuestionSource } from '../knowledge/domain/question-source.ts';
 import {
   assertLearningObjectiveConfirmable,
   assertQuestionConfirmable

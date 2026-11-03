@@ -7,7 +7,7 @@ import {
   applyHistoryRetentionPlan,
   changedHistoryNoteIds,
   HISTORY_RETENTION_COLLECTIONS
-} from '../../api/src/modules/knowledge/domain/history-retention.js';
+} from '../../api/src/modules/knowledge/domain/history-retention.ts';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import {
   validateSqliteDeletionFacts,
@@ -46,7 +46,7 @@ import {
 } from './knowledge-lifecycle-boundaries.mjs';
 import { recordExamFocusReviewBoundaries, readExamFocusReviewBoundaries } from './exam-focus-review-boundaries.mjs';
 import { projectSqliteProvenance } from './sqlite-provenance-projection.mjs';
-import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.js';
+import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 
 export function createSqliteDataStore(filePath, { beforeCommit = () => {} } = {}) {
   if (fs.existsSync(filePath) && fs.statSync(filePath).size === 0) {

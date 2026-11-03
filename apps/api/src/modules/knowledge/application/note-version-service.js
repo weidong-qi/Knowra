@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { createAppError } from '../../../errors/app-error.js';
-import { NoteVersion, calculateContentHash } from '../domain/note-version.js';
-import { parseVersionPageQuery } from '../domain/note-version-page.js';
+import { NoteVersion, calculateContentHash } from '../domain/note-version.ts';
+import { parseVersionPageQuery } from '../domain/note-version-page.ts';
 
 function versionId() {
   return `note-version-${crypto.randomUUID()}`;

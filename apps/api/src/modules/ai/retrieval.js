@@ -1,4 +1,4 @@
-import { calculateContentHash } from '../knowledge/domain/note-version.js';
+import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { createAuthorizedKeywordSearch } from './keyword-search.js';
 
 const MAX_INDEX_CANDIDATES = 32;

@@ -1,9 +1,9 @@
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { matchesKnowledgeCandidateRequest } from '../knowledge-candidate-retry.js';
 import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from '../knowledge-item-concurrency.js';
-import { KnowledgeItem } from '../../domain/knowledge-item.js';
-import { KnowledgeEvidence } from '../../domain/knowledge-evidence.js';
-import { isEvidenceUsable } from '../../domain/evidence-applicability.js';
+import { KnowledgeItem } from '../../domain/knowledge-item.ts';
+import { KnowledgeEvidence } from '../../domain/knowledge-evidence.ts';
+import { isEvidenceUsable } from '../../domain/evidence-applicability.ts';
 import {
   buildCreateKnowledgeEvidenceDto,
   buildCreateKnowledgeItemDto,
