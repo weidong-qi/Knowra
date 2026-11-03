@@ -19,14 +19,14 @@ import { createPostgresKnowledgeSpaceRepository } from './modules/knowledge/infr
 import { createPostgresContentAnnotationRepository } from './modules/knowledge/infrastructure/postgres/content-annotation-repository.js';
 import { createPostgresAttachmentRepository } from './modules/knowledge/infrastructure/postgres/attachment-repository.js';
 import { createPostgresNoteVersionRepository } from './modules/knowledge/infrastructure/postgres/note-version-repository.js';
-import { createPostgresKnowledgeItemRepository } from './modules/knowledge/infrastructure/postgres/knowledge-item-repository.js';
-import { createPostgresKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-evidence-repository.js';
-import { createPostgresKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.js';
+import { createPostgresKnowledgeItemRepository } from './modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts';
+import { createPostgresKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-evidence-repository.ts';
+import { createPostgresKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
 import { migratePostgresKnowledgeArtifactProvenance } from './infrastructure/migration/postgres-knowledge-artifact-provenance.js';
 import { createPostgresLearningObjectiveRepository } from './modules/knowledge/infrastructure/postgres/learning-objective-repository.ts';
 import { createPostgresExamProfileRepository } from './modules/knowledge/infrastructure/postgres/exam-profile-repository.ts';
 import { createPostgresExamFocusRepository } from './modules/knowledge/infrastructure/postgres/exam-focus-repository.ts';
-import { createPostgresQuestionRepository } from './modules/knowledge/infrastructure/postgres/question-repository.js';
+import { createPostgresQuestionRepository } from './modules/knowledge/infrastructure/postgres/question-repository.ts';
 import { createPostgresQuestionObjectiveRepository } from './modules/knowledge/infrastructure/postgres/question-objective-repository.ts';
 import { createPostgresQuestionSourceRepository } from './modules/knowledge/infrastructure/postgres/question-source-repository.ts';
 import {

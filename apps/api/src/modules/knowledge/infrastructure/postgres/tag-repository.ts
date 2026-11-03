@@ -1,6 +1,6 @@
 import type { TagRepositoryOptions, TagWriteInput, NavigationListOptions } from './navigation-repository-types.ts';
 import { mapTag, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresTagRepository({ db }: TagRepositoryOptions) {
   if (!db?.tag) throw new TypeError('PostgreSQL tag repository requires db.tag');

@@ -8,7 +8,7 @@ import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createAsyncKnowledgeItemService } from '../src/modules/knowledge/application/postgres-async/knowledge-domain-service.js';
 import { createInMemoryKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/knowledge-item-repository.js';
 import { createInMemoryKnowledgeEvidenceRepository } from '../src/modules/knowledge/infrastructure/knowledge-evidence-repository.js';
-import { createPostgresKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/postgres/knowledge-item-repository.js';
+import { createPostgresKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.js';
 import { createServer } from '../src/server.js';
 import { createAppContext } from '../src/app.factory.js';

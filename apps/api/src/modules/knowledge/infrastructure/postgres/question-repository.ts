@@ -1,9 +1,16 @@
 import { mapQuestion, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
+import type {
+  QuestionRepositoryOptions,
+  QuestionWriteInput,
+  QuestionListOptions,
+  ReviewWhere
+} from './knowledge-graph-repository-types.ts';
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
 
-export function createPostgresQuestionRepository({ db }) {
+export function createPostgresQuestionRepository({ db }: QuestionRepositoryOptions) {
   if (!db?.question) throw new TypeError('PostgreSQL Question repository requires db.question');
-  function toData(question) {
+  function toData(question: QuestionWriteInput) {
     return {
       id: question.id,
       questionType: question.questionType,
@@ -22,7 +29,7 @@ export function createPostgresQuestionRepository({ db }) {
     };
   }
   return {
-    async create(question) {
+    async create(question: QuestionWriteInput) {
       return withRepositoryErrors(() =>
         db.question
           .create({
@@ -31,7 +38,7 @@ export function createPostgresQuestionRepository({ db }) {
           .then(mapQuestion)
       );
     },
-    async save(question) {
+    async save(question: QuestionWriteInput) {
       const data = toData(question);
       return withRepositoryErrors(() =>
         db.question
@@ -46,12 +53,13 @@ export function createPostgresQuestionRepository({ db }) {
           .then(mapQuestion)
       );
     },
-    async findById(id) {
-      return withRepositoryErrors(() => db.question.findUnique({ where: { id } }).then(mapQuestion));
+    async findById(id: unknown) {
+      return withRepositoryErrors(() =>
+        db.question.findUnique({ where: { id } }).then<SyncMappedEntityMap['questions'] | null>(mapQuestion)
+      );
     },
-    /** @param {{ reviewStatus?: string, includeArchived?: boolean, includeDeleted?: boolean, limit?: number | string }} options */
-    list({ reviewStatus, includeArchived = false, includeDeleted = false, limit } = {}) {
-      const where = {
+    list({ reviewStatus, includeArchived = false, includeDeleted = false, limit }: QuestionListOptions = {}) {
+      const where: ReviewWhere = {
         ...(reviewStatus ? { reviewStatus } : includeArchived ? {} : { reviewStatus: { not: 'archived' } }),
         ...(includeDeleted ? {} : { deletedAt: null })
       };
@@ -62,7 +70,7 @@ export function createPostgresQuestionRepository({ db }) {
           .then(rows => rows.map(mapQuestion))
       );
     },
-    async delete(id) {
+    async delete(id: unknown) {
       return withRepositoryErrors(() => db.question.delete({ where: { id } }).then(mapQuestion));
     },
     supportsAsync: true

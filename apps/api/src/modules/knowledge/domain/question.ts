@@ -7,7 +7,7 @@ export interface QuestionConstructorInput<
   id: string;
   questionType?: QuestionType | string;
   stem?: unknown;
-  options?: unknown[] | null;
+  options?: unknown;
   referenceAnswer?: unknown;
   rubric?: unknown;
   explanation?: unknown;
@@ -31,14 +31,13 @@ function cloneOrNull<T>(value: T | null | undefined): T | null {
 
 export class Question<QuestionType = string, Difficulty = string | null, CreatedAt = string, UpdatedAt = CreatedAt> {
   declare id: string;
-  declare questionType:
-    Exclude<QuestionType, string | undefined> | 'singleChoice' | 'multipleChoice' | 'trueFalse' | 'shortAnswer';
+  declare questionType: 'singleChoice' | 'multipleChoice' | 'trueFalse' | 'shortAnswer';
   declare stem: string;
   declare options: unknown[] | null;
   declare referenceAnswer: unknown;
   declare rubric: unknown;
   declare explanation: string;
-  declare difficulty: Exclude<Difficulty, string | null | undefined> | 'easy' | 'medium' | 'hard' | null;
+  declare difficulty: 'easy' | 'medium' | 'hard' | null;
   declare reviewStatus: 'draft' | 'validating' | 'candidate' | 'confirmed' | 'archived';
   declare sourceMode: 'manual' | 'ai' | 'import';
   declare version: number;

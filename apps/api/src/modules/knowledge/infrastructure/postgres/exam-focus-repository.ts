@@ -6,7 +6,7 @@ import type {
   FocusWhere
 } from './assessment-repository-types.ts';
 import { mapExamFocus, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresExamFocusRepository({ db }: FocusRepositoryOptions) {
   if (!db?.examFocus) throw new TypeError('PostgreSQL ExamFocus repository requires db.examFocus');

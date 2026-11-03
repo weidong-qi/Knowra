@@ -8,7 +8,7 @@ import {
   noteWithTags,
   replaceNoteTags,
   withRepositoryErrors
-} from './repository-utils.js';
+} from './repository-utils.ts';
 
 export function createPostgresNoteRepository({ db }) {
   if (!db?.note) throw new TypeError('PostgreSQL note repository requires db.note');

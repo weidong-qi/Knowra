@@ -4,7 +4,7 @@ import type {
   NavigationListOptions
 } from './navigation-repository-types.ts';
 import { mapTagGroup, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresTagGroupRepository({ db }: TagGroupRepositoryOptions) {
   if (!db?.tagGroup) throw new TypeError('PostgreSQL tag group repository requires db.tagGroup');

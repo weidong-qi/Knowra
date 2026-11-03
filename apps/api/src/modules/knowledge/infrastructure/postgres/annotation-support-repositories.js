@@ -1,6 +1,6 @@
 import { toDate, toIso } from './mappers.ts';
 import { createAppError } from '../../../../errors/app-error.js';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresAnnotationExclusionRepository({ db }) {
   return {

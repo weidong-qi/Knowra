@@ -1,10 +1,16 @@
 import { mapKnowledgeEvidence, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
+import type {
+  EvidenceRepositoryOptions,
+  EvidenceWriteInput,
+  EvidenceWhere
+} from './knowledge-graph-repository-types.ts';
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
 
-export function createPostgresKnowledgeEvidenceRepository({ db }) {
+export function createPostgresKnowledgeEvidenceRepository({ db }: EvidenceRepositoryOptions) {
   if (!db?.knowledgeEvidence)
     throw new TypeError('PostgreSQL KnowledgeEvidence repository requires db.knowledgeEvidence');
-  function toData(evidence) {
+  function toData(evidence: EvidenceWriteInput) {
     return {
       id: evidence.id,
       knowledgeItemId: evidence.knowledgeItemId,
@@ -22,7 +28,7 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
       updatedAt: toDate(evidence.updatedAt)
     };
   }
-  function whereFor(options = {}) {
+  function whereFor(options: EvidenceWhere = {}) {
     return {
       ...(options.knowledgeItemId ? { knowledgeItemId: options.knowledgeItemId } : {}),
       ...(options.noteId ? { noteId: options.noteId } : {}),
@@ -30,7 +36,7 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
       ...(options.annotationId ? { annotationId: options.annotationId } : {})
     };
   }
-  async function mark(where, status) {
+  async function mark(where: EvidenceWhere, status: string) {
     return withRepositoryErrors(async () => {
       const statusFilter = status === 'stale' ? { notIn: ['stale', 'invalid'] } : { not: status };
       const rows = await db.knowledgeEvidence.findMany({ where: { ...where, status: statusFilter } });
@@ -43,7 +49,7 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
     });
   }
   return {
-    async create(evidence) {
+    async create(evidence: EvidenceWriteInput) {
       return withRepositoryErrors(() =>
         db.knowledgeEvidence
           .create({
@@ -52,7 +58,7 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
           .then(mapKnowledgeEvidence)
       );
     },
-    async save(evidence) {
+    async save(evidence: EvidenceWriteInput) {
       const data = toData(evidence);
       return withRepositoryErrors(() =>
         db.knowledgeEvidence
@@ -67,17 +73,21 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
           .then(mapKnowledgeEvidence)
       );
     },
-    async findById(id) {
-      return withRepositoryErrors(() => db.knowledgeEvidence.findUnique({ where: { id } }).then(mapKnowledgeEvidence));
+    async findById(id: unknown) {
+      return withRepositoryErrors(() =>
+        db.knowledgeEvidence
+          .findUnique({ where: { id } })
+          .then<SyncMappedEntityMap['knowledgeEvidence'] | null>(mapKnowledgeEvidence)
+      );
     },
-    async deleteByKnowledgeItemId(knowledgeItemId) {
+    async deleteByKnowledgeItemId(knowledgeItemId: unknown) {
       return withRepositoryErrors(async () => {
         const rows = await db.knowledgeEvidence.findMany({ where: { knowledgeItemId } });
         if (rows.length) await db.knowledgeEvidence.deleteMany({ where: { knowledgeItemId } });
         return rows.map(mapKnowledgeEvidence);
       });
     },
-    list(options = {}) {
+    list(options: EvidenceWhere = {}) {
       return withRepositoryErrors(() =>
         db.knowledgeEvidence
           .findMany({
@@ -87,16 +97,20 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
           .then(rows => rows.map(mapKnowledgeEvidence))
       );
     },
-    markByNoteId(noteId, status) {
+    markByNoteId(noteId: unknown, status: string) {
       return mark({ noteId }, status);
     },
-    markByAnnotationId(annotationId, status) {
+    markByAnnotationId(annotationId: unknown, status: string) {
       return mark({ annotationId }, status);
     },
-    markByNoteVersionId(noteVersionId, status, sourceType = null) {
+    markByNoteVersionId(noteVersionId: unknown, status: string, sourceType: string | null = null) {
       return mark({ noteVersionId, ...(sourceType ? { sourceType } : {}) }, status);
     },
-    markByNoteVersionIds(noteVersionIds, status, sourceType = null) {
+    markByNoteVersionIds(
+      noteVersionIds: { readonly length?: unknown },
+      status: string,
+      sourceType: string | null = null
+    ) {
       if (!noteVersionIds.length) return Promise.resolve([]);
       return mark({ noteVersionId: { in: noteVersionIds }, ...(sourceType ? { sourceType } : {}) }, status);
     },

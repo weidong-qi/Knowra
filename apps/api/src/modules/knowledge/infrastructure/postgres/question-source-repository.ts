@@ -7,7 +7,7 @@ import type {
   MappedSourceProjection
 } from './assessment-repository-types.ts';
 import { mapQuestionSource, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresQuestionSourceRepository({ db }: SourceRepositoryOptions) {
   if (!db?.questionSource) throw new TypeError('PostgreSQL QuestionSource repository requires db.questionSource');

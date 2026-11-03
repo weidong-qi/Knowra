@@ -1,7 +1,7 @@
 import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
 import type { ProfileRepositoryOptions, ProfileWriteInput, ReviewListOptions } from './assessment-repository-types.ts';
 import { mapExamProfile, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresExamProfileRepository({ db }: ProfileRepositoryOptions) {
   if (!db?.examProfile) throw new TypeError('PostgreSQL ExamProfile repository requires db.examProfile');

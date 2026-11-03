@@ -7,7 +7,7 @@ import type {
 } from './assessment-repository-types.ts';
 import { createAppError } from '../../../../errors/app-error.js';
 import { mapLearningObjective, toDate } from './mappers.ts';
-import { withRepositoryErrors } from './repository-utils.js';
+import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresLearningObjectiveRepository({ db }: ObjectiveRepositoryOptions) {
   if (!db?.learningObjective)
