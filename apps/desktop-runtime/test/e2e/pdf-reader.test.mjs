@@ -100,7 +100,8 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
   await expect(page.locator('.textLayer').first()).toBeVisible({ timeout: 25000 });
   await expect(page.getByRole('button', { name: /定位标注.*Knowra/ })).toBeVisible();
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: '导出摘录', exact: true }).click();
+  await page.getByRole('button', { name: '更多', exact: true }).click();
+  await page.getByRole('menuitem', { name: '导出摘录', exact: true }).click();
   const file = await (await download).path();
   assert.match(fs.readFileSync(file, 'utf8'), /PDF 评论持久保存/);
   const evidence = process.env.KNOWRA_E2E_OUTPUT;
@@ -123,6 +124,7 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
   );
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('PDF 评论持久保存');
   // Search and cross-page selection use the real PDF.js text layers.
+  await page.getByRole('button', { name: '搜索', exact: true }).click();
   await page.getByRole('searchbox', { name: '在 PDF 中搜索', exact: true }).fill('Knowra');
   await page.getByRole('searchbox', { name: '在 PDF 中搜索', exact: true }).press('Enter');
   await expect(page.locator('.textLayer .highlight').first()).toBeVisible();

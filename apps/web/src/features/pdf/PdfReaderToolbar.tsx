@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import type { Note } from '@study-accelerator/web-core';
-import { Button, SearchBox, SegmentedButton, SegmentedControl, TextField } from '../../components/ui';
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FocusIcon,
+  HighlightIcon,
+  ListIcon,
+  MoreHorizontalIcon,
+  PanelIcon,
+  RefreshIcon,
+  SearchIcon
+} from '../../components/icons/knowra';
+import { IconButton, SearchBox, SegmentedButton, SegmentedControl, TextField } from '../../components/ui';
+import { Menu, MenuItem, MenuPopover, MenuTrigger } from '../../components/ui/overlay';
 import type { usePdfViewer } from './usePdfViewer';
 import styles from './PdfReader.module.css';
 interface PdfReaderToolbarProps {
@@ -10,6 +22,7 @@ interface PdfReaderToolbarProps {
   editable: boolean;
   loaded: boolean;
   panel: boolean;
+  outlineOpen: boolean;
   tool: string;
   selection: boolean;
   onBack(): void;
@@ -28,6 +41,7 @@ export function PdfReaderToolbar({
   editable,
   loaded,
   panel,
+  outlineOpen,
   tool,
   selection,
   onBack,
@@ -40,132 +54,123 @@ export function PdfReaderToolbar({
   onHighlight
 }: PdfReaderToolbarProps) {
   const [pageInput, setPageInput] = useState('1'),
-    [query, setQuery] = useState('');
+    [query, setQuery] = useState(''),
+    [searchOpen, setSearchOpen] = useState(false);
   useEffect(() => {
     setPageInput(String(viewer.page));
   }, [viewer.page]);
+  const engine = () => viewer.viewerRef.current;
   return (
-    <>
-      <div className={styles.toolbar} role="toolbar" aria-label="PDF 阅读工具">
-        <Button size="compact" variant="ghost" onPress={() => onBack()}>
-          资料库
-        </Button>
-        <strong className={styles.title}>{note.title}</strong>
-        <Button size="compact" variant="ghost" isDisabled={!canWrite} onPress={() => void onFavorite()}>
-          {note.favorite ? '取消收藏' : '收藏'}
-        </Button>
-        <Button size="compact" variant="ghost" onPress={() => onOutline()}>
-          目录
-        </Button>
-        <Button size="compact" variant="ghost" onPress={() => void onDownload()}>
-          原文件
-        </Button>
-        <Button size="compact" variant="ghost" isDisabled={!loaded} onPress={() => void onExport()}>
-          导出摘录
-        </Button>
-        <Button size="compact" variant="ghost" aria-pressed={panel} onPress={() => onPanel()}>
-          标注
-        </Button>
+    <div className={styles.toolbar} role="toolbar" aria-label="PDF 阅读工具">
+      <IconButton size={28} aria-label="返回资料库" title="返回资料库" onPress={() => onBack()}>
+        <ChevronLeftIcon size={18} />
+      </IconButton>
+      <strong className={styles.title} title={note.title}>
+        {note.title}
+      </strong>
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton
+        size={28}
+        aria-label="上一页"
+        title="上一页"
+        isDisabled={viewer.page <= 1}
+        onPress={() => {
+          if (engine()) engine()!.currentPageNumber--;
+        }}
+      >
+        <ChevronLeftIcon size={16} />
+      </IconButton>
+      <div className={styles.pageField}>
+        <TextField
+          label="页码"
+          type="number"
+          value={pageInput}
+          onChange={setPageInput}
+          onKeyDown={event => {
+            if (event.key === 'Enter' && engine())
+              engine()!.currentPageNumber = Math.max(1, Math.min(viewer.count, Number(pageInput) || 1));
+          }}
+        />
       </div>
-      <div className={styles.toolbar} role="toolbar" aria-label="PDF 页面和标注工具">
-        <Button
-          size="compact"
-          variant="ghost"
-          isDisabled={viewer.page <= 1}
-          onPress={() => {
-            if (viewer.viewerRef.current) viewer.viewerRef.current.currentPageNumber--;
-          }}
+      <span className={styles.pageCount}>/ {viewer.count}</span>
+      <IconButton
+        size={28}
+        aria-label="下一页"
+        title="下一页"
+        isDisabled={viewer.page >= viewer.count}
+        onPress={() => {
+          if (engine()) engine()!.currentPageNumber++;
+        }}
+      >
+        <ChevronRightIcon size={16} />
+      </IconButton>
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton size={28} aria-label="缩小 PDF" title="缩小" onPress={() => engine()?.decreaseScale()}>
+        <span className={styles.glyph}>−</span>
+      </IconButton>
+      <IconButton size={28} aria-label="放大 PDF" title="放大" onPress={() => engine()?.increaseScale()}>
+        <span className={styles.glyph}>＋</span>
+      </IconButton>
+      <IconButton
+        size={28}
+        aria-label="适合宽度"
+        title="适合宽度"
+        onPress={() => {
+          if (engine()) engine()!.currentScaleValue = 'page-width';
+        }}
+      >
+        <FocusIcon size={16} />
+      </IconButton>
+      <IconButton
+        size={28}
+        aria-label="旋转"
+        title="旋转"
+        onPress={() => {
+          if (engine()) engine()!.pagesRotation = (engine()!.pagesRotation + 90) % 360;
+        }}
+      >
+        <RefreshIcon size={16} />
+      </IconButton>
+      <span className={styles.separator} aria-hidden="true" />
+      <SegmentedControl density="compact" aria-label="PDF 标注工具">
+        <SegmentedButton aria-label="文字选择" aria-pressed={tool === 'text'} onPress={() => onTool('text')}>
+          文字
+        </SegmentedButton>
+        <SegmentedButton
+          aria-label="区域框选"
+          aria-pressed={tool === 'region'}
+          isDisabled={!editable}
+          onPress={() => onTool('region')}
         >
-          上一页
-        </Button>
-        <div className={styles.pageField}>
-          <TextField
-            label="页码"
-            type="number"
-            value={pageInput}
-            onChange={setPageInput}
-            onKeyDown={event => {
-              if (event.key === 'Enter' && viewer.viewerRef.current)
-                viewer.viewerRef.current.currentPageNumber = Math.max(
-                  1,
-                  Math.min(viewer.count, Number(pageInput) || 1)
-                );
-            }}
-          />
-        </div>
-        <span>/ {viewer.count}</span>
-        <Button
-          size="compact"
-          variant="ghost"
-          isDisabled={viewer.page >= viewer.count}
-          onPress={() => {
-            if (viewer.viewerRef.current) viewer.viewerRef.current.currentPageNumber++;
-          }}
-        >
-          下一页
-        </Button>
-        <Button
-          size="compact"
-          variant="ghost"
-          aria-label="缩小 PDF"
-          onPress={() => viewer.viewerRef.current?.decreaseScale()}
-        >
-          −
-        </Button>
-        <Button
-          size="compact"
-          variant="ghost"
-          onPress={() => {
-            if (viewer.viewerRef.current) viewer.viewerRef.current.currentScaleValue = 'page-width';
-          }}
-        >
-          适合宽度
-        </Button>
-        <Button
-          size="compact"
-          variant="ghost"
-          aria-label="放大 PDF"
-          onPress={() => viewer.viewerRef.current?.increaseScale()}
-        >
-          ＋
-        </Button>
-        <Button
-          size="compact"
-          variant="ghost"
-          onPress={() => {
-            const engine = viewer.viewerRef.current;
-            if (engine) engine.pagesRotation = (engine.pagesRotation + 90) % 360;
-          }}
-        >
-          旋转
-        </Button>
-        <SegmentedControl density="compact" aria-label="PDF 标注工具">
-          <SegmentedButton aria-pressed={tool === 'text'} onPress={() => onTool('text')}>
-            文字选择
-          </SegmentedButton>
-          <SegmentedButton aria-pressed={tool === 'region'} isDisabled={!editable} onPress={() => onTool('region')}>
-            区域框选
-          </SegmentedButton>
-        </SegmentedControl>
-        <Button
-          size="compact"
-          isDisabled={!editable || !selection}
-          onPress={() => {
-            onHighlight();
-          }}
-        >
-          高亮选区
-        </Button>
+          区域
+        </SegmentedButton>
+      </SegmentedControl>
+      <IconButton
+        size={28}
+        aria-label="高亮选区"
+        title="高亮选区"
+        isDisabled={!editable || !selection}
+        onPress={() => onHighlight()}
+      >
+        <HighlightIcon size={16} />
+      </IconButton>
+      <span className={styles.toolbarSpacer} />
+      {searchOpen ? (
         <div className={styles.search}>
           <SearchBox
             label="在 PDF 中搜索"
             value={query}
+            autoFocus
             onChange={event => setQuery(event.target.value)}
             onClear={() => {
               setQuery('');
               viewer.eventRef.current?.dispatch('findbarclose', {});
             }}
             onKeyDown={event => {
+              if (event.key === 'Escape') {
+                setSearchOpen(false);
+                viewer.eventRef.current?.dispatch('findbarclose', {});
+              }
               if (event.key === 'Enter')
                 viewer.eventRef.current?.dispatch('find', {
                   type: 'again',
@@ -179,7 +184,40 @@ export function PdfReaderToolbar({
             placeholder="搜索 PDF，回车查找"
           />
         </div>
-      </div>
-    </>
+      ) : (
+        <IconButton size={28} aria-label="搜索" title="在 PDF 中搜索" onPress={() => setSearchOpen(true)}>
+          <SearchIcon size={16} />
+        </IconButton>
+      )}
+      <IconButton size={28} aria-label="目录" title="目录" aria-pressed={outlineOpen} onPress={() => onOutline()}>
+        <ListIcon size={16} />
+      </IconButton>
+      <IconButton size={28} aria-label="标注" title="标注" aria-pressed={panel} onPress={() => onPanel()}>
+        <PanelIcon size={16} />
+      </IconButton>
+      <MenuTrigger>
+        <IconButton size={28} aria-label="更多" title="更多">
+          <MoreHorizontalIcon size={16} />
+        </IconButton>
+        <MenuPopover>
+          <Menu
+            ariaLabel="PDF 更多操作"
+            onAction={key => {
+              if (key === 'favorite') void onFavorite();
+              if (key === 'download') void onDownload();
+              if (key === 'export') void onExport();
+            }}
+          >
+            <MenuItem id="favorite" isDisabled={!canWrite}>
+              {note.favorite ? '取消收藏' : '收藏'}
+            </MenuItem>
+            <MenuItem id="download">下载原文件</MenuItem>
+            <MenuItem id="export" isDisabled={!loaded}>
+              导出摘录
+            </MenuItem>
+          </Menu>
+        </MenuPopover>
+      </MenuTrigger>
+    </div>
   );
 }

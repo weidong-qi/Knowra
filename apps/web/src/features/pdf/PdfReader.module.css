@@ -11,22 +11,61 @@
   background: var(--surface-page);
 }
 .toolbar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 2px;
+  min-height: 36px;
+  max-width: calc(100% - 24px);
+  padding: var(--space-1);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  border-radius: var(--radius-popover);
+  /* 与笔记页工具栏同一套玻璃质感：半透明渐变加背景模糊。 */
+  background: var(--surface-action-glass-hover, var(--surface-page));
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow-action-glass, var(--shadow-control));
+}
+.toolbar::-webkit-scrollbar {
+  display: none;
+}
+.toolbar > * {
+  flex: 0 0 auto;
+}
+.separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 5px;
+  background: var(--border-strong);
+}
+.toolbarSpacer {
+  width: 8px;
+}
+.glyph {
+  font: 500 16px/1 var(--font-ui);
+}
+.pageCount {
+  min-width: 28px;
+  color: var(--text-muted);
+  font: 400 var(--font-size-meta) / 1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }
 .title {
-  flex: 1;
-  min-width: 100px;
+  max-width: 160px;
+  padding: 0 4px;
+  font: 500 var(--font-size-meta) / 1 var(--font-ui);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .pageField {
-  width: 70px;
+  width: 48px;
 }
 .pageField label {
   position: absolute;
@@ -36,9 +75,7 @@
   clip-path: inset(50%);
 }
 .search {
-  flex: 1;
-  min-width: 180px;
-  max-width: 360px;
+  width: 220px;
 }
 .feedback {
   display: flex;
@@ -60,6 +97,7 @@
   min-height: 0;
 }
 .stage {
+  container-type: inline-size;
   position: relative;
   flex: 1;
   min-width: 0;
@@ -70,6 +108,10 @@
   inset: 0;
   overflow: auto;
   background: var(--surface-sunken);
+}
+/* 悬浮工具栏盖在顶部，给第一页留出位置。 */
+.viewport :global(.pdfViewer) {
+  margin-top: 56px;
 }
 .viewport[data-region-tool] {
   cursor: crosshair;
@@ -85,15 +127,19 @@
   width: 290px;
   overflow: auto;
   min-height: 0;
+  margin: 12px 12px 12px 0;
   padding: 12px;
-  border-left: 1px solid var(--border-subtle);
-  background: var(--surface-page);
+  border: 0;
+  border-radius: var(--radius-popover);
+  background: var(--surface-action-glass-hover, var(--surface-page));
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow-action-glass, var(--shadow-control));
 }
 .outline {
   flex-basis: 210px;
   width: 210px;
-  border-right: 1px solid var(--border-subtle);
-  border-left: 0;
+  margin: 12px 0 12px 12px;
 }
 .annotations h2,
 .outline h2 {
@@ -174,14 +220,29 @@
     inset: 0 0 0 auto;
     z-index: 10;
     width: min(310px, 90%);
+    margin: 0;
+    border-radius: 0;
     box-shadow: var(--shadow-panel);
   }
   .outline {
     left: 0;
     right: auto;
   }
-  .toolbar {
-    gap: 4px;
-    padding: 6px;
+}
+@media (pointer: coarse) {
+  .toolbar button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .pageField {
+    width: 56px;
+  }
+}
+
+/* 阅读区较窄时（面板展开或手机）先让出标题，保证翻页与工具按钮完整可见。 */
+@container (max-width: 640px) {
+  .title,
+  .toolbar > .separator:first-of-type {
+    display: none;
   }
 }

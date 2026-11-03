@@ -276,32 +276,6 @@ export function PdfReaderView({
     <section className={styles.reader} data-knowra-pdf aria-label="PDF 阅读与标注">
       <style>{pdfViewerCss}</style>
       {titlebar.host ? createPortal(tabs, titlebar.host) : tabs}
-      <PdfReaderToolbar
-        note={note}
-        viewer={viewer}
-        canWrite={canWrite}
-        editable={editable}
-        loaded={loaded}
-        panel={panel}
-        tool={tool}
-        selection={Boolean(selection)}
-        onBack={() => navigate('/materials')}
-        onFavorite={async () => {
-          try {
-            await store.setNoteFavorite(note.id, !note.favorite);
-          } catch (reason) {
-            setError(String(reason));
-          }
-        }}
-        onOutline={() => setShowOutline(value => !value)}
-        onDownload={downloadOriginal}
-        onExport={exportExcerpt}
-        onPanel={() => setPanel(value => !value)}
-        onTool={setTool}
-        onHighlight={() => {
-          if (selection) createMark(selection);
-        }}
-      />
       <div className={styles.feedback} role="status">
         {session.busy
           ? '正在保存标注…'
@@ -387,6 +361,33 @@ export function PdfReaderView({
           </aside>
         ) : null}
         <div className={styles.stage}>
+          <PdfReaderToolbar
+            note={note}
+            viewer={viewer}
+            canWrite={canWrite}
+            editable={editable}
+            loaded={loaded}
+            panel={panel}
+            outlineOpen={showOutline}
+            tool={tool}
+            selection={Boolean(selection)}
+            onBack={() => navigate('/materials')}
+            onFavorite={async () => {
+              try {
+                await store.setNoteFavorite(note.id, !note.favorite);
+              } catch (reason) {
+                setError(String(reason));
+              }
+            }}
+            onOutline={() => setShowOutline(value => !value)}
+            onDownload={downloadOriginal}
+            onExport={exportExcerpt}
+            onPanel={() => setPanel(value => !value)}
+            onTool={setTool}
+            onHighlight={() => {
+              if (selection) createMark(selection);
+            }}
+          />
           <div
             ref={viewer.containerRef}
             className={styles.viewport}
