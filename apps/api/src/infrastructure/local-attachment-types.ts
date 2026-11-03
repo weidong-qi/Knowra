@@ -21,6 +21,8 @@ export interface LocalAttachmentRecord extends AttachmentFileMetadata {
   verifiedAt?: string | null;
   createdAt?: string;
 }
+/** PG status 仍是数据库原始字符串；恢复流程只与已知状态比较。 */
+export type AttachmentRecoveryRecord = Omit<LocalAttachmentRecord, 'status'> & { status?: string };
 
 export interface LocalAttachmentDataStore {
   readonly state: { attachments: LocalAttachmentRecord[] };

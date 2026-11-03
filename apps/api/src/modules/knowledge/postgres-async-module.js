@@ -25,7 +25,7 @@ import { createAsyncKnowledgeItemService } from './application/postgres-async/kn
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
 import { createAsyncSearchService } from './application/postgres-async/search-service.js';
 import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.js';
-import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.js';
+import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.ts';
 import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.js';
 import { createPostgresNoteVersionRepository } from './infrastructure/postgres/note-version-repository.js';
 import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres/knowledge-item-repository.js';
@@ -44,9 +44,9 @@ import {
   createPostgresAnnotationRevisionRepository
 } from './infrastructure/postgres/annotation-support-repositories.js';
 import { createAsyncAnnotationScopeService } from './application/postgres-async/annotation-scope-service.js';
-import { createPostgresKnowledgeSpaceRepository } from './infrastructure/postgres/knowledge-space-repository.js';
-import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-group-repository.js';
-import { createPostgresTagRepository } from './infrastructure/postgres/tag-repository.js';
+import { createPostgresKnowledgeSpaceRepository } from './infrastructure/postgres/knowledge-space-repository.ts';
+import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-group-repository.ts';
+import { createPostgresTagRepository } from './infrastructure/postgres/tag-repository.ts';
 import { createAsyncLearningObjectiveService } from './application/postgres-async/learning-objective-service.js';
 import { createAsyncAssessmentContextService } from './application/postgres-async/assessment-context-service.js';
 import { createAsyncQuestionService } from './application/postgres-async/question-service.js';

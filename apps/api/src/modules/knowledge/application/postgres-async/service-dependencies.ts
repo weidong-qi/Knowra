@@ -2,10 +2,10 @@ import type { Note } from '../../domain/note.ts';
 import type { NoteVersion } from '../../domain/note-version.ts';
 export interface PostgresRepositories {
   tagRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/tag-repository.js').createPostgresTagRepository
+    typeof import('../../infrastructure/postgres/tag-repository.ts').createPostgresTagRepository
   >;
   folderRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/folder-repository.js').createPostgresFolderRepository
+    typeof import('../../infrastructure/postgres/folder-repository.ts').createPostgresFolderRepository
   >;
   knowledgeArtifactProvenanceRepository: ReturnType<
     typeof import('../../infrastructure/postgres/knowledge-artifact-provenance-repository.js').createPostgresKnowledgeArtifactProvenanceRepository
@@ -14,7 +14,7 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/question-objective-repository.js').createPostgresQuestionObjectiveRepository
   >;
   tagGroupRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/tag-group-repository.js').createPostgresTagGroupRepository
+    typeof import('../../infrastructure/postgres/tag-group-repository.ts').createPostgresTagGroupRepository
   >;
   attachmentRepository: ReturnType<
     typeof import('../../infrastructure/postgres/attachment-repository.js').createPostgresAttachmentRepository
@@ -56,7 +56,7 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/learning-objective-repository.js').createPostgresLearningObjectiveRepository
   >;
   knowledgeSpaceRepository: ReturnType<
-    typeof import('../../infrastructure/postgres/knowledge-space-repository.js').createPostgresKnowledgeSpaceRepository
+    typeof import('../../infrastructure/postgres/knowledge-space-repository.ts').createPostgresKnowledgeSpaceRepository
   >;
   questionRepository: ReturnType<
     typeof import('../../infrastructure/postgres/question-repository.js').createPostgresQuestionRepository
@@ -150,7 +150,7 @@ export interface ContentAnnotationDependencies {
   revisionRepository?: PostgresRepositories['annotationRevisionRepository'];
   exclusionRepository?: PostgresRepositories['annotationExclusionRepository'];
   onSourceChanged?: (
-    annotation: import('../../domain/content-annotation.ts').ContentAnnotation
+    annotation: import('../../../sync/postgres-state-types.ts').SyncMappedEntityMap['contentAnnotations']
   ) => void | Promise<void>;
 }
 export interface SpaceDependencies extends TransactionDependencies {
@@ -189,7 +189,12 @@ export interface NoteDependencies extends TransactionDependencies {
   onBeforePermanentDelete?: NoteTransactionContext['onBeforePermanentDelete'];
 }
 export interface PostgresModuleDependencies extends Partial<PostgresRepositories> {
-  client?: import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost;
+  client?: import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost<
+    import('../../infrastructure/postgres/navigation-repository-types.ts').SpaceRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/navigation-repository-types.ts').FolderRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/navigation-repository-types.ts').TagRepositoryOptions['db'] &
+      import('../../infrastructure/postgres/navigation-repository-types.ts').TagGroupRepositoryOptions['db']
+  >;
   getPurgeTombstone?: TransactionDependencies['getTombstone'];
   readPurgeTaskState?: ReturnType<
     typeof import('../../../../infrastructure/asset-purge-task-state.ts').createPostgresPurgeTaskReader

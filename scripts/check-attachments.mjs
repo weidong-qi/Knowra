@@ -78,7 +78,7 @@ function runLocalInspection({ sourcePath, fileManager, generatedAt, repair, atta
 }
 
 async function runPostgresInspection({ fileManager, generatedAt, repair, ...context }) {
-  const { mapAttachment } = await import('../apps/api/src/modules/knowledge/infrastructure/postgres/mappers.js');
+  const { mapAttachment } = await import('../apps/api/src/modules/knowledge/infrastructure/postgres/mappers.ts');
   const runtime = await createPrismaRuntime({ databaseUrl: process.env.DATABASE_URL });
   await runtime.connect();
   try {

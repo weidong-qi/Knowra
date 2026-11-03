@@ -1,4 +1,4 @@
-import { mapNoteVersion, toDate } from './mappers.js';
+import { mapNoteVersion, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 import { versionPage } from '../../domain/note-version-page.js';
 

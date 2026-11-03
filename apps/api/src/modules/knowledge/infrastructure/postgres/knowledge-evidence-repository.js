@@ -1,8 +1,9 @@
-import { mapKnowledgeEvidence, toDate } from './mappers.js';
+import { mapKnowledgeEvidence, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresKnowledgeEvidenceRepository({ db }) {
-  if (!db?.knowledgeEvidence) throw new TypeError('PostgreSQL KnowledgeEvidence repository requires db.knowledgeEvidence');
+  if (!db?.knowledgeEvidence)
+    throw new TypeError('PostgreSQL KnowledgeEvidence repository requires db.knowledgeEvidence');
   function toData(evidence) {
     return {
       id: evidence.id,
@@ -31,34 +32,40 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
   }
   async function mark(where, status) {
     return withRepositoryErrors(async () => {
-      const statusFilter = status === 'stale'
-        ? { notIn: ['stale', 'invalid'] }
-        : { not: status };
+      const statusFilter = status === 'stale' ? { notIn: ['stale', 'invalid'] } : { not: status };
       const rows = await db.knowledgeEvidence.findMany({ where: { ...where, status: statusFilter } });
       if (!rows.length) return [];
       await db.knowledgeEvidence.updateMany({
-        where: { id: { in: rows.map((row) => row.id) } },
+        where: { id: { in: rows.map(row => row.id) } },
         data: { status, updatedAt: new Date() }
       });
-      return rows.map((row) => mapKnowledgeEvidence({ ...row, status }));
+      return rows.map(row => mapKnowledgeEvidence({ ...row, status }));
     });
   }
   return {
     async create(evidence) {
-      return withRepositoryErrors(() => db.knowledgeEvidence.create({
-        data: toData(evidence)
-      }).then(mapKnowledgeEvidence));
+      return withRepositoryErrors(() =>
+        db.knowledgeEvidence
+          .create({
+            data: toData(evidence)
+          })
+          .then(mapKnowledgeEvidence)
+      );
     },
     async save(evidence) {
       const data = toData(evidence);
-      return withRepositoryErrors(() => db.knowledgeEvidence.upsert({
-        where: { id: data.id },
-        create: data,
-        update: (() => {
-          const { id: _ignoredId, createdAt: _ignoredCreatedAt, ...updateData } = data;
-          return updateData;
-        })()
-      }).then(mapKnowledgeEvidence));
+      return withRepositoryErrors(() =>
+        db.knowledgeEvidence
+          .upsert({
+            where: { id: data.id },
+            create: data,
+            update: (() => {
+              const { id: _ignoredId, createdAt: _ignoredCreatedAt, ...updateData } = data;
+              return updateData;
+            })()
+          })
+          .then(mapKnowledgeEvidence)
+      );
     },
     async findById(id) {
       return withRepositoryErrors(() => db.knowledgeEvidence.findUnique({ where: { id } }).then(mapKnowledgeEvidence));
@@ -71,14 +78,24 @@ export function createPostgresKnowledgeEvidenceRepository({ db }) {
       });
     },
     list(options = {}) {
-      return withRepositoryErrors(() => db.knowledgeEvidence.findMany({
-        where: whereFor(options),
-        orderBy: { createdAt: 'asc' }
-      }).then((rows) => rows.map(mapKnowledgeEvidence)));
+      return withRepositoryErrors(() =>
+        db.knowledgeEvidence
+          .findMany({
+            where: whereFor(options),
+            orderBy: { createdAt: 'asc' }
+          })
+          .then(rows => rows.map(mapKnowledgeEvidence))
+      );
     },
-    markByNoteId(noteId, status) { return mark({ noteId }, status); },
-    markByAnnotationId(annotationId, status) { return mark({ annotationId }, status); },
-    markByNoteVersionId(noteVersionId, status, sourceType = null) { return mark({ noteVersionId, ...(sourceType ? { sourceType } : {}) }, status); },
+    markByNoteId(noteId, status) {
+      return mark({ noteId }, status);
+    },
+    markByAnnotationId(annotationId, status) {
+      return mark({ annotationId }, status);
+    },
+    markByNoteVersionId(noteVersionId, status, sourceType = null) {
+      return mark({ noteVersionId, ...(sourceType ? { sourceType } : {}) }, status);
+    },
     markByNoteVersionIds(noteVersionIds, status, sourceType = null) {
       if (!noteVersionIds.length) return Promise.resolve([]);
       return mark({ noteVersionId: { in: noteVersionIds }, ...(sourceType ? { sourceType } : {}) }, status);

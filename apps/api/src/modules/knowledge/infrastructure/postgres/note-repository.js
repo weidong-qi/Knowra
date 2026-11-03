@@ -1,4 +1,4 @@
-import { buildNoteData, mapNote, toDate } from './mappers.js';
+import { buildNoteData, mapNote, toDate } from './mappers.ts';
 import {
   booleanOption,
   buildNoteOrderBy,

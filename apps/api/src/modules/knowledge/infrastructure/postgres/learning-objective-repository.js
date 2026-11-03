@@ -1,5 +1,5 @@
 import { createAppError } from '../../../../errors/app-error.js';
-import { mapLearningObjective, toDate } from './mappers.js';
+import { mapLearningObjective, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
 export function createPostgresLearningObjectiveRepository({ db }) {

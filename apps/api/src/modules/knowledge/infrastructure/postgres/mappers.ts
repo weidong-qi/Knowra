@@ -1,21 +1,29 @@
 import crypto from 'node:crypto';
 import { Prisma } from '@prisma/client';
+import type * as Models from '@prisma/client';
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
+
+export type NoteRow = Models.Note & { noteTags?: Pick<Models.NoteTag, 'tagId'>[] | null };
+export type MappedUser = Omit<Models.User, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string };
+type Mapped<Row, Output> = Row extends null | undefined ? null : Output;
 import { createAppError } from '../../../../errors/app-error.js';
 import { validateKnowledgeArtifactProvenance } from '../../domain/knowledge-artifact-provenance-contract.js';
 
-export function toDate(value, fallback = new Date()) {
+export function toDate(value: unknown, fallback: unknown = new Date()): Date {
   if (value instanceof Date) {
     return value;
   }
-  const date = new Date(value ?? fallback);
-  return Number.isNaN(date.getTime()) ? new Date(fallback) : date;
+  const date = new Date((value ?? fallback) as string);
+  return Number.isNaN(date.getTime()) ? new Date(fallback as string) : date;
 }
 
-export function toIso(value, fallback = new Date()) {
+export function toIso(value: unknown, fallback: unknown = new Date()): string {
   return toDate(value, fallback).toISOString();
 }
 
-export function mapUser(row) {
+export function mapUser<Row extends Models.User | null | undefined>(row: Row): Mapped<Row, MappedUser>;
+export function mapUser(row: Models.User): MappedUser;
+export function mapUser(row: Models.User | null | undefined): MappedUser | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -28,7 +36,11 @@ export function mapUser(row) {
   };
 }
 
-export function mapSpace(row) {
+export function mapSpace<Row extends Models.KnowledgeSpace | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['spaces']>;
+export function mapSpace(row: Models.KnowledgeSpace): SyncMappedEntityMap['spaces'];
+export function mapSpace(row: Models.KnowledgeSpace | null | undefined): SyncMappedEntityMap['spaces'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -41,7 +53,11 @@ export function mapSpace(row) {
   };
 }
 
-export function mapFolder(row) {
+export function mapFolder<Row extends Models.Folder | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['folders']>;
+export function mapFolder(row: Models.Folder): SyncMappedEntityMap['folders'];
+export function mapFolder(row: Models.Folder | null | undefined): SyncMappedEntityMap['folders'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -57,7 +73,9 @@ export function mapFolder(row) {
   };
 }
 
-export function mapTag(row) {
+export function mapTag<Row extends Models.Tag | null | undefined>(row: Row): Mapped<Row, SyncMappedEntityMap['tags']>;
+export function mapTag(row: Models.Tag): SyncMappedEntityMap['tags'];
+export function mapTag(row: Models.Tag | null | undefined): SyncMappedEntityMap['tags'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -73,7 +91,11 @@ export function mapTag(row) {
   };
 }
 
-export function mapTagGroup(row) {
+export function mapTagGroup<Row extends Models.TagGroup | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['tagGroups']>;
+export function mapTagGroup(row: Models.TagGroup): SyncMappedEntityMap['tagGroups'];
+export function mapTagGroup(row: Models.TagGroup | null | undefined): SyncMappedEntityMap['tagGroups'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -88,11 +110,11 @@ export function mapTagGroup(row) {
   };
 }
 
-export function mapNote(row) {
+export function mapNote<Row extends NoteRow | null | undefined>(row: Row): Mapped<Row, SyncMappedEntityMap['notes']>;
+export function mapNote(row: NoteRow): SyncMappedEntityMap['notes'];
+export function mapNote(row: NoteRow | null | undefined): SyncMappedEntityMap['notes'] | null {
   if (!row) return null;
-  const internalLinks = Array.isArray(row.internalLinks)
-    ? row.internalLinks
-    : [];
+  const internalLinks = Array.isArray(row.internalLinks) ? row.internalLinks : [];
   return {
     id: row.id,
     spaceId: row.spaceId,
@@ -110,13 +132,17 @@ export function mapNote(row) {
     deleted: row.deletedAt !== null && row.deletedAt !== undefined,
     folderDeletionPackageId: row.folderDeletionPackageId ?? null,
     deletionPackage: row.deletionPackage ?? null,
-    tagIds: (row.noteTags ?? []).map((relation) => relation.tagId),
+    tagIds: (row.noteTags ?? []).map(relation => relation.tagId),
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt)
   };
 }
 
-export function mapAttachment(row) {
+export function mapAttachment<Row extends Models.Attachment | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['attachments']>;
+export function mapAttachment(row: Models.Attachment): SyncMappedEntityMap['attachments'];
+export function mapAttachment(row: Models.Attachment | null | undefined): SyncMappedEntityMap['attachments'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -132,7 +158,13 @@ export function mapAttachment(row) {
   };
 }
 
-export function mapAnnotation(row) {
+export function mapAnnotation<Row extends Models.ContentAnnotation | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['contentAnnotations']>;
+export function mapAnnotation(row: Models.ContentAnnotation): SyncMappedEntityMap['contentAnnotations'];
+export function mapAnnotation(
+  row: Models.ContentAnnotation | null | undefined
+): SyncMappedEntityMap['contentAnnotations'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -171,7 +203,11 @@ export function mapAnnotation(row) {
   };
 }
 
-export function mapNoteVersion(row) {
+export function mapNoteVersion<Row extends Models.NoteVersion | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['noteVersions']>;
+export function mapNoteVersion(row: Models.NoteVersion): SyncMappedEntityMap['noteVersions'];
+export function mapNoteVersion(row: Models.NoteVersion | null | undefined): SyncMappedEntityMap['noteVersions'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -183,7 +219,13 @@ export function mapNoteVersion(row) {
   };
 }
 
-export function mapKnowledgeItem(row) {
+export function mapKnowledgeItem<Row extends Models.KnowledgeItem | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['knowledgeItems']>;
+export function mapKnowledgeItem(row: Models.KnowledgeItem): SyncMappedEntityMap['knowledgeItems'];
+export function mapKnowledgeItem(
+  row: Models.KnowledgeItem | null | undefined
+): SyncMappedEntityMap['knowledgeItems'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -200,7 +242,13 @@ export function mapKnowledgeItem(row) {
   };
 }
 
-export function mapKnowledgeEvidence(row) {
+export function mapKnowledgeEvidence<Row extends Models.KnowledgeEvidence | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['knowledgeEvidence']>;
+export function mapKnowledgeEvidence(row: Models.KnowledgeEvidence): SyncMappedEntityMap['knowledgeEvidence'];
+export function mapKnowledgeEvidence(
+  row: Models.KnowledgeEvidence | null | undefined
+): SyncMappedEntityMap['knowledgeEvidence'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -220,7 +268,13 @@ export function mapKnowledgeEvidence(row) {
   };
 }
 
-export function mapLearningObjective(row) {
+export function mapLearningObjective<Row extends Models.LearningObjective | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['learningObjectives']>;
+export function mapLearningObjective(row: Models.LearningObjective): SyncMappedEntityMap['learningObjectives'];
+export function mapLearningObjective(
+  row: Models.LearningObjective | null | undefined
+): SyncMappedEntityMap['learningObjectives'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -238,7 +292,11 @@ export function mapLearningObjective(row) {
   };
 }
 
-export function mapExamProfile(row) {
+export function mapExamProfile<Row extends Models.ExamProfile | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['examProfiles']>;
+export function mapExamProfile(row: Models.ExamProfile): SyncMappedEntityMap['examProfiles'];
+export function mapExamProfile(row: Models.ExamProfile | null | undefined): SyncMappedEntityMap['examProfiles'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -247,7 +305,8 @@ export function mapExamProfile(row) {
     scope: Array.isArray(row.scope) ? [...row.scope] : [],
     language: row.language ?? 'zh-CN',
     commonQuestionTypes: Array.isArray(row.commonQuestionTypes) ? [...row.commonQuestionTypes] : [],
-    difficultyProfile: row.difficultyProfile && typeof row.difficultyProfile === 'object' ? structuredClone(row.difficultyProfile) : {},
+    difficultyProfile:
+      row.difficultyProfile && typeof row.difficultyProfile === 'object' ? structuredClone(row.difficultyProfile) : {},
     archivedAt: row.archivedAt ? toIso(row.archivedAt) : null,
     deletedAt: row.deletedAt ? toIso(row.deletedAt) : null,
     createdAt: toIso(row.createdAt),
@@ -255,7 +314,11 @@ export function mapExamProfile(row) {
   };
 }
 
-export function mapExamFocus(row) {
+export function mapExamFocus<Row extends Models.ExamFocus | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['examFocuses']>;
+export function mapExamFocus(row: Models.ExamFocus): SyncMappedEntityMap['examFocuses'];
+export function mapExamFocus(row: Models.ExamFocus | null | undefined): SyncMappedEntityMap['examFocuses'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -273,14 +336,19 @@ export function mapExamFocus(row) {
   };
 }
 
-export function mapQuestion(row) {
+export function mapQuestion<Row extends Models.Question | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['questions']>;
+export function mapQuestion(row: Models.Question): SyncMappedEntityMap['questions'];
+export function mapQuestion(row: Models.Question | null | undefined): SyncMappedEntityMap['questions'] | null {
   if (!row) return null;
   return {
     id: row.id,
     questionType: row.questionType,
     stem: row.stem ?? '',
     options: row.options === null || row.options === undefined ? null : structuredClone(row.options),
-    referenceAnswer: row.referenceAnswer === null || row.referenceAnswer === undefined ? null : structuredClone(row.referenceAnswer),
+    referenceAnswer:
+      row.referenceAnswer === null || row.referenceAnswer === undefined ? null : structuredClone(row.referenceAnswer),
     rubric: row.rubric === null || row.rubric === undefined ? null : structuredClone(row.rubric),
     explanation: row.explanation ?? '',
     difficulty: row.difficulty ?? null,
@@ -293,7 +361,13 @@ export function mapQuestion(row) {
   };
 }
 
-export function mapQuestionObjective(row) {
+export function mapQuestionObjective<Row extends Models.QuestionObjective | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['questionObjectives']>;
+export function mapQuestionObjective(row: Models.QuestionObjective): SyncMappedEntityMap['questionObjectives'];
+export function mapQuestionObjective(
+  row: Models.QuestionObjective | null | undefined
+): SyncMappedEntityMap['questionObjectives'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -305,7 +379,13 @@ export function mapQuestionObjective(row) {
   };
 }
 
-export function mapQuestionSource(row) {
+export function mapQuestionSource<Row extends Models.QuestionSource | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['questionSources']>;
+export function mapQuestionSource(row: Models.QuestionSource): SyncMappedEntityMap['questionSources'];
+export function mapQuestionSource(
+  row: Models.QuestionSource | null | undefined
+): SyncMappedEntityMap['questionSources'] | null {
   if (!row) return null;
   return {
     id: row.id,
@@ -321,10 +401,51 @@ export function mapQuestionSource(row) {
   };
 }
 
-export function buildNoteData(note) {
+export interface NoteWriteInput {
+  id?: unknown;
+  spaceId?: unknown;
+  folderId?: unknown;
+  title?: unknown;
+  rawMarkdown?: unknown;
+  annotationStructure?: unknown;
+  plainText?: unknown;
+  internalLinks?: unknown;
+  contentHash?: unknown;
+  status?: unknown;
+  sourceType?: unknown;
+  favorite?: unknown;
+  aiVisibility?: unknown;
+  deleted?: unknown;
+  folderDeletionPackageId?: unknown;
+  deletionPackage?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+type WriteField<Input, Key extends PropertyKey> = Key extends keyof Input ? Input[Key] : unknown;
+export interface NoteWriteData<Input extends NoteWriteInput = NoteWriteInput> {
+  id: WriteField<Input, 'id'>;
+  spaceId: WriteField<Input, 'spaceId'>;
+  folderId: NonNullable<WriteField<Input, 'folderId'>> | null;
+  title: WriteField<Input, 'title'>;
+  rawMarkdown: string;
+  annotationStructure: NonNullable<WriteField<Input, 'annotationStructure'>> | Prisma.NullTypes.DbNull;
+  plainText: string;
+  internalLinks: WriteField<Input, 'internalLinks'> | [];
+  contentHash: NonNullable<WriteField<Input, 'contentHash'>> | string;
+  status: NonNullable<WriteField<Input, 'status'>> | 'draft';
+  sourceType: NonNullable<WriteField<Input, 'sourceType'>> | 'manual';
+  favorite: boolean;
+  aiVisibility: NonNullable<WriteField<Input, 'aiVisibility'>> | 'normal';
+  deletedAt: Date | null;
+  folderDeletionPackageId: NonNullable<WriteField<Input, 'folderDeletionPackageId'>> | null;
+  deletionPackage: NonNullable<WriteField<Input, 'deletionPackage'>> | Prisma.NullTypes.DbNull;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export function buildNoteData<Input extends NoteWriteInput>(note: Input): NoteWriteData<Input>;
+export function buildNoteData(note: NoteWriteInput): NoteWriteData {
   const rawMarkdown = String(note.rawMarkdown ?? '');
-  const contentHash = note.contentHash
-    ?? crypto.createHash('sha256').update(rawMarkdown).digest('hex');
+  const contentHash = note.contentHash ?? crypto.createHash('sha256').update(rawMarkdown).digest('hex');
   return {
     id: note.id,
     spaceId: note.spaceId,
@@ -333,7 +454,7 @@ export function buildNoteData(note) {
     rawMarkdown,
     annotationStructure: note.annotationStructure ?? Prisma.DbNull,
     plainText: String(note.plainText ?? ''),
-    internalLinks: Array.isArray(note.internalLinks) ? note.internalLinks : [],
+    internalLinks: Array.isArray(note.internalLinks) ? (note.internalLinks as unknown) : [],
     contentHash,
     status: note.status ?? 'draft',
     sourceType: note.sourceType ?? 'manual',
@@ -346,10 +467,20 @@ export function buildNoteData(note) {
     updatedAt: toDate(note.updatedAt)
   };
 }
-export function mapKnowledgeArtifactProvenance(row) {
+export function mapKnowledgeArtifactProvenance<Row extends Models.KnowledgeArtifactProvenance | null | undefined>(
+  row: Row
+): Mapped<Row, SyncMappedEntityMap['knowledgeArtifactProvenance']>;
+export function mapKnowledgeArtifactProvenance(
+  row: Models.KnowledgeArtifactProvenance
+): SyncMappedEntityMap['knowledgeArtifactProvenance'];
+export function mapKnowledgeArtifactProvenance(
+  row: Models.KnowledgeArtifactProvenance | null | undefined
+): SyncMappedEntityMap['knowledgeArtifactProvenance'] | null {
   if (!row) return null;
   const record = validateKnowledgeArtifactProvenance(row.payload);
-  if (['id', 'artifactId', 'schemaVersion', 'state', 'provenanceHash'].some(key => row[key] !== record[key])) {
+  if (
+    (['id', 'artifactId', 'schemaVersion', 'state', 'provenanceHash'] as const).some(key => row[key] !== record[key])
+  ) {
     throw createAppError('KNOWLEDGE_ARTIFACT_PROVENANCE_INVALID', '来源摘要索引与内容不一致。', 422);
   }
   return structuredClone(record);

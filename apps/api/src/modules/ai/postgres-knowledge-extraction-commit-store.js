@@ -11,7 +11,7 @@ import { createPostgresKnowledgeEvidenceRepository } from '../knowledge/infrastr
 import { createPostgresKnowledgeArtifactProvenanceRepository } from '../knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.js';
 import { createPostgresNoteRepository } from '../knowledge/infrastructure/postgres/note-repository.js';
 import { createPostgresNoteVersionRepository } from '../knowledge/infrastructure/postgres/note-version-repository.js';
-import { createPostgresKnowledgeSpaceRepository } from '../knowledge/infrastructure/postgres/knowledge-space-repository.js';
+import { createPostgresKnowledgeSpaceRepository } from '../knowledge/infrastructure/postgres/knowledge-space-repository.ts';
 import { createPostgresAnalysisScopeRepository } from '../knowledge/infrastructure/postgres/annotation-support-repositories.js';
 
 export function createPostgresKnowledgeExtractionCommitStore({ client, ownerId }) {

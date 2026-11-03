@@ -54,7 +54,7 @@ import {
   legacyKnowledgeExtractionReceipts
 } from './knowledge-artifact-provenance-backfill.js';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.js';
-import { mapKnowledgeArtifactProvenance } from '../../modules/knowledge/infrastructure/postgres/mappers.js';
+import { mapKnowledgeArtifactProvenance } from '../../modules/knowledge/infrastructure/postgres/mappers.ts';
 
 const syncPlanCollections = Object.freeze({
   spaces: 'spaces',

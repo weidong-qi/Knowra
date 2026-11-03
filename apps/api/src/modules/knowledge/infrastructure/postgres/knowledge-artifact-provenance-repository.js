@@ -1,5 +1,5 @@
 import { assertProvenanceWrite } from '../knowledge-artifact-provenance-repository.js';
-import { mapKnowledgeArtifactProvenance } from './mappers.js';
+import { mapKnowledgeArtifactProvenance } from './mappers.ts';
 import { dbKnowledgeArtifactProvenance } from '../../../../infrastructure/migration/db-mappers.js';
 import { withRepositoryErrors } from './repository-utils.js';
 import { createAppError } from '../../../../errors/app-error.js';

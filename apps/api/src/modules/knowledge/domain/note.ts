@@ -20,7 +20,8 @@ export interface NoteConstructorInput<
   UpdatedAt = string | null,
   FolderDeletionPackageId = string | null,
   DeletionPackage = NoteDeletionPackage | null,
-  TagId = string
+  TagId = string,
+  InternalLink = string
 > {
   id: string;
   spaceId?: string | null;
@@ -34,7 +35,7 @@ export interface NoteConstructorInput<
   deleted?: Deleted | boolean;
   tagIds?: TagId[];
   plainText?: unknown;
-  internalLinks?: string[] | null;
+  internalLinks?: InternalLink[] | null;
   contentHash?: ContentHash | null;
   annotationStructure?: Structure | null;
   createdAt?: CreatedAt | string;
@@ -72,7 +73,8 @@ export class Note<
   UpdatedAt = string | null,
   FolderDeletionPackageId = string | null,
   DeletionPackage = NoteDeletionPackage | null,
-  TagId = string
+  TagId = string,
+  InternalLink = string
 > {
   declare id: string;
   declare spaceId: string | null;
@@ -80,7 +82,7 @@ export class Note<
   declare title: string;
   declare rawMarkdown: string;
   declare plainText: string;
-  declare internalLinks: string[];
+  declare internalLinks: InternalLink[] | string[];
   declare contentHash: ContentHash | null;
   declare annotationStructure: NonNullable<Structure> | AnnotationStructure;
   declare status: Status | string;
@@ -125,7 +127,8 @@ export class Note<
     UpdatedAt,
     FolderDeletionPackageId,
     DeletionPackage,
-    TagId
+    TagId,
+    InternalLink
   >) {
     if (!id?.trim()) {
       throw new Error('Note id is required');

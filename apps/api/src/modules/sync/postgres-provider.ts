@@ -40,7 +40,7 @@ import { createBatchSyncService } from './batch-service.ts';
 import { applyPostgresState } from './postgres-batch.ts';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction-context.ts';
-import * as maps from '../knowledge/infrastructure/postgres/mappers.js';
+import * as maps from '../knowledge/infrastructure/postgres/mappers.ts';
 import { appendChanges, createJournal, loadJournal, syncError } from './journal.ts';
 import { createSyncService } from './service.ts';
 import { applyNoteOperation } from './local-provider.ts';
@@ -85,7 +85,7 @@ async function readCollection<Collection extends SyncCollection>(
   } as SyncReadOptions<Collection>);
   return rows.map(row =>
     mapper
-      ? (maps[mapper] as SyncRowMapper<Collection>)(row)
+      ? (maps[mapper] as (typeof maps)[typeof mapper] & SyncRowMapper<Collection>)(row)
       : (JSON.parse(JSON.stringify(row)) as SyncMappedEntityMap[Collection])
   );
 }

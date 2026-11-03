@@ -6,7 +6,7 @@ export interface FolderDeletionPackage {
   destinationId: string | null;
 }
 
-export interface FolderConstructorInput {
+export interface FolderConstructorInput<DeletionPackage = FolderDeletionPackage> {
   id: string;
   spaceId: string;
   name: string;
@@ -16,10 +16,10 @@ export interface FolderConstructorInput {
   createdAt?: string | null;
   updatedAt?: string | null;
   deletedAt?: string | null;
-  deletionPackage?: FolderDeletionPackage | null;
+  deletionPackage?: DeletionPackage | null;
 }
 
-export class Folder {
+export class Folder<DeletionPackage = FolderDeletionPackage> {
   declare id: string;
   declare spaceId: string;
   declare name: string;
@@ -29,7 +29,7 @@ export class Folder {
   declare createdAt: string | null;
   declare updatedAt: string | null;
   declare deletedAt: string | null;
-  declare deletionPackage: FolderDeletionPackage | null;
+  declare deletionPackage: DeletionPackage | null;
 
   constructor({
     id,
@@ -42,7 +42,7 @@ export class Folder {
     updatedAt = createdAt,
     deletedAt = null,
     deletionPackage = null
-  }: FolderConstructorInput) {
+  }: FolderConstructorInput<DeletionPackage>) {
     if (!id?.trim()) {
       throw new Error('Folder id is required');
     }
