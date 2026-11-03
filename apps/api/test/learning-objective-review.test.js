@@ -13,7 +13,7 @@ import { createSqliteDataStore } from '../../desktop-runtime/src/sqlite-data-sto
 import { createAsyncLearningObjectiveService } from '../src/modules/knowledge/application/postgres-async/learning-objective-service.js';
 import { createInMemoryLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/learning-objective-repository.js';
 import { createInMemoryKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/knowledge-item-repository.js';
-import { createPostgresLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/postgres/learning-objective-repository.js';
+import { createPostgresLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/postgres/learning-objective-repository.ts';
 
 const objectiveInput = { objective: '能够解释合成知识的原因', actionVerb: 'explain', cognitiveLevel: 'understand' };
 const manual = { title: '合成知识', canonicalStatement: '仅用于审阅流程的合成内容', sourceMode: 'manual' };

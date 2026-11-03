@@ -105,19 +105,19 @@ export interface SnapshotRepositories {
   >;
   learningObjectiveRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/learning-objective-repository.js').createPostgresLearningObjectiveRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/learning-objective-repository.ts').createPostgresLearningObjectiveRepository
     >,
     'list'
   >;
   examProfileRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/exam-profile-repository.js').createPostgresExamProfileRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/exam-profile-repository.ts').createPostgresExamProfileRepository
     >,
     'list'
   >;
   examFocusRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/exam-focus-repository.js').createPostgresExamFocusRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/exam-focus-repository.ts').createPostgresExamFocusRepository
     >,
     'list'
   >;
@@ -129,13 +129,13 @@ export interface SnapshotRepositories {
   >;
   questionObjectiveRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/question-objective-repository.js').createPostgresQuestionObjectiveRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/question-objective-repository.ts').createPostgresQuestionObjectiveRepository
     >,
     'listByQuestionIds'
   >;
   questionSourceRepository: Pick<
     ReturnType<
-      typeof import('../modules/knowledge/infrastructure/postgres/question-source-repository.js').createPostgresQuestionSourceRepository
+      typeof import('../modules/knowledge/infrastructure/postgres/question-source-repository.ts').createPostgresQuestionSourceRepository
     >,
     'list'
   >;

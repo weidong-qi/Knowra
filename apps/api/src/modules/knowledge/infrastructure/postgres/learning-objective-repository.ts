@@ -1,11 +1,18 @@
+import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
+import type {
+  ObjectiveRepositoryOptions,
+  ObjectiveWriteInput,
+  ObjectiveListOptions,
+  ObjectiveWhere
+} from './assessment-repository-types.ts';
 import { createAppError } from '../../../../errors/app-error.js';
 import { mapLearningObjective, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.js';
 
-export function createPostgresLearningObjectiveRepository({ db }) {
+export function createPostgresLearningObjectiveRepository({ db }: ObjectiveRepositoryOptions) {
   if (!db?.learningObjective)
     throw new TypeError('PostgreSQL LearningObjective repository requires db.learningObjective');
-  function toData(objective) {
+  function toData(objective: ObjectiveWriteInput) {
     return {
       id: objective.id,
       knowledgeItemId: objective.knowledgeItemId,
@@ -22,12 +29,12 @@ export function createPostgresLearningObjectiveRepository({ db }) {
     };
   }
   return {
-    async lockById(id) {
+    async lockById(id: string) {
       await withRepositoryErrors(() =>
         db.$queryRawUnsafe('SELECT id FROM "LearningObjective" WHERE id = $1 FOR UPDATE', id)
       );
     },
-    async create(objective) {
+    async create(objective: ObjectiveWriteInput) {
       return withRepositoryErrors(() =>
         db.learningObjective
           .create({
@@ -36,9 +43,7 @@ export function createPostgresLearningObjectiveRepository({ db }) {
           .then(mapLearningObjective)
       );
     },
-    /** @param {import("../../domain/learning-objective.ts").LearningObjective} objective
-     * @param {{ expectedUpdatedAt?: string }} options */
-    async save(objective, { expectedUpdatedAt } = {}) {
+    async save(objective: ObjectiveWriteInput, { expectedUpdatedAt }: { expectedUpdatedAt?: unknown } = {}) {
       const data = toData(objective);
       if (expectedUpdatedAt) {
         return withRepositoryErrors(async () => {
@@ -69,13 +74,21 @@ export function createPostgresLearningObjectiveRepository({ db }) {
           .then(mapLearningObjective)
       );
     },
-    async findById(id) {
-      return withRepositoryErrors(() => db.learningObjective.findUnique({ where: { id } }).then(mapLearningObjective));
+    // requireObjectives 会在实体构造前传入 DTO 动态 map/filter/Set 的原始元素。
+    async findById(id: unknown) {
+      return withRepositoryErrors(() =>
+        db.learningObjective
+          .findUnique({ where: { id } })
+          .then<SyncMappedEntityMap['learningObjectives'] | null>(mapLearningObjective)
+      );
     },
-    /** @param {{ knowledgeItemId?: string, reviewStatus?: string, includeArchived?: boolean, includeDeleted?: boolean }} options */
-    list({ knowledgeItemId, reviewStatus, includeArchived = false, includeDeleted = false } = {}) {
-      /** @type {import("@prisma/client").Prisma.LearningObjectiveWhereInput} */
-      const where = { ...(knowledgeItemId ? { knowledgeItemId } : {}) };
+    list({
+      knowledgeItemId,
+      reviewStatus,
+      includeArchived = false,
+      includeDeleted = false
+    }: ObjectiveListOptions = {}) {
+      const where: ObjectiveWhere = { ...(knowledgeItemId ? { knowledgeItemId } : {}) };
       if (!includeDeleted) where.deletedAt = null;
       if (reviewStatus) where.reviewStatus = reviewStatus;
       else if (!includeArchived) where.reviewStatus = { not: 'archived' };
@@ -85,7 +98,7 @@ export function createPostgresLearningObjectiveRepository({ db }) {
           .then(rows => rows.map(mapLearningObjective))
       );
     },
-    async delete(id) {
+    async delete(id: string) {
       return withRepositoryErrors(() => db.learningObjective.delete({ where: { id } }).then(mapLearningObjective));
     },
     supportsAsync: true
