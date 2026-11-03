@@ -3,14 +3,14 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_RESTORE_BYTES } from '@study-accelerator/shared/attachments';
 import { createAppError } from '../errors/app-error.js';
-import { normalizeSha256 } from './attachment-record-reconciliation.js';
+import { normalizeSha256 } from './attachment-record-reconciliation.ts';
 import { sha256Buffer, writeFileAtomically } from './local-attachment-store-utils.js';
 
 export function decodeAttachmentBytes(contentBase64, limit = MAX_ATTACHMENT_UPLOAD_BYTES, allowEmpty = false) {
   if (typeof contentBase64 !== 'string' || contentBase64.length > Math.ceil(limit / 3) * 4) {
     throw createAppError('ATTACHMENT_TOO_LARGE', '附件超过允许的大小。', 413);
   }
-  if ((contentBase64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(contentBase64))) {
+  if (contentBase64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(contentBase64)) {
     throw createAppError('ATTACHMENT_CONTENT_INVALID', '附件内容编码无效。', 422);
   }
   const content = Buffer.from(contentBase64, 'base64');
@@ -22,7 +22,14 @@ export function decodeAttachmentBytes(contentBase64, limit = MAX_ATTACHMENT_UPLO
 }
 
 export function attachmentIdentity(attachment) {
-  return JSON.stringify([attachment.id, attachment.noteId, attachment.fileName, attachment.storagePath, attachment.sha256, attachment.size]);
+  return JSON.stringify([
+    attachment.id,
+    attachment.noteId,
+    attachment.fileName,
+    attachment.storagePath,
+    attachment.sha256,
+    attachment.size
+  ]);
 }
 
 export function assertSameAttachment(current, expected) {
@@ -37,16 +44,28 @@ export function inspectAttachmentFile(attachment, fileManager) {
   const readablePath = fileManager.resolveReadableAttachmentPath({ ...attachment });
   if (!readablePath) return { status: 'missing', verifiedAt: null };
   let content;
-  try { content = fs.readFileSync(readablePath); }
-  catch (error) { if (error.code === 'ENOENT') return { status: 'missing', verifiedAt: null }; throw error; }
+  try {
+    content = fs.readFileSync(readablePath);
+  } catch (error) {
+    if (error.code === 'ENOENT') return { status: 'missing', verifiedAt: null };
+    throw error;
+  }
   if (!expected) return { status: 'failed', verifiedAt: null };
-  if (content.length !== attachment.size || sha256Buffer(content) !== expected) return { status: 'corrupt', verifiedAt: null };
-  return { status: 'ready', verifiedAt: attachment.status === 'ready' && attachment.verifiedAt ? attachment.verifiedAt : new Date().toISOString(), content };
+  if (content.length !== attachment.size || sha256Buffer(content) !== expected)
+    return { status: 'corrupt', verifiedAt: null };
+  return {
+    status: 'ready',
+    verifiedAt:
+      attachment.status === 'ready' && attachment.verifiedAt ? attachment.verifiedAt : new Date().toISOString(),
+    content
+  };
 }
 
 export function assertReadableStatus(attachment) {
-  if (attachment.status === 'corrupt') throw createAppError('ATTACHMENT_FILE_CORRUPT', '附件文件损坏，请核验或恢复原文件。', 409);
-  if (!['ready', 'missing'].includes(attachment.status)) throw createAppError('ATTACHMENT_NOT_READY', '附件尚不可用，请先核验。', 409);
+  if (attachment.status === 'corrupt')
+    throw createAppError('ATTACHMENT_FILE_CORRUPT', '附件文件损坏，请核验或恢复原文件。', 409);
+  if (!['ready', 'missing'].includes(attachment.status))
+    throw createAppError('ATTACHMENT_NOT_READY', '附件尚不可用，请先核验。', 409);
 }
 
 export function throwFileHealth(status) {
@@ -58,7 +77,8 @@ export function throwFileHealth(status) {
 // 原内容永不覆盖：损坏副本作为恢复材料保留，成功提交后才移除本次临时备份。
 export function prepareAttachmentRestore(attachment, body, fileManager) {
   const expected = normalizeSha256(attachment.sha256);
-  if (!expected) throw createAppError('ATTACHMENT_RESTORE_UNVERIFIABLE', '缺少可信原哈希，请作为新附件上传，不能覆盖原附件。', 422);
+  if (!expected)
+    throw createAppError('ATTACHMENT_RESTORE_UNVERIFIABLE', '缺少可信原哈希，请作为新附件上传，不能覆盖原附件。', 422);
   const content = decodeAttachmentBytes(body?.contentBase64, MAX_ATTACHMENT_RESTORE_BYTES, attachment.size === 0);
   if (content.length !== attachment.size || sha256Buffer(content) !== expected) {
     throw createAppError('ATTACHMENT_RESTORE_MISMATCH', '所选文件与原附件不一致，请选择原文件。', 422);
@@ -71,9 +91,16 @@ export function prepareAttachmentRestore(attachment, body, fileManager) {
   writeFileAtomically(staged, content);
   try {
     if (fs.existsSync(destination)) fs.linkSync(destination, backup);
-    writeFileAtomically(intent, Buffer.from(JSON.stringify({ attachment: { ...attachment }, staged: path.basename(staged), backup: path.basename(backup) })));
+    writeFileAtomically(
+      intent,
+      Buffer.from(
+        JSON.stringify({ attachment: { ...attachment }, staged: path.basename(staged), backup: path.basename(backup) })
+      )
+    );
   } catch (error) {
-    fs.rmSync(staged, { force: true }); fs.rmSync(backup, { force: true }); throw error;
+    fs.rmSync(staged, { force: true });
+    fs.rmSync(backup, { force: true });
+    throw error;
   }
   let committed = false;
   return {
@@ -82,18 +109,28 @@ export function prepareAttachmentRestore(attachment, body, fileManager) {
       fs.renameSync(staged, destination);
       committed = true;
       const directory = fs.openSync(path.dirname(destination), 'r');
-      try { fs.fsyncSync(directory); } finally { fs.closeSync(directory); }
+      try {
+        fs.fsyncSync(directory);
+      } finally {
+        fs.closeSync(directory);
+      }
     },
     finalize() {
-      try { fs.rmSync(backup, { force: true }); fs.rmSync(intent, { force: true }); }
-      catch { /* 文件与元数据已提交，临时材料由重启核验清理。 */ }
+      try {
+        fs.rmSync(backup, { force: true });
+        fs.rmSync(intent, { force: true });
+      } catch {
+        /* 文件与元数据已提交，临时材料由重启核验清理。 */
+      }
     },
     rollback() {
       if (committed) {
         if (fs.existsSync(backup)) fs.renameSync(backup, destination);
         else fs.rmSync(destination, { force: true });
       }
-      fs.rmSync(staged, { force: true }); fs.rmSync(backup, { force: true }); fs.rmSync(intent, { force: true });
+      fs.rmSync(staged, { force: true });
+      fs.rmSync(backup, { force: true });
+      fs.rmSync(intent, { force: true });
     }
   };
 }
@@ -119,9 +156,12 @@ export async function recoverAttachmentRestores(fileManager, getAttachment, veri
       }
       await verifyAttachment?.(current.id);
       for (const candidate of [intent.staged, intent.backup]) {
-        if (typeof candidate === 'string' && /^\.restore-[a-f0-9-]+\.(tmp|bak)$/.test(candidate)) fs.rmSync(path.join(directory, candidate), { force: true });
+        if (typeof candidate === 'string' && /^\.restore-[a-f0-9-]+\.(tmp|bak)$/.test(candidate))
+          fs.rmSync(path.join(directory, candidate), { force: true });
       }
       fs.rmSync(path.join(directory, name));
-    } catch { /* 保留不能自动确认的恢复材料。 */ }
+    } catch {
+      /* 保留不能自动确认的恢复材料。 */
+    }
   }
 }

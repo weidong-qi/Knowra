@@ -1,5 +1,5 @@
 import { createMcpKnowledgeReadService } from './mcp-knowledge-read.js';
-import { wrapHandlersWithMaintenanceGate } from '../../infrastructure/maintenance-gate.js';
+import { wrapHandlersWithMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
 import { createNoteActionService } from './action-service.js';
 import { createAiGateway } from './gateway.js';
 import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.js';

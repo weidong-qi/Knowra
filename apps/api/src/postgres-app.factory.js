@@ -35,14 +35,14 @@ import {
   createPostgresAnnotationRevisionRepository
 } from './modules/knowledge/infrastructure/postgres/annotation-support-repositories.js';
 import { createAsyncNoteDeletionCoordinator } from './modules/knowledge/application/postgres-async/note-deletion-coordinator.js';
-import { withPostgresErrors } from './infrastructure/postgres-errors.js';
+import { withPostgresErrors } from './infrastructure/postgres-errors.ts';
 import { notFoundError } from './modules/knowledge/application/knowledge-errors.js';
-import { assertPostgresOwnerBoundary } from './infrastructure/owner-boundary.js';
-import { createMaintenanceGate, wrapHandlersWithMaintenanceGate } from './infrastructure/maintenance-gate.js';
+import { assertPostgresOwnerBoundary } from './infrastructure/owner-boundary.ts';
+import { createMaintenanceGate, wrapHandlersWithMaintenanceGate } from './infrastructure/maintenance-gate.ts';
 import {
   createPostgresAdvisoryLock,
   wrapHandlersWithPostgresAdvisoryLock
-} from './infrastructure/postgres-advisory-lock.js';
+} from './infrastructure/postgres-advisory-lock.ts';
 import { createModelSettingsService } from './modules/ai/model-settings.js';
 import { createOptionalAiRuntime } from './modules/ai/runtime.js';
 import { createAiFeatureSettings } from './modules/ai/feature-settings.js';

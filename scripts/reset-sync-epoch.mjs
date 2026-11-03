@@ -7,7 +7,7 @@ import {
   createPersistedLocalDocument,
   validatePersistedLocalState
 } from '../apps/api/src/infrastructure/local-data-schema.js';
-import { writeJsonFileAtomically } from '../apps/api/src/infrastructure/atomic-json-file.js';
+import { writeJsonFileAtomically } from '../apps/api/src/infrastructure/atomic-json-file.ts';
 import { resetJournalKeepingTombstones } from '../apps/api/src/modules/sync/journal.ts';
 import { loadPostgresSyncIdentityState } from '../apps/api/src/modules/sync/postgres-provider.js';
 import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.js';

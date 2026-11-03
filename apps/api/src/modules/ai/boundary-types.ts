@@ -138,7 +138,7 @@ export interface RuntimeOptions {
   knowledge?: ReturnType<typeof createKnowledgeModule>;
   asyncDomain?: boolean;
   maintenanceGate?: Parameters<
-    typeof import('../../infrastructure/maintenance-gate.js').wrapHandlersWithMaintenanceGate
+    typeof import('../../infrastructure/maintenance-gate.ts').wrapHandlersWithMaintenanceGate
   >[1];
   authorizePaidCall?: Parameters<typeof createAiGateway>[0]['authorizePaidCall'];
   fetchImpl?: typeof fetch;

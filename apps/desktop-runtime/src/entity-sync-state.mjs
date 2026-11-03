@@ -1,5 +1,5 @@
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
-import { cloneJsonData } from '../../api/src/infrastructure/json-clone.js';
+import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.js';
 import { selectEntityBatch } from './entity-batches.mjs';

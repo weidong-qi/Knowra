@@ -39,9 +39,9 @@ import { createModelSettingsService } from './modules/ai/model-settings.js';
 import { createAiFeatureSettings } from './modules/ai/feature-settings.js';
 import { createOptionalAiRuntime } from './modules/ai/runtime.js';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.js';
-import { createJsonlShadowSink } from './infrastructure/annotation-shadow-log.js';
+import { createJsonlShadowSink } from './infrastructure/annotation-shadow-log.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.js';
-import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.js';
+import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -1,4 +1,4 @@
-import { cloneJsonData } from '../../infrastructure/json-clone.js';
+import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertSyncContract } from './protocol-contract.ts';
 import { assertSyncDeviceEnabled } from './rollout-policy.ts';
 import { WRITABLE_COLLECTIONS, changeReferencesFor, sameEntity } from './entity-contract.ts';

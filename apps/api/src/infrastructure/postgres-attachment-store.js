@@ -12,7 +12,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { createAppError } from '../errors/app-error.js';
 import { createLocalAttachmentFileManager } from './local-attachment-file-manager.js';
-import { ATTACHMENT_STATUS } from './attachment-status.js';
+import { ATTACHMENT_STATUS } from './attachment-status.ts';
 import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.js';
 import { inspectAttachmentDeletion } from './attachment-deletion-preflight.js';
 import {

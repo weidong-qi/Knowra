@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { jsonChunks } from './json-chunks.js';
+import { jsonChunks } from './json-chunks.ts';
 
 /** 最小公开注入端口：函数属性保持 descriptor 的生产/消费关联，忽略的结果不作保证。 */
 export interface FilePort<D> {

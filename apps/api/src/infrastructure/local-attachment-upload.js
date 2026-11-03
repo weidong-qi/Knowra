@@ -1,5 +1,5 @@
 import { decodeAttachmentBytes } from './attachment-recovery.js';
-import { ATTACHMENT_STATUS } from './attachment-status.js';
+import { ATTACHMENT_STATUS } from './attachment-status.ts';
 import {
   createAttachmentId,
   sanitizeFileName,

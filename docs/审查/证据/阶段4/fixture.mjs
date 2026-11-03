@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createFileDataStore } from '../../../../apps/api/src/infrastructure/file-data-store.js';
-import { writeJsonFileAtomically } from '../../../../apps/api/src/infrastructure/atomic-json-file.js';
+import { writeJsonFileAtomically } from '../../../../apps/api/src/infrastructure/atomic-json-file.ts';
 import { createAppContext } from '../../../../apps/api/src/app.factory.js';
 import { createServer } from '../../../../apps/api/src/server.js';
 export async function fixture(){
