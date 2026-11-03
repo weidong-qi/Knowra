@@ -4,10 +4,24 @@ import { createNote, mockEditorWorkspace } from './fixtures/editorWorkspace';
 
 test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保留', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
-  await page.route('**/api/ai/model-settings', route => route.fulfill({ json: { data: { configured: false, modelId: 'deepseek-flash', modelSupported: true, supportedModelIds: ['deepseek-flash'] } } }));
+  await page.route('**/api/ai/model-settings', route =>
+    route.fulfill({
+      json: {
+        data: {
+          configured: false,
+          modelId: 'deepseek-flash',
+          modelSupported: true,
+          supportedModelIds: ['deepseek-flash']
+        }
+      }
+    })
+  );
   await page.addInitScript(() => {
     if (!localStorage.getItem('knowra:notes-index-appearance:v1')) {
-      localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify({ mode: 'light', theme: 'mono', shape: 'rounded', deco: 'off' }));
+      localStorage.setItem(
+        'knowra:notes-index-appearance:v1',
+        JSON.stringify({ mode: 'light', theme: 'mono', shape: 'rounded', deco: 'off' })
+      );
     }
   });
   await page.goto('/');
@@ -26,14 +40,19 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
     await expect(shell).toHaveAttribute('data-ni-theme', 'orange');
     await expect(page.getByRole('button', { name: '切换浅色模式' })).toBeVisible();
     await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(24, 25, 29)');
-    const radius = await shell.evaluate(element => getComputedStyle(element).getPropertyValue('--radius-control').trim());
+    const radius = await shell.evaluate(element =>
+      getComputedStyle(element).getPropertyValue('--radius-control').trim()
+    );
     expect(radius).toBe('7px');
   }
   await page.reload();
   await expect(shell).toHaveAttribute('data-ni-mode', 'dark');
   await page.screenshot({ path: info.outputPath('settings-dark.png'), animations: 'disabled' });
   await page.goto('/#/materials');
-  const create = page.getByRole('article', { name: '笔记索引' }).getByRole('toolbar', { name: '笔记索引工具栏' }).getByRole('button', { name: '新建', exact: true });
+  const create = page
+    .getByRole('article', { name: '笔记索引' })
+    .getByRole('toolbar', { name: '笔记索引工具栏' })
+    .getByRole('button', { name: '新建', exact: true });
   await create.click();
   const menu = page.getByRole('menu', { name: '新建', exact: true });
   await expect(menu).toBeVisible();
@@ -51,10 +70,25 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
 
 test('默认图标布局与卡片文件夹按原型展示，类型筛选收进显示选项', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
-  const folders = ['工作', '灵感箱', '学习资料', '生活'].map((name, index) => ({ id: `folder-${index + 1}`, name, parentId: null, children: [] }));
-  const notes = [14, 7, 10, 3].flatMap((count, index) => Array.from({ length: count }, (_, number) => createNote('', false, `note-${index}-${number}`, `资料 ${index + 1}-${number + 1}`, folders[index].id)));
-  await page.route(url => url.pathname === '/api/knowledge/folders/tree', route => route.fulfill({ json: { data: folders } }));
-  await page.route(url => url.pathname === '/api/knowledge/notes', route => route.fulfill({ json: { data: notes } }));
+  const folders = ['工作', '灵感箱', '学习资料', '生活'].map((name, index) => ({
+    id: `folder-${index + 1}`,
+    name,
+    parentId: null,
+    children: []
+  }));
+  const notes = [14, 7, 10, 3].flatMap((count, index) =>
+    Array.from({ length: count }, (_, number) =>
+      createNote('', false, `note-${index}-${number}`, `资料 ${index + 1}-${number + 1}`, folders[index].id)
+    )
+  );
+  await page.route(
+    url => url.pathname === '/api/knowledge/folders/tree',
+    route => route.fulfill({ json: { data: folders } })
+  );
+  await page.route(
+    url => url.pathname === '/api/knowledge/notes',
+    route => route.fulfill({ json: { data: notes } })
+  );
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/#/materials');
   const index = page.getByRole('article', { name: '笔记索引' });
@@ -62,11 +96,16 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   await expect(toolbar.getByRole('button', { name: '图标视图' })).toHaveAttribute('aria-pressed', 'true');
   await expect(toolbar.getByRole('button', { name: '图标视图' })).toHaveCSS('min-height', '22px');
   await toolbar.getByRole('button', { name: /^显示选项/ }).click();
-  await page.getByRole('group', { name: '类型' }).getByRole('button', { name: /^文件夹/ }).click();
+  await page
+    .getByRole('group', { name: '类型' })
+    .getByRole('button', { name: /^文件夹/ })
+    .click();
   await page.keyboard.press('Escape');
   await expect(index.locator('[data-entry-item]')).toHaveCount(4);
   await expect(index.locator('[data-folder-style="illustrated"]')).toHaveCount(4);
-  await expect(index.locator('[data-kind="folder"]').filter({ hasText: '工作' }).locator('[data-folder-paper]')).toHaveCount(3);
+  await expect(
+    index.locator('[data-kind="folder"]').filter({ hasText: '工作' }).locator('[data-folder-paper]')
+  ).toHaveCount(3);
   const heading = index.getByRole('button', { name: /^文件夹\s*4$/ });
   await expect(heading.locator('span > i')).toHaveCount(0);
   await heading.click();
@@ -90,13 +129,32 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   await page.screenshot({ path: info.outputPath('folder-cards-mobile.png'), animations: 'disabled' });
   await page.reload();
   await toolbar.getByRole('button', { name: /^显示选项/ }).click();
-  await expect(page.getByRole('group', { name: '类型' }).getByRole('button', { name: /^全部/ })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('group', { name: '布局' }).getByRole('button', { name: '图标' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', { name: '类型' }).getByRole('button', { name: /^全部/ })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await expect(page.getByRole('group', { name: '布局' }).getByRole('button', { name: '图标' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
 });
 
 test('热力图随标签区域滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
-  await page.route(url => url.pathname === '/api/knowledge/folders/tree', route => route.fulfill({ json: { data: Array.from({ length: 30 }, (_, index) => ({ id: `folder-${index + 1}`, name: `目录 ${index + 1}`, parentId: null, children: [] })) } }));
+  await page.route(
+    url => url.pathname === '/api/knowledge/folders/tree',
+    route =>
+      route.fulfill({
+        json: {
+          data: Array.from({ length: 30 }, (_, index) => ({
+            id: `folder-${index + 1}`,
+            name: `目录 ${index + 1}`,
+            parentId: null,
+            children: []
+          }))
+        }
+      })
+  );
   await page.setViewportSize({ width: 1440, height: 700 });
   await page.goto('/#/materials');
   const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
@@ -107,13 +165,18 @@ test('热力图随标签区域滚动，桌面和窄屏新建入口保持尺寸�
   await expect(sidebar.getByRole('treeitem')).toHaveCount(30);
   const position = await distribution.boundingBox();
   const trashBefore = await trash.boundingBox();
-  await scroll.evaluate(element => { element.scrollTop = element.scrollHeight; });
+  await scroll.evaluate(element => {
+    element.scrollTop = element.scrollHeight;
+  });
   const moved = await distribution.boundingBox();
   expect(position!.y - moved!.y).toBeGreaterThan(100);
   expect((await trash.boundingBox())!.y).toBe(trashBefore!.y);
   await expect(distribution).toBeInViewport();
   await page.screenshot({ path: info.outputPath('sidebar-scroll.png') });
-  for (const { width, targetSize } of [{ width: 1440, targetSize: 30 }, { width: 390, targetSize: 44 }]) {
+  for (const { width, targetSize } of [
+    { width: 1440, targetSize: 30 },
+    { width: 390, targetSize: 44 }
+  ]) {
     await page.setViewportSize({ width, height: 844 });
     const toolbar = page.getByRole('article', { name: '笔记索引' }).getByRole('toolbar', { name: '笔记索引工具栏' });
     const create = toolbar.getByRole('button', { name: '新建', exact: true });
@@ -141,26 +204,37 @@ test('热力图随标签区域滚动，桌面和窄屏新建入口保持尺寸�
 });
 
 for (const { label, hasTouch, viewport } of [
-  { label: '窄屏', hasTouch: false, viewport: { width: 390, height: 844 } },
+  { label: '手机鼠标', hasTouch: false, viewport: { width: 390, height: 844 } },
+  { label: '手机触屏', hasTouch: true, viewport: { width: 390, height: 844 } },
+  { label: '767px 手机边界鼠标', hasTouch: false, viewport: { width: 767, height: 900 } },
+  { label: '767px 手机边界触屏', hasTouch: true, viewport: { width: 767, height: 900 } },
+  { label: '768px 平板边界鼠标', hasTouch: false, viewport: { width: 768, height: 900 } },
+  { label: '768px 平板边界触屏', hasTouch: true, viewport: { width: 768, height: 900 } },
+  { label: '宽屏鼠标', hasTouch: false, viewport: { width: 1024, height: 900 } },
   { label: '宽屏触屏', hasTouch: true, viewport: { width: 1024, height: 900 } }
 ]) {
   test.describe(`${label}共享图标按钮`, () => {
     // 复用 fixture context，确保 syntheticNetwork 的请求和 WebSocket 隔离始终生效。
     test.use({ hasTouch, viewport });
-    test('保留44px点击区域', async ({ page }) => {
+    test(viewport.width < 768 ? '手机宽度保留44px点击区域' : '宽屏使用图标按钮声明尺寸', async ({ page }) => {
       await mockEditorWorkspace(page, []);
       await page.goto('/#/materials');
       const index = page.getByRole('article', { name: '笔记索引' });
-      for (const button of [
-        index.getByRole('button', { name: '筛选', exact: true }),
-        index.getByRole('button', { name: /^显示选项/ }),
-        index.getByRole('button', { name: '上一页', exact: true }),
-        index.getByRole('button', { name: '下一页', exact: true })
-      ]) {
+      for (const [button, regularSize] of [
+        [index.getByRole('button', { name: '筛选', exact: true }), 28],
+        [index.getByRole('button', { name: /^显示选项/ }), 28],
+        [index.getByRole('button', { name: '上一页', exact: true }), 24],
+        [index.getByRole('button', { name: '下一页', exact: true }), 24]
+      ] as const) {
         await expect(button).toBeVisible();
         const box = await button.boundingBox();
-        expect(box!.width).toBeGreaterThanOrEqual(44);
-        expect(box!.height).toBeGreaterThanOrEqual(44);
+        if (viewport.width < 768) {
+          expect(Number(box!.width.toFixed(3))).toBeGreaterThanOrEqual(44);
+          expect(Number(box!.height.toFixed(3))).toBeGreaterThanOrEqual(44);
+        } else {
+          expect(box!.width).toBeCloseTo(regularSize, 3);
+          expect(box!.height).toBeCloseTo(regularSize, 3);
+        }
       }
     });
   });
@@ -188,12 +262,18 @@ test('强制色保留页签和表单焦点，错误字段继续报告校验错�
 });
 
 for (const mode of ['light', 'dark']) {
-  for (const [buttonStyle, defaultButtonStyle] of [['paper', 'soft'], ['frost', 'glass']]) {
+  for (const [buttonStyle, defaultButtonStyle] of [
+    ['paper', 'soft'],
+    ['frost', 'glass']
+  ]) {
     test(`${mode} ${buttonStyle}/${defaultButtonStyle}：按钮材质不覆盖禁用反馈`, async ({ page }) => {
       await mockEditorWorkspace(page, []);
-      await page.addInitScript(appearance => {
-        localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify(appearance));
-      }, { mode, buttonStyle, defaultButtonStyle });
+      await page.addInitScript(
+        appearance => {
+          localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify(appearance));
+        },
+        { mode, buttonStyle, defaultButtonStyle }
+      );
       await page.goto('/#/showcase');
       const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
       await expect(shell).toHaveAttribute('data-button-style', buttonStyle);
@@ -207,7 +287,8 @@ for (const mode of ['light', 'dark']) {
         const colors = await button.evaluate(element => {
           const computed = getComputedStyle(element);
           const probe = document.createElement('span');
-          probe.style.cssText = 'color:var(--text-muted);background:var(--surface-hover);border:1px solid var(--border-subtle)';
+          probe.style.cssText =
+            'color:var(--text-muted);background:var(--surface-hover);border:1px solid var(--border-subtle)';
           element.append(probe);
           const neutral = getComputedStyle(probe);
           const result = {
