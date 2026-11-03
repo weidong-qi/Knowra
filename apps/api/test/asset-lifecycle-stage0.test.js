@@ -10,7 +10,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: '附件只读预检区分正文、回收站、历史版本与业务来源引用',
     async run() {
-      const { inspectAttachmentDeletion } = await import('../src/infrastructure/attachment-deletion-preflight.js');
+      const { inspectAttachmentDeletion } = await import('../src/infrastructure/attachment-deletion-preflight.ts');
       const id = 'attachment-stage0';
       const state = {
         notes: [

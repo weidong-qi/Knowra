@@ -7,7 +7,7 @@ import path from 'node:path';
 import { createPostgresSyncRuntime } from './modules/sync/postgres-provider.ts';
 import { createPrismaRuntime } from './infrastructure/prisma-client.js';
 import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.js';
-import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.js';
+import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.ts';
 import { createPostgresSnapshotService } from './infrastructure/postgres-snapshot-service.js';
 import { createPostgresKnowledgeModule } from './modules/knowledge/postgres-async-module.js';
 import { createPostgresKnowledgeHttpHandlers } from './modules/knowledge/http/postgres-async-handlers.js';

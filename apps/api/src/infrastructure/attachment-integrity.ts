@@ -3,21 +3,70 @@ import path from 'node:path';
 import { ATTACHMENT_STATUS, normalizeAttachmentStatus } from './attachment-status.ts';
 import { normalizeSha256 } from './attachment-record-reconciliation.ts';
 import { sha256FileSync } from './local-attachment-store-utils.ts';
+import type { AttachmentStatus } from './attachment-status.ts';
+import type { AttachmentFileMetadata, AttachmentOperationError } from './local-attachment-types.ts';
 
-/** @param {{attachments?: {id: string, storagePath?: string, size?: number, sha256?: string, status?: string, verifiedAt?: string}[], fileManager?: ReturnType<typeof import('./local-attachment-file-manager.ts').createLocalAttachmentFileManager>, generatedAt?: string}} options */
+export interface AttachmentIntegrityMetadata extends Omit<AttachmentFileMetadata, 'size'> {
+  id: string;
+  size?: number | string | null;
+  status?: string | null;
+  verifiedAt?: string | null;
+}
+export interface AttachmentIntegrityIssue {
+  code: string;
+  message: string;
+  attachmentId?: string;
+  fileName?: string;
+  expectedSha256?: string;
+  actualSha256?: string;
+  expectedSize?: number;
+  actualSize?: number;
+  previousStatus?: string | null;
+  generatedAt?: string;
+}
+export interface AttachmentIntegrityItem {
+  attachmentId: string;
+  filePath: string | null;
+  expectedFileName: string;
+  expectedSize: number | null;
+  expectedSha256: string | null;
+  storedStatus: string | null | undefined;
+  actualSize: number | null;
+  actualSha256: string | null;
+  observedStatus: AttachmentStatus;
+  errors: AttachmentIntegrityIssue[];
+  warnings: AttachmentIntegrityIssue[];
+}
+interface IntegrityFileManager {
+  getAttachmentFileName(attachment: Pick<AttachmentFileMetadata, 'id' | 'fileName'>): string;
+  getAttachmentCandidatePaths(attachment: Pick<AttachmentFileMetadata, 'id' | 'fileName'>): string[];
+  getManagedUploadsDirectory(): string;
+}
+export interface AttachmentIntegrityOptions {
+  attachments?: AttachmentIntegrityMetadata[];
+  fileManager?: IntegrityFileManager;
+  generatedAt?: string;
+}
+interface AttachmentRepairFields {
+  size?: number | string | null;
+  sha256?: string | null;
+  status?: string | null;
+  verifiedAt?: string | null;
+}
+
 export function inspectAttachmentIntegrity({
   attachments = [],
   fileManager,
   generatedAt = new Date().toISOString()
-} = {}) {
+}: AttachmentIntegrityOptions = {}) {
   if (!fileManager?.getAttachmentCandidatePaths) {
     throw new TypeError('Attachment integrity inspection requires a file manager');
   }
 
-  const errors = [];
-  const warnings = [];
-  const items = [];
-  const expectedFileNames = new Set();
+  const errors: AttachmentIntegrityIssue[] = [];
+  const warnings: AttachmentIntegrityIssue[] = [];
+  const items: AttachmentIntegrityItem[] = [];
+  const expectedFileNames = new Set<string>();
 
   for (const attachment of attachments) {
     const expectedFileName = fileManager.getAttachmentFileName(attachment);
@@ -56,8 +105,12 @@ export function inspectAttachmentIntegrity({
   };
 }
 
-export function buildAttachmentRepairRecord(attachment, item, { verifiedAt = new Date().toISOString() } = {}) {
-  const repaired = { ...attachment };
+export function buildAttachmentRepairRecord<T extends AttachmentIntegrityMetadata>(
+  attachment: T,
+  item: AttachmentIntegrityItem,
+  { verifiedAt = new Date().toISOString() }: { verifiedAt?: string } = {}
+) {
+  const repaired: Omit<T, keyof AttachmentRepairFields> & AttachmentRepairFields = { ...attachment };
   if (item.observedStatus === ATTACHMENT_STATUS.READY) {
     repaired.size = item.actualSize;
     repaired.sha256 = item.actualSha256;
@@ -70,11 +123,11 @@ export function buildAttachmentRepairRecord(attachment, item, { verifiedAt = new
   return repaired;
 }
 
-function inspectAttachment(attachment, filePath, generatedAt) {
+function inspectAttachment(attachment: AttachmentIntegrityMetadata, filePath: string | null, generatedAt: string) {
   const expectedSize = Number.isInteger(Number(attachment.size)) ? Number(attachment.size) : null;
   const expectedSha256 = normalizeSha256(attachment.sha256);
   const storedStatus = normalizeAttachmentStatus(attachment.status);
-  const base = {
+  const base: AttachmentIntegrityItem = {
     attachmentId: attachment.id,
     filePath,
     expectedFileName: path.basename(String(attachment.storagePath ?? '')),
@@ -83,7 +136,7 @@ function inspectAttachment(attachment, filePath, generatedAt) {
     storedStatus,
     actualSize: null,
     actualSha256: null,
-    observedStatus: /** @type {import('./attachment-status.ts').AttachmentStatus} */ (ATTACHMENT_STATUS.MISSING),
+    observedStatus: ATTACHMENT_STATUS.MISSING,
     errors: [],
     warnings: []
   };
@@ -148,8 +201,8 @@ function inspectAttachment(attachment, filePath, generatedAt) {
   return base;
 }
 
-function countStatuses(items) {
-  const counts = {
+function countStatuses(items: AttachmentIntegrityItem[]) {
+  const counts: Record<AttachmentStatus | 'total' | 'repairable' | 'orphanFiles', number> = {
     total: items.length,
     ready: 0,
     missing: 0,
@@ -171,16 +224,16 @@ function countStatuses(items) {
   return counts;
 }
 
-function isRegularFile(filePath) {
+function isRegularFile(filePath: string) {
   try {
     return fs.statSync(filePath).isFile();
   } catch (error) {
-    if (error.code === 'ENOENT') return false;
+    if ((error as AttachmentOperationError).code === 'ENOENT') return false;
     throw error;
   }
 }
 
-function listManagedFiles(directoryPath) {
+function listManagedFiles(directoryPath: string | null | undefined) {
   if (!directoryPath || !fs.existsSync(directoryPath)) return [];
   return fs
     .readdirSync(directoryPath, { withFileTypes: true })

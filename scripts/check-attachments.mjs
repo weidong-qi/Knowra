@@ -4,7 +4,7 @@ import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-clien
 import {
   buildAttachmentRepairRecord,
   inspectAttachmentIntegrity
-} from '../apps/api/src/infrastructure/attachment-integrity.js';
+} from '../apps/api/src/infrastructure/attachment-integrity.ts';
 import { createLocalAttachmentFileManager } from '../apps/api/src/infrastructure/local-attachment-file-manager.ts';
 import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.js';
 import { validatePersistedLocalState } from '../apps/api/src/infrastructure/local-data-schema.js';
