@@ -51,7 +51,8 @@
   font: 500 16px/1 var(--font-ui);
 }
 .pageCount {
-  min-width: 28px;
+  min-width: 24px;
+  padding-right: 2px;
   color: var(--text-muted);
   font: 400 var(--font-size-meta) / 1 var(--font-ui);
   font-variant-numeric: tabular-nums;
@@ -64,8 +65,24 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.pageBar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-action-glass-hover, var(--surface-page));
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow-action-glass, var(--shadow-control));
+}
 .pageField {
-  width: 48px;
+  width: 36px;
 }
 .pageField label {
   position: absolute;
@@ -234,8 +251,12 @@
     min-width: 36px;
     min-height: 36px;
   }
+  .pageBar button {
+    min-width: 40px;
+    min-height: 40px;
+  }
   .pageField {
-    width: 56px;
+    width: 44px;
   }
 }
 

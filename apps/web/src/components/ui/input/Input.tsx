@@ -27,6 +27,8 @@ export interface TextFieldProps extends Omit<RATextFieldProps, 'className' | 'ch
   isDisabled?: boolean;
   className?: string;
   inputClassName?: string;
+  /** `inline`：无底无框的紧凑输入（页码等工具栏内联字段），悬停和聚焦时才出现底色。 */
+  appearance?: 'default' | 'inline';
   type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search';
   children?: (childProps: { input: typeof RAInput; label: typeof Label; description: typeof Text; error: typeof FieldError }) => ReactNode;
 }
@@ -42,6 +44,7 @@ export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function Tex
     placeholder,
     className,
     inputClassName,
+    appearance = 'default',
     type = 'text',
     children,
     ...rest
@@ -54,7 +57,7 @@ export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function Tex
       isRequired={isRequired}
       isInvalid={isInvalid}
       isDisabled={isDisabled}
-      className={cx(styles.field, className)}
+      className={cx(styles.field, appearance === 'inline' && styles.fieldInline, className)}
       {...rest}
     >
       <Label className={styles.label}>

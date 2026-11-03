@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Note } from '@study-accelerator/web-core';
 import {
   ChevronLeftIcon,
-  ChevronRightIcon,
   FocusIcon,
   HighlightIcon,
   ListIcon,
@@ -11,7 +10,7 @@ import {
   RefreshIcon,
   SearchIcon
 } from '../../components/icons/knowra';
-import { IconButton, SearchBox, SegmentedButton, SegmentedControl, TextField } from '../../components/ui';
+import { IconButton, SearchBox, SegmentedButton, SegmentedControl } from '../../components/ui';
 import { Menu, MenuItem, MenuPopover, MenuTrigger } from '../../components/ui/overlay';
 import type { usePdfViewer } from './usePdfViewer';
 import styles from './PdfReader.module.css';
@@ -53,12 +52,8 @@ export function PdfReaderToolbar({
   onTool,
   onHighlight
 }: PdfReaderToolbarProps) {
-  const [pageInput, setPageInput] = useState('1'),
-    [query, setQuery] = useState(''),
+  const [query, setQuery] = useState(''),
     [searchOpen, setSearchOpen] = useState(false);
-  useEffect(() => {
-    setPageInput(String(viewer.page));
-  }, [viewer.page]);
   const engine = () => viewer.viewerRef.current;
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="PDF 阅读工具">
@@ -68,42 +63,6 @@ export function PdfReaderToolbar({
       <strong className={styles.title} title={note.title}>
         {note.title}
       </strong>
-      <span className={styles.separator} aria-hidden="true" />
-      <IconButton
-        size={28}
-        aria-label="上一页"
-        title="上一页"
-        isDisabled={viewer.page <= 1}
-        onPress={() => {
-          if (engine()) engine()!.currentPageNumber--;
-        }}
-      >
-        <ChevronLeftIcon size={16} />
-      </IconButton>
-      <div className={styles.pageField}>
-        <TextField
-          label="页码"
-          type="number"
-          value={pageInput}
-          onChange={setPageInput}
-          onKeyDown={event => {
-            if (event.key === 'Enter' && engine())
-              engine()!.currentPageNumber = Math.max(1, Math.min(viewer.count, Number(pageInput) || 1));
-          }}
-        />
-      </div>
-      <span className={styles.pageCount}>/ {viewer.count}</span>
-      <IconButton
-        size={28}
-        aria-label="下一页"
-        title="下一页"
-        isDisabled={viewer.page >= viewer.count}
-        onPress={() => {
-          if (engine()) engine()!.currentPageNumber++;
-        }}
-      >
-        <ChevronRightIcon size={16} />
-      </IconButton>
       <span className={styles.separator} aria-hidden="true" />
       <IconButton size={28} aria-label="缩小 PDF" title="缩小" onPress={() => engine()?.decreaseScale()}>
         <span className={styles.glyph}>−</span>

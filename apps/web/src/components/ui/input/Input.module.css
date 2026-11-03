@@ -43,6 +43,14 @@
 }
 
 .input[data-focused] { outline: 0; }
+
+/* 内联紧凑输入：数字类字段嵌在工具栏里，不抢视觉，聚焦时才出现底色。 */
+.fieldInline { gap: 0; }
+.fieldInline .inputShell { height: 24px; border-color: transparent; background: transparent; box-shadow: none; }
+.fieldInline:not([data-disabled]) .inputShell:hover { background: var(--surface-hover); }
+.fieldInline:not([data-disabled]):focus-within .inputShell { background: var(--surface-raised); }
+.fieldInline .input { padding: 0 2px; font-size: 12px; font-weight: 500; text-align: center; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
+.fieldInline .input::-webkit-outer-spin-button, .fieldInline .input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
 .input::placeholder, .textarea::placeholder { color: var(--text-placeholder, var(--text-muted)); font-weight: 400; }
 .textareaShell { height: auto; align-items: stretch; border-radius: var(--radius-popover); }
 .textarea { width: 100%; min-height: 96px; padding: 10px 11px; resize: vertical; border: 0; border-radius: inherit; outline: 0; background: transparent; color: var(--text-primary); font: 400 13px/1.6 var(--font-ui); }

@@ -26,6 +26,7 @@ import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
 import { exportPdfExcerpt, rectToPdf, type PdfSelection } from './pdfGeometry';
 import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
+import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
 import { PdfAnnotationsPanel } from './PdfAnnotationsPanel';
 import { pdfViewerCss } from './pdfRuntime';
@@ -417,6 +418,7 @@ export function PdfReaderView({
           >
             <div className="pdfViewer" />
           </div>
+          <PdfPageBar viewer={viewer} />
         </div>
         {panel ? (
           <PdfAnnotationsPanel
