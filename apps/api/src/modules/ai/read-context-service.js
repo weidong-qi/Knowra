@@ -95,6 +95,7 @@ export function createAiReadContextService({
   ) {
     throw new TypeError('AI read context needs private and knowledge repositories with an owner');
   }
+  /** @template Value @param {import('./record-types.ts').AiAwaitable<Value>} value */
   const read = value => Promise.resolve(value);
 
   async function requireSpace(spaceId) {
@@ -202,6 +203,7 @@ export function createAiReadContextService({
     } else fail('AI_SCOPE_INVALID', '当前只支持明确选中的笔记、选区和目录。');
 
     const selected = kind === 'selection' || kind === 'heading';
+    /** @type {{ref: import('./record-types.ts').AiSourceRef, text: string}[]} */
     const sources = [];
     for (const noteId of noteIds) {
       const { version } = await currentVersion(noteId, spaceId, selected ? (scope.noteVersionId ?? null) : null);
@@ -285,6 +287,7 @@ export function createAiReadContextService({
     const allowed = new Set(sources.map(source => source.ref.sourceId));
     if (excludedSourceIds.some(id => !allowed.has(id))) fail('AI_SCOPE_INVALID', '排除项不属于本次范围。');
     const exclusions = new Set(excludedSourceIds);
+    /** @type {import('./record-types.ts').AiScopeSnapshot} */
     const snapshot = {
       contractVersion: 1,
       kind: 'scopeSnapshot',
@@ -293,7 +296,7 @@ export function createAiReadContextService({
       datasetId: identity.datasetId,
       datasetEpoch: identity.datasetEpoch,
       spaceId,
-      scopeKind: scope.kind,
+      scopeKind: /** @type {import('./record-types.ts').AiScopeKind} */ (scope.kind),
       allowedSources: sources.map(source => source.ref),
       allowedFolderIds,
       excludedSourceIds: [...excludedSourceIds].sort(),
@@ -337,6 +340,7 @@ export function createAiReadContextService({
       if (!exclusions.has(source.ref.sourceId) && !ranked.some(item => item.ref.sourceId === source.ref.sourceId))
         omissions.push(`关键词未命中片段 ${source.ref.sourceId}`);
     const request = makeRequest(selected);
+    /** @type {import('./record-types.ts').AiContextManifest} */
     const manifest = {
       contractVersion: 1,
       kind: 'contextManifest',
@@ -425,6 +429,7 @@ export function createAiReadContextService({
     await read(repository.insert('scopeSnapshot', prepared.scopeSnapshot));
     await read(repository.insert('contextManifest', prepared.manifest));
     const issuedAt = now();
+    /** @type {import('./record-types.ts').AiGrant} */
     const grant = {
       contractVersion: 1,
       kind: 'aiGrant',
@@ -502,6 +507,7 @@ export function createAiReadContextService({
     }
   }
 
+  /** @param {import('./record-types.ts').AiJob} job */
   async function verifyJobSources(job, request = null) {
     const identity = await read(repository.identity());
     const [grant, manifest] = await Promise.all([
@@ -533,13 +539,17 @@ export function createAiReadContextService({
     return { scope, manifest, grant };
   }
 
-  /** @param {import("./read-context-service-types.ts").ValidateCitationsInput} [input] */
+  /**
+   * @param {import("./read-context-service-types.ts").ValidateCitationsInput} [input]
+   * @returns {Promise<import('./record-types.ts').AiSourceRef[]>}
+   */
   async function validateCitations({ jobId, citations } = {}) {
     if (!validId(jobId) || !Array.isArray(citations) || citations.length > MAX_SOURCES)
       fail('AI_CITATION_INVALID', '引用清单无效。');
     const job = await read(repository.get('aiJob', jobId));
     if (!job) fail('AI_CITATION_INVALID', '引用对应任务不存在。');
     const { manifest, scope } = await verifyJobSources(job);
+    /** 模型给出的索引键尚未校验；Map 查找保留该原值。 @type {Map<unknown, import('./record-types.ts').AiSourceRef>} */
     const allowed = new Map(manifest.sources.map(source => [source.sourceId, source]));
     const result = [];
     for (const citation of citations) {
@@ -578,7 +588,10 @@ export function createAiReadContextService({
     return result;
   }
 
-  /** @param {import("./read-context-service-types.ts").ValidateAnswerInput} [input] */
+  /**
+   * @param {import("./read-context-service-types.ts").ValidateAnswerInput} [input]
+   * @returns {Promise<import('./record-types.ts').AiAnswerResult>}
+   */
   async function validateAnswer({ jobId, result } = {}) {
     if (result?.truncated || result?.finishReason === 'length') {
       fail('AI_OUTPUT_TRUNCATED', '模型回答达到输出上限，请重新预览后提问。');

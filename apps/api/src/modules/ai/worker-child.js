@@ -14,11 +14,13 @@ const rpc = (method, args) =>
     process.send?.({ type: 'bridge', id, method, args });
   });
 const repository = /** @type {import('./boundary-types.ts').WorkerOptions['repository']} */ (
-  Object.fromEntries(
-    ['identity', 'get', 'list', 'insert', 'replace', 'appendEvent', 'listEvents'].map(name => [
-      name,
-      (...args) => rpc(`repository.${name}`, args)
-    ])
+  /** @type {Partial<NonNullable<import('./boundary-types.ts').WorkerOptions['repository']>>} */ (
+    Object.fromEntries(
+      ['identity', 'get', 'list', 'insert', 'replace', 'appendEvent', 'listEvents'].map(name => [
+        name,
+        (...args) => rpc(`repository.${name}`, args)
+      ])
+    )
   )
 );
 const budget = /** @type {import('./boundary-types.ts').WorkerOptions['budget']} */ (

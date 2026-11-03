@@ -1,6 +1,6 @@
 import type { createAiAccessService } from './access-service.js';
 import type { createAiGateway } from './gateway.js';
-import type { createAiRecordRepository } from './record-repository.js';
+import type { AiAnswerResult, AiJob, AiRecordRepositoryPort } from './record-types.ts';
 import type { createJsonBudgetAuthority } from './budget-ledger.js';
 import type { createBudgetPolicy } from './budget-policy.ts';
 import type { createModelSettingsService } from './model-settings.ts';
@@ -28,7 +28,7 @@ export interface BudgetLimits {
 }
 export interface WorkerOptions {
   repository?: Pick<
-    ReturnType<typeof createAiRecordRepository>,
+    AiRecordRepositoryPort,
     'identity' | 'get' | 'list' | 'insert' | 'replace' | 'appendEvent' | 'listEvents'
   >;
   budget?: Pick<ReturnType<typeof createJsonBudgetAuthority>, 'reserve' | 'settle'>;
@@ -41,14 +41,7 @@ export interface WorkerOptions {
   authorizeAttempt?: (attemptId: string) => void;
   revokeAttempt?: (attemptId: string) => void;
   verifySources?: ReturnType<typeof import('./read-context-service.js').createAiReadContextService>['verifyJobSources'];
-  validateResult?: (
-    job: { jobId: string },
-    result: GatewayResult
-  ) => Promise<
-    Awaited<
-      ReturnType<ReturnType<typeof import('./read-context-service.js').createAiReadContextService>['validateAnswer']>
-    >
-  >;
+  validateResult?: (job: Pick<AiJob, 'jobId'>, result: GatewayResult) => Promise<AiAnswerResult>;
   logger?: Pick<Console, 'warn' | 'error'>;
   policy?: ReturnType<typeof createBudgetPolicy>;
   limits?: BudgetLimits;
