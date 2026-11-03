@@ -139,8 +139,7 @@
   pointer-events: none;
 }
 /* 目录与标注面板沿用笔记检查器的卡片语言：浅灰底、细环加柔影、四周留间距，顶部标题行加渐隐分隔线。 */
-.annotations,
-.outline {
+.sidePanel {
   --panel-line: linear-gradient(
     90deg,
     transparent,
@@ -164,11 +163,6 @@
     var(--sidebar-highlight, inset 0 1px 0 transparent),
     0 0 0 1px var(--ni-ctx-border, var(--border-subtle)),
     0 14px 34px -16px color-mix(in srgb, #000 32%, transparent);
-}
-.outline {
-  flex-basis: 210px;
-  width: 210px;
-  margin: var(--shell-gap, 8px) 0 var(--shell-gap, 8px) var(--shell-gap, 8px);
 }
 .panelHeader {
   flex: 0 0 var(--tab-size, 44px);
@@ -270,8 +264,7 @@
   stroke-width: 1.5px;
 }
 @media (max-width: 760px) {
-  .annotations,
-  .outline {
+  .sidePanel {
     position: absolute;
     inset: 0 0 0 auto;
     z-index: 10;
@@ -280,10 +273,6 @@
     border-radius: 0;
     background: var(--surface-card-tint, var(--surface-page));
     box-shadow: var(--shadow-panel);
-  }
-  .outline {
-    left: 0;
-    right: auto;
   }
 }
 @media (pointer: coarse) {

@@ -8,7 +8,6 @@ import {
   DialogBody,
   DialogFooter,
   FileDropField,
-  PressableButton,
   TextField
 } from '../../components/ui';
 import { useAppStore } from '../../store/AppStoreProvider';
@@ -28,7 +27,7 @@ import { exportPdfExcerpt, rectToPdf, type PdfSelection } from './pdfGeometry';
 import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
-import { PdfAnnotationsPanel } from './PdfAnnotationsPanel';
+import { PdfSidePanel, type PdfPanelTab } from './PdfSidePanel';
 import { pdfViewerCss } from './pdfRuntime';
 import styles from './PdfReader.module.css';
 
@@ -57,7 +56,7 @@ export function PdfReaderView({
   const [ghost, setGhost] = useState<PdfSegment | null>(null);
   const [password, setPassword] = useState('');
   const [outline, setOutline] = useState<Array<{ title: string; dest: unknown; depth: number }>>([]);
-  const [showOutline, setShowOutline] = useState(false);
+  const [panelTab, setPanelTab] = useState<PdfPanelTab>('marks');
   const [saveDialog, setSaveDialog] = useState(false);
   const [review, setReview] = useState<PdfConflictReview | null>(null);
   const drag = useRef<{ index: number; x: number; y: number } | null>(null);
@@ -152,6 +151,7 @@ export function PdfReaderView({
       });
       setSelected(item.id);
       setPanel(true);
+      setPanelTab('marks');
     },
     [viewer.viewerRef]
   );
@@ -196,6 +196,7 @@ export function PdfReaderView({
     change(id, { ...value, kind: 'important', importance: 'normal', comment: '' });
     setSelected(id);
     setPanel(true);
+    setPanelTab('marks');
     setSelection(null);
     window.getSelection()?.removeAllRanges();
   }
@@ -340,29 +341,6 @@ export function PdfReaderView({
         ) : null}
       </div>
       <div className={styles.workspace} data-panel-open={panel || undefined}>
-        {showOutline ? (
-          <aside className={styles.outline} aria-label="PDF 目录">
-            <h2 className={styles.panelHeader}>目录</h2>
-            <div className={styles.panelBody}>
-              {outline.length ? (
-                outline.map((item, index) => (
-                  <PressableButton
-                    key={index}
-                    className={styles.outlineItem}
-                    style={{ paddingLeft: `${12 + item.depth * 12}px` }}
-                    onPress={() => {
-                      if (item.dest) void viewer.linkRef.current?.goToDestination(item.dest as string);
-                    }}
-                  >
-                    {item.title}
-                  </PressableButton>
-                ))
-              ) : (
-                <p className={styles.panelEmpty}>这份 PDF 没有目录。</p>
-              )}
-            </div>
-          </aside>
-        ) : null}
         <div className={styles.stage}>
           <PdfReaderToolbar
             note={note}
@@ -370,8 +348,8 @@ export function PdfReaderView({
             canWrite={canWrite}
             editable={editable}
             loaded={loaded}
-            panel={panel}
-            outlineOpen={showOutline}
+            panel={panel && panelTab === 'marks'}
+            outlineOpen={panel && panelTab === 'outline'}
             tool={tool}
             selection={Boolean(selection)}
             onBack={() => navigate('/materials')}
@@ -382,10 +360,16 @@ export function PdfReaderView({
                 setError(String(reason));
               }
             }}
-            onOutline={() => setShowOutline(value => !value)}
+            onOutline={() => {
+              setPanel(panel && panelTab === 'outline' ? false : true);
+              setPanelTab('outline');
+            }}
             onDownload={downloadOriginal}
             onExport={exportExcerpt}
-            onPanel={() => setPanel(value => !value)}
+            onPanel={() => {
+              setPanel(panel && panelTab === 'marks' ? false : true);
+              setPanelTab('marks');
+            }}
             onTool={setTool}
             onHighlight={() => {
               if (selection) createMark(selection);
@@ -423,13 +407,19 @@ export function PdfReaderView({
           <PdfPageBar viewer={viewer} />
         </div>
         {panel ? (
-          <PdfAnnotationsPanel
+          <PdfSidePanel
+            tab={panelTab}
+            onTab={setPanelTab}
             items={items}
+            outline={outline}
             selected={selected}
             canWrite={editable}
             onSelect={jump}
             onChange={change}
             onDelete={id => change(id, {}, true)}
+            onOutlineItem={item => {
+              if (item.dest) void viewer.linkRef.current?.goToDestination(item.dest as string);
+            }}
           />
         ) : null}
       </div>
