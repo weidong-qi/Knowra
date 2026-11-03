@@ -17,8 +17,8 @@ import { handleAssistantRoute } from './modules/ai/assistant-routes.js';
 import { handleAiAccessRoute } from './modules/ai/access-routes.js';
 import { handleConversationRoute } from './modules/ai/conversation-routes.js';
 import { handleConversationAttachmentRoute } from './modules/ai/conversation-attachment-routes.js';
-import { handleAiJobRoute } from './modules/ai/job-routes.js';
-import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-extraction-http-service.js';
+import { handleAiJobRoute } from './modules/ai/job-routes.ts';
+import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-extraction-http-service.ts';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { isWriteMethod, writeOriginDecision } from '@study-accelerator/shared/http-origin';
 

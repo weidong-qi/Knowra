@@ -1,4 +1,8 @@
 import { createAppError } from '../../errors/app-error.js';
+import type { AppError } from '../../errors/app-error.ts';
+import type { ExtractionSafeError, RawExtractionHttpError } from './knowledge-extraction-query-types.ts';
+
+type RawError = Omit<Partial<AppError>, 'code'> & { code?: unknown };
 
 // HTTP 和任务视图只使用固定文案；持久事件中的任意 message/payload 不直接公开。
 const messages = {
@@ -28,19 +32,29 @@ const messages = {
   KNOWLEDGE_EXTRACTION_RESPONSE_INCOMPLETE: [422, '提炼结果不完整，本次结果未保存。'],
   KNOWLEDGE_EXTRACTION_FAILED: [503, '提炼未完成，任务记录已保留，请稍后查看。'],
   AI_IDEMPOTENCY_CONFLICT: [409, '同一请求已绑定其他范围，请重新核对。']
-};
+} satisfies Record<string, readonly [number, string]>;
 
-export function extractionSafeError(code) {
-  const safe = Object.hasOwn(messages, code) ? code : 'KNOWLEDGE_EXTRACTION_FAILED';
-  return { code: safe, message: messages[safe][1] };
+export function extractionSafeError<Code>(code: Code): ExtractionSafeError<Code> {
+  const safe = Object.hasOwn(messages, code as PropertyKey) ? code : 'KNOWLEDGE_EXTRACTION_FAILED';
+  return { code: safe, message: messages[safe as keyof typeof messages][1] };
 }
 
-export function extractionHttpError(error) {
+export function extractionHttpError(error: unknown): RawExtractionHttpError {
   // 私有存储损坏、Mock约束失败和未知异常仅关闭本场景，不公开底层错误。
-  const code = ['KNOWLEDGE_EXTRACTION_TASK_INVALID', 'KNOWLEDGE_EXTRACTION_COMMIT_INVALID',
-    'KNOWLEDGE_EXTRACTION_MOCK_ONLY'].includes(error?.code) ? 'KNOWLEDGE_EXTRACTION_UNAVAILABLE' : error?.code;
+  const code = [
+    'KNOWLEDGE_EXTRACTION_TASK_INVALID',
+    'KNOWLEDGE_EXTRACTION_COMMIT_INVALID',
+    'KNOWLEDGE_EXTRACTION_MOCK_ONLY'
+  ].includes((error as RawError | null | undefined)?.code as string)
+    ? 'KNOWLEDGE_EXTRACTION_UNAVAILABLE'
+    : (error as RawError | null | undefined)?.code;
   const safe = extractionSafeError(code);
-  return createAppError(safe.code, safe.message, messages[safe.code][0]);
+  // Object.hasOwn沿用属性键强制转换；code原值未经字符串转换，仍由原构造器透传。
+  return (createAppError as (code: unknown, message: string, status: number) => RawExtractionHttpError)(
+    safe.code,
+    safe.message,
+    messages[safe.code as keyof typeof messages][0]
+  );
 }
 
 export const extractionUnavailable = () => extractionHttpError({ code: 'KNOWLEDGE_EXTRACTION_UNAVAILABLE' });

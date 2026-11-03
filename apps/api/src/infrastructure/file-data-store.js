@@ -11,7 +11,7 @@ import {
   historyRetentionBasis,
   HISTORY_RETENTION_COLLECTIONS
 } from '../modules/knowledge/domain/history-retention.js';
-import { extractionPageRows } from '../modules/ai/knowledge-extraction-task-page.js';
+import { extractionPageRows } from '../modules/ai/knowledge-extraction-task-page.ts';
 import {
   taskKey,
   validateExtractionTask,
