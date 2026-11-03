@@ -275,9 +275,10 @@ function NoteEditorStage({
     return (
       <ErrorBoundary
         key={note.id}
-        fallbackRender={() => (
+        fallbackRender={({ error }) => (
           <section>
             <p role="alert">PDF 阅读器暂时不可用，请重新打开资料。</p>
+            <p>{error instanceof Error ? `${error.name}: ${error.message}` : String(error)}</p>
             <Button onPress={() => navigate('/materials')}>返回资料库</Button>
           </section>
         )}

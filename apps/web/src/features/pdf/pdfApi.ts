@@ -2,6 +2,15 @@ import type { Note } from '@study-accelerator/web-core';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { readRuntimeConfig } from '../../app/runtimeConfig';
 
+/** 局域网 HTTP 页面不是安全上下文，crypto.randomUUID 不可用，退回 getRandomValues 生成 v4 UUID。 */
+export function randomId(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 export function pdfHeaders(): Record<string, string> {
   const id = readRuntimeConfig().datasetId;
   return id ? { 'X-Knowra-Dataset': id } : {};

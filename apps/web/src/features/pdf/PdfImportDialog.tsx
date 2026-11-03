@@ -3,7 +3,7 @@ import { MAX_PDF_BYTES } from '@study-accelerator/shared/pdf';
 import { Button, Dialog, DialogBody, DialogFooter, FileDropField } from '../../components/ui';
 import { useAppStore } from '../../store/AppStoreProvider';
 import { trackDesktopTask } from '../../app/desktopLifecycle';
-import { importPdf } from './pdfApi';
+import { importPdf, randomId } from './pdfApi';
 
 export function PdfImportDialog({ onClose, onImported }: { onClose(): void; onImported(id: string): void }) {
   const spaceId = useAppStore(state => state.serverData.currentSpaceId);
@@ -13,7 +13,7 @@ export function PdfImportDialog({ onClose, onImported }: { onClose(): void; onIm
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const operation = useRef(crypto.randomUUID());
+  const operation = useRef(randomId());
   const abort = useRef<AbortController | null>(null);
   const currentSpace = useRef(spaceId);
   currentSpace.current = spaceId;
@@ -65,7 +65,7 @@ export function PdfImportDialog({ onClose, onImported }: { onClose(): void; onIm
           isDisabled={progress !== null || !canWrite}
           onSelect={files => {
             setFile(files[0] ?? null);
-            operation.current = crypto.randomUUID();
+            operation.current = randomId();
             setError('');
           }}
         />

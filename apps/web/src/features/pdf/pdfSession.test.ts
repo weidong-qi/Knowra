@@ -4,6 +4,7 @@ import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 vi.mock('./pdfApi', () => ({
   pdfRequest: vi.fn(),
   pdfHeaders: () => ({ 'X-Knowra-Dataset': 'original-dataset' }),
+  randomId: () => crypto.randomUUID(),
   annotationUrl: (note: string, id: string) => `/api/pdf/${note}/annotations/${id}`
 }));
 const request = vi.mocked(pdfRequest);

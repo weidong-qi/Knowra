@@ -1,5 +1,5 @@
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
-import { annotationUrl, pdfRequest, pdfHeaders } from './pdfApi';
+import { annotationUrl, pdfRequest, pdfHeaders, randomId } from './pdfApi';
 
 export type PdfDraft = { id: string; fields: Partial<PdfAnnotation>; remove?: boolean; task?: Record<string, unknown> };
 export class PdfSession {
@@ -93,7 +93,7 @@ export class PdfSession {
     this.drafts.delete(id);
     let nextId = id;
     if (keepLocal && (!draft.remove || remote)) {
-      if (!remote) nextId = crypto.randomUUID();
+      if (!remote) nextId = randomId();
       this.drafts.set(nextId, { ...draft, id: nextId, task: undefined });
     }
     this.error = '';
@@ -121,7 +121,7 @@ export class PdfSession {
         const [id, draft] = this.drafts.entries().next().value!;
         draft.task ??= {
           ...draft.fields,
-          operationId: crypto.randomUUID(),
+          operationId: randomId(),
           expectedRevision: this.items.get(id)?.revision ?? 0
         };
         const task = draft.task;

@@ -20,7 +20,7 @@ import { useNavigate, useLocation } from '../../app/router';
 import { downloadTextFile } from '../../browser/downloadFile';
 import { EditorTabs } from '../editor/EditorTabs';
 import { downloadAttachment } from '../editor/attachmentAccess';
-import { listPdfAnnotations, pdfFileUrl, pdfRequest } from './pdfApi';
+import { listPdfAnnotations, pdfFileUrl, pdfRequest, randomId } from './pdfApi';
 import { usePdfViewer } from './usePdfViewer';
 import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
@@ -191,7 +191,7 @@ export function PdfReaderView({
       setError('本次选区过长，请分成几条标注保存。');
       return;
     }
-    const id = crypto.randomUUID();
+    const id = randomId();
     change(id, { ...value, kind: 'important', importance: 'normal', comment: '' });
     setSelected(id);
     setPanel(true);
