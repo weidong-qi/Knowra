@@ -45,7 +45,7 @@ V4 构建在 `dist/build-info.json` 和设置 → 关于知境记录版本、完
 
 发布成功后删除本次传输的压缩包与校验文件，保留发布目录及备份供回滚；定期查看 `.deploy-releases/` 和 `/opt/knowra-backups/` 的占用后再清理过旧记录。
 
-原 `scripts/post-deploy.sh` 仍作为需要现场构建时的人工应急入口；不要在常规发布中调用它。
+原 `scripts/post-deploy.sh` 仍作为需要现场构建时的人工应急入口；不要在常规发布中调用它。该入口会在附件校验与构建通过后，删除并重新建立 `knowra-api` / `knowra-web` 的 PM2 进程定义，短暂中断服务；只有两个进程均在线且工作目录、实际执行路径符合当前源码目录时才执行 `pm2 save`。任一步失败均返回非零，不报告部署成功；这个现场构建入口不提供 CI 发布目录的自动回滚。
 
 PM2 配置中，`KNOWRA_API_PORT` 同时决定 API 监听端口和 Web 的默认代理目标；只有显式设置非空 `API_ORIGIN` 时才覆盖该派生目标。调整 API 端口时不再需要重复维护默认 origin。`KNOWRA_WEB_PORT` 仍只控制 Web 监听端口，修改后需同步核对 Nginx 上游。
 

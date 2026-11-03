@@ -52,14 +52,22 @@ test('production Nginx template protects the site and keeps health public', () =
   );
 });
 
-test('post-deploy checks attachment integrity before reloading PM2', () => {
+test('应急部署在附件校验后重建 PM2，并在实际入口核验后才保存状态', () => {
   const postDeploy = readWorkspaceFile('scripts/post-deploy.sh');
 
   const attachmentCheckIndex = postDeploy.indexOf('npm run check:attachments');
-  const reloadIndex = postDeploy.indexOf('pm2 startOrReload');
+  const deleteIndex = postDeploy.indexOf('pm2 delete knowra-api knowra-web');
+  const startIndex = postDeploy.indexOf('pm2 start "$ROOT_DIR/deploy/ecosystem.config.cjs" --update-env');
+  const verifyIndex = postDeploy.indexOf('pm2 jlist');
+  const saveIndex = postDeploy.indexOf('pm2 save');
   assert.notEqual(attachmentCheckIndex, -1);
-  assert.notEqual(reloadIndex, -1);
-  assert.ok(attachmentCheckIndex < reloadIndex);
+  assert.notEqual(deleteIndex, -1);
+  assert.notEqual(startIndex, -1);
+  assert.notEqual(verifyIndex, -1);
+  assert.notEqual(saveIndex, -1);
+  assert.ok(attachmentCheckIndex < deleteIndex);
+  assert.ok(deleteIndex < startIndex && startIndex < verifyIndex && verifyIndex < saveIndex);
+  assert.doesNotMatch(postDeploy, /pm2 startOrReload/);
 });
 
 test('production deployment guide keeps the full test suite off the live host', () => {

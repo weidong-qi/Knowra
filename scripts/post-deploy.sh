@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# post-deploy.sh — 部署/拉取代码后构建 V4 并刷新正式进程
+# post-deploy.sh — 人工应急构建并重新建立正式进程
 
 set -euo pipefail
 
@@ -86,8 +86,30 @@ if command -v pm2 >/dev/null 2>&1; then
     fi
   done
 
-  echo "▶ post-deploy: 将 PM2 入口刷新为 API + V4 Web..."
-  pm2 startOrReload deploy/ecosystem.config.cjs --update-env
+  # startOrReload 可能保留旧 pm_exec_path/cwd；重建这两个进程的定义后再核验。
+  echo "▶ post-deploy: 重建 API + Web 的 PM2 进程定义..."
+  pm2 delete knowra-api knowra-web
+  pm2 start "$ROOT_DIR/deploy/ecosystem.config.cjs" --update-env
+  if ! pm2 jlist | node -e '
+const fs = require("node:fs");
+const path = require("node:path");
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", chunk => input += chunk).on("end", () => {
+  try {
+    const root = fs.realpathSync(process.argv[1]);
+    const apps = JSON.parse(input);
+    for (const [name, script] of [["knowra-api", "apps/api/src/main.js"], ["knowra-web", "apps/web/server.mjs"]]) {
+      const env = apps.find(app => app.name === name)?.pm2_env;
+      if (!env || env.status !== "online" || fs.realpathSync(env.pm_cwd) !== root || fs.realpathSync(env.pm_exec_path) !== path.join(root, script)) process.exit(1);
+    }
+  } catch {
+    process.exitCode = 1;
+  }
+})' "$ROOT_DIR"; then
+    printf '%s\n' '✗ post-deploy: PM2 实际进程入口核验失败，未保存进程状态。' >&2
+    exit 1
+  fi
   pm2 save
 fi
 
