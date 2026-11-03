@@ -9,35 +9,62 @@ import {
   knowledgeExtractionCommitKey,
   validateKnowledgeExtractionCommit
 } from '../modules/ai/knowledge-extraction-commit-contract.js';
+import type { QuerySqlPort } from './core-operation-types.ts';
+import type {
+  LocalPurgeTaskDataStore,
+  PurgeAiCollection,
+  PurgeAiCollections,
+  PurgeAiId,
+  PurgeAiKind,
+  PurgeAiRecord,
+  PurgeComparable,
+  PurgeComparisonField,
+  PurgeExtension,
+  PurgeExtensionKind,
+  PurgeExtractionReceipt,
+  PurgeSqlDefinition,
+  PurgeTaskState,
+  RawPurgeSqlRow
+} from './purge-task-types.ts';
 
-const boundary = ['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'];
-const same = (left, right, fields = boundary) => !!left && !!right && fields.every(key => left[key] === right[key]);
-const invalid = () => {
+const boundary: PurgeComparisonField[] = ['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'];
+const same = <Left extends PurgeComparable>(
+  left: Left | null | undefined,
+  right: PurgeComparable | null | undefined,
+  fields: readonly PurgeComparisonField[] = boundary
+): left is Left => !!left && !!right && fields.every(key => left[key] === right[key]);
+const invalid = (): never => {
   throw new Error('持久化任务引用或历史绑定无法核实。');
 };
-const empty = () => ({
-  ai: Object.fromEntries(Object.values(AI_RECORD_KINDS).map(value => [value.collection, []])),
+const empty = (): PurgeTaskState => ({
+  ai: Object.fromEntries<PurgeAiRecord[]>(
+    Object.values(AI_RECORD_KINDS).map(value => [value.collection, []])
+  ) as PurgeAiCollections,
   tasks: [],
   receipts: []
 });
 
-function decodeExtension(row, kind) {
+function decodeExtension(row: RawPurgeSqlRow, kind: PurgeExtensionKind): PurgeExtension {
   const receipt = kind === 'receipts';
-  const record = receipt
-    ? validateKnowledgeExtractionCommit(JSON.parse(row.receipt_json))
-    : validateExtractionTask(JSON.parse(row.descriptor_json));
+  const record: PurgeExtension = receipt
+    ? validateKnowledgeExtractionCommit(JSON.parse(row.receipt_json as string))
+    : validateExtractionTask(JSON.parse(row.descriptor_json as string));
   const key = receipt ? knowledgeExtractionCommitKey : taskKey;
   if (
     key(record) !== key({ ownerId: row.owner_id, datasetId: row.dataset_id, jobId: row.job_id }) ||
-    (receipt && Object.hasOwn(row, 'receipt_hash') && row.receipt_hash !== record.receiptHash)
+    (receipt &&
+      Object.hasOwn(row, 'receipt_hash') &&
+      row.receipt_hash !== (record as PurgeExtractionReceipt).receiptHash)
   )
     invalid();
   return record;
 }
 
-export function createLocalPurgeTaskReader(dataStore) {
+export function createLocalPurgeTaskReader(
+  dataStore: LocalPurgeTaskDataStore | null | undefined
+): () => PurgeTaskState {
   if (!dataStore) return empty;
-  if (typeof dataStore.getPurgeTaskState === 'function') return () => dataStore.getPurgeTaskState();
+  if (typeof dataStore.getPurgeTaskState === 'function') return () => dataStore.getPurgeTaskState!();
   if (typeof dataStore.readSync !== 'function') return invalid;
   return () => {
     if (
@@ -46,20 +73,22 @@ export function createLocalPurgeTaskReader(dataStore) {
       dataStore.knowledgeExtractionCommitStoreError
     )
       invalid();
-    return dataStore.readSync(db => {
+    return dataStore.readSync!(db => {
       const result = empty();
-      for (const [kind, definition] of Object.entries(AI_SQL_DEFINITIONS)) {
-        result.ai[AI_RECORD_KINDS[kind].collection] = db
+      for (const [kind, definition] of Object.entries(AI_SQL_DEFINITIONS) as [PurgeAiKind, PurgeSqlDefinition][]) {
+        (result.ai as Record<PurgeAiCollection, PurgeAiRecord[]>)[
+          AI_RECORD_KINDS[kind].collection as PurgeAiCollection
+        ] = db
           .prepare(`SELECT * FROM ${definition.table}`)
           .all()
-          .map(row => decodeAiRow(kind, row));
+          .map(row => decodeAiRow(kind, row) as PurgeAiRecord);
       }
       for (const [kind, table, metadata] of [
         ['tasks', 'ai_knowledge_extraction_tasks', 'aiKnowledgeExtractionTasksVersion'],
         ['receipts', 'knowledge_extraction_commits', 'knowledgeExtractionCommitsVersion']
-      ]) {
+      ] as const) {
         if (db.prepare('SELECT value FROM metadata WHERE key = ?').get(metadata)?.value !== '1') invalid();
-        result[kind] = db
+        (result as Record<PurgeExtensionKind, PurgeExtension[]>)[kind] = db
           .prepare(`SELECT * FROM ${table}`)
           .all()
           .map(row => decodeExtension(row, kind));
@@ -70,21 +99,26 @@ export function createLocalPurgeTaskReader(dataStore) {
 }
 
 /** The supplied client is the existing owner-scoped transaction proxy, not another connection. */
-export function createPostgresPurgeTaskReader(client, ownerId) {
+export function createPostgresPurgeTaskReader(client: QuerySqlPort, ownerId: string) {
   return async () => {
     const result = empty();
-    const sqlColumn = field =>
-      ({ allowedTools: 'allowed_tools_json', actionKinds: 'action_kinds_json', resultJson: 'result_json' })[field] ??
-      field.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    /** @type {[string, string[]][]} */
-    const requiredTables = Object.values(AI_SQL_DEFINITIONS).map(value => [
-      value.table,
-      [
-        ...value.fields.map(sqlColumn),
-        ...(value.document ? [value.document] : []),
-        ...(value.table === 'ai_context_manifests' ? ['manifest_hash'] : [])
+    const sqlColumn = (field: string) =>
+      (
+        ({ allowedTools: 'allowed_tools_json', actionKinds: 'action_kinds_json', resultJson: 'result_json' }) as Record<
+          string,
+          string | undefined
+        >
+      )[field] ?? field.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    const requiredTables: [string, string[]][] = (Object.values(AI_SQL_DEFINITIONS) as PurgeSqlDefinition[]).map(
+      value => [
+        value.table,
+        [
+          ...value.fields.map(sqlColumn),
+          ...(value.document ? [value.document] : []),
+          ...(value.table === 'ai_context_manifests' ? ['manifest_hash'] : [])
+        ]
       ]
-    ]);
+    );
     requiredTables.push(
       ['ai_knowledge_extraction_tasks', ['owner_id', 'dataset_id', 'job_id', 'descriptor_json']],
       ['knowledge_extraction_commits', ['owner_id', 'dataset_id', 'job_id', 'receipt_json', 'receipt_hash']]
@@ -103,36 +137,38 @@ export function createPostgresPurgeTaskReader(client, ownerId) {
       )
         invalid();
     }
-    for (const [kind, definition] of Object.entries(AI_SQL_DEFINITIONS)) {
+    for (const [kind, definition] of Object.entries(AI_SQL_DEFINITIONS) as [PurgeAiKind, PurgeSqlDefinition][]) {
       // Orphans have no recoverable owner boundary and must not silently disappear through an inner join.
       const selection = ['aiJobAttempt', 'aiUsageRecord'].includes(kind)
         ? `SELECT r.* FROM ${definition.table} r LEFT JOIN ai_jobs j ON j.job_id = r.job_id WHERE j.owner_id = $1 OR j.job_id IS NULL`
         : `SELECT * FROM ${definition.table} WHERE owner_id = $1`;
-      result.ai[AI_RECORD_KINDS[kind].collection] = (await client.$queryRawUnsafe(selection, ownerId)).map(row =>
-        decodeAiRow(kind, row)
-      );
+      (result.ai as Record<PurgeAiCollection, PurgeAiRecord[]>)[AI_RECORD_KINDS[kind].collection as PurgeAiCollection] =
+        (await client.$queryRawUnsafe(selection, ownerId)).map(row => decodeAiRow(kind, row) as PurgeAiRecord);
     }
     for (const [kind, table] of [
       ['tasks', 'ai_knowledge_extraction_tasks'],
       ['receipts', 'knowledge_extraction_commits']
-    ]) {
-      result[kind] = (await client.$queryRawUnsafe(`SELECT * FROM ${table} WHERE owner_id = $1`, ownerId)).map(row =>
-        decodeExtension(row, kind)
-      );
+    ] as const) {
+      (result as Record<PurgeExtensionKind, PurgeExtension[]>)[kind] = (
+        await client.$queryRawUnsafe(`SELECT * FROM ${table} WHERE owner_id = $1`, ownerId)
+      ).map(row => decodeExtension(row, kind));
     }
     return result;
   };
 }
 
 /** v1 supports note sources only. Unsupported asset scopes/jobs cannot establish absence of references. */
-export function verifyPurgeTaskState({ ai, tasks, receipts }) {
-  const maps = {};
-  for (const [kind, { collection, id }] of Object.entries(AI_RECORD_KINDS)) {
+export function verifyPurgeTaskState({ ai, tasks, receipts }: PurgeTaskState) {
+  const maps = {} as { [C in PurgeAiCollection]: Map<string, PurgeAiCollections[C][number]> };
+  for (const [kind, { collection, id }] of Object.entries(AI_RECORD_KINDS) as [
+    PurgeAiKind,
+    { collection: PurgeAiCollection; id: PurgeAiId }
+  ][]) {
     if (!Array.isArray(ai?.[collection])) invalid();
-    maps[collection] = new Map(
+    (maps as Record<PurgeAiCollection, Map<string, PurgeAiRecord>>)[collection] = new Map(
       ai[collection].map(record => {
         validateAiRecord(kind, record);
-        return [record[id], record];
+        return [(record as Partial<Record<PurgeAiId, string>>)[id]!, record] as const;
       })
     );
     if (maps[collection].size !== ai[collection].length) invalid();
@@ -174,9 +210,9 @@ export function verifyPurgeTaskState({ ai, tasks, receipts }) {
       if (!attempt || attempt.jobId !== job.jobId) invalid();
     }
   }
-  const ordinals = new Set(),
-    generations = new Set(),
-    usageAttempts = new Set();
+  const ordinals = new Set<string>(),
+    generations = new Set<string>(),
+    usageAttempts = new Set<string>();
   for (const attempt of maps.attempts.values()) {
     const ordinal = JSON.stringify([attempt.jobId, attempt.ordinal]),
       generation = JSON.stringify([attempt.jobId, attempt.leaseGeneration]);
@@ -195,7 +231,9 @@ export function verifyPurgeTaskState({ ai, tasks, receipts }) {
   }
   if (!Array.isArray(tasks) || !Array.isArray(receipts)) invalid();
   const receiptsByKey = new Map(
-    receipts.map(receipt => [knowledgeExtractionCommitKey(validateKnowledgeExtractionCommit(receipt)), receipt])
+    receipts.map(
+      receipt => [knowledgeExtractionCommitKey(validateKnowledgeExtractionCommit(receipt)), receipt] as const
+    )
   );
   if (receiptsByKey.size !== receipts.length || new Set(tasks.map(taskKey)).size !== tasks.length) invalid();
   for (const task of tasks) {

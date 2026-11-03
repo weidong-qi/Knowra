@@ -2,7 +2,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import schema from './contracts/note-actions-v1.schema.json' with { type: 'json' };
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
 import { hashRecord } from './record-contract.js';
-import { validateCoreOperationReceipt } from '../../infrastructure/core-operation-contract.js';
+import { validateCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';
 import { createAppError } from '../../errors/app-error.js';
 
 export const actionError = (code, message, status = 409) => {
@@ -155,13 +155,19 @@ export function validateActionState(value) {
       invalid();
     if (row.receipt) {
       const receipt = validateCoreOperationReceipt(row.receipt);
+      // validateActionPlan 已限定笔记工具；kind 不一致时先短路，下面只读取已匹配的笔记结果。
       if (
         actionIdentityKeys.some(key => row[key] !== receipt[key]) ||
         receipt.planHash !== row.plan.planHash ||
         receipt.kind !== row.plan.toolName ||
-        hashRecord(receipt.result.changes.map(change => change.noteId).sort()) !==
-          hashRecord(row.plan.items.map(item => item.after.id).sort()) ||
-        receipt.result.changes.some(
+        hashRecord(
+          /** @type {import('../../infrastructure/core-operation-types.ts').CoreNoteResult} */ (receipt.result).changes
+            .map(change => change.noteId)
+            .sort()
+        ) !== hashRecord(row.plan.items.map(item => item.after.id).sort()) ||
+        /** @type {import('../../infrastructure/core-operation-types.ts').CoreNoteResult} */ (
+          receipt.result
+        ).changes.some(
           change =>
             change.contentHash !==
             calculateContentHash(row.plan.items.find(item => item.after.id === change.noteId).after.rawMarkdown)

@@ -1,13 +1,21 @@
-import { createAppError } from '../errors/app-error.js';
-import { createAsyncCoreOperationStore } from './core-operation-store.js';
-import { coreOperationKey, validateCoreOperationReceipt } from './core-operation-contract.js';
+import { createAppError } from '../errors/app-error.ts';
+import { createAsyncCoreOperationStore } from './core-operation-store.ts';
+import { coreOperationKey, validateCoreOperationReceipt } from './core-operation-contract.ts';
 import { PERSISTENCE_TRANSACTION_ACTIVE } from './transaction-context.ts';
+import type { CoreOperationLookup, CoreOperationSqlRow, CoreOperationSqlTransaction } from './core-operation-types.ts';
+import type { PostgresTransactionHost } from './postgres-transaction-port.ts';
 
-export function createPostgresCoreOperationStore({ client, ownerId }) {
-  const assertOwner = input => {
+export interface PostgresCoreOperationStoreDependencies {
+  client: CoreOperationSqlTransaction &
+    PostgresTransactionHost<CoreOperationSqlTransaction> & { [PERSISTENCE_TRANSACTION_ACTIVE]?: boolean };
+  ownerId: string;
+}
+
+export function createPostgresCoreOperationStore({ client, ownerId }: PostgresCoreOperationStoreDependencies) {
+  const assertOwner = (input: CoreOperationLookup) => {
     if (input.ownerId !== ownerId) throw createAppError('CORE_OPERATION_FORBIDDEN', '操作不属于当前用户。', 403);
   };
-  return createAsyncCoreOperationStore({
+  return createAsyncCoreOperationStore<CoreOperationSqlTransaction>({
     transaction: operation => {
       if (client[PERSISTENCE_TRANSACTION_ACTIVE]) throw new TypeError('核心操作必须拥有最外层事务，不能嵌套提交。');
       return client.$transaction(
@@ -21,13 +29,13 @@ export function createPostgresCoreOperationStore({ client, ownerId }) {
     },
     async get(input, tx = client) {
       assertOwner(input);
-      const rows = await tx.$queryRawUnsafe(
+      const rows = (await tx.$queryRawUnsafe(
         `SELECT owner_id, dataset_id, operation_id, plan_hash, receipt_hash, receipt_json FROM core_operation_receipts
         WHERE owner_id = $1 AND dataset_id = $2 AND operation_id = $3`,
         input.ownerId,
         input.datasetId,
         input.operationId
-      );
+      )) as CoreOperationSqlRow[];
       const row = rows[0];
       if (!row) return null;
       // JSON null 仍是已存在的 SQL 行，不能当作“未提交”并重新执行业务。

@@ -192,7 +192,7 @@ export interface PostgresModuleDependencies extends Partial<PostgresRepositories
   client?: import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost;
   getPurgeTombstone?: TransactionDependencies['getTombstone'];
   readPurgeTaskState?: ReturnType<
-    typeof import('../../../../infrastructure/asset-purge-task-state.js').createPostgresPurgeTaskReader
+    typeof import('../../../../infrastructure/asset-purge-task-state.ts').createPostgresPurgeTaskReader
   >;
   getPurgeDatasetEpoch?: () => string | Promise<string>;
 }
