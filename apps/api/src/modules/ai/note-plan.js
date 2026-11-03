@@ -3,7 +3,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import schema from './contracts/note-tools-v1.schema.json' with { type: 'json' };
 import { hashRecord } from './record-contract.js';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
-import { buildCreateNoteDto, buildUpdateNoteDto } from '../knowledge/application/dto/note.dto.js';
+import { buildCreateNoteDto, buildUpdateNoteDto } from '../knowledge/application/dto/note.dto.ts';
 
 const descriptions = {
   notes_create: '为用户明确要求的新笔记提出标题与 Markdown。目标 ID 和位置权限由宿主固定；结果仅为计划。',

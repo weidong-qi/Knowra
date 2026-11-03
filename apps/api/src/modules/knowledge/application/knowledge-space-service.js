@@ -1,5 +1,5 @@
 import { KnowledgeSpace } from '../domain/knowledge-space.js';
-import { buildDefaultKnowledgeSpaceDto } from './dto/knowledge-space.dto.js';
+import { buildDefaultKnowledgeSpaceDto } from './dto/knowledge-space.dto.ts';
 import { createInMemoryKnowledgeSpaceRepository } from '../infrastructure/knowledge-space-repository.js';
 import { createInMemoryTagGroupRepository } from '../infrastructure/tag-group-repository.js';
 import { TagGroup } from '../domain/tag-group.js';

@@ -4,7 +4,7 @@ export const noteDtoTests = [
   {
     name: 'buildCreateNoteDto trims title and preserves ids',
     async run() {
-      const { buildCreateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.js');
+      const { buildCreateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.ts');
 
       const dto = buildCreateNoteDto({
         id: 'dto-note-1',
@@ -23,7 +23,7 @@ export const noteDtoTests = [
   {
     name: 'buildCreateNoteDto derives id and title when omitted',
     async run() {
-      const { buildCreateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.js');
+      const { buildCreateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.ts');
 
       const dto = buildCreateNoteDto({
         rawMarkdown: '# Imported Redis Notes\n\nqueue jobs',
@@ -38,7 +38,7 @@ export const noteDtoTests = [
   {
     name: 'buildUpdateNoteDto keeps only defined fields',
     async run() {
-      const { buildUpdateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.js');
+      const { buildUpdateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.ts');
 
       const dto = buildUpdateNoteDto({
         title: '  Updated title ',
@@ -55,7 +55,7 @@ export const noteDtoTests = [
   {
     name: 'buildUpdateNoteDto keeps favorite when explicitly provided',
     async run() {
-      const { buildUpdateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.js');
+      const { buildUpdateNoteDto } = await import('../src/modules/knowledge/application/dto/note.dto.ts');
 
       const dto = buildUpdateNoteDto({
         favorite: true
@@ -69,29 +69,30 @@ export const noteDtoTests = [
   {
     name: 'note DTOs reject insecure HTTP image sources but allow ordinary HTTP links',
     async run() {
-      const {
-        buildCreateNoteDto,
-        buildUpdateNoteDto
-      } = await import('../src/modules/knowledge/application/dto/note.dto.js');
+      const { buildCreateNoteDto, buildUpdateNoteDto } =
+        await import('../src/modules/knowledge/application/dto/note.dto.ts');
 
       assert.throws(
-        () => buildCreateNoteDto({
-          title: 'Unsafe image',
-          rawMarkdown: '![diagram](http://example.com/diagram.png)'
-        }),
-        (error) => error.code === 'INSECURE_IMAGE_URL' && error.statusCode === 422
+        () =>
+          buildCreateNoteDto({
+            title: 'Unsafe image',
+            rawMarkdown: '![diagram](http://example.com/diagram.png)'
+          }),
+        error => error.code === 'INSECURE_IMAGE_URL' && error.statusCode === 422
       );
       assert.throws(
-        () => buildUpdateNoteDto({
-          rawMarkdown: '<img src=\"http://example.com/diagram.png\">'
-        }),
-        (error) => error.code === 'INSECURE_IMAGE_URL'
+        () =>
+          buildUpdateNoteDto({
+            rawMarkdown: '<img src="http://example.com/diagram.png">'
+          }),
+        error => error.code === 'INSECURE_IMAGE_URL'
       );
       assert.throws(
-        () => buildUpdateNoteDto({
-          rawMarkdown: '![diagram][asset]\n\n[asset]: http://example.com/diagram.png'
-        }),
-        (error) => error.code === 'INSECURE_IMAGE_URL'
+        () =>
+          buildUpdateNoteDto({
+            rawMarkdown: '![diagram][asset]\n\n[asset]: http://example.com/diagram.png'
+          }),
+        error => error.code === 'INSECURE_IMAGE_URL'
       );
 
       const dto = buildCreateNoteDto({

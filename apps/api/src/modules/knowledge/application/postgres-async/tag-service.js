@@ -1,5 +1,5 @@
 import { Tag } from '../../domain/tag.js';
-import { buildCreateTagDto, buildUpdateTagDto } from '../dto/tag.dto.js';
+import { buildCreateTagDto, buildUpdateTagDto } from '../dto/tag.dto.ts';
 import { conflictError, notFoundError } from '../knowledge-errors.js';
 
 /** @param {import('./service-dependencies.ts').TagDependencies} dependencies */

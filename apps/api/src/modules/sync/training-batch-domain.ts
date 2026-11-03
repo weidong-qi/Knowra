@@ -19,12 +19,18 @@ import {
   assertLearningObjectiveConfirmable,
   assertQuestionConfirmable
 } from '../knowledge/application/formal-asset-validation.js';
-import { buildCreateExamProfileDto, buildUpdateExamFocusDto } from '../knowledge/application/dto/assessment.dto.js';
+import { buildCreateExamProfileDto, buildUpdateExamFocusDto } from '../knowledge/application/dto/assessment.dto.ts';
 import { TRAINING_COLLECTIONS, sameEntity } from './entity-contract.ts';
 import { syncError } from './journal.ts';
 
 const subjects = new Set(['learningObjectives', 'examProfiles', 'examFocuses', 'questions']);
 type ConstructedCollection = 'learningObjectives' | 'examProfiles' | 'examFocuses' | 'questions' | 'questionSources';
+type TrainingConstructorInput =
+  | ConstructorParameters<typeof LearningObjective>[0]
+  | ConstructorParameters<typeof ExamProfile>[0]
+  | ConstructorParameters<typeof ExamFocus>[0]
+  | ConstructorParameters<typeof Question>[0]
+  | ConstructorParameters<typeof QuestionSource>[0];
 const constructors: {
   [Collection in ConstructedCollection]: new (input: SyncEntity<Collection>) => SyncEntityMap[Collection];
 } = {
@@ -138,7 +144,7 @@ export function normalizeTrainingChange(
   return {
     ...new (
       constructors[collection as ConstructedCollection] as new (
-        input: SyncEntity<ConstructedCollection>
+        input: TrainingConstructorInput
       ) => SyncEntityMap[ConstructedCollection]
     )({ ...(value as SyncEntity<ConstructedCollection>), ...fields })
   };

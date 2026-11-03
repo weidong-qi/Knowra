@@ -1,9 +1,4 @@
-import type {
-  AnnotationScopeType,
-  AnchorSegment,
-  ContentAnchor,
-  IdentityBinding
-} from '@study-accelerator/content-anchor';
+import type { AnnotationScopeType, ContentAnchor, IdentityBinding } from '@study-accelerator/content-anchor';
 
 export type ContentAnnotationKind = 'important' | 'question' | 'supplement' | 'pitfall' | 'temporary';
 export type ContentAnnotationSourceMode = 'manual' | 'ai';
@@ -20,26 +15,38 @@ export interface ContentAnnotationAnchor extends Partial<ContentAnchor> {
   markId?: string;
   roles?: string[];
 }
+interface AnchorConstructorView {
+  tracking?: { empty?: unknown };
+  format?: unknown;
+  markId?: unknown;
+}
 
 export interface ContentAnnotationOriginSnapshot {
   noteVersionId: string | null;
   contentHash: string;
-  scopeType: AnnotationScopeType;
-  segments: AnchorSegment[];
+  scopeType: unknown;
+  segments: unknown;
   quoteText: string;
-  headingPath: string[];
+  headingPath: unknown;
 }
 
 /** 受支持的调用契约，不代表 JavaScript 运行时所有能通过校验的输入。 */
-export interface ContentAnnotationConstructorInput {
+export interface ContentAnnotationConstructorInput<
+  Kind = string,
+  SourceMode = string,
+  ScopeType = string,
+  Importance = string | null,
+  HeadingPath = string[],
+  Anchor = ContentAnnotationAnchor
+> {
   id: string;
   spaceId: string;
   noteId: string;
   noteVersionId?: string | null;
-  kind?: string;
-  sourceMode?: string;
+  kind?: Kind | string;
+  sourceMode?: SourceMode | string;
   quoteText: string;
-  headingPath?: string[];
+  headingPath?: HeadingPath | string[];
   fromPosition: number;
   toPosition: number;
   prefixText?: string;
@@ -49,14 +56,14 @@ export interface ContentAnnotationConstructorInput {
   idempotencyKey: string;
   status?: string;
   schemaVersion?: number;
-  scopeType?: string;
-  importance?: string | null;
-  comment?: string;
+  scopeType?: ScopeType | string;
+  importance?: Importance | string | null;
+  comment?: unknown;
   lifecycleStatus?: string;
   anchorStatus?: string;
   anchorReason?: string | null;
   revision?: number;
-  anchor?: ContentAnnotationAnchor | null;
+  anchor?: Anchor | ContentAnnotationAnchor | null;
   originSnapshot?: Partial<ContentAnnotationOriginSnapshot> | null;
   identityBinding?: IdentityBinding | null;
   resolvedContentHash?: string | null;
@@ -89,15 +96,22 @@ export function projectLegacyAnnotationStatus({
   return anchorStatus === 'resolved' ? 'active' : 'stale';
 }
 
-export class ContentAnnotation {
+export class ContentAnnotation<
+  Kind = string,
+  SourceMode = string,
+  ScopeType = string,
+  Importance = string | null,
+  HeadingPath = string[],
+  Anchor = ContentAnnotationAnchor
+> {
   declare id: string;
   declare spaceId: string;
   declare noteId: string;
   declare noteVersionId: string | null;
-  declare kind: ContentAnnotationKind;
-  declare sourceMode: ContentAnnotationSourceMode;
+  declare kind: Exclude<Kind, string | undefined> | ContentAnnotationKind;
+  declare sourceMode: Exclude<SourceMode, string | undefined> | ContentAnnotationSourceMode;
   declare quoteText: string;
-  declare headingPath: string[];
+  declare headingPath: (HeadingPath extends Iterable<infer Item> ? Item[] : unknown[]) | string[];
   declare fromPosition: number;
   declare toPosition: number;
   declare prefixText: string;
@@ -106,14 +120,14 @@ export class ContentAnnotation {
   declare noteContentHash: string;
   declare idempotencyKey: string;
   declare schemaVersion: ContentAnnotationSchemaVersion;
-  declare scopeType: AnnotationScopeType;
-  declare importance: ContentAnnotationImportance;
+  declare scopeType: Exclude<ScopeType, string | undefined> | AnnotationScopeType;
+  declare importance: Exclude<Importance, string | null | undefined> | ContentAnnotationImportance;
   declare comment: string;
   declare lifecycleStatus: ContentAnnotationLifecycleStatus;
   declare anchorStatus: ContentAnnotationAnchorStatus;
   declare anchorReason: string | null;
   declare revision: number;
-  declare anchor: ContentAnnotationAnchor | null;
+  declare anchor: Exclude<Anchor, undefined> | ContentAnnotationAnchor | null;
   // 仅检查真值并克隆，不能据此保证快照字段完整。
   declare originSnapshot: Partial<ContentAnnotationOriginSnapshot> | null;
   declare identityBinding: IdentityBinding | null;
@@ -159,11 +173,17 @@ export class ContentAnnotation {
     createdAt = new Date().toISOString(),
     updatedAt = createdAt,
     deletedAt = null
-  }: ContentAnnotationConstructorInput) {
+  }: ContentAnnotationConstructorInput<Kind, SourceMode, ScopeType, Importance, HeadingPath, Anchor>) {
     if (!id?.trim() || !spaceId?.trim() || !noteId?.trim()) throw new Error('Annotation identity is required');
-    if (!ANNOTATION_KINDS.has(kind) || !SOURCE_MODES.has(sourceMode))
+    if (
+      !(ANNOTATION_KINDS as ReadonlySet<unknown>).has(kind) ||
+      !(SOURCE_MODES as ReadonlySet<unknown>).has(sourceMode)
+    )
       throw new Error('Annotation kind or sourceMode is invalid');
-    if (!SCOPE_TYPES.has(scopeType) || !IMPORTANCE_LEVELS.has(importance))
+    if (
+      !(SCOPE_TYPES as ReadonlySet<unknown>).has(scopeType) ||
+      !(IMPORTANCE_LEVELS as ReadonlySet<unknown>).has(importance)
+    )
       throw new Error('Annotation scope or importance is invalid');
     if (!LIFECYCLE_STATUSES.has(lifecycleStatus) || !ANCHOR_STATUSES.has(anchorStatus))
       throw new Error('Annotation lifecycle or anchor status is invalid');
@@ -172,7 +192,7 @@ export class ContentAnnotation {
     if (typeof comment !== 'string' || comment.length > 2000) throw new Error('Annotation comment is invalid');
     if (
       typeof quoteText !== 'string' ||
-      (!quoteText.trim() && !anchor?.tracking?.empty) ||
+      (!quoteText.trim() && !(anchor as AnchorConstructorView | null)?.tracking?.empty) ||
       !anchorFingerprint?.trim() ||
       !noteContentHash?.trim() ||
       !idempotencyKey?.trim()
@@ -182,14 +202,16 @@ export class ContentAnnotation {
       !Number.isInteger(fromPosition) ||
       !Number.isInteger(toPosition) ||
       fromPosition < 0 ||
-      (fromPosition >= toPosition && !anchor?.tracking?.empty)
+      (fromPosition >= toPosition && !(anchor as AnchorConstructorView | null)?.tracking?.empty)
     )
       throw new Error('Annotation range is invalid');
     if (!ANNOTATION_STATUSES.has(status)) throw new Error('Annotation status is invalid');
     if (schemaVersion === 2 && (!anchor || !originSnapshot)) throw new Error('Versioned annotation anchor is required');
     if (
       schemaVersion === INLINE_ANNOTATION_SCHEMA &&
-      (anchor?.format !== INLINE_ANCHOR_FORMAT || typeof anchor.markId !== 'string' || !originSnapshot)
+      ((anchor as AnchorConstructorView | null)?.format !== INLINE_ANCHOR_FORMAT ||
+        typeof (anchor as AnchorConstructorView).markId !== 'string' ||
+        !originSnapshot)
     )
       throw new Error('Inline annotation anchor is required');
 
@@ -201,7 +223,7 @@ export class ContentAnnotation {
       kind,
       sourceMode,
       quoteText: schemaVersion === 1 ? quoteText.trim() : quoteText,
-      headingPath: [...headingPath],
+      headingPath: [...(headingPath as Iterable<unknown>)],
       fromPosition,
       toPosition,
       prefixText,

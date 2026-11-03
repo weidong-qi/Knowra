@@ -1,4 +1,4 @@
-import { createPrefixedId, requireText } from './_shared.js';
+import { createPrefixedId, requireText } from './_shared.ts';
 import {
   LEARNING_OBJECTIVE_ACTION_VERBS,
   LEARNING_OBJECTIVE_COGNITIVE_LEVELS,

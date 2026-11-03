@@ -1,4 +1,4 @@
-import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.js';
+import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.ts';
 
 export interface FolderDtoInput {
   id?: unknown;

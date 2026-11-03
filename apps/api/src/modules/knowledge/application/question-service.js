@@ -1,7 +1,7 @@
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { Question } from '../domain/question.js';
 import { QuestionSource } from '../domain/question-source.js';
-import { buildCreateQuestionDto, buildUpdateQuestionDto } from './dto/assessment.dto.js';
+import { buildCreateQuestionDto, buildUpdateQuestionDto } from './dto/assessment.dto.ts';
 import { assertQuestionConfirmable, deriveQuestionSourceStatus } from './formal-asset-validation.js';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 
@@ -93,8 +93,18 @@ export function createQuestionService({
     };
   }
 
+  /**
+   * @overload
+   * @param {import('../infrastructure/assessment-repository.ts').QuestionSourceRecord[]} sources
+   * @param {{preserveStale?: boolean}} [options]
+   * @returns {ReturnType<typeof resolveSourceReference>[]}
+   */
+  /** @overload @param {unknown} sources @param {{preserveStale?: boolean}} [options] @returns {unknown} */
+  /** @param {unknown} sources @param {{preserveStale?: boolean}} [options] */
   function resolveSources(sources = [], options = {}) {
-    return sources.map(source => resolveSourceReference(source, options));
+    return /** @type {{map(callback: (source: unknown) => object): unknown}} */ (sources).map(source =>
+      resolveSourceReference(source, options)
+    );
   }
 
   function assertSourceIdsAvailable(sources, questionId) {
@@ -175,6 +185,11 @@ export function createQuestionService({
     }
   }
 
+  /**
+   * @template {import('../domain/question.ts').Question<unknown, unknown, unknown, unknown>} Record
+   * @param {Record} question
+   * @returns {Record}
+   */
   function saveNew(question) {
     return repository.create?.(question) ?? repository.save(question);
   }

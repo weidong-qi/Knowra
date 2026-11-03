@@ -1,7 +1,7 @@
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { Question } from '../../domain/question.js';
 import { QuestionSource } from '../../domain/question-source.js';
-import { buildCreateQuestionDto, buildUpdateQuestionDto } from '../dto/assessment.dto.js';
+import { buildCreateQuestionDto, buildUpdateQuestionDto } from '../dto/assessment.dto.ts';
 import { assertQuestionConfirmable, deriveQuestionSourceStatus } from '../formal-asset-validation.js';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 
@@ -87,8 +87,22 @@ export function createAsyncQuestionService({
       status: preserveStale && source.status === 'stale' ? 'stale' : deriveQuestionSourceStatus(source, reference)
     };
   }
+  /**
+   * @overload
+   * @param {import('../../infrastructure/assessment-repository.ts').QuestionSourceRecord[]} sources
+   * @param {{preserveStale?: boolean}} [options]
+   * @returns {Promise<Awaited<ReturnType<typeof resolveSourceReference>>[]>}
+   */
+  /** @overload @param {unknown} sources @param {{preserveStale?: boolean}} [options] @returns {Promise<unknown[]>} */
+  /** @param {unknown} sources @param {{preserveStale?: boolean}} [options] */
   function resolveSources(sources = [], options = {}) {
-    return Promise.all(sources.map(source => resolveSourceReference(source, options)));
+    return Promise.all(
+      /** @type {Iterable<unknown>} */ (
+        /** @type {{map(callback: (source: unknown) => Promise<object>): unknown}} */ (sources).map(source =>
+          resolveSourceReference(source, options)
+        )
+      )
+    );
   }
   async function assertSourceIdsAvailable(sources, questionId) {
     const sourceIds = new Set();
@@ -125,7 +139,10 @@ export function createAsyncQuestionService({
       requireObjectives(links.map(link => link.learningObjectiveId)),
       questionSourceRepository.listByQuestionIds([question.id])
     ]);
-    const sources = await resolveSources(persistedSources, { preserveStale: true });
+    const sources = await resolveSources(
+      /** @type {import('../../infrastructure/assessment-repository.ts').QuestionSourceRecord[]} */ (persistedSources),
+      { preserveStale: true }
+    );
     if (sources.some((source, index) => source.status !== persistedSources[index]?.status)) {
       await questionSourceRepository.replaceForQuestion(
         question.id,
@@ -168,6 +185,12 @@ export function createAsyncQuestionService({
       );
     }
   }
+  /**
+   * @template {import('../../domain/question.ts').Question<unknown, unknown, unknown, unknown>} Record
+   * @template Result
+   * @param {import('../service-dependencies.ts').AssessmentWritePort<NoInfer<Record>, Result>} targetRepository
+   * @param {Record} question
+   */
   async function saveNew(targetRepository, question) {
     return targetRepository.create ? targetRepository.create(question) : targetRepository.save(question);
   }

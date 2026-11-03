@@ -1,4 +1,4 @@
-import { createPrefixedId, requireText } from './_shared.js';
+import { createPrefixedId, requireText } from './_shared.ts';
 import { validationError } from '../knowledge-errors.js';
 
 export interface KnowledgeItemDtoInput {

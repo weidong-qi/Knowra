@@ -5,7 +5,7 @@ import {
   buildCreateExamProfileDto,
   buildUpdateExamFocusDto,
   buildUpdateExamProfileDto
-} from './dto/assessment.dto.js';
+} from './dto/assessment.dto.ts';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 
 const now = () => new Date().toISOString();
@@ -48,6 +48,12 @@ export function createAssessmentContextService({
       throw conflictError(code, `A ${entityName} with the same id already exists`);
     }
   }
+  /**
+   * @template {import('../infrastructure/assessment-repository.ts').AssessmentRecord} Record
+   * @param {import('./service-dependencies.ts').AssessmentWritePort<NoInfer<Record>>} repository
+   * @param {Record} record
+   * @returns {Record}
+   */
   function saveNew(repository, record) {
     return repository.create?.(record) ?? repository.save(record);
   }

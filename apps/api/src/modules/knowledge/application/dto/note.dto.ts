@@ -1,15 +1,60 @@
-import { createPrefixedId, normalizeIdList, normalizeOptionalId, requireText, trimIfString } from './_shared.js';
+import { createPrefixedId, normalizeIdList, normalizeOptionalId, requireText, trimIfString } from './_shared.ts';
 import { assertNoInsecureImageUrls } from '../note-content-policy.js';
 import { validationError } from '../knowledge-errors.js';
 
-function aiVisibility(value) {
-  if (!['normal', 'private'].includes(value)) {
+export interface NoteDtoInput {
+  id?: unknown;
+  title?: unknown;
+  rawMarkdown?: unknown;
+  spaceId?: unknown;
+  folderId?: unknown;
+  status?: unknown;
+  sourceType?: unknown;
+  favorite?: unknown;
+  aiVisibility?: unknown;
+  tagIds?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  expectedUpdatedAt?: unknown;
+}
+type Field<Input, Key extends PropertyKey> = Key extends keyof Input ? Input[Key] : unknown;
+type Trimmed<Value> = Value extends string ? string : Value;
+export interface CreateNoteDto<Input extends NoteDtoInput = NoteDtoInput> {
+  id: string;
+  title: NonNullable<Trimmed<Field<Input, 'title'>>> | string;
+  rawMarkdown: Field<Input, 'rawMarkdown'>;
+  spaceId: string | null;
+  folderId: string | null;
+  status: NonNullable<Field<Input, 'status'>> | 'draft';
+  sourceType: NonNullable<Field<Input, 'sourceType'>> | 'manual';
+  favorite: NonNullable<Field<Input, 'favorite'>> | false;
+  aiVisibility: Field<Input, 'aiVisibility'> | 'normal';
+  tagIds: unknown[];
+  createdAt: Field<Input, 'createdAt'>;
+  updatedAt: Field<Input, 'updatedAt'>;
+}
+export interface UpdateNoteDto<Input extends NoteDtoInput = NoteDtoInput> {
+  expectedUpdatedAt?: string;
+  title?: Trimmed<Field<Input, 'title'>>;
+  rawMarkdown?: Field<Input, 'rawMarkdown'>;
+  spaceId?: string | null;
+  folderId?: string | null;
+  status?: Field<Input, 'status'>;
+  sourceType?: Field<Input, 'sourceType'>;
+  favorite?: Field<Input, 'favorite'>;
+  aiVisibility?: Field<Input, 'aiVisibility'>;
+  tagIds?: unknown[];
+  updatedAt?: Field<Input, 'updatedAt'>;
+}
+
+function aiVisibility<Value>(value: Value): Value {
+  if (!(['normal', 'private'] as readonly unknown[]).includes(value)) {
     throw validationError('NOTE_AI_VISIBILITY_INVALID', '笔记 AI 可读性只能为普通或私密。');
   }
   return value;
 }
 
-function deriveTitleFromMarkdown(markdown) {
+function deriveTitleFromMarkdown(markdown: unknown) {
   if (typeof markdown !== 'string') {
     return null;
   }
@@ -36,7 +81,7 @@ function deriveTitleFromMarkdown(markdown) {
   );
 }
 
-function createNoteId({ id, title, rawMarkdown }) {
+function createNoteId({ id, title, rawMarkdown }: Pick<NoteDtoInput, 'id' | 'title' | 'rawMarkdown'>) {
   if (id !== undefined && id !== null) {
     return requireText(id, 'NOTE_ID_INVALID', 'Note id is invalid');
   }
@@ -44,8 +89,9 @@ function createNoteId({ id, title, rawMarkdown }) {
   return createPrefixedId('note', title || deriveTitleFromMarkdown(rawMarkdown) || 'item');
 }
 
-/** @param {Partial<Omit<import('../../domain/note.ts').Note, 'tagIds' | 'annotationStructure'>> & {tagIds?: unknown}} input */
-export function buildCreateNoteDto(input = {}) {
+export function buildCreateNoteDto<Input extends NoteDtoInput>(input: Input): CreateNoteDto<Input>;
+export function buildCreateNoteDto(input?: NoteDtoInput): CreateNoteDto;
+export function buildCreateNoteDto(input: NoteDtoInput = {}): CreateNoteDto {
   if (typeof input.rawMarkdown !== 'string') {
     throw validationError('NOTE_CONTENT_REQUIRED', 'Note rawMarkdown is required');
   }
@@ -76,11 +122,13 @@ export function buildCreateNoteDto(input = {}) {
   };
 }
 
-export function buildUpdateNoteDto(input = {}) {
-  const dto = {};
+export function buildUpdateNoteDto<Input extends NoteDtoInput>(input: Input): UpdateNoteDto<Input>;
+export function buildUpdateNoteDto(input?: NoteDtoInput): UpdateNoteDto;
+export function buildUpdateNoteDto(input: NoteDtoInput = {}): UpdateNoteDto {
+  const dto: UpdateNoteDto = {};
 
   if (input.expectedUpdatedAt !== undefined) {
-    const expectedUpdatedAt = new Date(input.expectedUpdatedAt);
+    const expectedUpdatedAt = new Date(input.expectedUpdatedAt as string);
     if (typeof input.expectedUpdatedAt !== 'string' || Number.isNaN(expectedUpdatedAt.getTime())) {
       throw validationError('NOTE_EXPECTED_UPDATED_AT_INVALID', 'Note expectedUpdatedAt is invalid');
     }
