@@ -90,6 +90,8 @@ jobs:
           fi
       - name: Check V4 architecture boundaries
         run: npm run check:boundaries -w @study-accelerator/web-v4
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
       - name: Check migrated API TypeScript
         run: npm run typecheck:migrated -w @study-accelerator/api
       - name: Check CI coverage and failure gates
