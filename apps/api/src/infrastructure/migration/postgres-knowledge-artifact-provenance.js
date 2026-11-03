@@ -12,6 +12,10 @@ import { validateKnowledgeArtifactProvenanceRelations } from '../../modules/know
 import { knowledgeExtractionCommitKey } from '../../modules/ai/knowledge-extraction-commit-contract.js';
 
 /** 调用方提供核心 syncRuntime 事务；迁移数据、journal 与完成标记一次提交。 */
+/**
+ * @param {import('./provenance-types.ts').ProvenanceMigrationClient} db
+ * @param {string} ownerId
+ */
 export async function migratePostgresKnowledgeArtifactProvenance(db, ownerId) {
   return db.$transaction(async tx => {
     const migrations = await tx.$queryRawUnsafe('SELECT version FROM knowledge_artifact_provenance_migrations');
@@ -54,7 +58,11 @@ export async function migratePostgresKnowledgeArtifactProvenance(db, ownerId) {
         return null;
       }
     });
-    const getTombstone = (collection, id) => journal?.payload?.tombstones?.[JSON.stringify([collection, id])];
+    // 原始 JSON 仅提供可选字段视图，不把它视为已校验的同步日志。
+    const getTombstone = (collection, id) =>
+      /** @type {{ tombstones?: Record<string, import('@prisma/client').Prisma.JsonValue | undefined> } | null} */ (
+        journal?.payload
+      )?.tombstones?.[JSON.stringify([collection, id])];
     const stats = backfillKnowledgeArtifactProvenance(state, { receipts, getTombstone });
     const previous = new Map(records.map(record => [record.id, record.provenanceHash]));
     for (const record of state.knowledgeArtifactProvenance) {

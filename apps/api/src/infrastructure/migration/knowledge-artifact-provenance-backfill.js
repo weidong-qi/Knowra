@@ -9,6 +9,12 @@ import {
 import { migrateLegacyKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.js';
 import { assertProvenanceWrite } from '../../modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.js';
 
+/**
+ * @overload
+ * @param {unknown} extension
+ * @returns {unknown[]}
+ */
+/** @returns {unknown[]} */
 export function legacyKnowledgeExtractionReceipts(extension) {
   return extension?.version === 1 && Object.keys(extension).length === 2 && Array.isArray(extension.receipts)
     ? extension.receipts
@@ -16,6 +22,10 @@ export function legacyKnowledgeExtractionReceipts(extension) {
 }
 
 /** 只从已经验证的宿主 receipt 挑选白名单；不改变原 receipt 或其 hash。 */
+/**
+ * @param {import('../../modules/ai/knowledge-extraction-commit-types.ts').KnowledgeExtractionCommitReceipt} receipt
+ * @param {import('../../modules/knowledge/application/knowledge-extraction-types.ts').ExtractionCandidatePlan} candidate
+ */
 export function createKnowledgeArtifactProvenanceFromReceipt(receipt, candidate) {
   const artifactId = candidate.candidateInput.id;
   const record = {
@@ -57,8 +67,8 @@ export function createKnowledgeArtifactProvenanceFromReceipt(receipt, candidate)
 
 /** 只修改摘要集合。坏的可选旧 receipt 被隔离，坏的新摘要永远抛错。 */
 /**
- * @param state
- * @param {{receipts?: ReturnType<typeof legacyKnowledgeExtractionReceipts>, getTombstone?: (collection: string, id: string) => {collection: string, id: string, revision: number, eventId: string, deletedAt: string | null} | null}} options */
+ * @param {import('./provenance-types.ts').ProvenanceBackfillState} state
+ * @param {import('./provenance-types.ts').ProvenanceBackfillOptions} options */
 export function backfillKnowledgeArtifactProvenance(state, { receipts = [], getTombstone = () => null } = {}) {
   const records = (state.knowledgeArtifactProvenance ??= []);
   records.forEach(validateKnowledgeArtifactProvenance);

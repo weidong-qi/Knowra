@@ -483,6 +483,7 @@ export async function applyJsonMigration({
   return report;
 }
 
+/** @param {import('./migration-client.ts').MigrationTransaction} client */
 export async function assertEmptyTarget(client) {
   const models = [
     'user',
