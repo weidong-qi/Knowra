@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createAiGateway, AiGatewayError } from '../src/modules/ai/gateway.js';
-import { createMockAiAdapter } from '../src/modules/ai/infrastructure/providers/mock-adapter.js';
-import { createDeepSeekAdapter } from '../src/modules/ai/infrastructure/providers/deepseek-adapter.js';
+import { createMockAiAdapter } from '../src/modules/ai/infrastructure/providers/mock-adapter.ts';
+import { createDeepSeekAdapter } from '../src/modules/ai/infrastructure/providers/deepseek-adapter.ts';
 import { deepSeekPayload } from '../src/modules/ai/outbound-payload.ts';
 import { runCapabilityProbe } from '../src/modules/ai/capability-probe.js';
 

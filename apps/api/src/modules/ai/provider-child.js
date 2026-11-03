@@ -1,4 +1,4 @@
-import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.js';
+import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.ts';
 
 // 子进程只持有本次供应商请求；没有业务 repository、预算或笔记服务入口。
 const adapter = createDeepSeekAdapter();
