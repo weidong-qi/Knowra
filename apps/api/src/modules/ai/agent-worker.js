@@ -1,8 +1,8 @@
-import { authorizedHistory, authorizedQuestion, plainMessages } from './agent-request-context.js';
-import { analyzeProposal, proposalProgress } from './proposal-progress.js';
-// 保留既有调用方的进度文本入口，纯规则统一在 proposal-progress.js 维护。
-export { proposalProgress } from './proposal-progress.js';
-import { toolsForWriteIntent, toolsForAssistant } from './note-write-intent.js';
+import { authorizedHistory, authorizedQuestion, plainMessages } from './agent-request-context.ts';
+import { analyzeProposal, proposalProgress } from './proposal-progress.ts';
+// 保留既有调用方的进度文本入口，纯规则统一在 proposal-progress.ts 维护。
+export { proposalProgress } from './proposal-progress.ts';
+import { toolsForWriteIntent, toolsForAssistant } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '../knowledge/domain/note-version.js';
 import { beijingDay } from './budget-ledger.js';
@@ -10,7 +10,7 @@ import { actualCostMicrounits, quoteWorstCase } from './worker.js';
 import { hashRecord } from './record-contract.js';
 import { createAuthorizedRetrieval } from './retrieval.js';
 import { createAiRecoveryScope } from './recovery-scope.ts';
-import { emptyAgentCheckpoint } from './agent-checkpoint.js';
+import { emptyAgentCheckpoint } from './agent-checkpoint.ts';
 import { ANNOTATIONS_TOOL, listAnnotatedRanges } from './annotation-read-tool.js';
 import { FOLDERS_LIST_TOOL, NOTES_LIST_TOOL, CATALOG_TOOL_NAMES, catalogSpecsFromCalls } from './catalog-tool.ts';
 import { KNOWLEDGE_PROPOSE_TOOL, proposeKnowledge } from './knowledge-propose-tool.js';
@@ -21,7 +21,7 @@ import {
   requestsAssistantArtifact,
   requestsKnowledgeProposal,
   renderExternalSources
-} from './assistant-tools.js';
+} from './assistant-tools.ts';
 
 const MAX_ROUNDS = 4;
 const MAX_TOOLS = 6;
