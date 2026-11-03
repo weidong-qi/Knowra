@@ -3,10 +3,16 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { taskAttachmentStorageKey } from '../modules/task-workspaces/storage-validation.ts';
 import { fail, uuid } from '../modules/task-workspaces/contract.ts';
-import { verifyTaskImage, TASK_IMAGE_MAX_BYTES } from './task-workspace-image.js';
-const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+import { verifyTaskImage, TASK_IMAGE_MAX_BYTES } from './task-workspace-image.ts';
+import type { Stats } from 'node:fs';
+import type { AppError } from '../errors/app-error.ts';
+import type { TaskWorkspaceFiles } from '../modules/task-workspaces/repository-port.ts';
+export interface TaskWorkspaceFilesOptions {
+  uploadsDirectory: string;
+}
+const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
-function secureDirectory(root, segments, create = false) {
+function secureDirectory(root: string, segments: string[], create = false) {
   let candidate = root;
   for (const segment of ['', ...segments]) {
     if (segment) candidate = path.join(candidate, segment);
@@ -16,13 +22,13 @@ function secureDirectory(root, segments, create = false) {
   }
   return candidate;
 }
-function readFile(file) {
+function readFile(file: string) {
   const expected = fs.lstatSync(file);
   if (!expected.isFile() || expected.isSymbolicLink() || expected.nlink !== 1 || expected.size > TASK_IMAGE_MAX_BYTES)
     fail('FORBIDDEN');
   const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0));
   try {
-    const matches = stat =>
+    const matches = (stat: Stats) =>
       stat.isFile() &&
       stat.nlink === 1 &&
       stat.dev === expected.dev &&
@@ -38,7 +44,7 @@ function readFile(file) {
   }
 }
 
-export function createTaskWorkspaceFiles({ uploadsDirectory }) {
+export function createTaskWorkspaceFiles({ uploadsDirectory }: TaskWorkspaceFilesOptions): TaskWorkspaceFiles {
   const configuredRoot = path.resolve(uploadsDirectory);
   fs.mkdirSync(configuredRoot, { recursive: true, mode: 0o700 });
   secureDirectory(configuredRoot, []);
@@ -60,8 +66,8 @@ export function createTaskWorkspaceFiles({ uploadsDirectory }) {
       const verified = await verifyTaskImage(copy, mimeType);
       const storageKey = taskAttachmentStorageKey(workspaceId, documentId, attachmentId);
       const segments = storageKey.split('/');
-      const file = path.join(secureDirectory(root, segments.slice(0, -1), true), segments.at(-1));
-      let fd,
+      const file = path.join(secureDirectory(root, segments.slice(0, -1), true), segments.at(-1)!);
+      let fd: number | undefined,
         created = false;
       try {
         fd = fs.openSync(file, 'wx', 0o600);
@@ -78,7 +84,7 @@ export function createTaskWorkspaceFiles({ uploadsDirectory }) {
         }
       } catch (error) {
         if (created) fs.rmSync(file, { force: true });
-        if (error.code === 'EEXIST') fail('CONFLICT');
+        if ((error as AppError).code === 'EEXIST') fail('CONFLICT');
         throw error;
       } finally {
         if (fd !== undefined) fs.closeSync(fd);
@@ -121,7 +127,7 @@ export function createTaskWorkspaceFiles({ uploadsDirectory }) {
           fail('FORBIDDEN');
         return { bytes, mimeType: verified.mimeType, width: verified.width, height: verified.height };
       } catch (error) {
-        if (error.code?.startsWith('TASK_WORKSPACE_')) throw error;
+        if ((error as AppError).code?.startsWith('TASK_WORKSPACE_')) throw error;
         fail('FORBIDDEN');
       }
     }

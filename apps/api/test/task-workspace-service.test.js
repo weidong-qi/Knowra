@@ -4,7 +4,7 @@ import { createTaskWorkspaceService } from '../src/modules/task-workspaces/servi
 import {
   createJsonTaskWorkspaceStore,
   createEmptyTaskWorkspaceSnapshot
-} from '../src/infrastructure/task-workspace-json-store.js';
+} from '../src/infrastructure/task-workspace-json-store.ts';
 
 export function fixture() {
   let state = createEmptyTaskWorkspaceSnapshot(),

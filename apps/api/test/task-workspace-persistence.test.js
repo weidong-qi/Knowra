@@ -5,7 +5,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { createTaskWorkspaceService } from '../src/modules/task-workspaces/service.ts';
-import { createTaskWorkspaceFiles } from '../src/infrastructure/task-workspace-files.js';
+import { createTaskWorkspaceFiles } from '../src/infrastructure/task-workspace-files.ts';
 import { acquireDataFileWriteLock } from '../src/infrastructure/data-file-write-lock.ts';
 import sharp from 'sharp';
 function open(file, files) {

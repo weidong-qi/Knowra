@@ -8,8 +8,8 @@ import {
 import { createLocalAttachmentFileManager } from '../apps/api/src/infrastructure/local-attachment-file-manager.ts';
 import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.js';
 import { validatePersistedLocalState } from '../apps/api/src/infrastructure/local-data-schema.js';
-import { readJsonFileSync } from '../apps/api/src/infrastructure/json-file-reader.js';
-import { readAttachmentInspectionSource } from '../apps/api/src/infrastructure/attachment-inspection-source.js';
+import { readJsonFileSync } from '../apps/api/src/infrastructure/json-file-reader.ts';
+import { readAttachmentInspectionSource } from '../apps/api/src/infrastructure/attachment-inspection-source.ts';
 
 const options = parseArgs(process.argv.slice(2));
 
