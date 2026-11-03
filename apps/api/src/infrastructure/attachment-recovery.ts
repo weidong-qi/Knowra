@@ -2,11 +2,28 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_RESTORE_BYTES } from '@study-accelerator/shared/attachments';
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { normalizeSha256 } from './attachment-record-reconciliation.ts';
-import { sha256Buffer, writeFileAtomically } from './local-attachment-store-utils.js';
+import { sha256Buffer, writeFileAtomically } from './local-attachment-store-utils.ts';
+import type {
+  AttachmentFileHealth,
+  AttachmentFileManager,
+  AttachmentOperationError,
+  AttachmentRestoreBody,
+  AttachmentRestoreIntent,
+  LocalAttachmentRecord
+} from './local-attachment-types.ts';
 
-export function decodeAttachmentBytes(contentBase64, limit = MAX_ATTACHMENT_UPLOAD_BYTES, allowEmpty = false) {
+type AttachmentInspectionFileManager = Pick<AttachmentFileManager, 'resolveReadableAttachmentPath'>;
+type AttachmentRestoreFileManager = Pick<
+  AttachmentFileManager,
+  'resolveManagedAbsolutePath' | 'getManagedUploadsDirectory'
+>;
+type AttachmentLookup = (
+  id: string | undefined
+) => LocalAttachmentRecord | null | undefined | Promise<LocalAttachmentRecord | null | undefined>;
+
+export function decodeAttachmentBytes(contentBase64: unknown, limit = MAX_ATTACHMENT_UPLOAD_BYTES, allowEmpty = false) {
   if (typeof contentBase64 !== 'string' || contentBase64.length > Math.ceil(limit / 3) * 4) {
     throw createAppError('ATTACHMENT_TOO_LARGE', '附件超过允许的大小。', 413);
   }
@@ -21,7 +38,7 @@ export function decodeAttachmentBytes(contentBase64, limit = MAX_ATTACHMENT_UPLO
   return content;
 }
 
-export function attachmentIdentity(attachment) {
+export function attachmentIdentity(attachment: LocalAttachmentRecord) {
   return JSON.stringify([
     attachment.id,
     attachment.noteId,
@@ -32,14 +49,20 @@ export function attachmentIdentity(attachment) {
   ]);
 }
 
-export function assertSameAttachment(current, expected) {
+export function assertSameAttachment(
+  current: LocalAttachmentRecord | null | undefined,
+  expected: LocalAttachmentRecord
+): asserts current is LocalAttachmentRecord {
   if (!current || attachmentIdentity(current) !== attachmentIdentity(expected)) {
     throw createAppError('ATTACHMENT_CHANGED', '附件已删除或发生变化，请刷新后重试。', 409);
   }
 }
 
 // 读取前保存期望值；文件定位工具不得把实测大小写回有可信哈希的记录。
-export function inspectAttachmentFile(attachment, fileManager) {
+export function inspectAttachmentFile(
+  attachment: LocalAttachmentRecord,
+  fileManager: AttachmentInspectionFileManager
+): AttachmentFileHealth {
   const expected = normalizeSha256(attachment.sha256);
   const readablePath = fileManager.resolveReadableAttachmentPath({ ...attachment });
   if (!readablePath) return { status: 'missing', verifiedAt: null };
@@ -47,7 +70,7 @@ export function inspectAttachmentFile(attachment, fileManager) {
   try {
     content = fs.readFileSync(readablePath);
   } catch (error) {
-    if (error.code === 'ENOENT') return { status: 'missing', verifiedAt: null };
+    if ((error as AttachmentOperationError).code === 'ENOENT') return { status: 'missing', verifiedAt: null };
     throw error;
   }
   if (!expected) return { status: 'failed', verifiedAt: null };
@@ -61,21 +84,25 @@ export function inspectAttachmentFile(attachment, fileManager) {
   };
 }
 
-export function assertReadableStatus(attachment) {
+export function assertReadableStatus(attachment: Pick<LocalAttachmentRecord, 'status'>) {
   if (attachment.status === 'corrupt')
     throw createAppError('ATTACHMENT_FILE_CORRUPT', '附件文件损坏，请核验或恢复原文件。', 409);
-  if (!['ready', 'missing'].includes(attachment.status))
+  if (!['ready', 'missing'].includes(attachment.status!))
     throw createAppError('ATTACHMENT_NOT_READY', '附件尚不可用，请先核验。', 409);
 }
 
-export function throwFileHealth(status) {
+export function throwFileHealth(status: AttachmentFileHealth['status']): never {
   if (status === 'missing') throw createAppError('ATTACHMENT_FILE_MISSING', '附件文件缺失，请恢复原文件。', 404);
   if (status === 'corrupt') throw createAppError('ATTACHMENT_FILE_CORRUPT', '附件文件损坏，请恢复原文件。', 409);
   throw createAppError('ATTACHMENT_UNVERIFIABLE', '附件缺少可信原哈希，无法核验。', 422);
 }
 
 // 原内容永不覆盖：损坏副本作为恢复材料保留，成功提交后才移除本次临时备份。
-export function prepareAttachmentRestore(attachment, body, fileManager) {
+export function prepareAttachmentRestore(
+  attachment: LocalAttachmentRecord,
+  body: AttachmentRestoreBody | null | undefined,
+  fileManager: AttachmentRestoreFileManager
+) {
   const expected = normalizeSha256(attachment.sha256);
   if (!expected)
     throw createAppError('ATTACHMENT_RESTORE_UNVERIFIABLE', '缺少可信原哈希，请作为新附件上传，不能覆盖原附件。', 422);
@@ -137,11 +164,15 @@ export function prepareAttachmentRestore(attachment, body, fileManager) {
 
 // 崩溃后仅继续已获授权、身份及原文件哈希仍匹配的恢复。
 // 其他材料保留供运维诊断，不让旧 ID 重新出现。
-export async function recoverAttachmentRestores(fileManager, getAttachment, verifyAttachment) {
+export async function recoverAttachmentRestores<VerifyResult>(
+  fileManager: AttachmentInspectionFileManager & AttachmentRestoreFileManager,
+  getAttachment: AttachmentLookup,
+  verifyAttachment?: (id: string) => VerifyResult | Promise<VerifyResult>
+) {
   const directory = fileManager.getManagedUploadsDirectory();
   for (const name of fs.readdirSync(directory).filter(name => /^\.restore-[a-f0-9-]+\.json$/.test(name))) {
     try {
-      const intent = JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8'));
+      const intent = JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8')) as AttachmentRestoreIntent;
       const current = await getAttachment(intent.attachment?.id);
       assertSameAttachment(current, intent.attachment);
       if (inspectAttachmentFile(current, fileManager).status !== 'ready') {

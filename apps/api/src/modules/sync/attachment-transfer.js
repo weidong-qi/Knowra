@@ -1,8 +1,8 @@
-import { createAttachmentId, sanitizeFileName } from '../../infrastructure/local-attachment-store-utils.js';
+import { createAttachmentId, sanitizeFileName } from '../../infrastructure/local-attachment-store-utils.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { createLocalAttachmentFileManager } from '../../infrastructure/local-attachment-file-manager.js';
+import { createLocalAttachmentFileManager } from '../../infrastructure/local-attachment-file-manager.ts';
 import { syncError } from './journal.ts';
 
 export const MAX_SYNC_ATTACHMENT_BYTES = 6 * 1024 * 1024;

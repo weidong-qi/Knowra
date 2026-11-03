@@ -5,13 +5,13 @@ import {
   prepareAttachmentRestore,
   assertSameAttachment,
   recoverAttachmentRestores
-} from './attachment-recovery.js';
-import { decodeAttachmentBytes } from './attachment-recovery.js';
+} from './attachment-recovery.ts';
+import { decodeAttachmentBytes } from './attachment-recovery.ts';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { createAppError } from '../errors/app-error.js';
-import { createLocalAttachmentFileManager } from './local-attachment-file-manager.js';
+import { createLocalAttachmentFileManager } from './local-attachment-file-manager.ts';
 import { ATTACHMENT_STATUS } from './attachment-status.ts';
 import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.js';
 import { inspectAttachmentDeletion } from './attachment-deletion-preflight.js';
@@ -22,7 +22,7 @@ import {
   scheduleFileCleanup,
   sha256Buffer,
   writeFileAtomicallyAsync
-} from './local-attachment-store-utils.js';
+} from './local-attachment-store-utils.ts';
 
 /** @param {import('./postgres-storage-types.ts').PostgresAttachmentStoreOptions} options */
 export function createPostgresAttachmentStore({

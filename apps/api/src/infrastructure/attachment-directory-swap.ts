@@ -1,38 +1,46 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
+import type { AttachmentOperationError } from './local-attachment-types.ts';
 
-export function stageAttachmentFiles({
-  uploadsDirectory,
-  preparedItems
-}) {
+export interface StageAttachmentFilesOptions {
+  uploadsDirectory: string;
+  preparedItems: { storageFileName: string; content: Uint8Array }[];
+}
+export interface AttachmentDirectorySwapOptions<RecordType> {
+  uploadsDirectory: string;
+  stagingDirectory: string;
+  records: RecordType[];
+}
+interface RestoreAfterCommitFailureOptions {
+  uploadsDirectory: string;
+  stagingDirectory: string;
+  backupDirectory: string;
+  error: AttachmentOperationError;
+}
+
+export function stageAttachmentFiles({ uploadsDirectory, preparedItems }: StageAttachmentFilesOptions) {
   const stagingDirectory = createStagingDirectory(uploadsDirectory);
 
   try {
     for (const item of preparedItems) {
-      fs.writeFileSync(
-        path.join(stagingDirectory, item.storageFileName),
-        item.content
-      );
+      fs.writeFileSync(path.join(stagingDirectory, item.storageFileName), item.content);
     }
     return stagingDirectory;
   } catch (error) {
     cleanupDirectory(stagingDirectory);
-    throw createAppError(
-      'STORAGE_ATTACHMENT_STAGE_FAILED',
-      'Failed to stage imported attachment files',
-      500,
-      { cause: error }
-    );
+    throw createAppError('STORAGE_ATTACHMENT_STAGE_FAILED', 'Failed to stage imported attachment files', 500, {
+      cause: error
+    });
   }
 }
 
-export function createAttachmentDirectorySwap({
+export function createAttachmentDirectorySwap<RecordType>({
   uploadsDirectory,
   stagingDirectory,
   records
-}) {
+}: AttachmentDirectorySwapOptions<RecordType>) {
   const backupDirectory = `${uploadsDirectory}.backup-${randomUUID()}`;
   let status = 'staged';
 
@@ -51,15 +59,12 @@ export function createAttachmentDirectorySwap({
           uploadsDirectory,
           stagingDirectory,
           backupDirectory,
-          error
+          error: error as AttachmentOperationError
         });
         status = 'failed';
-        throw createAppError(
-          'STORAGE_ATTACHMENT_COMMIT_FAILED',
-          'Failed to replace attachment files',
-          500,
-          { cause: error }
-        );
+        throw createAppError('STORAGE_ATTACHMENT_COMMIT_FAILED', 'Failed to replace attachment files', 500, {
+          cause: error
+        });
       }
     },
     rollback() {
@@ -85,7 +90,7 @@ export function createAttachmentDirectorySwap({
   };
 }
 
-function createStagingDirectory(uploadsDirectory) {
+function createStagingDirectory(uploadsDirectory: string) {
   const parentDirectory = path.dirname(uploadsDirectory);
   const baseName = path.basename(uploadsDirectory);
   fs.mkdirSync(parentDirectory, { recursive: true });
@@ -97,18 +102,18 @@ function restoreAfterCommitFailure({
   stagingDirectory,
   backupDirectory,
   error
-}) {
+}: RestoreAfterCommitFailureOptions) {
   if (fs.existsSync(backupDirectory) && !fs.existsSync(uploadsDirectory)) {
     try {
       fs.renameSync(backupDirectory, uploadsDirectory);
     } catch (restoreError) {
-      error.restoreError = restoreError;
+      error.restoreError = restoreError as Error;
     }
   }
   cleanupDirectory(stagingDirectory);
 }
 
-function rollbackDirectorySwap(uploadsDirectory, backupDirectory) {
+function rollbackDirectorySwap(uploadsDirectory: string, backupDirectory: string) {
   const importedDirectory = `${uploadsDirectory}.failed-${randomUUID()}`;
   try {
     fs.renameSync(uploadsDirectory, importedDirectory);
@@ -125,24 +130,21 @@ function rollbackDirectorySwap(uploadsDirectory, backupDirectory) {
   cleanupDirectory(importedDirectory);
 }
 
-function restoreImportedDirectory(uploadsDirectory, importedDirectory) {
+function restoreImportedDirectory(uploadsDirectory: string, importedDirectory: string) {
   if (!fs.existsSync(uploadsDirectory) && fs.existsSync(importedDirectory)) {
     fs.renameSync(importedDirectory, uploadsDirectory);
   }
 }
 
-function cleanupBackup(backupDirectory) {
+function cleanupBackup(backupDirectory: string) {
   try {
     removeDirectory(backupDirectory);
   } catch (error) {
-    console.error(
-      'Attachment import backup cleanup failed:',
-      error?.message
-    );
+    console.error('Attachment import backup cleanup failed:', (error as AttachmentOperationError)?.message);
   }
 }
 
-function removeDirectory(directoryPath) {
+function removeDirectory(directoryPath: string) {
   if (!fs.existsSync(directoryPath)) {
     return;
   }
@@ -154,13 +156,13 @@ function removeDirectory(directoryPath) {
   });
 }
 
-function cleanupDirectory(directoryPath) {
+function cleanupDirectory(directoryPath: string) {
   try {
     removeDirectory(directoryPath);
   } catch (error) {
     console.error(
       `Attachment directory cleanup failed for ${path.basename(directoryPath)}:`,
-      error?.message
+      (error as AttachmentOperationError)?.message
     );
   }
 }

@@ -5,18 +5,18 @@ import {
   prepareAttachmentRestore,
   assertSameAttachment,
   recoverAttachmentRestores
-} from './attachment-recovery.js';
+} from './attachment-recovery.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createAppError } from '../errors/app-error.js';
-import { createLocalAttachmentFileManager } from './local-attachment-file-manager.js';
-import { createLocalAttachmentDeletionManager } from './local-attachment-deletion.js';
+import { createLocalAttachmentFileManager } from './local-attachment-file-manager.ts';
+import { createLocalAttachmentDeletionManager } from './local-attachment-deletion.ts';
 import { createLocalAttachmentSnapshotStore } from './local-attachment-snapshot-store.js';
 import { ATTACHMENT_STATUS } from './attachment-status.ts';
 import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.js';
 import { reconcileAttachmentIntegrity } from './attachment-record-reconciliation.ts';
-import { createLocalAttachmentUpload } from './local-attachment-upload.js';
-import { moveFileSafely, sanitizeFileName } from './local-attachment-store-utils.js';
+import { createLocalAttachmentUpload } from './local-attachment-upload.ts';
+import { moveFileSafely, sanitizeFileName } from './local-attachment-store-utils.ts';
 
 export function createLocalAttachmentStore({
   dataStore,

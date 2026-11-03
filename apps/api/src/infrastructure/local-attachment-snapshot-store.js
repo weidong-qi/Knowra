@@ -1,30 +1,15 @@
 import fs from 'node:fs';
 import { createAppError } from '../errors/app-error.js';
-import { cloneValue } from './local-attachment-store-utils.js';
-import {
-  createAttachmentDirectorySwap,
-  stageAttachmentFiles
-} from './attachment-directory-swap.js';
-import {
-  validateAttachmentSnapshotItems
-} from './local-attachment-snapshot-validator.js';
+import { cloneValue } from './local-attachment-store-utils.ts';
+import { createAttachmentDirectorySwap, stageAttachmentFiles } from './attachment-directory-swap.ts';
+import { validateAttachmentSnapshotItems } from './local-attachment-snapshot-validator.js';
 
-export function createLocalAttachmentSnapshotStore({
-  dataStore,
-  flush,
-  fileManager,
-  listAttachments
-}) {
+export function createLocalAttachmentSnapshotStore({ dataStore, flush, fileManager, listAttachments }) {
   function exportAttachmentsSnapshot() {
-    return listAttachments().map((attachment) => {
-      const readablePath = fileManager
-        .resolveReadableAttachmentPath(attachment);
+    return listAttachments().map(attachment => {
+      const readablePath = fileManager.resolveReadableAttachmentPath(attachment);
       if (!readablePath) {
-        throw createAppError(
-          'ATTACHMENT_FILE_MISSING',
-          `Attachment file missing: ${attachment.id}`,
-          404
-        );
+        throw createAppError('ATTACHMENT_FILE_MISSING', `Attachment file missing: ${attachment.id}`, 404);
       }
 
       return {
@@ -35,11 +20,7 @@ export function createLocalAttachmentSnapshotStore({
   }
 
   function prepareAttachmentsSnapshot(items = [], options = {}) {
-    const preparedItems = validateAttachmentSnapshotItems(
-      items,
-      fileManager,
-      options
-    );
+    const preparedItems = validateAttachmentSnapshotItems(items, fileManager, options);
     const uploadsDirectory = fileManager.getManagedUploadsDirectory();
     const stagingDirectory = stageAttachmentFiles({
       uploadsDirectory,
@@ -49,9 +30,7 @@ export function createLocalAttachmentSnapshotStore({
     return createAttachmentDirectorySwap({
       uploadsDirectory,
       stagingDirectory,
-      records: preparedItems.map(
-        ({ content, storageFileName, ...record }) => record
-      )
+      records: preparedItems.map(({ content, storageFileName, ...record }) => record)
     });
   }
 
@@ -73,11 +52,7 @@ export function createLocalAttachmentSnapshotStore({
   }
 
   function replaceAttachments(records) {
-    dataStore.state.attachments.splice(
-      0,
-      dataStore.state.attachments.length,
-      ...cloneValue(records)
-    );
+    dataStore.state.attachments.splice(0, dataStore.state.attachments.length, ...cloneValue(records));
   }
 
   return {

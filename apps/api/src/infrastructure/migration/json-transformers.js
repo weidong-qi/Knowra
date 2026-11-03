@@ -10,7 +10,7 @@ import {
   looksWindowsAbsolute,
   sanitizeFileName,
   toPortablePath
-} from '../local-attachment-store-utils.js';
+} from '../local-attachment-store-utils.ts';
 
 export function transformSpace(space, fallbackTimestamp) {
   const createdAt = normalizeTimestamp(space.createdAt ?? fallbackTimestamp, fallbackTimestamp);
