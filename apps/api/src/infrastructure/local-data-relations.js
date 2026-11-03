@@ -1,3 +1,4 @@
+import { validatePdfRelations } from '@study-accelerator/shared/pdf';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { calculateContentHash, projectMarkdown, resolveAnchor, listTracking } from '@study-accelerator/content-anchor';
 import { nextKnowledgeItemTimestamp } from '../modules/knowledge/application/knowledge-item-concurrency.js';
@@ -40,6 +41,11 @@ export function validateLocalDataRelations(state) {
   validateKnowledgeEvidence(state.knowledgeEvidence, knowledgeItems, notes, noteVersions, annotations);
   validateKnowledgeArtifactProvenanceRelations(state);
   validateAttachments(state.attachments, notes);
+  try {
+    validatePdfRelations(state);
+  } catch (error) {
+    throw createAppError('STORAGE_IMPORT_INVALID', error.message, 422);
+  }
   validateLearningObjectives(state.learningObjectives, knowledgeItems);
   validateExamProfiles(state.examProfiles);
   validateExamFocuses(state.examFocuses, examProfiles, learningObjectives);

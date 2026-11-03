@@ -56,7 +56,7 @@ export function createAsyncNoteService({
         const saved = await transactionNoteRepository.save(note, {
           expectedUpdatedAt
         });
-        if (createVersion && transactionNoteVersionService) {
+        if (createVersion && transactionNoteVersionService && note.contentKind !== 'pdf') {
           const version = await transactionNoteVersionService.ensureForNote(saved);
           await transactionOnNoteContentChanged?.(saved, version, annotationChange);
         } else if (annotationChange) {
@@ -86,6 +86,8 @@ export function createAsyncNoteService({
 
   async function updateNote(noteId, updates) {
     const currentNote = await requireNote(noteId, { includeDeleted: true });
+    if (currentNote.contentKind === 'pdf' && updates.rawMarkdown !== undefined)
+      throw validationError('PDF_IMMUTABLE', 'PDF 原文件不能作为 Markdown 正文修改。');
     const dto = buildUpdateNoteDto(updates);
     if (dto.rawMarkdown !== undefined)
       for (const id of addedNoteLinkTargets(dto.rawMarkdown, currentNote.rawMarkdown)) {

@@ -50,6 +50,7 @@ export interface NoteDeletionOptions<
       }
     | null
     | undefined;
+  removePdfAnnotations?: (noteIds: unknown[]) => void;
   runTransaction?: (<Value>(operation: () => Value) => Value) | undefined;
 }
 export interface NoteDeletionCoordinator<
@@ -71,9 +72,11 @@ export function createNoteDeletionCoordinator<
   annotationExclusionRepository,
   annotationRevisionRepository,
   attachmentStore,
+  removePdfAnnotations = _noteIds => {},
   runTransaction = operation => operation()
 }: NoteDeletionOptions<NoteResult, RecycleResult>): NoteDeletionCoordinator<NoteResult, RecycleResult> {
   function removeDependents(noteIds: unknown[]): unknown {
+    removePdfAnnotations(noteIds);
     const annotationIds =
       typeof contentAnnotationRepository?.list === 'function'
         ? contentAnnotationRepository

@@ -10,13 +10,16 @@ export interface SyncMappedEntityMap {
   folders: IsoRow<Models.Folder>;
   tags: IsoRow<Models.Tag>;
   tagGroups: IsoRow<Models.TagGroup>;
-  notes: Omit<IsoRow<Models.Note>, 'deletedAt' | 'internalLinks'> & {
+  notes: Omit<IsoRow<Models.Note>, 'deletedAt' | 'internalLinks' | 'contentKind' | 'pdfSource'> & {
+    contentKind: 'markdown' | 'pdf';
+    pdfSource: import('@study-accelerator/shared/pdf').PdfSource | null;
     deleted: boolean;
     internalLinks: Prisma.JsonValue[];
     tagIds: string[];
   };
   noteVersions: IsoRow<Models.NoteVersion>;
   attachments: IsoRow<Models.Attachment>;
+  pdfAnnotations: import('@study-accelerator/shared/pdf').PdfAnnotation;
   contentAnnotations: Omit<IsoRow<Models.ContentAnnotation>, 'headingPath'> & { headingPath: Prisma.JsonValue[] };
   annotationExclusions: IsoRow<Models.AnnotationExclusion>;
   annotationRevisions: IsoRow<Models.AnnotationRevision>;

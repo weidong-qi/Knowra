@@ -8,6 +8,16 @@ import { syncError } from './journal.ts';
 export async function handleSyncRoute({ request, response, url, sync }: SyncRouteDependencies): Promise<boolean> {
   if (!url.pathname.startsWith('/api/sync/')) return false;
   if (!sync) throw syncError('SYNC_UNAVAILABLE', '此运行服务尚未启用云端同步存储。', 503);
+  if (request.method === 'POST' && url.pathname === '/api/sync/blob-stream') {
+    let metadata: Record<string, unknown>;
+    try {
+      metadata = JSON.parse(decodeURIComponent((request.headers['x-knowra-blob'] as string | undefined) ?? ''));
+    } catch {
+      throw syncError('SYNC_ATTACHMENT_INVALID', 'PDF 传输元数据无效。', 422);
+    }
+    sendJson(response, 200, { data: await sync.uploadBlobStream({ ...metadata, stream: request }) });
+    return true;
+  }
   const handlers: Record<string, () => SyncAwaitable<object>> = {
     'GET /api/sync/device': () => sync.device(toQueryObject(url)),
     'GET /api/sync/status': () => sync.status(),

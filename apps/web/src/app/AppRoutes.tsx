@@ -6,12 +6,7 @@ import { useAppStore } from '../store/AppStoreProvider';
 import { LoadingState } from '../components/ui/status';
 import { Button } from '../components/ui/button/Button';
 import { NoteEditorView } from '../features/editor';
-import {
-  CreateEntryDialog,
-  DeleteTreeEntryDialog,
-  NotesIndexView,
-  type CreateMode
-} from '../features/notes';
+import { CreateEntryDialog, DeleteTreeEntryDialog, NotesIndexView, type CreateMode } from '../features/notes';
 import { MarkdownImportDialog } from '../features/editor/MarkdownImportDialog';
 import type { EditorViewAction, EffectiveEditorViewState } from '../features/editor/editorViewState';
 import { HomeView } from '../views/HomeView';
@@ -27,7 +22,11 @@ import { workspaceCapabilities } from '../store/workspaceCapabilities';
 import { SettingsView } from '../features/settings/SettingsView';
 import type { AppPreferences } from '../features/settings/preferences';
 
-const TaskWorkspacesView = lazy(async () => ({ default: (await import('../features/task-workspaces/TaskWorkspacesView')).TaskWorkspacesView }));
+const PdfReaderView = lazy(async () => ({ default: (await import('../features/pdf/PdfReaderView')).PdfReaderView }));
+
+const TaskWorkspacesView = lazy(async () => ({
+  default: (await import('../features/task-workspaces/TaskWorkspacesView')).TaskWorkspacesView
+}));
 
 const AssistantView = lazy(async () => {
   const module = await import('../features/assistant/AssistantView');
@@ -82,31 +81,65 @@ export interface AppRoutesProps {
 export function AppRoutes(props: AppRoutesProps) {
   const routePath = props.pathname.split('?')[0];
   if (routePath === '/showcase/icons') {
-    return <Suspense fallback={<LoadingState label="正在加载图标库…" />}><IconLibraryView /></Suspense>;
+    return (
+      <Suspense fallback={<LoadingState label="正在加载图标库…" />}>
+        <IconLibraryView />
+      </Suspense>
+    );
   }
   if (routePath === '/showcase') {
-    return <Suspense fallback={<LoadingState label="正在加载组件展台…" />}><ComponentShowcase /></Suspense>;
+    return (
+      <Suspense fallback={<LoadingState label="正在加载组件展台…" />}>
+        <ComponentShowcase />
+      </Suspense>
+    );
   }
-  if (routePath === '/settings') return <SettingsView
-    preferences={props.preferences}
-    onPreferencesChange={props.onPreferencesChange}
-    sidebarOpen={props.sidebarOpen}
-    onSidebarOpenChange={props.onSidebarOpenChange}
-  />;
-  if (routePath === '/assistant') return <ErrorBoundary key={routePath} fallbackRender={() => (
-    <section aria-labelledby="assistant-error-title" style={{ padding: '2rem' }}>
-      <h1 id="assistant-error-title">AI 助手暂时不可用</h1>
-      <p role="alert">助手界面加载或运行失败，笔记仍可继续使用。</p>
-      <Button onPress={() => window.location.reload()}>重试助手</Button>
-      <Button variant="ghost" onPress={props.onOpenMaterials}>返回笔记</Button>
-    </section>
-  )}>
-    <Suspense fallback={<LoadingState label="正在加载 AI 助手…" />}>
-      <AssistantView pathname={props.pathname} onOpenNote={props.onOpenNote} />
-    </Suspense>
-  </ErrorBoundary>;
-  if (props.routeDomain === 'task-workspaces') return <ErrorBoundary fallbackRender={({ resetErrorBoundary }) => <section aria-label="任务工作区加载失败"><p role="alert">任务工作区暂时不可用，私人笔记不受影响。</p><Button onPress={resetErrorBoundary}>重试任务工作区</Button></section>}><Suspense fallback={<LoadingState label="正在加载任务工作区…" />}><TaskWorkspacesView /></Suspense></ErrorBoundary>;
-  if (props.routeDomain === 'knowledge') return <KnowledgeStage pathname={props.pathname} onOpenNote={props.onOpenNote} />;
+  if (routePath === '/settings')
+    return (
+      <SettingsView
+        preferences={props.preferences}
+        onPreferencesChange={props.onPreferencesChange}
+        sidebarOpen={props.sidebarOpen}
+        onSidebarOpenChange={props.onSidebarOpenChange}
+      />
+    );
+  if (routePath === '/assistant')
+    return (
+      <ErrorBoundary
+        key={routePath}
+        fallbackRender={() => (
+          <section aria-labelledby="assistant-error-title" style={{ padding: '2rem' }}>
+            <h1 id="assistant-error-title">AI 助手暂时不可用</h1>
+            <p role="alert">助手界面加载或运行失败，笔记仍可继续使用。</p>
+            <Button onPress={() => window.location.reload()}>重试助手</Button>
+            <Button variant="ghost" onPress={props.onOpenMaterials}>
+              返回笔记
+            </Button>
+          </section>
+        )}
+      >
+        <Suspense fallback={<LoadingState label="正在加载 AI 助手…" />}>
+          <AssistantView pathname={props.pathname} onOpenNote={props.onOpenNote} />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  if (props.routeDomain === 'task-workspaces')
+    return (
+      <ErrorBoundary
+        fallbackRender={({ resetErrorBoundary }) => (
+          <section aria-label="任务工作区加载失败">
+            <p role="alert">任务工作区暂时不可用，私人笔记不受影响。</p>
+            <Button onPress={resetErrorBoundary}>重试任务工作区</Button>
+          </section>
+        )}
+      >
+        <Suspense fallback={<LoadingState label="正在加载任务工作区…" />}>
+          <TaskWorkspacesView />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  if (props.routeDomain === 'knowledge')
+    return <KnowledgeStage pathname={props.pathname} onOpenNote={props.onOpenNote} />;
   if (props.routeDomain === 'training') return <TrainingWorkspaceView />;
   if (props.routeDomain !== 'materials') return <PlaceholderStage domain={props.routeDomain} />;
   if (routePath === '/materials/tags') return <TagManagerView />;
@@ -138,85 +171,96 @@ export function AppRoutes(props: AppRoutesProps) {
   );
 }
 
-function NoteEditorStage({ noteId, editorView, canWrite, onEditorViewAction, onOpenNote }: {
+function NoteEditorStage({
+  noteId,
+  editorView,
+  canWrite,
+  onEditorViewAction,
+  onOpenNote
+}: {
   noteId: string;
   editorView: EffectiveEditorViewState;
   canWrite: boolean;
   onEditorViewAction(action: EditorViewAction): void;
   onOpenNote(noteId: string): void;
 }) {
-  const serverData = useAppStore((state) => state.serverData);
-  const navigation = useAppStore((state) => state.navigation);
-  const selectNote = useAppStore((state) => state.selectNote);
-  const closeNoteTab = useAppStore((state) => state.closeNoteTab);
-  const closeOtherNoteTabs = useAppStore((state) => state.closeOtherNoteTabs);
-  const reorderNoteTabs = useAppStore((state) => state.reorderNoteTabs);
-  const createNote = useAppStore((state) => state.createNote);
-  const duplicateNote = useAppStore((state) => state.duplicateNote);
-  const importMarkdownNotes = useAppStore((state) => state.importMarkdownNotes);
-  const createFolder = useAppStore((state) => state.createFolder);
-  const renameNote = useAppStore((state) => state.renameNote);
-  const loadNoteContent = useAppStore((state) => state.loadNoteContent);
-  const saveNoteContent = useAppStore((state) => state.saveNoteContent);
-  const setEditorHasLocalChanges = useAppStore((state) => state.setEditorHasLocalChanges);
-  const persistenceMode = useAppStore((state) => state.persistenceMode);
-  const deleteNote = useAppStore((state) => state.deleteNote);
-  const setNoteFavorite = useAppStore((state) => state.setNoteFavorite);
-  const setNoteTags = useAppStore((state) => state.setNoteTags);
-  const createTag = useAppStore((state) => state.createTag);
-  const updateTag = useAppStore((state) => state.updateTag);
-  const deleteTag = useAppStore((state) => state.deleteTag);
-  const mergeTags = useAppStore((state) => state.mergeTags);
-  const listNoteVersions = useAppStore((state) => state.listNoteVersions);
-  const listNoteVersionPage = useAppStore((state) => state.listNoteVersionPage);
-  const previewNoteVersionPrune = useAppStore((state) => state.previewNoteVersionPrune);
-  const saveNoteVersionAs = useAppStore((state) => state.saveNoteVersionAs);
-  const getNoteVersion = useAppStore((state) => state.getNoteVersion);
-  const organizeNote = useAppStore((state) => state.organizeNote);
-  const listNoteAttachments = useAppStore((state) => state.listNoteAttachments);
-  const uploadNoteAttachment = useAppStore((state) => state.uploadNoteAttachment);
-  const renameNoteAttachment = useAppStore((state) => state.renameNoteAttachment);
-  const deleteNoteAttachment = useAppStore((state) => state.deleteNoteAttachment);
+  const serverData = useAppStore(state => state.serverData);
+  const navigation = useAppStore(state => state.navigation);
+  const selectNote = useAppStore(state => state.selectNote);
+  const closeNoteTab = useAppStore(state => state.closeNoteTab);
+  const closeOtherNoteTabs = useAppStore(state => state.closeOtherNoteTabs);
+  const reorderNoteTabs = useAppStore(state => state.reorderNoteTabs);
+  const createNote = useAppStore(state => state.createNote);
+  const duplicateNote = useAppStore(state => state.duplicateNote);
+  const importMarkdownNotes = useAppStore(state => state.importMarkdownNotes);
+  const createFolder = useAppStore(state => state.createFolder);
+  const renameNote = useAppStore(state => state.renameNote);
+  const loadNoteContent = useAppStore(state => state.loadNoteContent);
+  const saveNoteContent = useAppStore(state => state.saveNoteContent);
+  const setEditorHasLocalChanges = useAppStore(state => state.setEditorHasLocalChanges);
+  const persistenceMode = useAppStore(state => state.persistenceMode);
+  const deleteNote = useAppStore(state => state.deleteNote);
+  const setNoteFavorite = useAppStore(state => state.setNoteFavorite);
+  const setNoteTags = useAppStore(state => state.setNoteTags);
+  const createTag = useAppStore(state => state.createTag);
+  const updateTag = useAppStore(state => state.updateTag);
+  const deleteTag = useAppStore(state => state.deleteTag);
+  const mergeTags = useAppStore(state => state.mergeTags);
+  const listNoteVersions = useAppStore(state => state.listNoteVersions);
+  const listNoteVersionPage = useAppStore(state => state.listNoteVersionPage);
+  const previewNoteVersionPrune = useAppStore(state => state.previewNoteVersionPrune);
+  const saveNoteVersionAs = useAppStore(state => state.saveNoteVersionAs);
+  const getNoteVersion = useAppStore(state => state.getNoteVersion);
+  const organizeNote = useAppStore(state => state.organizeNote);
+  const listNoteAttachments = useAppStore(state => state.listNoteAttachments);
+  const uploadNoteAttachment = useAppStore(state => state.uploadNoteAttachment);
+  const renameNoteAttachment = useAppStore(state => state.renameNoteAttachment);
+  const deleteNoteAttachment = useAppStore(state => state.deleteNoteAttachment);
   const inspectAttachmentDeletion = useAppStore(state => state.inspectAttachmentDeletion);
   const verifyNoteAttachment = useAppStore(state => state.verifyNoteAttachment);
   const restoreNoteAttachment = useAppStore(state => state.restoreNoteAttachment);
   const listAttachmentCleanup = useAppStore(state => state.listAttachmentCleanup);
   const retryAttachmentCleanup = useAppStore(state => state.retryAttachmentCleanup);
-  const getLinkedNotes = useAppStore((state) => state.getLinkedNotes);
-  const getNoteLinkRelations = useAppStore((state) => state.getNoteLinkRelations);
-  const searchLinkNotes = useAppStore((state) => state.searchCommandNotes);
-  const listAnnotations = useAppStore((state) => state.listAnnotations);
-  const createAnnotation = useAppStore((state) => state.createAnnotation);
-  const deleteAnnotation = useAppStore((state) => state.deleteAnnotation);
-  const restoreAnnotation = useAppStore((state) => state.restoreAnnotation);
-  const updateAnnotationAnchor = useAppStore((state) => state.updateAnnotationAnchor);
-  const updateAnnotation = useAppStore((state) => state.updateAnnotation);
-  const confirmAnnotationRange = useAppStore((state) => state.confirmAnnotationRange);
-  const previewAnnotation = useAppStore((state) => state.previewAnnotation);
-  const getAnnotationKnowledgeLinks = useAppStore((state) => state.getAnnotationKnowledgeLinks);
-  const previewAnalysisScope = useAppStore((state) => state.previewAnalysisScope);
-  const createAnalysisScope = useAppStore((state) => state.createAnalysisScope);
-  const listAnalysisScopes = useAppStore((state) => state.listAnalysisScopes);
-  const trashAnalysisScope = useAppStore((state) => state.trashAnalysisScope);
-  const restoreAnalysisScope = useAppStore((state) => state.restoreAnalysisScope);
-  const createAnnotationExclusion = useAppStore((state) => state.createAnnotationExclusion);
-  const deleteAnnotationExclusion = useAppStore((state) => state.deleteAnnotationExclusion);
-  const setStatusMessage = useAppStore((state) => state.setStatusMessage);
+  const getLinkedNotes = useAppStore(state => state.getLinkedNotes);
+  const getNoteLinkRelations = useAppStore(state => state.getNoteLinkRelations);
+  const searchLinkNotes = useAppStore(state => state.searchCommandNotes);
+  const listAnnotations = useAppStore(state => state.listAnnotations);
+  const createAnnotation = useAppStore(state => state.createAnnotation);
+  const deleteAnnotation = useAppStore(state => state.deleteAnnotation);
+  const restoreAnnotation = useAppStore(state => state.restoreAnnotation);
+  const updateAnnotationAnchor = useAppStore(state => state.updateAnnotationAnchor);
+  const updateAnnotation = useAppStore(state => state.updateAnnotation);
+  const confirmAnnotationRange = useAppStore(state => state.confirmAnnotationRange);
+  const previewAnnotation = useAppStore(state => state.previewAnnotation);
+  const getAnnotationKnowledgeLinks = useAppStore(state => state.getAnnotationKnowledgeLinks);
+  const previewAnalysisScope = useAppStore(state => state.previewAnalysisScope);
+  const createAnalysisScope = useAppStore(state => state.createAnalysisScope);
+  const listAnalysisScopes = useAppStore(state => state.listAnalysisScopes);
+  const trashAnalysisScope = useAppStore(state => state.trashAnalysisScope);
+  const restoreAnalysisScope = useAppStore(state => state.restoreAnalysisScope);
+  const createAnnotationExclusion = useAppStore(state => state.createAnnotationExclusion);
+  const deleteAnnotationExclusion = useAppStore(state => state.deleteAnnotationExclusion);
+  const setStatusMessage = useAppStore(state => state.setStatusMessage);
   const createKnowledgeCandidate = useAppStore(state => state.createKnowledgeCandidate);
   const [knowledgeSource, setKnowledgeSource] = useState<Annotation | null>(null);
   const canWriteKnowledge = canWrite && workspaceCapabilities(persistenceMode).writeKnowledge;
   const knowledgeContext = useRef<{ noteId: string; canWrite: boolean } | null>(null);
   knowledgeContext.current = { noteId, canWrite: canWriteKnowledge };
-  useEffect(() => () => { knowledgeContext.current = null; }, []);
+  useEffect(
+    () => () => {
+      knowledgeContext.current = null;
+    },
+    []
+  );
   const navigate = useNavigate();
   const [createMode, setCreateMode] = useState<CreateMode>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [favoritePending, setFavoritePending] = useState(false);
-  const note = serverData.notes.find((item) => item.id === noteId && !item.deleted) ?? null;
-  const folder = note?.folderId ? serverData.foldersById[note.folderId] ?? null : null;
+  const note = serverData.notes.find(item => item.id === noteId && !item.deleted) ?? null;
+  const folder = note?.folderId ? (serverData.foldersById[note.folderId] ?? null) : null;
   const openNotes = navigation.openNoteTabs
-    .map((id) => serverData.notes.find((item) => item.id === id && !item.deleted))
+    .map(id => serverData.notes.find(item => item.id === id && !item.deleted))
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   useEffect(() => {
@@ -226,6 +270,23 @@ function NoteEditorStage({ noteId, editorView, canWrite, onEditorViewAction, onO
   useEffect(() => {
     if (note && !note.contentLoaded) void loadNoteContent(note.id).catch(() => undefined);
   }, [loadNoteContent, note]);
+
+  if (note?.contentKind === 'pdf' && note.pdfSource)
+    return (
+      <ErrorBoundary
+        key={note.id}
+        fallbackRender={() => (
+          <section>
+            <p role="alert">PDF 阅读器暂时不可用，请重新打开资料。</p>
+            <Button onPress={() => navigate('/materials')}>返回资料库</Button>
+          </section>
+        )}
+      >
+        <Suspense fallback={<LoadingState label="正在加载 PDF 阅读器…" />}>
+          <PdfReaderView key={note.id} note={note} canWrite={canWrite} onOpenNote={onOpenNote} />
+        </Suspense>
+      </ErrorBoundary>
+    );
 
   return (
     <>
@@ -247,55 +308,64 @@ function NoteEditorStage({ noteId, editorView, canWrite, onEditorViewAction, onO
         onViewAction={onEditorViewAction}
         onOpenNote={onOpenNote}
         onReturnToList={() => navigate('/materials')}
-        onCloseNote={(closingNoteId) => {
+        onCloseNote={closingNoteId => {
           const nextNoteId = closeNoteTab(closingNoteId);
           if (closingNoteId !== note?.id) return;
           if (nextNoteId) onOpenNote(nextNoteId);
           else navigate('/materials');
         }}
-        onCloseOtherNotes={(remainingNoteId) => {
+        onCloseOtherNotes={remainingNoteId => {
           closeOtherNoteTabs(remainingNoteId);
           onOpenNote(remainingNoteId);
         }}
         onReorderNotes={reorderNoteTabs}
-        onCopyTabPath={(tabNote) => {
+        onCopyTabPath={tabNote => {
           const tabFolder = tabNote.folderId ? serverData.foldersById[tabNote.folderId] : null;
           const path = [tabFolder?.name, tabNote.title || '无标题笔记'].filter(Boolean).join(' / ');
-          void navigator.clipboard.writeText(path)
+          void navigator.clipboard
+            .writeText(path)
             .then(() => setStatusMessage(`已复制路径：${path}`))
             .catch(() => setStatusMessage('复制路径失败，请检查剪贴板权限'));
         }}
         onCreateNote={() => setCreateMode('note')}
         onCreateFolder={() => setCreateMode('folder')}
         onImportMarkdown={() => setImportOpen(true)}
-        onRenameNote={(title) => note ? renameNote(note.id, title) : Promise.resolve()}
-        onSaveMarkdown={(targetNoteId, markdown, expectedUpdatedAt, baseMarkdown, annotationMapping) => (
+        onRenameNote={title => (note ? renameNote(note.id, title) : Promise.resolve())}
+        onSaveMarkdown={(targetNoteId, markdown, expectedUpdatedAt, baseMarkdown, annotationMapping) =>
           saveNoteContent(targetNoteId, markdown, expectedUpdatedAt, baseMarkdown, annotationMapping)
-        )}
+        }
         onSaveAs={async () => {
           if (!note) return;
           const createdId = await duplicateNote(note.id);
           onOpenNote(createdId);
         }}
         onDeleteNote={() => setDeleteOpen(true)}
-        onSetTags={(tagIds) => note ? setNoteTags(note.id, tagIds) : Promise.resolve()}
+        onSetTags={tagIds => (note ? setNoteTags(note.id, tagIds) : Promise.resolve())}
         onCreateTag={createTag}
         onUpdateTag={updateTag}
         onDeleteTag={deleteTag}
         onMergeTags={mergeTags}
         onOpenTagManager={() => navigate('/materials/tags')}
-        onOpenTag={(tagId) => navigate(`/materials?tags=${encodeURIComponent(tagId)}&match=all`)}
+        onOpenTag={tagId => navigate(`/materials?tags=${encodeURIComponent(tagId)}&match=all`)}
         onListVersions={listNoteVersions}
         onListVersionPage={listNoteVersionPage}
         onPreviewVersionPrune={previewNoteVersionPrune}
-        onSaveVersionAs={async version => { if (note) onOpenNote(await saveNoteVersionAs(note.id, version.id)); }}
+        onSaveVersionAs={async version => {
+          if (note) onOpenNote(await saveNoteVersionAs(note.id, version.id));
+        }}
         onGetVersion={getNoteVersion}
-        onOrganizeNote={(input) => note ? organizeNote(note.id, input) : Promise.resolve()}
+        onOrganizeNote={input => (note ? organizeNote(note.id, input) : Promise.resolve())}
         onListAttachments={listNoteAttachments}
         onUploadAttachment={uploadNoteAttachment}
         onRenameAttachment={renameNoteAttachment}
         onDeleteAttachment={deleteNoteAttachment}
-        attachmentActions={{ inspectAttachmentDeletion, verifyNoteAttachment, restoreNoteAttachment, listAttachmentCleanup, retryAttachmentCleanup }}
+        attachmentActions={{
+          inspectAttachmentDeletion,
+          verifyNoteAttachment,
+          restoreNoteAttachment,
+          listAttachmentCleanup,
+          retryAttachmentCleanup
+        }}
         onGetLinkedNotes={getLinkedNotes}
         onGetNoteLinkRelations={getNoteLinkRelations}
         onSearchLinkNotes={searchLinkNotes}
@@ -308,14 +378,22 @@ function NoteEditorStage({ noteId, editorView, canWrite, onEditorViewAction, onO
         onConfirmAnnotationRange={confirmAnnotationRange}
         onPreviewAnnotation={previewAnnotation}
         onGetAnnotationKnowledgeLinks={getAnnotationKnowledgeLinks}
-        onCreateKnowledgeCandidate={canWriteKnowledge ? async annotation => {
-          const current = await previewAnnotation(annotation.id);
-          if (knowledgeContext.current?.noteId !== annotation.noteId || !knowledgeContext.current?.canWrite) throw new Error('已切换笔记或写入状态，请重新打开标注。');
-          if (current.resolution.status !== 'resolved') throw new Error('标注来源已变化，请重新定位后创建知识候选。');
-          setKnowledgeSource(current.annotation);
-        } : undefined}
+        onCreateKnowledgeCandidate={
+          canWriteKnowledge
+            ? async annotation => {
+                const current = await previewAnnotation(annotation.id);
+                if (knowledgeContext.current?.noteId !== annotation.noteId || !knowledgeContext.current?.canWrite)
+                  throw new Error('已切换笔记或写入状态，请重新打开标注。');
+                if (current.resolution.status !== 'resolved')
+                  throw new Error('标注来源已变化，请重新定位后创建知识候选。');
+                setKnowledgeSource(current.annotation);
+              }
+            : undefined
+        }
         onOpenKnowledgeItem={id => navigate(`/knowledge?item=${encodeURIComponent(id)}`)}
-        onExtractWithAssistant={noteId => navigate(`/assistant?new=1&noteId=${encodeURIComponent(noteId)}&intent=extract`)}
+        onExtractWithAssistant={noteId =>
+          navigate(`/assistant?new=1&noteId=${encodeURIComponent(noteId)}&intent=extract`)
+        }
         onPreviewAnalysisScope={previewAnalysisScope}
         onCreateAnalysisScope={createAnalysisScope}
         onListAnalysisScopes={listAnalysisScopes}
@@ -332,17 +410,24 @@ function NoteEditorStage({ noteId, editorView, canWrite, onEditorViewAction, onO
             .finally(() => setFavoritePending(false));
         }}
       />
-      {knowledgeSource ? <CreateKnowledgeCandidateDialog
-        source={knowledgeSource}
-        canWrite={canWriteKnowledge}
-        onClose={() => setKnowledgeSource(null)}
-        onCreate={createKnowledgeCandidate}
-        onCreated={item => { setKnowledgeSource(null); navigate(`/knowledge?item=${encodeURIComponent(item.id)}`); }}
-      /> : null}
+      {knowledgeSource ? (
+        <CreateKnowledgeCandidateDialog
+          source={knowledgeSource}
+          canWrite={canWriteKnowledge}
+          onClose={() => setKnowledgeSource(null)}
+          onCreate={createKnowledgeCandidate}
+          onCreated={item => {
+            setKnowledgeSource(null);
+            navigate(`/knowledge?item=${encodeURIComponent(item.id)}`);
+          }}
+        />
+      ) : null}
       <CreateEntryDialog
         mode={createMode}
         parentFolderId={folder?.id ?? null}
-        onOpenChange={(open) => { if (!open) setCreateMode(null); }}
+        onOpenChange={open => {
+          if (!open) setCreateMode(null);
+        }}
         onCreateNote={async (folderId, title) => {
           const createdId = await createNote(folderId, title);
           onOpenNote(createdId);
@@ -354,7 +439,7 @@ function NoteEditorStage({ noteId, editorView, canWrite, onEditorViewAction, onO
         isOpen={importOpen}
         folderName={folder?.name ?? '未整理'}
         onOpenChange={setImportOpen}
-        onImport={async (sources) => {
+        onImport={async sources => {
           const result = await importMarkdownNotes(folder?.id ?? null, sources);
           onOpenNote(result.firstNoteId);
         }}
@@ -373,7 +458,15 @@ function NoteEditorStage({ noteId, editorView, canWrite, onEditorViewAction, onO
   );
 }
 
-function HomeStage({ onRetry, canWrite, onSelectNote, onOpenMaterials, onOpenSearch, onOpenCreate, onOpenSchedule }: {
+function HomeStage({
+  onRetry,
+  canWrite,
+  onSelectNote,
+  onOpenMaterials,
+  onOpenSearch,
+  onOpenCreate,
+  onOpenSchedule
+}: {
   onRetry(): Promise<void>;
   canWrite: boolean;
   onSelectNote(noteId: string, title: string): void;
@@ -382,10 +475,10 @@ function HomeStage({ onRetry, canWrite, onSelectNote, onOpenMaterials, onOpenSea
   onOpenCreate?(): void;
   onOpenSchedule(): void;
 }) {
-  const loadState = useAppStore((state) => state.workspaceLoadState);
-  const error = useAppStore((state) => state.workspaceError);
-  const dataMode = useAppStore((state) => state.dataMode);
-  const serverData = useAppStore((state) => state.serverData);
+  const loadState = useAppStore(state => state.workspaceLoadState);
+  const error = useAppStore(state => state.workspaceError);
+  const dataMode = useAppStore(state => state.dataMode);
+  const serverData = useAppStore(state => state.serverData);
   const navigate = useNavigate();
   return (
     <HomeView
@@ -408,7 +501,7 @@ function HomeStage({ onRetry, canWrite, onSelectNote, onOpenMaterials, onOpenSea
 }
 
 function PlaceholderStage({ domain }: { domain: WorkDomain }) {
-  const setActiveWorkDomain = useAppStore((state) => state.setActiveWorkDomain);
+  const setActiveWorkDomain = useAppStore(state => state.setActiveWorkDomain);
   const navigate = useNavigate();
   return (
     <PlaceholderView

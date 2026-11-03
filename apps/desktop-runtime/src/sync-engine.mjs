@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import { Readable } from 'node:stream';
 import {
   assertSyncContract,
   assertSnapshotBinding,
@@ -96,34 +98,39 @@ export function createSyncEngine(
           entityTransfer.verify(entry.value);
         } catch {
           store.metadataTransaction(db => writeMeta(db, 'attachmentPending', entry.id));
-          const response = await fetchSync(
-            `${meta('serverUrl')}/api/storage/attachments/${encodeURIComponent(entry.id)}/content`,
-            {
-              headers: authorization ? { Authorization: authorization } : {},
-              redirect: 'error',
-              signal: AbortSignal.timeout(30000)
-            }
-          );
+          const fileRoute =
+            entry.value.mimeType === 'application/pdf'
+              ? `/api/storage/pdf-files/${encodeURIComponent(entry.id)}`
+              : `/api/storage/attachments/${encodeURIComponent(entry.id)}/content`;
+          const response = await fetchSync(`${meta('serverUrl')}${fileRoute}`, {
+            headers: authorization ? { Authorization: authorization } : {},
+            redirect: 'error',
+            signal: AbortSignal.timeout(30000)
+          });
           if (!response.ok) {
             const failure = new Error(`附件下载失败（${response.status}），已保留待传输任务。`);
             if ([401, 403].includes(response.status)) failure.code = 'AUTH_REQUIRED';
             throw failure;
           }
-          const reader = response.body.getReader();
-          const chunks = [];
-          let total = 0;
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            total += value.byteLength;
-            if (total > 6 * 1024 * 1024) {
-              await reader.cancel();
-              throw new Error('附件下载超过支持的体积，已停止传输。');
+          if (entry.value.mimeType === 'application/pdf')
+            await entityTransfer.putStream({ attachment: entry.value, stream: Readable.fromWeb(response.body) });
+          else {
+            const reader = response.body.getReader();
+            const chunks = [];
+            let total = 0;
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              total += value.byteLength;
+              if (total > 6 * 1024 * 1024) {
+                await reader.cancel();
+                throw new Error('附件下载超过支持的体积，已停止传输。');
+              }
+              chunks.push(value);
             }
-            chunks.push(value);
+            const bytes = Buffer.concat(chunks, total);
+            entityTransfer.put({ attachment: entry.value, contentBase64: bytes.toString('base64') });
           }
-          const bytes = Buffer.concat(chunks, total);
-          entityTransfer.put({ attachment: entry.value, contentBase64: bytes.toString('base64') });
           store.syncTransaction((db, state) => {
             writeMeta(db, 'attachmentPending', null);
             const local = state.attachments.find(item => item.id === entry.id);
@@ -273,6 +280,33 @@ export function createSyncEngine(
       }
       for (const entry of operation.changes)
         if (entry.collection === 'attachments' && entry.value) {
+          if (entry.value.mimeType === 'application/pdf') {
+            const response = await fetchSync(
+              `${meta('serverUrl')}/api/sync/blob-stream`,
+              {
+                method: 'POST',
+                duplex: 'half',
+                redirect: 'error',
+                headers: {
+                  ...(authorization ? { Authorization: authorization } : {}),
+                  'Content-Type': 'application/pdf',
+                  'X-Knowra-Blob': encodeURIComponent(
+                    JSON.stringify({ ...syncContract(), deviceId: operation.deviceId, attachment: entry.value })
+                  )
+                },
+                body: fs.createReadStream(entityTransfer.pathFor(entry.value)),
+                signal: AbortSignal.timeout(180000)
+              },
+              true
+            );
+            const payload = await response.json();
+            if (!response.ok || !payload.data)
+              throw Object.assign(new Error(payload.error?.message ?? 'PDF 同步失败'), {
+                code: [401, 403].includes(response.status) ? 'AUTH_REQUIRED' : payload.error?.code,
+                status: response.status
+              });
+            continue;
+          }
           const content = entityTransfer.read(entry.value);
           await request('blobs', {
             ...syncContract(),

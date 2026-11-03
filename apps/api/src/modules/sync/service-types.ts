@@ -83,6 +83,7 @@ export interface SyncHttpService {
   changes(input: SyncPageQuery): SyncAwaitable<object>;
   pushBatch(input: unknown): SyncAwaitable<SyncReceiptResult>;
   uploadBlob(input: unknown): SyncAwaitable<object>;
+  uploadBlobStream(input: unknown): SyncAwaitable<object>;
   push(input: unknown): SyncAwaitable<SyncReceiptResult>;
 }
 export interface SyncRouteDependencies {

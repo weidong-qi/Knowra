@@ -1,10 +1,13 @@
+import { buildNoteData, mapNote } from './modules/knowledge/infrastructure/postgres/mappers.ts';
+import { buildJsonMigrationPlan, applyJsonMigration } from './infrastructure/migration/json-to-postgres.js';
+import { createPdfService } from './modules/pdf/service.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createPostgresPurgeTaskReader } from './infrastructure/asset-purge-task-state.ts';
 import { createPostgresActionStore } from './modules/ai/postgres-action-store.js';
 import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts';
 import { createPostgresCoreOperationStore } from './infrastructure/postgres-core-operation-store.ts';
 import path from 'node:path';
-import { createPostgresSyncRuntime } from './modules/sync/postgres-provider.ts';
+import { createPostgresSyncRuntime, readPostgresPdfSnapshot } from './modules/sync/postgres-provider.ts';
 import { createPrismaRuntime } from './infrastructure/prisma-client.js';
 import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.js';
 import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.ts';
@@ -238,6 +241,22 @@ export async function createPostgresAppContext({
     aiLocation: 'server',
     repositories,
     http: {
+      pdf: createPdfService({
+        postgres: {
+          buildNoteData,
+          mapNote,
+          readSnapshot: readPostgresPdfSnapshot,
+          buildMigrationPlan: buildJsonMigrationPlan,
+          applyMigration: input => applyJsonMigration({ ...input, client: db })
+        },
+        db,
+        knowledge,
+        uploadsDir,
+        storageRootDir,
+        ownerId: normalizedOwnerId,
+        maintenanceGate,
+        beforeImport: () => aiRepository.rotateEpoch()
+      }),
       modelSettings,
       aiFeatures,
       aiBudget,
@@ -245,7 +264,8 @@ export async function createPostgresAppContext({
         syncRuntime.service(knowledge.noteService, createAttachmentTransfer({ uploadsDir, storageRootDir })),
         maintenanceGate,
         {
-          getAccess: name => (['push', 'pushBatch', 'uploadBlob', 'bootstrap'].includes(name) ? 'mutation' : 'read')
+          getAccess: name =>
+            ['push', 'pushBatch', 'uploadBlob', 'uploadBlobStream', 'bootstrap'].includes(name) ? 'mutation' : 'read'
         }
       ),
       storage: createPostgresSnapshotService({

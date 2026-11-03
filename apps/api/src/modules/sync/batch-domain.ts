@@ -186,6 +186,25 @@ export function prepareBatchState(
         throw syncError('SYNC_IMMUTABLE', '已保存的生成来源事实不可覆盖或降级。', 422);
       }
     }
+    if (
+      collection === 'notes' &&
+      old &&
+      ((old.contentKind ?? 'markdown') !== (value?.contentKind ?? 'markdown') ||
+        ['attachmentId', 'sha256', 'importRequestHash'].some(
+          key => old.pdfSource?.[key] !== value?.pdfSource?.[key]
+        )) &&
+      value
+    )
+      throw syncError('PDF_SOURCE_IMMUTABLE', '不能改换资料类型或 PDF 主文件。', 422);
+    if (collection === 'pdfAnnotations' && old && value) {
+      const fixed = item =>
+        Object.fromEntries(
+          ['noteId', 'spaceId', 'attachmentId', 'sha256', 'type', 'segments', 'quoteText'].map(key => [key, item[key]])
+        );
+      if (!sameEntity(collection, fixed(old), fixed(value)))
+        throw syncError('PDF_SOURCE_IMMUTABLE', 'PDF 标注的原文与位置不能改换。', 422);
+      if (value.revision < old.revision) throw syncError('PDF_ANNOTATION_CONFLICT', 'PDF 标注修订不能倒退。', 409);
+    }
     if (value && value.id !== id) throw syncError('SYNC_ENTITY_INVALID', '实体 ID 与操作不一致。', 422);
     if (
       IMMUTABLE_COLLECTIONS.has(collection) &&
@@ -412,6 +431,7 @@ export function prepareBatchState(
   });
   for (const change of changes.filter(item => item.collection === 'notes' && item.value)) {
     const note = state.notes.find(item => item.id === change.id)!;
+    if (note.contentKind === 'pdf') continue;
     if (!state.noteVersions.some(version => version.noteId === note.id && version.contentHash === note.contentHash))
       throw syncError('DEPENDENCY_MISSING', '正文对应的不可变版本尚未提交。');
     annotations.reconcileForNote(note.id, calculateContentHash(note.rawMarkdown));

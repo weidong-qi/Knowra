@@ -8,6 +8,8 @@ export interface NoteDtoInput {
   rawMarkdown?: unknown;
   spaceId?: unknown;
   folderId?: unknown;
+  contentKind?: unknown;
+  pdfSource?: unknown;
   status?: unknown;
   sourceType?: unknown;
   favorite?: unknown;
@@ -23,6 +25,8 @@ export interface CreateNoteDto<Input extends NoteDtoInput = NoteDtoInput> {
   id: string;
   title: NonNullable<Trimmed<Field<Input, 'title'>>> | string;
   rawMarkdown: Field<Input, 'rawMarkdown'>;
+  contentKind: NonNullable<Field<Input, 'contentKind'>> | 'markdown';
+  pdfSource: NonNullable<Field<Input, 'pdfSource'>> | null;
   spaceId: string | null;
   folderId: string | null;
   status: NonNullable<Field<Input, 'status'>> | 'draft';
@@ -110,6 +114,8 @@ export function buildCreateNoteDto(input: NoteDtoInput = {}): CreateNoteDto {
     }),
     title,
     rawMarkdown: input.rawMarkdown,
+    contentKind: input.contentKind ?? 'markdown',
+    pdfSource: input.pdfSource ?? null,
     spaceId: normalizeOptionalId(input.spaceId, 'NOTE_SPACE_INVALID', 'Note spaceId is invalid'),
     folderId: normalizeOptionalId(input.folderId, 'NOTE_FOLDER_INVALID', 'Note folderId is invalid'),
     status: input.status ?? 'draft',

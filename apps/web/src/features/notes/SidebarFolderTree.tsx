@@ -9,7 +9,7 @@ import {
   MenuTrigger,
   PressableButton
 } from '../../components/ui';
-import { ChevronRightIcon, FolderIcon, NoteIcon, SolidFolderIcon, SolidExpandedFolderIcon } from '../../components/icons/knowra';
+import { ChevronRightIcon, FolderIcon, NoteIcon, PdfFileIcon, SolidFolderIcon, SolidExpandedFolderIcon } from '../../components/icons/knowra';
 import { useAppStore, useAppStoreApi } from '../../store/AppStoreProvider';
 import { countFolderNotes, folderMatchesQuery } from './notesIndexModel';
 import { useEntryDragDrop, useEntryDropTarget } from './EntryDragDrop';
@@ -188,7 +188,7 @@ function SidebarNoteRow({ note, selected, canWrite, onAction, onOpenNote }: {
         onOpenNote?.(note.id);
       }}
     >
-      <NoteIcon size={18} />
+      {note.contentKind === 'pdf' ? <PdfFileIcon size={18} /> : <NoteIcon size={18} />}
       <span>{note.title || '未命名笔记'}</span>
     </PressableButton>
   </NoteContextMenu>

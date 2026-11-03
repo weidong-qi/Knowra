@@ -30,6 +30,8 @@ export function createAsyncAnnotationScopeService({
   async function requireNote(id) {
     const note = await noteRepository.findById(id);
     if (!note || note.deleted) throw fail('ANNOTATION_NOTE_NOT_FOUND', '笔记不存在', 404);
+    if (note.contentKind === 'pdf')
+      throw fail('PDF_ANALYSIS_UNSUPPORTED', '首版 PDF 尚不支持 AI 提炼或 Markdown 分析范围。', 422);
     return note;
   }
   async function requireVersion(note) {

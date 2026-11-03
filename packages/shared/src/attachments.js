@@ -10,7 +10,9 @@ export function attachmentIdsInText(text) {
     try {
       const id = decodeURIComponent(match[1]);
       if (id && id !== '.' && id !== '..' && !/[/\\\0]/.test(id)) ids.add(id);
-    } catch { /* 非法编码不是可访问的资源。 */ }
+    } catch {
+      /* 非法编码不是可访问的资源。 */
+    }
   }
   return [...ids];
 }
@@ -19,6 +21,11 @@ export function hasAttachmentReference(value, attachmentId, seen = new Set()) {
   if (typeof value === 'string') return attachmentIdsInText(value).includes(attachmentId);
   if (!value || typeof value !== 'object' || seen.has(value)) return false;
   seen.add(value);
-  if (value.attachmentId === attachmentId || (value.sourceType === 'attachment' && value.sourceId === attachmentId)) return true;
+  if (
+    value.pdfSource?.attachmentId === attachmentId ||
+    value.attachmentId === attachmentId ||
+    (value.sourceType === 'attachment' && value.sourceId === attachmentId)
+  )
+    return true;
   return Object.values(value).some(child => hasAttachmentReference(child, attachmentId, seen));
 }

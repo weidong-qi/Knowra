@@ -1,3 +1,4 @@
+import { validatePdfAnnotation } from '@study-accelerator/shared/pdf';
 import { createAppError } from '../errors/app-error.js';
 import { cloneJsonData } from './json-clone.ts';
 import {
@@ -9,7 +10,7 @@ import { isAttachmentStatus } from './attachment-status.ts';
 import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { migrateLegacyKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 
-export const LOCAL_DATA_SCHEMA_VERSION = 7;
+export const LOCAL_DATA_SCHEMA_VERSION = 8;
 export const LOCAL_SNAPSHOT_VERSION = 'v1-local-json';
 
 export const LOCAL_DATA_COLLECTIONS = Object.freeze([
@@ -30,6 +31,7 @@ export const LOCAL_DATA_COLLECTIONS = Object.freeze([
   'questionSources',
   'attachments',
   'contentAnnotations',
+  'pdfAnnotations',
   'annotationExclusions',
   'annotationRevisions',
   'analysisScopeSnapshots'
@@ -204,6 +206,12 @@ function validateEntity(collectionName, item, index) {
     (item.internalLinks ?? []).forEach((noteId, linkIndex) => {
       assertNonEmptyString(noteId, `${location}.internalLinks[${linkIndex}]`);
     });
+  } else if (collectionName === 'pdfAnnotations') {
+    try {
+      validatePdfAnnotation(item);
+    } catch (error) {
+      invalidSnapshot(error.message);
+    }
   } else if (collectionName === 'noteVersions') {
     assertNonEmptyString(item.noteId, `${location}.noteId`);
     if (typeof item.content !== 'string') {
@@ -453,6 +461,7 @@ function assertSchemaVersion(schemaVersion) {
     schemaVersion === 4 ||
     schemaVersion === 5 ||
     schemaVersion === 6 ||
+    schemaVersion === 7 ||
     schemaVersion === LOCAL_DATA_SCHEMA_VERSION
   ) {
     return;
@@ -465,6 +474,12 @@ function assertSchemaVersion(schemaVersion) {
 }
 
 function assertProvenanceSchemaVersion(data, schemaVersion) {
+  if (
+    (schemaVersion ?? 1) < 8 &&
+    ((data.pdfAnnotations?.length ?? 0) ||
+      (Array.isArray(data.notes) && data.notes.some(note => note?.contentKind === 'pdf' || note?.pdfSource)))
+  )
+    invalidSnapshot('PDF 资料需要新版快照格式');
   if (
     (schemaVersion ?? 1) < 7 &&
     Array.isArray(data.knowledgeArtifactProvenance) &&

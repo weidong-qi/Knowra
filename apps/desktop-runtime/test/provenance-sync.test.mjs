@@ -313,7 +313,7 @@ test('旧冻结批次确知未接纳时只解除旧信封，新operation完整�
   clean(device);
   assert.equal(sent.length, 1);
   assert.notEqual(sent[0].operationId, old.operationId);
-  assert.equal(sent[0].entitySchemaVersion, 8);
+  assert.equal(sent[0].entitySchemaVersion, 9);
   assert(sent[0].capabilities.includes('knowledge-provenance-v1'));
   assert.equal(cloud.store.state.notes.find(value => value.id === note.id).rawMarkdown, note.rawMarkdown);
   assert.equal(device.engine.status().pendingEntities, 0);
@@ -356,7 +356,7 @@ test('快照分页绑定被替换或未来schema响应时，不应用半页、�
         const body = await response.json();
         body.data[field] =
           field === 'entitySchemaVersion'
-            ? 9
+            ? 10
             : field === 'count'
               ? body.data.count + 1
               : field === 'nextOffset'

@@ -2,7 +2,12 @@
 import '../features/editor/MilkdownNoteEditor';
 import { StrictMode, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { createEmptyWorkspaceSnapshot, normalizeNotes, type Note, type WorkspaceApi } from '@study-accelerator/web-core';
+import {
+  createEmptyWorkspaceSnapshot,
+  normalizeNotes,
+  type Note,
+  type WorkspaceApi
+} from '@study-accelerator/web-core';
 import { App } from './App';
 import { AppProviders } from './AppProviders';
 import { RouterProvider } from './router';
@@ -58,7 +63,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
 
     // 第一轮：error → EmptyState title 显示 "资料加载失败"
     expect(await screen.findByText('资料加载失败')).toBeInTheDocument();
@@ -83,7 +92,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
 
     const loadingLabel = await screen.findByText('正在加载资料…');
     expect(loadingLabel).toBeInTheDocument();
@@ -104,7 +117,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
 
     expect(await screen.findByText('还没有资料')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '打开全局搜索' }).length).toBeGreaterThan(0);
@@ -118,7 +135,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
     await screen.findByRole('heading', { name: '笔记工作台' });
 
     const mobileNav = screen.getByRole('navigation', { name: '移动端模块导航' });
@@ -154,7 +175,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
     await screen.findByRole('heading', { name: '笔记工作台' });
 
     fireEvent.keyDown(window, { key: 'k', metaKey: true });
@@ -162,17 +187,37 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
   });
 
   it('CmdK 正文投影经过真实 store 能力打开资料路径并选中目录；标签与主页动作保留', async () => {
-    const note = { id: 'note/正文', spaceId: 'space-1', title: '合成正文资料', folderId: 'folder-1', summary: '前文'.repeat(120),
-      contentLoaded: false, rawMarkdown: '', tagIds: [], internalLinks: [], favorite: false, deleted: false };
+    const note = {
+      id: 'note/正文',
+      spaceId: 'space-1',
+      title: '合成正文资料',
+      folderId: 'folder-1',
+      summary: '前文'.repeat(120),
+      contentLoaded: false,
+      rawMarkdown: '',
+      tagIds: [],
+      internalLinks: [],
+      favorite: false,
+      deleted: false
+    };
     const api = createWorkspaceApiStub({ notes: [note] });
-    api.searchCommandNotes = vi.fn(async () => [{ id: note.id, title: note.title, folderId: note.folderId, snippet: '…超过摘要的中文命中…' }]);
+    api.searchCommandNotes = vi.fn(async () => [
+      { id: note.id, title: note.title, folderId: note.folderId, snippet: '…超过摘要的中文命中…' }
+    ]);
     vi.mocked(api.loadWorkspaceResources).mockResolvedValue({
       folderTree: [{ id: 'folder-1', name: '合成目录', parentId: null, children: [] }],
-      notes: [note], tags: [{ id: 'tag-current', spaceId: 'space-1', name: '合成标签', color: 'blue' }]
+      notes: [note],
+      tags: [{ id: 'tag-current', spaceId: 'space-1', name: '合成标签', color: 'blue' }]
     });
     const store = createAppStore({ api, cacheKey: 'synthetic-command', mockSnapshot: createEmptyWorkspaceSnapshot() });
     const navigate = vi.fn();
-    render(<RouterProvider location={{ pathname: '/', navigate }}><AppProviders store={store}><App /></AppProviders></RouterProvider>);
+    render(
+      <RouterProvider location={{ pathname: '/', navigate }}>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
+      </RouterProvider>
+    );
     await screen.findByRole('heading', { name: '笔记工作台' });
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     let dialog = await screen.findByRole('dialog', { name: '全局搜索' });
@@ -206,13 +251,24 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
   it('当前空间变化后，全局搜索不展示旧空间本地标题或标签', async () => {
     const api = createWorkspaceApiStub();
     const store = createAppStore({ api, cacheKey: 'synthetic-space', mockSnapshot: createEmptyWorkspaceSnapshot() });
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
     await screen.findByRole('heading', { name: '笔记工作台' });
     fireEvent.keyDown(window, { key: 'k', metaKey: true });
     const dialog = await screen.findByRole('dialog', { name: '全局搜索' });
     expect(within(dialog).getByText('Note')).toBeInTheDocument();
-    act(() => store.setState(state => ({ serverData: { ...state.serverData, currentSpaceId: 'space-2',
-      tags: [{ id: 'old-tag', name: '旧空间标签', spaceId: 'space-1', color: 'blue' }] } })));
+    act(() =>
+      store.setState(state => ({
+        serverData: {
+          ...state.serverData,
+          currentSpaceId: 'space-2',
+          tags: [{ id: 'old-tag', name: '旧空间标签', spaceId: 'space-1', color: 'blue' }]
+        }
+      }))
+    );
     expect(within(dialog).queryByText('Note')).not.toBeInTheDocument();
     expect(within(dialog).queryByText('#旧空间标签')).not.toBeInTheDocument();
     expect(within(dialog).getByRole('option')).toHaveTextContent('返回主页');
@@ -222,7 +278,13 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     const api = createWorkspaceApiStub({ notes: [] });
     const store = createAppStore({ api, cacheKey: 'test-cache', mockSnapshot: createEmptyWorkspaceSnapshot() });
     const navigateMock = vi.fn();
-    render(<RouterProvider location={{ pathname: '/', navigate: navigateMock }}><AppProviders store={store}><App /></AppProviders></RouterProvider>);
+    render(
+      <RouterProvider location={{ pathname: '/', navigate: navigateMock }}>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
+      </RouterProvider>
+    );
     await screen.findByText('还没有资料');
 
     fireEvent.keyDown(window, { key: 'n', metaKey: true });
@@ -230,7 +292,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     fireEvent.change(within(dialog).getByRole('textbox', { name: '笔记名称' }), { target: { value: '全局创建' } });
     fireEvent.click(within(dialog).getByRole('button', { name: '创建' }));
 
-    await waitFor(() => expect(api.createNote).toHaveBeenCalledWith(expect.objectContaining({ title: '全局创建', folderId: null })));
+    await waitFor(() =>
+      expect(api.createNote).toHaveBeenCalledWith(expect.objectContaining({ title: '全局创建', folderId: null }))
+    );
     expect(navigateMock).toHaveBeenCalledWith('/materials/notes/created-note');
   });
 
@@ -242,7 +306,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
     await screen.findByRole('heading', { name: '笔记工作台' });
 
     const rail = screen.getByRole('navigation', { name: '工作域导航' });
@@ -258,24 +326,34 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     const storage = new Map<string, string>();
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => { storage.set(key, value); },
-      removeItem: (key: string) => { storage.delete(key); }
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      }
     });
     const api = createWorkspaceApiStub();
     const store = createAppStore({ api, cacheKey: 'settings-test', mockSnapshot: createEmptyWorkspaceSnapshot() });
     const navigate = vi.fn();
     const view = render(
       <RouterProvider location={{ pathname: '/', navigate }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
-    fireEvent.click(within(screen.getByRole('navigation', { name: '工作域导航' })).getByRole('button', { name: '设置' }));
+    fireEvent.click(
+      within(screen.getByRole('navigation', { name: '工作域导航' })).getByRole('button', { name: '设置' })
+    );
     expect(navigate).toHaveBeenCalledWith('/settings');
     view.unmount();
 
     render(
       <RouterProvider location={{ pathname: '/settings', navigate }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
     expect(screen.getByRole('heading', { name: '设置' })).toBeInTheDocument();
@@ -283,17 +361,22 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(screen.queryByText('个人偏好')).not.toBeInTheDocument();
     expect(screen.queryByText('分类 / CATEGORIES')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '全部设置' })).not.toBeInTheDocument();
-    expect(screen.getByText('显示 9 / 9 项设置')).toBeInTheDocument();
+    expect(screen.getByText('显示 10 / 10 项设置')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '大（19 像素）' }));
     expect(document.documentElement.style.getPropertyValue('--note-font-size')).toBe('19px');
     fireEvent.click(screen.getByRole('checkbox', { name: '减少界面动效' }));
     expect(document.documentElement.dataset.reduceMotion).toBe('true');
-    expect(JSON.parse(localStorage.getItem('knowra:preferences:v1') ?? '{}')).toEqual({ noteFontSize: 19, reduceMotion: true });
+    expect(JSON.parse(localStorage.getItem('knowra:preferences:v1') ?? '{}')).toEqual({
+      noteFontSize: 19,
+      reduceMotion: true
+    });
     fireEvent.click(screen.getByRole('checkbox', { name: '显示笔记目录栏' }));
     expect(localStorage.getItem('knowra:notes-sidebar-open')).toBe('false');
-    fireEvent.click(within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', { name: /辅助体验/ }));
+    fireEvent.click(
+      within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', { name: /辅助体验/ })
+    );
     expect(screen.queryByRole('heading', { name: '笔记正文字号' })).not.toBeInTheDocument();
-    expect(screen.getByText('显示 1 / 9 项设置')).toBeInTheDocument();
+    expect(screen.getByText('显示 1 / 10 项设置')).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 
@@ -307,7 +390,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     render(
       <RouterProvider location={{ pathname: '/training', navigate: vi.fn() }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
 
@@ -319,18 +404,40 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
   it('shows training asset trash, restore and blocked purge states', async () => {
     const api = createWorkspaceApiStub();
-    let question = { id: 'question-1', stem: '导数是什么意思？', updatedAt: '2026-09-24T00:00:00.000Z', reviewStatus: 'draft', deletedAt: null as string | null, learningObjectiveIds: [] };
-    api.listTrainingAssets = vi.fn(async kind => kind === 'question' ? [question] : []);
+    let question = {
+      id: 'question-1',
+      stem: '导数是什么意思？',
+      updatedAt: '2026-09-24T00:00:00.000Z',
+      reviewStatus: 'draft',
+      deletedAt: null as string | null,
+      learningObjectiveIds: []
+    };
+    api.listTrainingAssets = vi.fn(async kind => (kind === 'question' ? [question] : []));
     api.mutateTrainingAsset = vi.fn(async (_kind, _id, action) => {
       question = { ...question, deletedAt: action === 'trash' ? '2026-09-24T00:00:01.000Z' : null };
       return question;
     });
-    api.inspectTrainingAssetPurge = vi.fn().mockResolvedValue({ asset: { type: 'question', id: question.id }, decision: 'requires-dependency-action', expectedUpdatedAt: question.updatedAt, references: [{ collection: 'analysisScopeSnapshots', id: 'scope-1', action: 'retain-or-resolve-history' }], exclusiveRecords: {}, coverage: {} });
+    api.inspectTrainingAssetPurge = vi.fn().mockResolvedValue({
+      asset: { type: 'question', id: question.id },
+      decision: 'requires-dependency-action',
+      expectedUpdatedAt: question.updatedAt,
+      references: [{ collection: 'analysisScopeSnapshots', id: 'scope-1', action: 'retain-or-resolve-history' }],
+      exclusiveRecords: {},
+      coverage: {}
+    });
     const store = createAppStore({ api, cacheKey: 'training-test', mockSnapshot: createEmptyWorkspaceSnapshot() });
-    render(<RouterProvider location={{ pathname: '/training', navigate: vi.fn() }}><AppProviders store={store}><App /></AppProviders></RouterProvider>);
+    render(
+      <RouterProvider location={{ pathname: '/training', navigate: vi.fn() }}>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
+      </RouterProvider>
+    );
     expect(await screen.findByRole('heading', { name: '导数是什么意思？' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '删除…' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: '删除题目？' })).getByRole('button', { name: '移入回收站' }));
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: '删除题目？' })).getByRole('button', { name: '移入回收站' })
+    );
     await waitFor(() => expect(api.mutateTrainingAsset).toHaveBeenCalledWith('question', 'question-1', 'trash'));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '删除题目？' })).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: '回收站' }));
@@ -349,7 +456,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
     await screen.findByRole('heading', { name: '笔记工作台' });
 
     const rail = screen.getByRole('navigation', { name: '工作域导航' });
@@ -368,7 +479,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     const navigateMock = vi.fn();
     render(
       <RouterProvider location={{ pathname: '/', navigate: navigateMock }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
     await screen.findByRole('heading', { name: '笔记工作台' });
@@ -390,7 +503,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     render(
       <RouterProvider location={{ pathname: '/materials', navigate: vi.fn() }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
 
@@ -412,7 +527,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     render(
       <RouterProvider location={{ pathname: '/materials', navigate: vi.fn() }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
 
@@ -434,23 +551,34 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
   it('remembers a collapsed notes sidebar after the app remounts', async () => {
     const values = new Map<string, string>();
     const storage: Storage = {
-      get length() { return values.size; },
+      get length() {
+        return values.size;
+      },
       clear: () => values.clear(),
-      getItem: (key) => values.get(key) ?? null,
-      key: (index) => [...values.keys()][index] ?? null,
-      removeItem: (key) => { values.delete(key); },
-      setItem: (key, value) => { values.set(key, value); }
+      getItem: key => values.get(key) ?? null,
+      key: index => [...values.keys()][index] ?? null,
+      removeItem: key => {
+        values.delete(key);
+      },
+      setItem: (key, value) => {
+        values.set(key, value);
+      }
     };
     vi.stubGlobal('localStorage', storage);
-    const renderIndex = () => render(
-      <RouterProvider location={{ pathname: '/materials', navigate: vi.fn() }}>
-        <AppProviders store={createAppStore({
-          api: createWorkspaceApiStub(),
-          cacheKey: 'test-cache',
-          mockSnapshot: createEmptyWorkspaceSnapshot()
-        })}><App /></AppProviders>
-      </RouterProvider>
-    );
+    const renderIndex = () =>
+      render(
+        <RouterProvider location={{ pathname: '/materials', navigate: vi.fn() }}>
+          <AppProviders
+            store={createAppStore({
+              api: createWorkspaceApiStub(),
+              cacheKey: 'test-cache',
+              mockSnapshot: createEmptyWorkspaceSnapshot()
+            })}
+          >
+            <App />
+          </AppProviders>
+        </RouterProvider>
+      );
 
     try {
       const first = renderIndex();
@@ -478,7 +606,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     render(
       <RouterProvider location={{ pathname: '/materials/notes/note-1', navigate: vi.fn() }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
 
@@ -487,7 +617,10 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(screen.getByRole('toolbar', { name: '笔记格式工具栏' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: '笔记上下文导航' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '工作区状态' }));
-    expect(within(await screen.findByLabelText('工作区位置')).getByText('Note')).toHaveAttribute('aria-current', 'location');
+    expect(within(await screen.findByLabelText('工作区位置')).getByText('Note')).toHaveAttribute(
+      'aria-current',
+      'location'
+    );
   });
 
   it('moves editor tabs into the Mac titlebar while keeping the browser layout intact', async () => {
@@ -500,7 +633,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       });
       render(
         <RouterProvider location={{ pathname: '/materials/notes/note-1', navigate: vi.fn() }}>
-          <AppProviders store={store}><App /></AppProviders>
+          <AppProviders store={store}>
+            <App />
+          </AppProviders>
         </RouterProvider>
       );
 
@@ -525,7 +660,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       const navigateMock = vi.fn();
       render(
         <RouterProvider location={{ pathname: '/', navigate: navigateMock }}>
-          <AppProviders store={store}><App /></AppProviders>
+          <AppProviders store={store}>
+            <App />
+          </AppProviders>
         </RouterProvider>
       );
       await screen.findByRole('heading', { name: '笔记工作台' });
@@ -558,7 +695,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     render(
       <RouterProvider location={{ pathname: '/materials/notes/note-1', navigate: navigateMock }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
 
@@ -580,7 +719,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     const navigateMock = vi.fn();
     render(
       <RouterProvider location={{ pathname: '/materials', navigate: navigateMock }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
     expect(await screen.findByRole('article', { name: '笔记索引' })).toBeInTheDocument();
@@ -600,7 +741,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
-    render(<AppProviders store={store}><App /></AppProviders>);
+    render(
+      <AppProviders store={store}>
+        <App />
+      </AppProviders>
+    );
     await screen.findByRole('heading', { name: '笔记工作台' });
 
     fireEvent.click(screen.getByRole('button', { name: '工作区状态' }));
@@ -621,7 +766,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     render(
       <RouterProvider location={{ pathname: '/materials', navigate: vi.fn() }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
     // 等到 NotesIndexView 出现（即使 notes 为空）
@@ -653,7 +800,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     render(
       <RouterProvider location={{ pathname: '/materials', navigate: vi.fn() }}>
-        <AppProviders store={store}><App /></AppProviders>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
       </RouterProvider>
     );
     expect(await screen.findByRole('article', { name: '笔记索引' })).toBeInTheDocument();
@@ -686,20 +835,49 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 describe('CmdK 打开尚未预载的服务端笔记', () => {
   beforeEach(() => Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() }));
 
-  const detail = (id = 'remote-a') => normalizeNotes([{ id, spaceId: 'space-1', title: `正式详情 ${id}`, folderId: 'folder-1',
-    rawMarkdown: `# 详情正文\n\n${'超过摘要的前文。'.repeat(50)}完整服务端正文 ${id}`, deleted: false }])[0];
+  const detail = (id = 'remote-a') =>
+    normalizeNotes([
+      {
+        id,
+        spaceId: 'space-1',
+        title: `正式详情 ${id}`,
+        folderId: 'folder-1',
+        rawMarkdown: `# 详情正文\n\n${'超过摘要的前文。'.repeat(50)}完整服务端正文 ${id}`,
+        deleted: false
+      }
+    ])[0];
   function setup() {
     const api = createWorkspaceApiStub({ notes: [] });
-    api.searchCommandNotes = vi.fn(async input => input.query.startsWith('目标') ? [{ id: input.query === '目标 B' ? 'remote-b' : 'remote-a',
-      title: '正文匹配资料', folderId: 'folder-1', snippet: `…${input.query}…` }] : []);
+    api.searchCommandNotes = vi.fn(async input =>
+      input.query.startsWith('目标')
+        ? [
+            {
+              id: input.query === '目标 B' ? 'remote-b' : 'remote-a',
+              title: '正文匹配资料',
+              folderId: 'folder-1',
+              snippet: `…${input.query}…`
+            }
+          ]
+        : []
+    );
     vi.mocked(api.getNote).mockImplementation(async id => detail(id));
-    const store = createAppStore({ api, cacheKey: 'synthetic-command-unseen', mockSnapshot: createEmptyWorkspaceSnapshot() });
+    const store = createAppStore({
+      api,
+      cacheKey: 'synthetic-command-unseen',
+      mockSnapshot: createEmptyWorkspaceSnapshot()
+    });
     let setPath!: (path: string) => void;
     const navigate = vi.fn((path: string) => setPath(path));
     function Harness() {
       const [pathname, setPathname] = useState('/');
       setPath = setPathname;
-      return <RouterProvider location={{ pathname, navigate }}><AppProviders store={store}><App /></AppProviders></RouterProvider>;
+      return (
+        <RouterProvider location={{ pathname, navigate }}>
+          <AppProviders store={store}>
+            <App />
+          </AppProviders>
+        </RouterProvider>
+      );
     }
     render(<Harness />);
     return { api, store, navigate };
@@ -715,7 +893,10 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
   }
   function deferredDetail() {
     let resolve!: (note: Note) => void, reject!: (error: Error) => void;
-    const promise = new Promise<Note>((yes, no) => { resolve = yes; reject = no; });
+    const promise = new Promise<Note>((yes, no) => {
+      resolve = yes;
+      reject = no;
+    });
     return { promise, resolve, reject };
   }
 
@@ -728,7 +909,9 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(document.querySelector('.ProseMirror')).toHaveTextContent('完整服务端正文 remote-a'));
     expect(store.getState().serverData.notes).toEqual([detail()]);
-    expect(store.getState().navigation).toEqual(expect.objectContaining({ selectedNoteId: 'remote-a', selectedFolderId: 'folder-1', openNoteTabs: ['remote-a'] }));
+    expect(store.getState().navigation).toEqual(
+      expect.objectContaining({ selectedNoteId: 'remote-a', selectedFolderId: 'folder-1', openNoteTabs: ['remote-a'] })
+    );
     expect(api.getNote).toHaveBeenCalledExactlyOnceWith('remote-a');
     expect(api.loadWorkspaceResources).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledExactlyOnceWith('/materials/notes/remote-a');
@@ -771,33 +954,41 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it.each(['关闭', '输入变化', '空间往返', '同空间新快照', '另行导航'])('%s后迟到详情不插入、不重开 Dialog 或抢导航', async change => {
-    const { api, store, navigate } = setup();
-    const pending = deferredDetail();
-    vi.mocked(api.getNote).mockReturnValueOnce(pending.promise);
-    await screen.findByRole('heading', { name: '笔记工作台' });
-    const { dialog, input } = await searchAndSelect();
-    await within(dialog).findByText('正在载入笔记…');
-    if (change === '关闭') fireEvent.click(within(dialog).getByRole('button', { name: '关闭对话框' }));
-    else if (change === '输入变化') fireEvent.change(input, { target: { value: '返回主页' } });
-    else if (change === '空间往返') act(() => {
-      store.setState(state => ({ serverData: { ...state.serverData, currentSpaceId: 'space-2' } }));
-      store.setState(state => ({ serverData: { ...state.serverData, currentSpaceId: 'space-1' } }));
-    });
-    else if (change === '同空间新快照') act(() => store.setState(state => ({ serverData: { ...state.serverData, spaces: [...state.serverData.spaces] } })));
-    else act(() => navigate('/settings'));
-    const scopedData = store.getState().serverData;
-    await act(async () => pending.resolve(detail()));
-    expect(store.getState().serverData).toBe(scopedData);
-    expect(store.getState().serverData.notes).toEqual([]);
-    expect(navigate.mock.calls).toEqual(change === '另行导航' ? [['/settings']] : []);
-    expect(screen.queryByRole('heading', { name: detail().title })).not.toBeInTheDocument();
-    if (change === '关闭') expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
+  it.each(['关闭', '输入变化', '空间往返', '同空间新快照', '另行导航'])(
+    '%s后迟到详情不插入、不重开 Dialog 或抢导航',
+    async change => {
+      const { api, store, navigate } = setup();
+      const pending = deferredDetail();
+      vi.mocked(api.getNote).mockReturnValueOnce(pending.promise);
+      await screen.findByRole('heading', { name: '笔记工作台' });
+      const { dialog, input } = await searchAndSelect();
+      await within(dialog).findByText('正在载入笔记…');
+      if (change === '关闭') fireEvent.click(within(dialog).getByRole('button', { name: '关闭对话框' }));
+      else if (change === '输入变化') fireEvent.change(input, { target: { value: '返回主页' } });
+      else if (change === '空间往返')
+        act(() => {
+          store.setState(state => ({ serverData: { ...state.serverData, currentSpaceId: 'space-2' } }));
+          store.setState(state => ({ serverData: { ...state.serverData, currentSpaceId: 'space-1' } }));
+        });
+      else if (change === '同空间新快照')
+        act(() =>
+          store.setState(state => ({ serverData: { ...state.serverData, spaces: [...state.serverData.spaces] } }))
+        );
+      else act(() => navigate('/settings'));
+      const scopedData = store.getState().serverData;
+      await act(async () => pending.resolve(detail()));
+      expect(store.getState().serverData).toBe(scopedData);
+      expect(store.getState().serverData.notes).toEqual([]);
+      expect(navigate.mock.calls).toEqual(change === '另行导航' ? [['/settings']] : []);
+      expect(screen.queryByRole('heading', { name: detail().title })).not.toBeInTheDocument();
+      if (change === '关闭') expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    }
+  );
 
   it.each(['成功', '失败'])('后选 B 先完成，旧 A 迟到%s不会抢回选中项或路由', async outcome => {
     const { api, store, navigate } = setup();
-    const first = deferredDetail(), second = deferredDetail();
+    const first = deferredDetail(),
+      second = deferredDetail();
     vi.mocked(api.getNote).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
     await screen.findByRole('heading', { name: '笔记工作台' });
     const { dialog, input } = await searchAndSelect();
@@ -809,7 +1000,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
     await act(async () => second.resolve(detail('remote-b')));
     await screen.findByRole('heading', { name: detail('remote-b').title });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await act(async () => outcome === '成功' ? first.resolve(detail()) : first.reject(new Error('旧 A 请求失败')));
+    await act(async () => (outcome === '成功' ? first.resolve(detail()) : first.reject(new Error('旧 A 请求失败'))));
     expect(store.getState().navigation.selectedNoteId).toBe('remote-b');
     expect(store.getState().serverData.notes.map(note => note.id)).toEqual(['remote-b']);
     expect(navigate).toHaveBeenCalledExactlyOnceWith('/materials/notes/remote-b');
@@ -827,18 +1018,22 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
       expect(store.getState().navigation).toBe(before);
       expect(api.getNote).not.toHaveBeenCalled();
       expect(navigate).not.toHaveBeenCalled();
-    } finally { removeGuard(); }
+    } finally {
+      removeGuard();
+    }
   });
 
   it('详情完成与选择之间出现新资料快照时，不把已失效笔记打开为空页面', async () => {
     const { store, navigate } = setup();
     await screen.findByRole('heading', { name: '笔记工作台' });
     const load = store.getState().loadCommandNote;
-    store.setState({ loadCommandNote: async input => {
-      const result = await load(input);
-      store.setState(state => ({ serverData: { ...state.serverData, notes: [] } }));
-      return result;
-    } });
+    store.setState({
+      loadCommandNote: async input => {
+        const result = await load(input);
+        store.setState(state => ({ serverData: { ...state.serverData, notes: [] } }));
+        return result;
+      }
+    });
     const { dialog } = await searchAndSelect();
     await waitFor(() => expect(within(dialog).queryByText('正在载入笔记…')).not.toBeInTheDocument());
     expect(navigate).not.toHaveBeenCalled();
@@ -882,8 +1077,14 @@ function createWorkspaceApiStub(overrides: { notes?: Array<Record<string, unknow
     permanentlyDeleteNote: vi.fn().mockResolvedValue({ id: 'note-1' }),
     setNoteFavorite: vi.fn().mockResolvedValue({ id: 'note-1' }),
     setNoteTags: vi.fn().mockResolvedValue({ id: 'note-1' }),
-    createTag: vi.fn(), updateTag: vi.fn(), deleteTag: vi.fn(), mergeTags: vi.fn(), reorderTags: vi.fn(),
-    createTagGroup: vi.fn(), updateTagGroup: vi.fn(), deleteTagGroup: vi.fn(),
+    createTag: vi.fn(),
+    updateTag: vi.fn(),
+    deleteTag: vi.fn(),
+    mergeTags: vi.fn(),
+    reorderTags: vi.fn(),
+    createTagGroup: vi.fn(),
+    updateTagGroup: vi.fn(),
+    deleteTagGroup: vi.fn(),
     deleteNotes: vi.fn().mockResolvedValue([]),
     assignTagToNotes: vi.fn().mockResolvedValue([]),
     updateTagsForNotes: vi.fn().mockResolvedValue([]),
@@ -899,7 +1100,13 @@ function createWorkspaceApiStub(overrides: { notes?: Array<Record<string, unknow
     listNoteAttachments: vi.fn().mockResolvedValue([]),
     uploadNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
     renameNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
-    inspectAttachmentDeletion: vi.fn().mockResolvedValue({ asset: { type: 'attachment', id: 'attachment-1' }, decision: 'can-purge-no-history', references: [], reasonCodes: [], coverage: { persistedCurrentAndHistory: true } }),
+    inspectAttachmentDeletion: vi.fn().mockResolvedValue({
+      asset: { type: 'attachment', id: 'attachment-1' },
+      decision: 'can-purge-no-history',
+      references: [],
+      reasonCodes: [],
+      coverage: { persistedCurrentAndHistory: true }
+    }),
     verifyNoteAttachment: vi.fn(),
     restoreNoteAttachment: vi.fn(),
     listAttachmentCleanup: vi.fn().mockResolvedValue({ items: [], pending: 0 }),

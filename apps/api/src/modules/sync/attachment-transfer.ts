@@ -1,5 +1,7 @@
+import { MAX_PDF_BYTES } from '@study-accelerator/shared/pdf';
+import { stagePdf } from '../pdf/files.ts';
 import type { AppError } from '../../errors/app-error.ts';
-import type { PreparedSyncAttachment, SyncBlobInput, SyncTransferRecord } from './domain-types.ts';
+import type { PreparedSyncAttachment, SyncBlobInput, SyncBlobStreamInput, SyncTransferRecord } from './domain-types.ts';
 type TransferRecord = SyncTransferRecord;
 type CopyRecord<RecordType extends TransferRecord> = Omit<
   RecordType,
@@ -25,6 +27,8 @@ interface AttachmentTransfer {
     noteId: string
   ): { attachment: CopyRecord<RecordType> & { storagePath: string }; rollback: () => boolean };
   put(input: SyncBlobInput): PreparedSyncAttachment;
+  pathFor(record: TransferRecord | null | undefined): string;
+  putStream(input: SyncBlobStreamInput): Promise<PreparedSyncAttachment>;
   read(attachment: TransferRecord | null | undefined): Buffer;
 }
 import { createAttachmentId, sanitizeFileName } from '../../infrastructure/local-attachment-store-utils.ts';
@@ -51,7 +55,7 @@ export function createAttachmentTransfer({
       !/^[a-f0-9]{64}$/.test((record.sha256 ?? '') as string) ||
       !Number.isSafeInteger(record.size) ||
       (record.size as number) < 0 ||
-      (record.size as number) > MAX_SYNC_ATTACHMENT_BYTES
+      (record.size as number) > (record.mimeType === 'application/pdf' ? MAX_PDF_BYTES : MAX_SYNC_ATTACHMENT_BYTES)
     )
       throw syncError('SYNC_ATTACHMENT_INVALID', '附件大小或哈希无效。', 422);
     if (
@@ -87,6 +91,32 @@ export function createAttachmentTransfer({
   }
   const transfer: AttachmentTransfer = {
     verify,
+    pathFor(attachment) {
+      verify(attachment);
+      return inspect(attachment).destination;
+    },
+    async putStream({ attachment, stream }) {
+      const { destination } = inspect(attachment);
+      if (attachment.mimeType !== 'application/pdf')
+        throw syncError('SYNC_ATTACHMENT_INVALID', '二进制 PDF 传输类型无效。', 422);
+      const staged = await stagePdf(stream, uploadsDir);
+      try {
+        if (staged.size !== attachment.size || staged.sha256 !== attachment.sha256)
+          throw syncError('ATTACHMENT_HASH_MISMATCH', 'PDF 传输校验失败。', 422);
+        if (fs.existsSync(destination)) {
+          try {
+            return verify(attachment);
+          } catch (error) {
+            if (!allowRepair) throw error;
+            fs.renameSync(destination, path.join(uploadsDir, `.sync-corrupt-${randomUUID()}`));
+          }
+        }
+        fs.linkSync(staged.file, destination);
+        return verify(attachment);
+      } finally {
+        fs.rmSync(staged.file, { force: true });
+      }
+    },
     // 新归属必须使用新 ID；先落盘，再由调用方的业务事务发布元数据。
     prepareCopy<RecordType extends TransferRecord>(attachment: RecordType, noteId: string) {
       const copy: CopyRecord<RecordType> = {
@@ -101,8 +131,9 @@ export function createAttachmentTransfer({
       copy.storagePath = storagePath;
       const rollback = () => (manager.removeAttachmentFile as RemoveTransferFile)(copy);
       try {
-        const content = transfer.read(attachment);
-        transfer.put({ attachment: copy, contentBase64: content.toString('base64') });
+        const source = transfer.pathFor(attachment);
+        fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
+        transfer.verify(copy);
         return { attachment: copy as typeof copy & { storagePath: string }, rollback };
       } catch (error) {
         try {
