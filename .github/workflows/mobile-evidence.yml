@@ -2,7 +2,7 @@ name: Mobile synthetic evidence
 on:
   pull_request:
     paths:
-      - 'apps/web-v4/**'
+      - 'apps/web/**'
       - 'packages/web-core/**'
       - '.github/workflows/mobile-evidence.yml'
   workflow_dispatch:
@@ -41,30 +41,30 @@ jobs:
           KNOWRA_EVIDENCE_BASE: ${{ github.event.pull_request.base.sha || github.sha }}
           KNOWRA_EVIDENCE_BASE_REF: ${{ github.base_ref || github.ref_name }}
         run: |
-          cp "$RUNNER_TEMP/knowra-chinese-fonts.txt" apps/web-v4/dist/chinese-fonts.txt
+          cp "$RUNNER_TEMP/knowra-chinese-fonts.txt" apps/web/dist/chinese-fonts.txt
           export KNOWRA_EVIDENCE_SHA="$(git rev-parse HEAD)"
-          export KNOWRA_EVIDENCE_SOURCE_TREE="$(git rev-parse HEAD:apps/web-v4/src)"
+          export KNOWRA_EVIDENCE_SOURCE_TREE="$(git rev-parse HEAD:apps/web/src)"
           export KNOWRA_BASE_PRODUCTION_EQUIVALENT=false
           if git diff --quiet "$KNOWRA_EVIDENCE_BASE" HEAD -- . \
             ':(exclude).github/workflows/mobile-evidence.yml' \
-            ':(exclude)apps/web-v4/playwright.mobile-evidence.config.ts' \
-            ':(exclude)apps/web-v4/e2e/mobile-evidence.spec.ts' \
-            ':(exclude)apps/web-v4/e2e/mobile-evidence.fixture.ts'; then
+            ':(exclude)apps/web/playwright.mobile-evidence.config.ts' \
+            ':(exclude)apps/web/e2e/mobile-evidence.spec.ts' \
+            ':(exclude)apps/web/e2e/mobile-evidence.fixture.ts'; then
             export KNOWRA_BASE_PRODUCTION_EQUIVALENT=true
           else
             status=$?
             if [ "$status" -ne 1 ]; then exit "$status"; fi
           fi
-          npm run test:e2e -w @study-accelerator/web-v4 -- --config playwright.mobile-evidence.config.ts
+          npm run test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mobile-evidence-${{ github.sha }}
           path: |
-            apps/web-v4/test-results/mobile-evidence
-            apps/web-v4/playwright-report/mobile-evidence
-            apps/web-v4/dist/build-info.json
-            apps/web-v4/dist/chinese-fonts.txt
+            apps/web/test-results/mobile-evidence
+            apps/web/playwright-report/mobile-evidence
+            apps/web/dist/build-info.json
+            apps/web/dist/chinese-fonts.txt
           if-no-files-found: error
           retention-days: 14
       - name: Upload compact screenshots and measurements
@@ -73,9 +73,9 @@ jobs:
         with:
           name: mobile-screenshots-${{ github.sha }}
           path: |
-            apps/web-v4/test-results/mobile-evidence/*/*.png
-            apps/web-v4/test-results/mobile-evidence/*/scenario-manifest.json
-            apps/web-v4/dist/build-info.json
-            apps/web-v4/dist/chinese-fonts.txt
+            apps/web/test-results/mobile-evidence/*/*.png
+            apps/web/test-results/mobile-evidence/*/scenario-manifest.json
+            apps/web/dist/build-info.json
+            apps/web/dist/chinese-fonts.txt
           if-no-files-found: error
           retention-days: 14

@@ -108,7 +108,7 @@ modelSettingsTests.push(
       assert.equal(desktop.DEFAULT_MODEL_ID, api.DEFAULT_MODEL_ID);
       assert.equal(reviewedDeepSeekPriceProfile.modelId, api.DEFAULT_MODEL_ID);
       const uiSource = fs.readFileSync(
-        new URL('../../web-v4/src/features/settings/modelSettings.ts', import.meta.url),
+        new URL('../../web/src/features/settings/modelSettings.ts', import.meta.url),
         'utf8'
       );
       const declaration = uiSource.match(/export const SUPPORTED_MODEL_IDS\s*=\s*(?:Object\.freeze\()?\[([^\]]*)\]/);

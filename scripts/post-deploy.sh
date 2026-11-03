@@ -8,7 +8,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$ROOT_DIR"
 
-V4_DIST_DIR="${KNOWRA_V4_DIST_DIR:-apps/web-v4/dist}"
+V4_DIST_DIR="${KNOWRA_V4_DIST_DIR:-apps/web/dist}"
 if [[ "$V4_DIST_DIR" = /* ]]; then
   V4_DIST_ROOT="$V4_DIST_DIR"
 else

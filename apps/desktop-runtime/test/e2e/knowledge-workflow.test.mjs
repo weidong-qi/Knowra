@@ -11,9 +11,13 @@ import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
-import { createV4WebServer } from '../../../web-v4/server/app.mjs';
+import { createV4WebServer } from '../../../web/server/app.mjs';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
-import { projectMarkdown, anchorForSection, calculateContentHash } from '../../../../packages/content-anchor/src/index.js';
+import {
+  projectMarkdown,
+  anchorForSection,
+  calculateContentHash
+} from '../../../../packages/content-anchor/src/index.js';
 
 test('真实页面：标注来源审核与过期保护；桌面离线新建、确认和重载回读', { timeout: 60000 }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-knowledge-ui-'));
@@ -25,26 +29,53 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   const raw = '# 注意力机制\n根据相关程度对信息加权。';
   const note = k.noteService.createNote({ title: '知识流程验收', rawMarkdown: raw, spaceId: space.id });
   const anchor = anchorForSection(projectMarkdown(raw), 0);
-  const annotation = k.contentAnnotationService.createAnnotation({ spaceId: space.id, noteId: note.id, schemaVersion: 2, scopeType: 'section', quoteText: anchor.quoteText, fromPosition: anchor.sourceStart, toPosition: anchor.sourceEnd, anchor, anchorFingerprint: 'knowledge-e2e', noteContentHash: calculateContentHash(raw), idempotencyKey: 'knowledge-e2e' });
+  const annotation = k.contentAnnotationService.createAnnotation({
+    spaceId: space.id,
+    noteId: note.id,
+    schemaVersion: 2,
+    scopeType: 'section',
+    quoteText: anchor.quoteText,
+    fromPosition: anchor.sourceStart,
+    toPosition: anchor.sourceEnd,
+    anchor,
+    anchorFingerprint: 'knowledge-e2e',
+    noteContentHash: calculateContentHash(raw),
+    idempotencyKey: 'knowledge-e2e'
+  });
   const server = createServer({ appContext: cloud });
-  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`;
-  const distRoot = fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url));
+  const distRoot = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
   const web = createV4WebServer({ distRoot, getApiOrigin: () => origin });
-  web.listen(0, '127.0.0.1'); await once(web, 'listening');
+  web.listen(0, '127.0.0.1');
+  await once(web, 'listening');
   const webOrigin = `http://127.0.0.1:${web.address().port}`;
-  const runtime = await startLocalRuntime({ dataDirectory: path.join(root, 'local'), distRoot, syncOptions: { autoSync: false } });
+  const runtime = await startLocalRuntime({
+    dataDirectory: path.join(root, 'local'),
+    distRoot,
+    syncOptions: { autoSync: false }
+  });
   let browser;
-  t.after(async () => { await browser?.close(); await runtime.close(); await Promise.all([new Promise(resolve => server.close(resolve)), new Promise(resolve => web.close(resolve))]); fs.rmSync(root, { recursive: true, force: true }); });
+  t.after(async () => {
+    await browser?.close();
+    await runtime.close();
+    await Promise.all([new Promise(resolve => server.close(resolve)), new Promise(resolve => web.close(resolve))]);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
   browser = await chromium.launch({
     ...(process.env.KNOWRA_TEST_BROWSER_CHANNEL ? { channel: process.env.KNOWRA_TEST_BROWSER_CHANNEL } : {}),
-    ...(process.env.KNOWRA_TEST_BROWSER_EXECUTABLE ? { executablePath: process.env.KNOWRA_TEST_BROWSER_EXECUTABLE } : {})
+    ...(process.env.KNOWRA_TEST_BROWSER_EXECUTABLE
+      ? { executablePath: process.env.KNOWRA_TEST_BROWSER_EXECUTABLE }
+      : {})
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${webOrigin}/#/materials/notes/${note.id}`);
   await expect(page.locator('.ProseMirror')).toContainText('根据相关程度');
-  if (!await page.getByRole('tab', { name: '标注', exact: true }).isVisible()) await page.getByRole('button', { name: '切换文档检查器' }).click();
+  if (!(await page.getByRole('tab', { name: '标注', exact: true }).isVisible()))
+    await page.getByRole('button', { name: '切换文档检查器' }).click();
   await page.getByRole('tab', { name: '标注', exact: true }).click();
   await page.getByRole('button', { name: '重点 1 更多操作' }).click();
   await page.getByRole('menuitem', { name: '创建知识候选' }).click();
@@ -68,7 +99,10 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   await page.getByRole('button', { name: '编辑', exact: true }).click();
   const edit = page.getByRole('dialog', { name: '编辑知识' });
   await edit.getByLabel('核心陈述').fill('本页未保存的修改');
-  k.knowledgeItemService.updateItem(candidate.id, { canonicalStatement: '另一个页面已更新', expectedUpdatedAt: dataStore.state.knowledgeItems[0].updatedAt });
+  k.knowledgeItemService.updateItem(candidate.id, {
+    canonicalStatement: '另一个页面已更新',
+    expectedUpdatedAt: dataStore.state.knowledgeItems[0].updatedAt
+  });
   await edit.getByRole('button', { name: '保存', exact: true }).click();
   await expect(edit.getByRole('alert')).toBeVisible();
   await expect(edit.getByLabel('核心陈述')).toHaveValue('本页未保存的修改');
@@ -76,14 +110,22 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   await edit.getByRole('button', { name: '取消', exact: true }).click();
   await page.getByRole('button', { name: '放弃修改', exact: true }).click();
   await page.reload();
-  await expect(page.getByRole('article', { name: '知识详情', exact: true }).getByText('另一个页面已更新', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('article', { name: '知识详情', exact: true }).getByText('另一个页面已更新', { exact: true })
+  ).toBeVisible();
   await page.getByRole('button', { name: '归档', exact: true }).click();
   await page.getByRole('button', { name: '确认归档', exact: true }).click();
   await expect.poll(() => dataStore.state.knowledgeItems[0].reviewStatus).toBe('archived');
   await page.getByRole('button', { name: '恢复为候选', exact: true }).click();
   await expect.poll(() => dataStore.state.knowledgeItems[0].reviewStatus).toBe('candidate');
   await expect(page.getByRole('button', { name: '确认知识', exact: true })).toBeEnabled();
-  if (process.env.KNOWRA_E2E_OUTPUT) { fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true }); await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'knowledge-workflow.png'), animations: 'disabled' }); }
+  if (process.env.KNOWRA_E2E_OUTPUT) {
+    fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
+    await page.screenshot({
+      path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'knowledge-workflow.png'),
+      animations: 'disabled'
+    });
+  }
   await page.goto(`${runtime.launchUrl}`);
   await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: /知识/ }).click();
   await knowledgeCreateButton(page).click();
@@ -107,10 +149,15 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   assert.equal(dataStore.state.knowledgeItems.find(item => item.id === offlineId).reviewStatus, 'confirmed');
   await expect(page.getByRole('button', { name: /注意力加权/ })).toBeVisible();
   const cloudOffline = dataStore.state.knowledgeItems.find(item => item.id === offlineId);
-  k.knowledgeItemService.updateItem(offlineId, { canonicalStatement: '云端改动同步后自动显示。', expectedUpdatedAt: cloudOffline.updatedAt });
+  k.knowledgeItemService.updateItem(offlineId, {
+    canonicalStatement: '云端改动同步后自动显示。',
+    expectedUpdatedAt: cloudOffline.updatedAt
+  });
   const syncReply = await page.request.post(`${runtime.origin}/api/local-runtime/sync/retry`, { data: {} });
   assert.equal(syncReply.status(), 200);
   // 面板关闭后的空闲状态查询间隔为 10 秒。
-  await expect(page.getByRole('article', { name: '知识详情', exact: true })).toContainText('云端改动同步后自动显示。', { timeout: 15000 });
+  await expect(page.getByRole('article', { name: '知识详情', exact: true })).toContainText('云端改动同步后自动显示。', {
+    timeout: 15000
+  });
   assert.deepEqual(errors, []);
 });

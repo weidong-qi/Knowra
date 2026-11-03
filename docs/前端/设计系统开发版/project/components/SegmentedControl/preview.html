@@ -1,0 +1,24 @@
+<!-- @dsCard group="操作" height=140 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>SegmentedControl</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Group(props) {
+  const [value, setValue] = useState(props.items[0][0]);
+  return h(K.SegmentedControl, { variant: props.variant, density: props.density, role: 'group', 'aria-label': props.label },
+    props.items.map(([id, label, count]) => h(K.SegmentedButton, { key: id, count, 'aria-pressed': value === id, onPress: () => setValue(id) }, label)));
+}
+function Demo() {
+  return h('div', { className: 'kn-col' },
+    h(Group, { label: '视图', items: [['all', '全部', 128], ['note', '笔记', 96], ['file', '资料', 32]] }),
+    h(Group, { label: '排序', density: 'compact', items: [['recent', '最近'], ['name', '名称']] }),
+    h(Group, { label: '分区', variant: 'underline', items: [['overview', '概览', 4], ['rel', '关系'], ['quiz', '试题']] }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

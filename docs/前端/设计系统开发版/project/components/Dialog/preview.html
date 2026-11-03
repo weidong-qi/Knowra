@@ -1,0 +1,23 @@
+<!-- @dsCard group="浮层" height=340 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Dialog</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  return h('div', { className: 'kn-row' },
+    h(K.DialogTrigger, null,
+      h(K.Button, { variant: 'danger', icon: h(I.DeleteIcon, { size: 14 }) }, '删除文件夹'),
+      h(K.Dialog, { title: '删除"期末复习"文件夹？', description: '这个操作可以在 30 天内撤销。' },
+        h(K.DialogBody, null, '文件夹里的 12 篇笔记会一起移到回收站，30 天内可以恢复。'),
+        h(K.DialogFooter, null,
+          h(K.DialogClose, { variant: 'ghost' }, '取消'),
+          h(K.DialogClose, { variant: 'danger' }, '移到回收站')))));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

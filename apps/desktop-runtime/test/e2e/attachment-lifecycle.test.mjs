@@ -12,7 +12,7 @@ test('真实 V4 附件缺失核验、原文件恢复、删除预检与本机保�
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-attachment-page-'));
   const runtime = await startLocalRuntime({
     dataDirectory: root,
-    distRoot: fileURLToPath(new URL('../../../web-v4/dist', import.meta.url)),
+    distRoot: fileURLToPath(new URL('../../../web/dist', import.meta.url)),
     syncOptions: { autoSync: false }
   });
   const browser = await chromium.launch({

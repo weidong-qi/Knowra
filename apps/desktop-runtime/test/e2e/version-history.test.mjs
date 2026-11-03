@@ -12,7 +12,7 @@ test('真实页面：历史摘要分页、差异对比、恢复和另存后持�
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-history-e2e-'));
   const runtime = await startLocalRuntime({
     dataDirectory: directory,
-    distRoot: fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url))
+    distRoot: fileURLToPath(new URL('../../../web/dist/', import.meta.url))
   });
   const browser = await chromium.launch();
   t.after(async () => {
@@ -118,7 +118,7 @@ test('真实页面：恢复 A 后继续自动保存 C，恢复前 B 仍可从历
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-restore-checkpoint-e2e-'));
   const runtime = await startLocalRuntime({
     dataDirectory: directory,
-    distRoot: fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url))
+    distRoot: fileURLToPath(new URL('../../../web/dist/', import.meta.url))
   });
   const browser = await chromium.launch();
   t.after(async () => {

@@ -1,0 +1,30 @@
+<!-- @dsCard group="浮层" height=360 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Menu</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [last, setLast] = useState('（点开菜单选一项）');
+  return h('div', { className: 'kn-row', style: { alignItems: 'flex-start' } },
+    h(K.MenuTrigger, null,
+      h(K.Button, { icon: h(I.MoreHorizontalIcon, { size: 14 }) }, '笔记操作'),
+      h(K.MenuPopover, null,
+        h(K.Menu, { ariaLabel: '笔记操作', onAction: (key) => setLast(String(key)) },
+          h(K.MenuSection, null,
+            h(K.MenuHeader, null, '笔记'),
+            h(K.MenuItem, { id: '重命名', icon: h(I.EditIcon, { size: 14 }), kbd: 'F2' }, '重命名'),
+            h(K.MenuItem, { id: '创建副本', icon: h(I.CopyIcon, { size: 14 }), kbd: '⌘D' }, '创建副本'),
+            h(K.MenuItem, { id: '移动到…', icon: h(I.FolderIcon, { size: 14 }) }, '移动到…'),
+            h(K.MenuItem, { id: '发布', icon: h(I.UploadIcon, { size: 14 }), isDisabled: true }, '发布（未配置）')),
+          h(K.MenuSeparator),
+          h(K.MenuItem, { id: '移到回收站', icon: h(I.DeleteIcon, { size: 14 }), isDanger: true }, '移到回收站')))),
+    h('span', { style: { color: 'var(--text-secondary)', fontSize: 12, lineHeight: '36px' } }, '上次选择：' + last));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

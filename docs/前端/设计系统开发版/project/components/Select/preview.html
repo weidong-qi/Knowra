@@ -1,0 +1,19 @@
+<!-- @dsCard group="表单" height=380 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Select</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  return h('div', { className: 'kn-col', style: { maxWidth: 300 } },
+    h(K.Select, { label: '所属文件夹', defaultSelectedKey: 'final', options: [{ id: 'mid', label: '期中' }, { id: 'final', label: '期末复习' }, { id: 'wrong', label: '错题本' }, { id: 'archive', label: '归档', isDisabled: true }] }),
+    h(K.Select, { label: '难度', placeholder: '选择难度', options: [{ id: '1', label: '基础' }, { id: '2', label: '提高' }, { id: '3', label: '挑战' }] }),
+    h(K.Select, { label: '排序', presentation: 'toolbar', defaultSelectedKey: 'recent', options: [{ id: 'recent', label: '最近编辑' }, { id: 'name', label: '名称' }] }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

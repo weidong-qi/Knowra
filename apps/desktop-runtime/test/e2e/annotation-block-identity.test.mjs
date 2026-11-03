@@ -32,7 +32,7 @@ test('真实SQLite页面：保存后块身份写入服务端，整页重开沿�
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-block-identity-'));
   const runtime = await startLocalRuntime({
     dataDirectory: directory,
-    distRoot: fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url))
+    distRoot: fileURLToPath(new URL('../../../web/dist/', import.meta.url))
   });
   const browser = await chromium.launch({ executablePath: process.env.KNOWRA_TEST_BROWSER_EXECUTABLE });
   t.after(async () => {
@@ -137,7 +137,7 @@ for (const { trailingNewline, delayedAnnotation } of [
       const serverUrl = `http://127.0.0.1:${cloud.address().port}`;
       runtime = await startLocalRuntime({
         dataDirectory: path.join(directory, 'local'),
-        distRoot: fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url)),
+        distRoot: fileURLToPath(new URL('../../../web/dist/', import.meta.url)),
         syncOptions: { autoSync: false }
       });
       browser = await chromium.launch({ executablePath: process.env.KNOWRA_TEST_BROWSER_EXECUTABLE });

@@ -1,0 +1,66 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Cover</title>
+<style>
+  html, body { margin: 0; background: var(--surface-page); }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--surface-page); }
+  .cover svg { position: absolute; inset: 0; }
+  .ink { fill: var(--text-primary); }
+  .accent { fill: var(--accent); }
+  .solid { fill: var(--accent-solid); }
+  .tint { fill: var(--accent-border); }
+  .chrome { fill: var(--surface-chrome); }
+  .ground { fill: var(--surface-page); }
+  .panel { rx: var(--radius-panel); ry: var(--radius-panel); }
+  .ctl { rx: var(--radius-control); ry: var(--radius-control); }
+  .text { position: absolute; left: 40px; bottom: 32px; max-width: 440px; }
+  .name { margin: 0; font: 700 96px/.95 var(--font-ui); letter-spacing: -2px; color: var(--text-primary); }
+  .tagline { margin: 16px 0 0; font: 400 14px/1.4 var(--font-ui); color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+    <!--
+      blocks: text-primary 50×256 (rail-size) · accent-border 120×256 · accent 200×164 · accent-solid 200×84 · surface-chrome 70×256, bleeding off the right edge
+      arrangement: a flush modular grid that is the app shell itself — rail, sidebar, content, inspector — separated by shell-gap (8px), from x = 496
+      pattern: "geometric, modular, dense UI" — tiles cut by radius-panel, with pill rows (radius-pill) for nav items and disc rail buttons cut from the ground
+      steps and radii: shell-gap 8, space-5 24 pitch, space-4 16 inset; radius-panel 12, radius-control 7, radius-pill as half the short side
+    -->
+    <rect class="ink panel" x="496" y="16" width="50" height="256"/>
+    <rect class="tint panel" x="554" y="16" width="120" height="256"/>
+    <rect class="accent panel" x="682" y="16" width="200" height="164"/>
+    <rect class="solid panel" x="682" y="188" width="200" height="84"/>
+    <rect class="chrome panel" x="890" y="16" width="86" height="256"/>
+
+    <!-- 图标栏按钮：从底色切出的圆 -->
+    <circle class="ground" cx="521" cy="48" r="10"/>
+    <circle class="accent" cx="521" cy="96" r="10"/>
+    <circle class="ground" cx="521" cy="144" r="10"/>
+
+    <!-- 侧栏导航：胶囊条，当前项抬起为底色 -->
+    <rect class="ground ctl" x="566" y="40" width="96" height="16"/>
+    <rect class="accent" x="570" y="72" width="72" height="8" rx="4"/>
+    <rect class="solid" x="570" y="96" width="56" height="8" rx="4"/>
+    <rect class="solid" x="570" y="120" width="80" height="8" rx="4"/>
+    <rect class="solid" x="570" y="144" width="48" height="8" rx="4"/>
+
+    <!-- 内容区：标题条与正文行 -->
+    <rect class="ground" x="698" y="40" width="112" height="16" rx="8"/>
+    <rect class="tint" x="698" y="72" width="168" height="8" rx="4"/>
+    <rect class="tint" x="698" y="96" width="144" height="8" rx="4"/>
+    <rect class="tint" x="698" y="120" width="160" height="8" rx="4"/>
+
+    <!-- 主按钮胶囊 -->
+    <rect class="ground" x="698" y="214" width="88" height="32" rx="16"/>
+  </svg>
+  <div class="text">
+    <p class="name">知境<br>Knowra</p>
+    <p class="tagline">笔记、知识点与试题，在同一张安静的工作台上。</p>
+  </div>
+</div>
+</body>
+</html>

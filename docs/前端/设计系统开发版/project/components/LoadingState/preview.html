@@ -1,0 +1,19 @@
+<!-- @dsCard group="容器" height=210 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>LoadingState</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  return h('div', { className: 'kn-col', style: { maxWidth: 320 } },
+    h(K.LoadingState, { variant: 'dots', label: '正在载入笔记…' }),
+    h(K.LoadingState, { variant: 'bar', label: '正在导入资料…' }),
+    h(K.LoadingState, { variant: 'skeleton', label: '正在载入列表…' }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>
