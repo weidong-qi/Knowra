@@ -1,5 +1,9 @@
 const READ_METHODS = new Set(['GET', 'HEAD']);
 const MUTATIONS = [
+  ['POST', /^\/api\/storage\/pdf-imports$/],
+  ['PUT', /^\/api\/storage\/pdf-files\/[^/]+$/],
+  ['PUT', /^\/api\/pdf\/[^/]+\/annotations\/[^/]+$/],
+  ['DELETE', /^\/api\/pdf\/[^/]+\/annotations\/[^/]+$/],
   ['POST', /^\/api\/task-workspaces$/],
   ['POST', /^\/api\/task-workspaces\/[^/]+\/(?:archive|documents|tasks)$/],
   ['PATCH', /^\/api\/task-workspaces\/[^/]+\/documents\/[^/]+$/],
@@ -9,10 +13,16 @@ const MUTATIONS = [
   ['POST', /^\/api\/knowledge\/(?:learning-objectives|exam-profiles|exam-focuses|questions)$/],
   ['PATCH', /^\/api\/knowledge\/(?:learning-objectives|exam-profiles|exam-focuses|questions)\/[^/]+$/],
   ['POST', /^\/api\/knowledge\/exam-profiles\/[^/]+\/focuses$/],
-  ['POST', /^\/api\/knowledge\/learning-objectives\/[^/]+\/(?:confirm|request-revision|archive|restore|trash|restore-deleted)$/],
+  [
+    'POST',
+    /^\/api\/knowledge\/learning-objectives\/[^/]+\/(?:confirm|request-revision|archive|restore|trash|restore-deleted)$/
+  ],
   ['POST', /^\/api\/knowledge\/exam-profiles\/[^/]+\/(?:archive|restore|trash|restore-deleted)$/],
   ['POST', /^\/api\/knowledge\/exam-focuses\/[^/]+\/(?:confirm|archive|restore|trash|restore-deleted)$/],
-  ['POST', /^\/api\/knowledge\/questions\/[^/]+\/(?:validate|submit-review|confirm|archive|restore|trash|restore-deleted)$/],
+  [
+    'POST',
+    /^\/api\/knowledge\/questions\/[^/]+\/(?:validate|submit-review|confirm|archive|restore|trash|restore-deleted)$/
+  ],
   ['POST', /^\/api\/ai\/actions(?:\/drafts|\/[^/]+\/(?:approve|apply|cancel|reject|undo-preview))?$/],
   ['POST', /^\/api\/ai\/conversations$/],
   ['POST', /^\/api\/ai\/conversations\/[^/]+\/messages$/],
@@ -27,7 +37,10 @@ const MUTATIONS = [
   ['POST', /^\/api\/ai\/assistant\/jobs$/],
   ['POST', /^\/api\/ai\/assistant\/jobs\/[^/]+\/cancel$/],
   // 预算相关：只写本机数据目录里的设置/提醒/账本文件，或用已配置的密钥只读 DeepSeek 余额；不发送任何笔记或对话。
-  ['POST', /^\/api\/ai\/assistant\/(?:budget-settings|balance\/refresh|usage\/resolve|alerts\/(?:mark|allow|pause|resume))$/],
+  [
+    'POST',
+    /^\/api\/ai\/assistant\/(?:budget-settings|balance\/refresh|usage\/resolve|alerts\/(?:mark|allow|pause|resume))$/
+  ],
   // 该 POST 只计算预览，不保存分析范围或触发 AI。
   ['POST', /^\/api\/knowledge\/analysis-scopes\/preview$/],
   ['POST', /^\/api\/knowledge\/items$/],

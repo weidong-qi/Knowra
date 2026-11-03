@@ -45,6 +45,12 @@ export function createBatchSyncService(provider, ownerId, transfer) {
     }
   }
   return {
+    uploadBlobStream: body => {
+      assertSyncContract(body);
+      assertSyncDeviceEnabled(body?.deviceId);
+      if (!transfer?.putStream) throw syncError('SYNC_UNAVAILABLE', '此服务未配置 PDF 传输。', 503);
+      return transfer.putStream(body);
+    },
     uploadBlob: body => {
       assertSyncContract(body);
       assertSyncDeviceEnabled(body?.deviceId);

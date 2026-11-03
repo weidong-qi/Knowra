@@ -15,6 +15,13 @@ function matchNotePath(pathname, suffix = '') {
   return pathname.match(new RegExp(`^\\/api\\/knowledge\\/notes\\/([^/]+)${escapedSuffix}$`));
 }
 
+/** @param {unknown} body */
+function assertMarkdownBody(body) {
+  const value = /** @type {{contentKind?: unknown; pdfSource?: unknown} | null | undefined} */ (body);
+  if ((value?.contentKind && value.contentKind !== 'markdown') || value?.pdfSource)
+    throw createAppError('PDF_IMPORT_REQUIRED', '请使用 PDF 导入保存原文件。', 422);
+}
+
 export async function handleNoteRoute({ request, response, url, knowledge }) {
   if (request.method === 'GET' && url.pathname === '/api/knowledge/notes') {
     sendJson(response, 200, {
@@ -25,6 +32,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'POST' && url.pathname === '/api/knowledge/notes') {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 201, {
       data: await knowledge.createNote(body)
     });
@@ -33,6 +41,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'POST' && url.pathname === '/api/knowledge/notes/import-markdown') {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 201, {
       data: await knowledge.importMarkdown(body)
     });
@@ -41,6 +50,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'POST' && url.pathname === '/api/knowledge/notes/import-markdown-batch') {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 201, {
       data: await knowledge.importMarkdownBatch(body)
     });
@@ -56,6 +66,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'POST' && url.pathname === '/api/knowledge/notes/batch/delete') {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 200, {
       data: await knowledge.deleteNotes(body)
     });
@@ -64,6 +75,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'POST' && url.pathname === '/api/knowledge/notes/batch/tags') {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 200, {
       data: await knowledge.assignTagToNotes(body)
     });
@@ -72,6 +84,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'PATCH' && url.pathname === '/api/knowledge/notes/batch/tags') {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 200, { data: await knowledge.updateTagsForNotes(body) });
     return true;
   }
@@ -110,6 +123,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'PATCH' && noteMatch) {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     if (
       Object.hasOwn(/** @type {object} */ (body ?? {}), 'rawMarkdown') &&
       !(/** @type {{ expectedUpdatedAt?: unknown }} */ (body).expectedUpdatedAt)
@@ -145,6 +159,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
   const favoriteMatch = matchNotePath(url.pathname, '/favorite');
   if (request.method === 'POST' && favoriteMatch) {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 200, {
       data: await knowledge.setFavorite({ id: decodeRouteId(favoriteMatch[1]) }, body)
     });
@@ -162,6 +177,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
   const tagsMatch = matchNotePath(url.pathname, '/tags');
   if (request.method === 'POST' && tagsMatch) {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 200, {
       data: await knowledge.assignTagToNote({ id: decodeRouteId(tagsMatch[1]) }, body)
     });
@@ -170,6 +186,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
 
   if (request.method === 'PUT' && tagsMatch) {
     const body = await parseBody(request);
+    assertMarkdownBody(body);
     sendJson(response, 200, {
       data: await knowledge.setNoteTags(
         {

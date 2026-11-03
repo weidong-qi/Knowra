@@ -29,6 +29,7 @@
     "katex": "^0.16.22",
     "mdast-util-math": "^3.0.0",
     "micromark-extension-math": "^3.1.0",
+    "pdfjs-dist": "6.5.438",
     "react": "19.2.8",
     "react-aria": "3.51.0",
     "react-aria-components": "1.20.0",

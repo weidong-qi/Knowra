@@ -72,6 +72,7 @@ const syncPlanCollections = Object.freeze({
   questions: 'questions',
   questionObjectives: 'questionObjectives',
   questionSources: 'questionSources',
+  pdfAnnotations: 'pdfAnnotations',
   attachments: 'attachments',
   contentAnnotations: 'annotations',
   annotationExclusions: 'annotationExclusions',
@@ -94,6 +95,7 @@ const syncDbModels = Object.freeze({
   questions: 'question',
   questionObjectives: 'questionObjective',
   questionSources: 'questionSource',
+  pdfAnnotations: 'pdfAnnotation',
   attachments: 'attachment',
   contentAnnotations: 'contentAnnotation',
   annotationExclusions: 'annotationExclusion',
@@ -160,6 +162,7 @@ export function buildJsonMigrationPlan({
     tagGroups: state.tagGroups.map(group => transformTagGroup(group, fallbackTimestamp)),
     tags: state.tags.map(tag => transformTag(tag, fallbackTimestamp)),
     notes: state.notes.map(note => transformNote(note, fallbackTimestamp, reportTools)),
+    pdfAnnotations: structuredClone(state.pdfAnnotations),
     noteVersions: [],
     knowledgeItems: state.knowledgeItems.map(item => transformKnowledgeItem(item, fallbackTimestamp, reportTools)),
     knowledgeEvidence: state.knowledgeEvidence.map(evidence => transformKnowledgeEvidence(evidence, fallbackTimestamp)),
@@ -343,6 +346,7 @@ export function buildJsonMigrationPlan({
     'annotationExclusions',
     'annotationRevisions',
     'analysisScopeSnapshots',
+    'pdfAnnotations',
     'attachments'
   ]) {
     reportTools.count(collection, plan[collection].length);
@@ -437,6 +441,15 @@ export async function applyJsonMigration({
     if (plan.annotations.length) await tx.contentAnnotation.createMany({ data: plan.annotations.map(dbAnnotation) });
     if (plan.annotationExclusions.length)
       await tx.annotationExclusion.createMany({ data: plan.annotationExclusions.map(dbAnnotationExclusion) });
+    if (plan.pdfAnnotations?.length)
+      await tx.pdfAnnotation.createMany({
+        data: plan.pdfAnnotations.map(value => ({
+          id: value.id,
+          noteId: value.noteId,
+          revision: value.revision,
+          payload: value
+        }))
+      });
     if (plan.annotationRevisions.length)
       await tx.annotationRevision.createMany({ data: plan.annotationRevisions.map(dbAnnotationRevision) });
     if (plan.analysisScopeSnapshots.length)
@@ -492,6 +505,7 @@ export async function assertEmptyTarget(client) {
     'tag',
     'note',
     'noteTag',
+    'pdfAnnotation',
     'attachment',
     'contentAnnotation',
     'annotationExclusion',

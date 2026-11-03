@@ -923,17 +923,31 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
             version: Math.max(entry.value.version, current.value.version + (edited ? 1 : 0))
           };
         }
+        if (entry.collection === 'pdfAnnotations' && entry.value && current?.value)
+          entry.value = { ...entry.value, revision: Math.max(entry.value.revision, current.value.revision + 1) };
         replace(merged, entry);
       }
     }
     preserveRemoteNotePrivacy(merged, remote);
     const localAttachments = state.attachments.map(attachment => ({ ...attachment }));
+    const localPdfAnnotations = structuredClone(state.pdfAnnotations);
+    const localPdfNotes = state.notes.filter(
+      note =>
+        note.contentKind === 'pdf' &&
+        dirty.some(
+          entry =>
+            entry.collection === 'pdfAnnotations' &&
+            (entry.value?.noteId ?? bases(db).get(syncKey(entry.collection, entry.id))?.value?.noteId) === note.id
+        )
+    );
     preserveAttachmentHealth(merged, state);
     assertNoKnowledgeArtifactProvenanceDowngrade(state, merged);
     setState(state, reconcileSyncedSourceStates(merged));
     if (choice === 'copy') {
       const notes = dirty.filter(entry => entry.collection === 'notes' && entry.value);
-      if (notes.length !== 1) throw new Error('保留两篇仅适用于一篇笔记的冲突。');
+      for (const note of localPdfNotes)
+        if (!notes.some(entry => entry.id === note.id)) notes.push({ collection: 'notes', id: note.id, value: note });
+      if (notes.length !== 1) throw new Error('保留两份仅适用于一份资料的冲突。');
       createEntityConflictCopy({
         original: {
           ...notes[0].value,
@@ -942,6 +956,7 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
             : {})
         },
         localAttachments,
+        localPdfAnnotations,
         state,
         noteService,
         entityTransfer,

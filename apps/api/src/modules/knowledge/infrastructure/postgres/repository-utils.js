@@ -25,6 +25,7 @@ export function buildNoteWhere(options = {}) {
   }
   if (options.spaceId) where.spaceId = options.spaceId;
   if (options.folderId) where.folderId = options.folderId;
+  if (['markdown', 'pdf'].includes(options.contentKind)) where.contentKind = options.contentKind;
   if (booleanOption(options.favoriteOnly)) where.favorite = true;
   const tagIds = Array.isArray(options.tagIds)
     ? options.tagIds.filter(Boolean)

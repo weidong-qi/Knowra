@@ -8,6 +8,8 @@ export interface NoteSummaryInput {
   title?: unknown;
   plainText?: unknown;
   rawMarkdown?: unknown;
+  contentKind?: 'markdown' | 'pdf';
+  pdfSource?: { attachmentId: string; sha256: string; importRequestHash?: string } | null;
   internalLinks?: unknown;
   status?: unknown;
   sourceType?: unknown;
@@ -26,6 +28,8 @@ export interface NoteSummaryOutlineEntry {
 
 /** 直接读取保留输入类型；数组分支会再次读取并迭代，不保证元素是字符串。 */
 export interface NoteSummary<Source extends NoteSummaryInput = NoteSummaryInput> {
+  contentKind: 'markdown' | 'pdf';
+  pdfSource: Source['pdfSource'];
   id: Source['id'];
   spaceId: Source['spaceId'];
   folderId: Source['folderId'];
@@ -71,7 +75,9 @@ export function createNoteSummary<Source extends NoteSummaryInput>(note: Source)
     tagIds: Array.isArray(note.tagIds) ? [...note.tagIds] : [],
     createdAt: note.createdAt,
     updatedAt: note.updatedAt,
-    contentLoaded: false
+    contentLoaded: false,
+    contentKind: note.contentKind ?? 'markdown',
+    pdfSource: note.pdfSource
   };
 }
 

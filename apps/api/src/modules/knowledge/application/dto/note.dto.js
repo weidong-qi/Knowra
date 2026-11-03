@@ -1,10 +1,4 @@
-import {
-  createPrefixedId,
-  normalizeIdList,
-  normalizeOptionalId,
-  requireText,
-  trimIfString
-} from './_shared.js';
+import { createPrefixedId, normalizeIdList, normalizeOptionalId, requireText, trimIfString } from './_shared.js';
 import { assertNoInsecureImageUrls } from '../note-content-policy.js';
 import { validationError } from '../knowledge-errors.js';
 
@@ -27,14 +21,19 @@ function deriveTitleFromMarkdown(markdown) {
 
   const firstLine = markdown
     .split('\n')
-    .map((line) => line.trim())
+    .map(line => line.trim())
     .find(Boolean);
 
   if (!firstLine) {
     return null;
   }
 
-  return firstLine.replace(/^[-*>\d.\s]+/, '').trim().slice(0, 80) || null;
+  return (
+    firstLine
+      .replace(/^[-*>\d.\s]+/, '')
+      .trim()
+      .slice(0, 80) || null
+  );
 }
 
 function createNoteId({ id, title, rawMarkdown }) {
@@ -42,10 +41,7 @@ function createNoteId({ id, title, rawMarkdown }) {
     return requireText(id, 'NOTE_ID_INVALID', 'Note id is invalid');
   }
 
-  return createPrefixedId(
-    'note',
-    title || deriveTitleFromMarkdown(rawMarkdown) || 'item'
-  );
+  return createPrefixedId('note', title || deriveTitleFromMarkdown(rawMarkdown) || 'item');
 }
 
 export function buildCreateNoteDto(input = {}) {
@@ -67,6 +63,8 @@ export function buildCreateNoteDto(input = {}) {
     }),
     title,
     rawMarkdown: input.rawMarkdown,
+    contentKind: input.contentKind ?? 'markdown',
+    pdfSource: input.pdfSource ?? null,
     spaceId: normalizeOptionalId(input.spaceId, 'NOTE_SPACE_INVALID', 'Note spaceId is invalid'),
     folderId: normalizeOptionalId(input.folderId, 'NOTE_FOLDER_INVALID', 'Note folderId is invalid'),
     status: input.status ?? 'draft',
@@ -84,14 +82,8 @@ export function buildUpdateNoteDto(input = {}) {
 
   if (input.expectedUpdatedAt !== undefined) {
     const expectedUpdatedAt = new Date(input.expectedUpdatedAt);
-    if (
-      typeof input.expectedUpdatedAt !== 'string'
-      || Number.isNaN(expectedUpdatedAt.getTime())
-    ) {
-      throw validationError(
-        'NOTE_EXPECTED_UPDATED_AT_INVALID',
-        'Note expectedUpdatedAt is invalid'
-      );
+    if (typeof input.expectedUpdatedAt !== 'string' || Number.isNaN(expectedUpdatedAt.getTime())) {
+      throw validationError('NOTE_EXPECTED_UPDATED_AT_INVALID', 'Note expectedUpdatedAt is invalid');
     }
     dto.expectedUpdatedAt = expectedUpdatedAt.toISOString();
   }

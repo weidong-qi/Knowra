@@ -16,14 +16,16 @@ async function listen(server) {
 
 async function close(server) {
   server.closeAllConnections();
-  await new Promise((resolve) => server.close(resolve));
+  await new Promise(resolve => server.close(resolve));
 }
 
 test('production proxy accepts the body limit and rejects larger requests before forwarding', async () => {
   const received = [];
   const upstream = http.createServer((request, response) => {
     let size = 0;
-    request.on('data', (chunk) => { size += chunk.byteLength; });
+    request.on('data', chunk => {
+      size += chunk.byteLength;
+    });
     request.on('end', () => {
       received.push(size);
       response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -37,7 +39,8 @@ test('production proxy accepts the body limit and rejects larger requests before
     const limit = 8 * 1024 * 1024;
     for (const size of [limit, limit + 1]) {
       const response = await fetch(`${origin}/api/knowledge/notes`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: 'a'.repeat(size - 11) })
       });
       const payload = await response.json();
@@ -46,11 +49,17 @@ test('production proxy accepts the body limit and rejects larger requests before
       else assert.equal(payload.error.code, 'PAYLOAD_TOO_LARGE');
     }
     const restoreBody = JSON.stringify({ contentBase64: Buffer.alloc(6 * 1024 * 1024).toString('base64') });
-    const restored = await fetch(`${origin}/api/storage/attachments/attachment-legacy/restore`, { method: 'POST', body: restoreBody });
+    const restored = await fetch(`${origin}/api/storage/attachments/attachment-legacy/restore`, {
+      method: 'POST',
+      body: restoreBody
+    });
     assert.equal(restored.status, 200, '6 MiB 原文件包含 JSON 包装后仍可转发');
     const upload = await fetch(`${origin}/api/storage/attachments`, { method: 'POST', body: restoreBody });
     assert.equal(upload.status, 413, '其他接口保持 8 MiB 请求限制');
-    const tooLarge = await fetch(`${origin}/api/storage/attachments/attachment-legacy/restore`, { method: 'POST', body: 'a'.repeat(9 * 1024 * 1024 + 1) });
+    const tooLarge = await fetch(`${origin}/api/storage/attachments/attachment-legacy/restore`, {
+      method: 'POST',
+      body: 'a'.repeat(9 * 1024 * 1024 + 1)
+    });
     assert.equal(tooLarge.status, 413);
     assert.deepEqual(received, [limit, Buffer.byteLength(restoreBody)]);
   } finally {
@@ -96,22 +105,99 @@ test('Web proxy 按最终 UTF-8 JSON 字节数放行同步 batch/blob 边界并�
   const received = [];
   const upstream = http.createServer((request, response) => {
     let size = 0;
-    request.on('data', chunk => { size += chunk.byteLength; });
-    request.on('end', () => { received.push([request.url, size]); response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(JSON.stringify({ data: { size } })); });
+    request.on('data', chunk => {
+      size += chunk.byteLength;
+    });
+    request.on('end', () => {
+      received.push([request.url, size]);
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify({ data: { size } }));
+    });
   });
-  const apiOrigin = await listen(upstream), proxy = createV4WebServer({ distRoot: '.', getApiOrigin: () => apiOrigin });
+  const apiOrigin = await listen(upstream),
+    proxy = createV4WebServer({ distRoot: '.', getApiOrigin: () => apiOrigin });
   try {
     const origin = await listen(proxy);
-    for (const [route, limit] of [['batch', 16 * 1024 * 1024], ['blobs', 9 * 1024 * 1024]]) {
+    for (const [route, limit] of [
+      ['batch', 16 * 1024 * 1024],
+      ['blobs', 9 * 1024 * 1024]
+    ]) {
       for (const size of [limit, limit + 1]) {
         // 中文采用 UTF-8 计量；body 本身始终是有效 JSON。
         const body = JSON.stringify({ text: '中' + 'a'.repeat(size - 14) });
         assert.equal(Buffer.byteLength(body), size);
-        const response = await fetch(`${origin}/api/sync/${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+        const response = await fetch(`${origin}/api/sync/${route}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body
+        });
         assert.equal(response.status, size === limit ? 200 : 413, route);
       }
     }
-    assert.deepEqual(received, [['/api/sync/batch', 16 * 1024 * 1024], ['/api/sync/blobs', 9 * 1024 * 1024]]);
-  } finally { await close(proxy); await close(upstream); }
+    assert.deepEqual(received, [
+      ['/api/sync/batch', 16 * 1024 * 1024],
+      ['/api/sync/blobs', 9 * 1024 * 1024]
+    ]);
+  } finally {
+    await close(proxy);
+    await close(upstream);
+  }
+});
+
+test('PDF 二进制代理独立限额、流式输出与 Range / HEAD', async () => {
+  const upstream = http.createServer(async (request, response) => {
+    request.on('error', () => {});
+    if (request.method === 'POST') {
+      let size = 0;
+      try {
+        for await (const chunk of request) size += chunk.length;
+      } catch {
+        return;
+      }
+      response.setHeader('Content-Type', 'application/json');
+      response.end(JSON.stringify({ data: { size } }));
+      return;
+    }
+    response.writeHead(request.headers.range ? 206 : 200, {
+      'Content-Type': 'application/pdf',
+      'Accept-Ranges': 'bytes',
+      ...(request.headers.range ? { 'Content-Range': 'bytes 0-4/10' } : {})
+    });
+    response.end(request.method === 'HEAD' ? undefined : '%PDF-');
+  });
+  const apiOrigin = await listen(upstream),
+    proxy = createV4WebServer({ distRoot: '.', getApiOrigin: () => apiOrigin });
+  try {
+    const origin = await listen(proxy);
+    const { Readable } = await import('node:stream');
+    const chunk = Buffer.alloc(1024 * 1024);
+    const body = async function* (extra) {
+      for (let i = 0; i < 50; i++) yield chunk;
+      if (extra) yield Buffer.from([1]);
+    };
+    let response = await fetch(`${origin}/api/storage/pdf-imports`, {
+      method: 'POST',
+      body: Readable.from(body(false)),
+      duplex: 'half'
+    });
+    assert.equal(response.status, 200, await response.clone().text());
+    assert.equal((await response.json()).data.size, 50 * 1024 * 1024);
+    response = await fetch(`${origin}/api/storage/pdf-imports`, {
+      method: 'POST',
+      body: Readable.from(body(true)),
+      duplex: 'half'
+    });
+    assert.equal(response.status, 413);
+    assert.equal((await response.json()).error.code, 'PAYLOAD_TOO_LARGE');
+    response = await fetch(`${origin}/api/storage/pdf-files/file`, { headers: { Range: 'bytes=0-4' } });
+    assert.equal(response.status, 206);
+    assert.equal(response.headers.get('content-range'), 'bytes 0-4/10');
+    assert.equal(await response.text(), '%PDF-');
+    response = await fetch(`${origin}/api/storage/pdf-files/file`, { method: 'HEAD' });
+    assert.equal(response.status, 200);
+    assert.equal((await response.arrayBuffer()).byteLength, 0);
+  } finally {
+    await close(proxy);
+    await close(upstream);
+  }
 });

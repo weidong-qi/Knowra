@@ -265,6 +265,8 @@ export const NOTE_FIELDS: string[] = [
   'favorite',
   'status',
   'sourceType',
+  'contentKind',
+  'pdfSource',
   'deleted',
   'aiVisibility'
 ];
@@ -280,6 +282,8 @@ export type SyncNoteContent = Partial<
     | 'favorite'
     | 'status'
     | 'sourceType'
+    | 'contentKind'
+    | 'pdfSource'
     | 'deleted'
     | 'aiVisibility'
   >

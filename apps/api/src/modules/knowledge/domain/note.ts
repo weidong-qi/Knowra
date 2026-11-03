@@ -27,6 +27,8 @@ export interface NoteConstructorInput<
   folderId?: string | null;
   title: string;
   rawMarkdown: unknown;
+  contentKind?: 'markdown' | 'pdf';
+  pdfSource?: { attachmentId: string; sha256: string; importRequestHash?: string } | null;
   status?: Status | string;
   sourceType?: SourceType | string;
   favorite?: Favorite | boolean;
@@ -79,6 +81,8 @@ export class Note<
   declare folderId: string | null;
   declare title: string;
   declare rawMarkdown: string;
+  declare contentKind: 'markdown' | 'pdf';
+  declare pdfSource: { attachmentId: string; sha256: string; importRequestHash?: string } | null;
   declare plainText: string;
   declare internalLinks: string[];
   declare contentHash: ContentHash | null;
@@ -100,6 +104,8 @@ export class Note<
     folderId = null,
     title,
     rawMarkdown,
+    contentKind = 'markdown',
+    pdfSource = null,
     status = 'draft',
     sourceType = 'manual',
     favorite = false,
@@ -142,6 +148,8 @@ export class Note<
     this.folderId = folderId;
     this.title = title.trim();
     this.rawMarkdown = rawMarkdown;
+    this.contentKind = contentKind;
+    this.pdfSource = pdfSource ? structuredClone(pdfSource) : null;
     this.plainText = typeof plainText === 'string' ? plainText : stripMarkdown(rawMarkdown);
     this.internalLinks = Array.isArray(internalLinks) ? [...new Set(internalLinks)] : extractInternalLinks(rawMarkdown);
     this.contentHash = contentHash;

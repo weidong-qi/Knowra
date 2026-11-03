@@ -109,6 +109,7 @@ export function createPostgresSnapshotService({
         questionSources,
         attachments,
         contentAnnotations: annotations,
+        pdfAnnotations: (await client.$transaction(async tx => tx.pdfAnnotation.findMany())).map(row => row.payload),
         annotationExclusions,
         annotationRevisions,
         analysisScopeSnapshots

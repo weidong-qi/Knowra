@@ -1,3 +1,4 @@
+import { handlePdfRoute } from './modules/pdf/routes.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { handleTaskWorkspaceRoute } from './modules/task-workspaces/routes.ts';
 import { handleActionRoute } from './modules/ai/action-routes.js';
@@ -94,6 +95,8 @@ export function createServer({ appContext, cors = /** @type {{allowedOrigins?: s
       )
         return;
 
+      if (await handlePdfRoute({ request, response, url, pdf: appContext.http.pdf })) return;
+
       if (await handleStorageRoute({ request, response, url, storage })) {
         return;
       }
@@ -136,6 +139,10 @@ export function createServer({ appContext, cors = /** @type {{allowedOrigins?: s
         }
       });
     } catch (error) {
+      if (response.headersSent || response.destroyed) {
+        response.destroy();
+        return;
+      }
       if (error instanceof AppError) {
         sendError(response, error.statusCode, error.code, error.message);
         return;
@@ -147,6 +154,9 @@ export function createServer({ appContext, cors = /** @type {{allowedOrigins?: s
       sendError(response, 500, 'INTERNAL_SERVER_ERROR', 'Internal server error');
     }
   });
+  // 同步持久化阻塞事件循环时，已在空闲连接上排队的请求仍可能尚未被解析。
+  // 保留对外 5 秒的空闲提示，但延后实际断开，避免代理收到 ECONNRESET。
+  server.keepAliveTimeoutBuffer = 60_000;
   // 原生 close/close 事件仍只表示网络关闭；持库宿主另等 closeAi 或 context.close。
   server.closeAi = aiLifecycle.close;
   return server;

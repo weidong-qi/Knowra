@@ -15,6 +15,12 @@ interface MigrationRows {
   tag: ReturnType<typeof rows.dbTag>;
   note: ReturnType<typeof rows.dbNote>;
   attachment: ReturnType<typeof rows.dbAttachment>;
+  pdfAnnotation: {
+    id: string;
+    noteId: string;
+    revision: number;
+    payload: import('@study-accelerator/shared/pdf').PdfAnnotation;
+  };
   contentAnnotation: ReturnType<typeof rows.dbAnnotation>;
   annotationExclusion: ReturnType<typeof rows.dbAnnotationExclusion>;
   annotationRevision: ReturnType<typeof rows.dbAnnotationRevision>;

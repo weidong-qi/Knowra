@@ -17,7 +17,7 @@ interface SyncContractInput {
   capabilities?: unknown;
 }
 
-export const SYNC_ENTITY_SCHEMA_VERSION = 8;
+export const SYNC_ENTITY_SCHEMA_VERSION = 9;
 export const KNOWLEDGE_PROVENANCE_SYNC_CAPABILITY = 'knowledge-provenance-v1';
 export const KNOWLEDGE_LIFECYCLE_SYNC_CAPABILITY = 'knowledge-lifecycle-v1';
 // agent 执行模式的来源摘要：旧端无法校验这类记录，必须在握手阶段拒绝，而不是读到记录才失败。
@@ -27,6 +27,7 @@ export const KNOWLEDGE_MCP_PROVENANCE_SYNC_CAPABILITY = 'knowledge-provenance-mc
 // 重点内联化：schemaVersion 3 的重点由正文标记派生，旧端会拒绝这类记录，必须在握手阶段要求两端都升级。
 export const INLINE_ANNOTATIONS_SYNC_CAPABILITY = 'inline-annotations-v1';
 export const REQUIRED_SYNC_CAPABILITIES = Object.freeze([
+  'pdf-materials-v1',
   'note-ai-visibility-v1',
   'asset-lifecycle-v1',
   'atomic-entities-v2',
@@ -59,7 +60,7 @@ export function assertSyncContract(value: unknown, { query = false } = {}): Sync
   ) {
     throw syncError(
       'SYNC_CLIENT_UPGRADE_REQUIRED',
-      '笔记隐私与知识同步格式已升级，请更新应用与云端；本地数据和待同步修改已保留。',
+      'PDF 资料与知识同步格式已升级，请更新应用与云端；本地数据和待同步修改已保留。',
       422
     );
   }

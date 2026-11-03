@@ -4,9 +4,7 @@ import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain
 
 // Only persisted business records are scanned here. Offline copies, backups and
 // in-flight work need their own lifecycle protocol before general purge is opened.
-const REFERENCE_COLLECTIONS = LOCAL_DATA_COLLECTIONS.filter(
-  (collection) => collection !== 'attachments'
-);
+const REFERENCE_COLLECTIONS = LOCAL_DATA_COLLECTIONS.filter(collection => collection !== 'attachments');
 
 const POSTGRES_MODELS = Object.freeze({
   spaces: 'knowledgeSpace',
@@ -24,6 +22,7 @@ const POSTGRES_MODELS = Object.freeze({
   questions: 'question',
   questionObjectives: 'questionObjective',
   questionSources: 'questionSource',
+  pdfAnnotations: 'pdfAnnotation',
   contentAnnotations: 'contentAnnotation',
   annotationExclusions: 'annotationExclusion',
   annotationRevisions: 'annotationRevision',
@@ -31,8 +30,8 @@ const POSTGRES_MODELS = Object.freeze({
 });
 
 function referenceCategory(collection) {
-  if (collection === 'noteVersions' || collection === 'analysisScopeSnapshots'
-    || collection === 'annotationRevisions') return 'history';
+  if (collection === 'noteVersions' || collection === 'analysisScopeSnapshots' || collection === 'annotationRevisions')
+    return 'history';
   if (collection === 'notes') return 'shared';
   if (collection === 'knowledgeEvidence' || collection === 'questionSources') return 'independent';
   return 'exclusive';
@@ -42,21 +41,33 @@ export function inspectAttachmentDeletion(attachmentId, state) {
   const references = [];
   for (const collection of REFERENCE_COLLECTIONS) {
     for (const record of state[collection] ?? []) {
-      const content = collection === 'knowledgeArtifactProvenance'
-        ? validateKnowledgeArtifactProvenance(record).sources?.map(source => source.quoteText) ?? [] : record;
+      const content =
+        collection === 'knowledgeArtifactProvenance'
+          ? (validateKnowledgeArtifactProvenance(record).sources?.map(source => source.quoteText) ?? [])
+          : record;
       if (!hasAttachmentReference(content, attachmentId)) continue;
-      const knowledgeItemId = collection === 'knowledgeItems' ? record.id
-        : collection === 'knowledgeArtifactProvenance' ? record.artifactId : record.knowledgeItemId;
+      const knowledgeItemId =
+        collection === 'knowledgeItems'
+          ? record.id
+          : collection === 'knowledgeArtifactProvenance'
+            ? record.artifactId
+            : record.knowledgeItemId;
       const item = state.knowledgeItems?.find(item => item.id === knowledgeItemId && !item.deletedAt);
       references.push({
         category: referenceCategory(collection),
         collection,
         id: record.id,
-        title: String(record.title || record.fileName || record.name || item?.title || (record.noteId && state.notes?.find(note => note.id === record.noteId)?.title) || record.id),
+        title: String(
+          record.title ||
+            record.fileName ||
+            record.name ||
+            item?.title ||
+            (record.noteId && state.notes?.find(note => note.id === record.noteId)?.title) ||
+            record.id
+        ),
         ...(item ? { knowledgeItemId: item.id } : {}),
         ...(record.noteId ? { noteId: record.noteId } : {}),
-        ...(collection === 'notes' && (record.deleted || record.deletedAt)
-          ? { retention: 'recycle-bin' } : {}),
+        ...(collection === 'notes' && (record.deleted || record.deletedAt) ? { retention: 'recycle-bin' } : {}),
         reasonCode: 'ATTACHMENT_REFERENCED'
       });
     }
@@ -78,13 +89,16 @@ export function inspectAttachmentDeletion(attachmentId, state) {
 
 export async function loadPostgresAttachmentReferenceState(db) {
   const entries = await Promise.all(
-    REFERENCE_COLLECTIONS.map(async (collection) => {
+    REFERENCE_COLLECTIONS.map(async collection => {
       const model = POSTGRES_MODELS[collection];
       if (!db[model]?.findMany) {
         throw new TypeError(`Attachment reference scan requires ${model}.findMany`);
       }
       const rows = await db[model].findMany();
-      return [collection, collection === 'knowledgeArtifactProvenance' ? rows.map(row => row.payload) : rows];
+      return [
+        collection,
+        ['knowledgeArtifactProvenance', 'pdfAnnotations'].includes(collection) ? rows.map(row => row.payload) : rows
+      ];
     })
   );
   return Object.fromEntries(entries);

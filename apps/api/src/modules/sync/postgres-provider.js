@@ -24,6 +24,7 @@ const collections = {
   notes: ['note', 'mapNote'],
   noteVersions: ['noteVersion', 'mapNoteVersion'],
   attachments: ['attachment', 'mapAttachment'],
+  pdfAnnotations: ['pdfAnnotation', 'mapPdfAnnotation'],
   contentAnnotations: ['contentAnnotation', 'mapAnnotation'],
   knowledgeItems: ['knowledgeItem', 'mapKnowledgeItem'],
   knowledgeEvidence: ['knowledgeEvidence', 'mapKnowledgeEvidence'],
@@ -49,7 +50,7 @@ async function readCollection(db, collection, ids) {
   return rows.map(row => (mapper ? maps[mapper](row) : JSON.parse(JSON.stringify(row))));
 }
 
-async function snapshot(db) {
+export async function readPostgresPdfSnapshot(db) {
   const result = {};
   for (const collection of Object.keys(collections)) result[collection] = await readCollection(db, collection);
   return result;
@@ -76,7 +77,7 @@ async function scopedSnapshot(db, before, touched) {
 
 // 校验开关：同时全表读取并与按 ID 重建的后像逐项比对，供测试证明两者等价。
 async function assertScopedMatchesFull(db, scoped) {
-  const full = await snapshot(db);
+  const full = await readPostgresPdfSnapshot(db);
   for (const collection of Object.keys(collections)) {
     const left = new Map(scoped[collection].map(item => [item.id, JSON.stringify(item)]));
     const right = new Map(full[collection].map(item => [item.id, JSON.stringify(item)]));
@@ -117,7 +118,7 @@ export function createPostgresSyncRuntime(client, ownerId) {
     return client.$transaction(
       async tx => {
         await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(1266775634, 32)::text');
-        const before = await snapshot(tx);
+        const before = await readPostgresPdfSnapshot(tx);
         const row = await tx.syncJournal.findUnique({ where: { ownerId } });
         // version 随每次写入递增；after 仅在其后无写入时可复用，避免同一事务重复全表读取。
         const context = { tx, before, journal: loadJournal(row?.payload, before), version: 0, after: null };
@@ -129,7 +130,7 @@ export function createPostgresSyncRuntime(client, ownerId) {
               ? before
               : context.after?.version === context.version
                 ? context.after.state
-                : await snapshot(tx);
+                : await readPostgresPdfSnapshot(tx);
           const noteIds = changedHistoryNoteIds(before, after);
           if (!context.touched && noteIds.size) {
             const references = await historyReferences(tx);
@@ -257,7 +258,7 @@ export function createPostgresSyncRuntime(client, ownerId) {
             state = await scopedSnapshot(context.tx, context.before, context.touched);
             if (process.env.KNOWRA_SYNC_VERIFY_SCOPED_AFTER === '1') await assertScopedMatchesFull(context.tx, state);
           }
-          state ??= await snapshot(context.tx);
+          state ??= await readPostgresPdfSnapshot(context.tx);
           context.after = { version: context.version, state };
           return { state, journal: appendChanges(structuredClone(context.journal), context.before, state) };
         },

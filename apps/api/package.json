@@ -23,6 +23,7 @@
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "bullmq": "^5.56.2",
+    "fflate": "0.8.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "0.35.5"

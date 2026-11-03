@@ -340,14 +340,14 @@ test('训练冲突可采用本地并保留恢复记录，旧编辑不能自动�
   assert.equal(b.store.state.questions[0].deletedAt, null);
 });
 
-test('训练契约沿用schema8，双方旧能力拒绝，原始冻结请求哈希不改写', async t => {
+test('训练契约升级schema9，双方旧能力拒绝，原始冻结请求哈希不改写', async t => {
   const cloud = await fixture(t);
   const a = cloud.device('a');
   await a.connect();
   assets(a.knowledge);
   const frozen = nextEntityUpload(a.store);
   const contract = syncContract();
-  assert.equal(contract.entitySchemaVersion, 8);
+  assert.equal(contract.entitySchemaVersion, 9);
   assert(contract.capabilities.includes('training-assets-v1'));
   assert.throws(
     () =>

@@ -1,0 +1,187 @@
+.reader {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  align-self: stretch;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  color: var(--text-primary);
+  background: var(--surface-page);
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.title {
+  flex: 1;
+  min-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pageField {
+  width: 70px;
+}
+.pageField label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.search {
+  flex: 1;
+  min-width: 180px;
+  max-width: 360px;
+}
+.feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.feedback [role='alert'] {
+  color: var(--text-primary);
+}
+.workspace {
+  display: flex;
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.viewport {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: var(--surface-sunken);
+}
+.viewport[data-region-tool] {
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.viewport[data-region-tool] :global(.textLayer) {
+  pointer-events: none;
+}
+.annotations,
+.outline {
+  flex: 0 0 290px;
+  width: 290px;
+  overflow: auto;
+  min-height: 0;
+  padding: 12px;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--surface-page);
+}
+.outline {
+  flex-basis: 210px;
+  width: 210px;
+  border-right: 1px solid var(--border-subtle);
+  border-left: 0;
+}
+.annotations h2,
+.outline h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.outlineItem {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  text-align: left;
+}
+.markCard {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  padding: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.markCard[data-selected] {
+  border-color: var(--accent-text);
+}
+.markJump {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+.markJump span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.markJump strong {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: pre-wrap;
+  max-height: 130px;
+  overflow: auto;
+}
+.markCard p {
+  white-space: pre-wrap;
+  margin: 0;
+  font-size: 13px;
+}
+.reader :global([data-knowra-pdf-overlay] rect) {
+  fill: var(--pdf-mark-important);
+  fill-opacity: 0.28;
+  stroke: none;
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='question']) {
+  fill: var(--pdf-mark-question);
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='supplement']) {
+  fill: var(--pdf-mark-supplement);
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='pitfall']) {
+  fill: var(--pdf-mark-pitfall);
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='temporary']) {
+  fill: var(--pdf-mark-temporary);
+}
+.reader :global([data-knowra-pdf-overlay] [data-type='region']) {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5px;
+  fill-opacity: 0.1;
+}
+.reader :global([data-knowra-pdf-overlay] [data-selected]) {
+  stroke: var(--text-primary);
+  stroke-width: 1.5px;
+}
+@media (max-width: 760px) {
+  .annotations,
+  .outline {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 10;
+    width: min(310px, 90%);
+    box-shadow: var(--shadow-panel);
+  }
+  .outline {
+    left: 0;
+    right: auto;
+  }
+  .toolbar {
+    gap: 4px;
+    padding: 6px;
+  }
+}

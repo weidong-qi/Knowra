@@ -88,17 +88,19 @@ export function mapTagGroup(row) {
   };
 }
 
+export const mapPdfAnnotation = row => (row ? structuredClone(row.payload) : null);
+
 export function mapNote(row) {
   if (!row) return null;
-  const internalLinks = Array.isArray(row.internalLinks)
-    ? row.internalLinks
-    : [];
+  const internalLinks = Array.isArray(row.internalLinks) ? row.internalLinks : [];
   return {
     id: row.id,
     spaceId: row.spaceId,
     folderId: row.folderId ?? null,
     title: row.title,
     rawMarkdown: row.rawMarkdown,
+    contentKind: row.contentKind ?? 'markdown',
+    pdfSource: row.pdfSource ?? null,
     annotationStructure: row.annotationStructure ?? null,
     plainText: row.plainText ?? '',
     internalLinks: [...internalLinks],
@@ -110,7 +112,7 @@ export function mapNote(row) {
     deleted: row.deletedAt !== null && row.deletedAt !== undefined,
     folderDeletionPackageId: row.folderDeletionPackageId ?? null,
     deletionPackage: row.deletionPackage ?? null,
-    tagIds: (row.noteTags ?? []).map((relation) => relation.tagId),
+    tagIds: (row.noteTags ?? []).map(relation => relation.tagId),
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt)
   };
@@ -247,7 +249,8 @@ export function mapExamProfile(row) {
     scope: Array.isArray(row.scope) ? [...row.scope] : [],
     language: row.language ?? 'zh-CN',
     commonQuestionTypes: Array.isArray(row.commonQuestionTypes) ? [...row.commonQuestionTypes] : [],
-    difficultyProfile: row.difficultyProfile && typeof row.difficultyProfile === 'object' ? structuredClone(row.difficultyProfile) : {},
+    difficultyProfile:
+      row.difficultyProfile && typeof row.difficultyProfile === 'object' ? structuredClone(row.difficultyProfile) : {},
     archivedAt: row.archivedAt ? toIso(row.archivedAt) : null,
     deletedAt: row.deletedAt ? toIso(row.deletedAt) : null,
     createdAt: toIso(row.createdAt),
@@ -280,7 +283,8 @@ export function mapQuestion(row) {
     questionType: row.questionType,
     stem: row.stem ?? '',
     options: row.options === null || row.options === undefined ? null : structuredClone(row.options),
-    referenceAnswer: row.referenceAnswer === null || row.referenceAnswer === undefined ? null : structuredClone(row.referenceAnswer),
+    referenceAnswer:
+      row.referenceAnswer === null || row.referenceAnswer === undefined ? null : structuredClone(row.referenceAnswer),
     rubric: row.rubric === null || row.rubric === undefined ? null : structuredClone(row.rubric),
     explanation: row.explanation ?? '',
     difficulty: row.difficulty ?? null,
@@ -323,14 +327,15 @@ export function mapQuestionSource(row) {
 
 export function buildNoteData(note) {
   const rawMarkdown = String(note.rawMarkdown ?? '');
-  const contentHash = note.contentHash
-    ?? crypto.createHash('sha256').update(rawMarkdown).digest('hex');
+  const contentHash = note.contentHash ?? crypto.createHash('sha256').update(rawMarkdown).digest('hex');
   return {
     id: note.id,
     spaceId: note.spaceId,
     folderId: note.folderId ?? null,
     title: note.title,
     rawMarkdown,
+    contentKind: note.contentKind ?? 'markdown',
+    pdfSource: note.pdfSource ?? Prisma.DbNull,
     annotationStructure: note.annotationStructure ?? Prisma.DbNull,
     plainText: String(note.plainText ?? ''),
     internalLinks: Array.isArray(note.internalLinks) ? note.internalLinks : [],
