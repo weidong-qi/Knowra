@@ -30,9 +30,10 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 8px 8px;
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-color: transparent transparent;
   scrollbar-width: thin;
 }
+.scrollBody:hover { scrollbar-color: var(--border-strong) transparent; }
 
 .section { padding-top: 14px; }
 .section:first-child { padding-top: 8px; }
@@ -71,7 +72,7 @@
 .sectionToggle:hover { color: var(--text-primary); }
 .sectionChevron { display: inline-flex; transition: transform var(--motion-fast) var(--motion-ease); }
 .sectionChevron[data-expanded] { transform: rotate(90deg); }
-.sectionBody, .folderTree { display: grid; gap: 2px; }
+.sectionBody, .folderTree { display: grid; gap: 1px; }
 .sectionBody[hidden] { display: none; }
 
 .folderRow, .documentRow {
@@ -89,8 +90,8 @@
   transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 
-.folderRow { min-height: 34px; grid-template-columns: 18px minmax(0, 1fr) auto; padding: 4px 8px 4px 2px; }
-.documentRow { min-height: 34px; grid-template-columns: 18px minmax(0, 1fr); padding: 4px 8px; }
+.folderRow { min-height: 30px; grid-template-columns: 18px minmax(0, 1fr) auto; padding: 4px 8px 4px 2px; }
+.documentRow { min-height: 30px; grid-template-columns: 18px minmax(0, 1fr); padding: 4px 8px; }
 .folderRow > svg { color: var(--accent); }
 .documentRow > svg { color: var(--text-muted); }
 .folderRow:hover, .documentRow:hover { background: var(--surface-hover); color: var(--text-primary); }
@@ -114,7 +115,7 @@
 .documentRow[aria-current='page'] > svg { color: var(--text-secondary); }
 .folderRow small { color: var(--text-muted); font: 400 13px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
 .libraryRow { margin-bottom: 4px; }
-.entryDragArea { min-width: 0; width: 100%; }
+.entryDragArea { position: relative; min-width: 0; width: 100%; }
 .entryDragArea[draggable='true'] .folderRow, .entryDragArea[draggable='true'] .documentRow { cursor: grab; }
 .entryDragArea[draggable='true']:active .folderRow, .entryDragArea[draggable='true']:active .documentRow { cursor: grabbing; }
 
@@ -129,13 +130,13 @@
 
 .folderToggle {
   width: 18px;
-  min-height: 34px;
+  min-height: 30px;
   display: grid;
   place-items: center;
   border: 0;
   border-radius: var(--radius-control);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--ni-ink-4, var(--border-control));
 }
 
 .folderToggle:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
@@ -209,3 +210,40 @@
 @media (prefers-reduced-motion: reduce) { .trashLid { transition: none; } }
 
 .sidebarContent[data-ni-theme="mono"] .tags { --ink-danger: var(--ni-ink-2); --ink-danger-soft: var(--ni-fill-2); }
+
+/* 区块标题右侧的「＋」「⋮」等操作：平时灰，悬停才变深，不抢文件夹与标签本身。 */
+.sectionHeader button:not(.sectionToggle) { color: var(--ni-ink-3, var(--text-muted)); }
+.sectionHeader button:not(.sectionToggle):hover:not(:disabled) { color: var(--text-primary); }
+
+/* 悬停操作：行右侧淡入「＋」「…」，文件夹的数量让位；键盘聚焦到行内时同样出现。 */
+.rowActions {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 6px;
+  transform: translateY(-50%);
+  border-radius: var(--radius-control);
+  background: var(--surface-hover);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--motion-ease);
+}
+.entryDragArea:hover > .rowActions,
+.entryDragArea:focus-within > .rowActions,
+.rowActions:has([aria-expanded='true']) {
+  opacity: 1;
+  pointer-events: auto;
+}
+.folderRow small { transition: opacity var(--motion-fast) var(--motion-ease); }
+.entryDragArea:hover .folderRow small,
+.entryDragArea:focus-within .folderRow small,
+.entryDragArea:has([aria-expanded='true']) .folderRow small { opacity: 0; }
+.rowActions button { color: var(--ni-ink-3, var(--text-muted)); }
+.rowActions button:hover:not(:disabled) { color: var(--text-primary); }
+@media (hover: none) {
+  .rowActions { opacity: 1; pointer-events: auto; }
+  .folderRow small { opacity: 0; }
+}

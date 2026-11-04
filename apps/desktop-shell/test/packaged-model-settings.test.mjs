@@ -18,7 +18,8 @@ test('打包 Mac 模型设置经原生 IPC 保存、重启、保留、替换和�
     app = await launchTestApplication(electron, { executablePath, env: { ...process.env, KNOWRA_DESKTOP_SMOKE_DIR: directory }, timeout: 20000 });
     page = await app.firstWindow();
     await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('button', { name: '设置', exact: true }).click();
+    await page.getByRole('button', { name: '账户与设置', exact: true }).click();
+    await page.getByRole('menuitem', { name: '设置', exact: true }).click();
     await page.getByRole('button', { name: /模型接入/ }).click();
     await expect(page.getByRole('heading', { name: '模型接入', exact: true })).toBeVisible();
   };

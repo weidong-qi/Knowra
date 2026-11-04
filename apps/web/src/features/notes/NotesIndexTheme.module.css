@@ -1,6 +1,6 @@
 /* 定稿的完整装饰与胶囊色板，由应用外壳及浮层共同继承。 */
 .theme {
---ni-chrome:#eceef1;
+--ni-chrome:#f1f2f5;
   --ni-page:#fefefe;
   --ni-ink:#17181b; --ni-ink-2:#686d76; --ni-ink-3:#8a8f99; --ni-ink-4:#b4b9c6;
   --ni-body:#2e323a; --ni-ink-3-text:#6d727d;
@@ -16,7 +16,7 @@
   --ni-accent-soft:color-mix(in srgb,var(--ni-accent) 9%,#fff);
   --ni-accent-line:color-mix(in srgb,var(--ni-accent) 24%,#fff);
   --ni-st-active:#ffb81f; --ni-st-done:#22c55e;
-  --ni-ambient:color-mix(in srgb,var(--ni-accent) 11%,transparent);
+  --ni-ambient:transparent;
   --ni-mark:color-mix(in srgb,var(--ni-accent) 22%,transparent);
   --ni-fav:#ffbf1f; --ni-fav-line:#f2a900;
   --ni-toast-act:#ffb98f;
@@ -31,13 +31,13 @@
   --ni-ring:rgba(24,30,48,.08); --ni-ring-2:rgba(24,30,48,.22); --ni-ring-3:rgba(24,30,48,.4);
   --ni-fill-1:rgba(24,30,48,.045); --ni-fill-2:rgba(24,30,48,.06); --ni-fill-3:rgba(24,30,48,.05); --ni-fill-4:rgba(24,30,48,.014);
   --ni-sw-off:rgba(24,30,48,.18); --ni-scroll:rgba(24,30,48,.15); --ni-hair:rgba(24,30,48,.13);
-  --ni-sheen:rgba(255,255,255,.32); --ni-hl-c:#fff; --ni-sel-hover:color-mix(in srgb,var(--ni-accent) 12%,var(--ni-page));
+  --ni-sheen:transparent; --ni-hl-c:#fff; --ni-sel-hover:color-mix(in srgb,var(--ni-accent) 12%,var(--ni-page));
   --ni-danger:#c23a3a; --ni-danger-soft:#fbeeee; --ni-danger-ring:#e5a3a3;
   /* 浮卡靠 .10 细描边立住，模糊阴影只保留约 1/4 强度，避免发飘。 */
-  --ni-sh-page:inset 0 1px 0 var(--ni-ctx-hl),0 0 0 1px rgba(24,30,48,.10),0 2px 6px -2px rgba(24,30,48,.04),0 6px 18px -6px rgba(24,30,48,.04),0 22px 48px -18px rgba(24,30,48,.06);
-  --ni-sh-ctx:var(--sidebar-highlight),0 0 0 1px var(--ni-ctx-border),0 2px 6px -2px rgba(24,30,48,.04),0 12px 28px -16px rgba(24,30,48,.075);
+  --ni-sh-page:0 0 0 1px rgba(24,30,48,.09);
+  --ni-sh-ctx:0 0 0 1px rgba(24,30,48,.08);
   --ni-sh-pop:inset 0 1px 0 var(--ni-ctx-hl),0 0 0 1px var(--ni-ring),0 2px 4px rgba(24,30,48,.05),0 10px 24px -8px rgba(24,30,48,.14),0 28px 64px -14px rgba(24,30,48,.28);
-  --ni-sh-card:0 0 0 1px rgba(24,30,48,.07),0 1px 2px rgba(24,30,48,.04);
+  --ni-sh-card:0 0 0 1px rgba(24,30,48,.08);
   --ni-ui:"Inter","PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
   --ni-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --ni-ease:cubic-bezier(.4,0,.2,1);
@@ -110,7 +110,7 @@ color-scheme:dark;
   --ni-accent:#f26b1d; --ni-accent-ink:#ff9a62;
   --ni-accent-soft:color-mix(in srgb,var(--ni-accent) 15%,var(--ni-page)); --ni-accent-line:color-mix(in srgb,var(--ni-accent) 38%,var(--ni-page));
   --ni-st-active:#ffc233; --ni-st-done:#34d27b;
-  --ni-ambient:color-mix(in srgb,var(--ni-accent) 9%,transparent);
+  --ni-ambient:transparent;
   --ni-mark:color-mix(in srgb,var(--ni-accent) 32%,transparent);
   --ni-fav:#ffc233; --ni-fav-line:#ffc233; --ni-toast-act:#ff9a62; --ni-btn-on-accent:#fff;
   --ni-danger:#ef6a6a; --ni-danger-soft:rgba(239,106,106,.13); --ni-danger-ring:#8c4444;
@@ -123,10 +123,10 @@ color-scheme:dark;
   --ni-fill-1:rgba(255,255,255,.055); --ni-fill-2:rgba(255,255,255,.08); --ni-fill-3:rgba(255,255,255,.07); --ni-fill-4:rgba(255,255,255,.02);
   --ni-sw-off:rgba(255,255,255,.2); --ni-scroll:rgba(255,255,255,.16); --ni-hair:rgba(255,255,255,.1);
   --ni-sheen:rgba(255,255,255,.03); --ni-hl-c:rgba(255,255,255,.07);
-  --ni-sh-ctx:var(--sidebar-highlight),0 0 0 1px var(--ni-ctx-border),var(--shadow-panel-contact),0 12px 28px -16px var(--ni-ring);
-  --ni-sh-page:inset 0 1px 0 var(--ni-ctx-hl),0 0 0 1px rgba(255,255,255,.07),0 1px 2px rgba(0,0,0,.4),0 8px 24px -8px rgba(0,0,0,.55),0 22px 48px -18px rgba(0,0,0,.6);
+  --ni-sh-ctx:0 0 0 1px rgba(255,255,255,.07);
+  --ni-sh-page:0 0 0 1px rgba(255,255,255,.08);
   --ni-sh-pop:inset 0 1px 0 var(--ni-ctx-hl),0 0 0 1px rgba(255,255,255,.11),0 2px 4px rgba(0,0,0,.35),0 10px 24px -8px rgba(0,0,0,.5),0 28px 64px -14px rgba(0,0,0,.75);
-  --ni-sh-card:0 0 0 1px rgba(255,255,255,.08),0 1px 2px rgba(0,0,0,.3);
+  --ni-sh-card:0 0 0 1px rgba(255,255,255,.08);
 }
 
 .theme[data-ni-mode="dark"] {

@@ -15,7 +15,8 @@ test('真实隔离 APP 的设置、前端文件和启动回执显示相同构建
   const app = await launchTestApplication(electron, { executablePath, env: { ...process.env, KNOWRA_DESKTOP_SMOKE_DIR: directory }, timeout: 20000 });
   t.after(async () => { await closeTestApplication(app); fs.rmSync(directory, { recursive: true, force: true }); });
   const page = await app.firstWindow();
-  await page.getByRole('button', { name: '设置', exact: true }).click();
+  await page.getByRole('button', { name: '账户与设置', exact: true }).click();
+  await page.getByRole('menuitem', { name: '设置', exact: true }).click();
   await page.getByRole('button', { name: /关于知境/ }).click();
   await expect(page.getByRole('heading', { name: '关于知境·Knowra' })).toBeVisible();
   await expect(page.getByText(info.version, { exact: true })).toBeVisible();

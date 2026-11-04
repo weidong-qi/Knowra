@@ -1,0 +1,67 @@
+/* 首页首屏：暖纸底 + 手绘涂鸦，底部浮出墨线描边的彩色便签。 */
+.hero {
+  --hero-paper: #fff6e8;
+  --doodle-ink: #2a2733;
+  --doodle-orange: #ff7a2f;
+  --doodle-yellow: #ffd23f;
+  --doodle-pink: #ff9db8;
+  --doodle-mint: #6fdcb2;
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--hero-paper);
+}
+:global([data-ni-mode='dark']) .hero {
+  --hero-paper: #1d1a24;
+  --doodle-ink: #f1e9dc;
+  --doodle-orange: #e8631f;
+  --doodle-yellow: #d9ab22;
+  --doodle-pink: #c65b7e;
+  --doodle-mint: #2fa57c;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.kicker {
+  position: absolute;
+  z-index: 1;
+  top: clamp(20px, 4vh, 40px);
+  left: clamp(20px, 4vw, 48px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font: 500 var(--font-size-meta) / 1.5 var(--font-ui);
+}
+.kickerPill {
+  padding: 3px 12px;
+  border: 2px solid var(--doodle-ink);
+  border-radius: var(--radius-pill);
+  background: var(--hero-paper);
+  color: var(--text-primary);
+}
+.version {
+  color: var(--text-secondary);
+}
+
+/* 底部：便签卡片，部分被页面底边裁切，像从下方翻出来 */
+.stage {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  padding: clamp(160px, 38vh, 340px) clamp(16px, 4vw, 64px) 0;
+}

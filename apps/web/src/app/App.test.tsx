@@ -89,7 +89,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     );
 
     // 等待 loadWorkspace 完成（冻结主页的第一个工作台出现即代表已就绪）
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     expect(api.listKnowledgeSpaces).toHaveBeenCalledTimes(1);
     expect(api.loadWorkspaceResources).toHaveBeenCalledTimes(1);
 
@@ -101,12 +101,12 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '工作区状态' })).toBeInTheDocument();
 
-    expect(within(rail).queryByRole('button', { name: '全局搜索' })).not.toBeInTheDocument();
+    expect(within(rail).getByRole('button', { name: '全局搜索' })).toBeInTheDocument();
     expect(within(rail).queryByRole('button', { name: '新建笔记' })).not.toBeInTheDocument();
     expect(within(rail).queryByRole('button', { name: '组件库' })).not.toBeInTheDocument();
 
-    // 工作台计数来自真实 workspace。
-    expect(screen.getByText('1 篇笔记')).toBeInTheDocument();
+    // 首屏「最近编辑」便签来自真实 workspace：当前空间只有 1 篇笔记。
+    expect(within(screen.getByRole('list', { name: '最近编辑' })).getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('shows the home with error state and retries after a failed load', async () => {
@@ -135,8 +135,8 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     await waitFor(() => {
       expect(screen.queryByText('资料加载失败')).not.toBeInTheDocument();
     });
-    // 第二轮成功：工作域卡出现
-    expect(screen.getByRole('heading', { name: '笔记工作台' })).toBeInTheDocument();
+    // 第二轮成功：首页首屏标题出现
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(api.listKnowledgeSpaces).toHaveBeenCalledTimes(2);
   });
 
@@ -197,7 +197,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         <App />
       </AppProviders>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
 
     const mobileNav = screen.getByRole('navigation', { name: '移动端模块导航' });
     fireEvent.click(within(mobileNav).getByRole('button', { name: '打开全局搜索' }));
@@ -237,7 +237,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         <App />
       </AppProviders>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
 
     fireEvent.keyDown(window, { key: 'k', metaKey: true });
     expect(await screen.findByRole('dialog', { name: '全局搜索' })).toBeInTheDocument();
@@ -275,7 +275,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         </AppProviders>
       </RouterProvider>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     let dialog = await screen.findByRole('dialog', { name: '全局搜索' });
     fireEvent.change(within(dialog).getByRole('combobox'), { target: { value: '超过摘要的中文' } });
@@ -313,7 +313,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         <App />
       </AppProviders>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     fireEvent.keyDown(window, { key: 'k', metaKey: true });
     const dialog = await screen.findByRole('dialog', { name: '全局搜索' });
     expect(within(dialog).getByText('Note')).toBeInTheDocument();
@@ -368,15 +368,17 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         <App />
       </AppProviders>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
 
     const rail = screen.getByRole('navigation', { name: '工作域导航' });
     const training = within(rail).getByRole('button', { name: /试题/ });
     expect(training).toBeEnabled();
     expect(within(rail).getByRole('button', { name: /知识/ })).toBeEnabled();
-    expect(within(rail).getByRole('button', { name: '设置' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '通知（尚未上线）' })).toBeDisabled();
-    expect(within(rail).getByRole('button', { name: /执行/ })).toBeDisabled();
+    expect(within(rail).getByRole('button', { name: '账户与设置' })).toBeEnabled();
+    // 未上线的入口不占位：执行、通知、我的都不出现在左栏。
+    expect(within(rail).queryByRole('button', { name: /执行/ })).not.toBeInTheDocument();
+    expect(within(rail).queryByRole('button', { name: /通知/ })).not.toBeInTheDocument();
+    expect(within(rail).queryByRole('button', { name: /我的/ })).not.toBeInTheDocument();
   });
 
   it('opens settings and applies local preferences', async () => {
@@ -401,8 +403,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       </RouterProvider>
     );
     fireEvent.click(
-      within(screen.getByRole('navigation', { name: '工作域导航' })).getByRole('button', { name: '设置' })
+      within(screen.getByRole('navigation', { name: '工作域导航' })).getByRole('button', { name: '账户与设置' })
     );
+    fireEvent.click(await screen.findByRole('menuitem', { name: '设置' }));
     expect(navigate).toHaveBeenCalledWith('/settings');
     view.unmount();
 
@@ -518,7 +521,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         <App />
       </AppProviders>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
 
     const rail = screen.getByRole('navigation', { name: '工作域导航' });
     // 主页不属于任何工作域的子页面：左轨所有模块入口都应为非激活态。
@@ -541,7 +544,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         </AppProviders>
       </RouterProvider>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
 
     const rail = screen.getByRole('navigation', { name: '工作域导航' });
     fireEvent.click(within(rail).getByRole('button', { name: '资料' }));
@@ -722,7 +725,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
           </AppProviders>
         </RouterProvider>
       );
-      await screen.findByRole('heading', { name: '笔记工作台' });
+      await screen.findByRole('heading', { level: 1 });
       act(() => store.getState().selectNote('note-1'));
 
       const titlebar = screen.getByLabelText(native ? 'Mac 窗口标题栏' : '全局顶栏');
@@ -803,7 +806,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
         <App />
       </AppProviders>
     );
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
 
     fireEvent.click(screen.getByRole('button', { name: '工作区状态' }));
     const breadcrumb = await screen.findByLabelText('工作区位置');
@@ -959,7 +962,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
 
   it('读取未知 ID 的完整详情并打开实际编辑页面，无需重载摘要列表', async () => {
     const { api, store, navigate } = setup();
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     expect(store.getState().serverData.notes).toEqual([]);
     await searchAndSelect();
     expect(await screen.findByRole('heading', { name: detail().title })).toBeInTheDocument();
@@ -979,7 +982,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
     const { api, store, navigate } = setup();
     const pending = deferredDetail();
     vi.mocked(api.getNote).mockReturnValueOnce(pending.promise);
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     const { dialog, input } = await searchAndSelect();
     expect(await within(dialog).findByText('正在载入笔记…')).toBeInTheDocument();
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -1003,7 +1006,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
   ])('%s显示错误，不导航、不伪造正文', async (_, override, message) => {
     const { api, store, navigate } = setup();
     vi.mocked(api.getNote).mockResolvedValue({ ...detail(), ...override } as Note);
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     const { dialog } = await searchAndSelect();
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(String(message));
     expect(store.getState().serverData.notes).toEqual([]);
@@ -1017,7 +1020,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
       const { api, store, navigate } = setup();
       const pending = deferredDetail();
       vi.mocked(api.getNote).mockReturnValueOnce(pending.promise);
-      await screen.findByRole('heading', { name: '笔记工作台' });
+      await screen.findByRole('heading', { level: 1 });
       const { dialog, input } = await searchAndSelect();
       await within(dialog).findByText('正在载入笔记…');
       if (change === '关闭') fireEvent.click(within(dialog).getByRole('button', { name: '关闭对话框' }));
@@ -1047,7 +1050,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
     const first = deferredDetail(),
       second = deferredDetail();
     vi.mocked(api.getNote).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     const { dialog, input } = await searchAndSelect();
     await within(dialog).findByText('正在载入笔记…');
     fireEvent.change(input, { target: { value: '目标 B' } });
@@ -1066,7 +1069,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
 
   it('保留已有导航 Guard：被阻止时不改变选中项或读取未知详情', async () => {
     const { api, store, navigate } = setup();
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     const removeGuard = registerNavigationGuard(() => false);
     try {
       const before = store.getState().navigation;
@@ -1082,7 +1085,7 @@ describe('CmdK 打开尚未预载的服务端笔记', () => {
 
   it('详情完成与选择之间出现新资料快照时，不把已失效笔记打开为空页面', async () => {
     const { store, navigate } = setup();
-    await screen.findByRole('heading', { name: '笔记工作台' });
+    await screen.findByRole('heading', { level: 1 });
     const load = store.getState().loadCommandNote;
     store.setState({
       loadCommandNote: async input => {

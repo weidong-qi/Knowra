@@ -12,12 +12,14 @@ import {
   NoteIcon,
   QuestionIcon,
   SparkIcon,
+  SearchIcon,
   SettingsIcon,
   UserIcon,
   type KnowraIconProps
 } from '../components/icons/knowra';
 import type { WorkDomain } from '../store/types';
 import { cx } from '../components/ui/classnames';
+import { Menu, MenuItem, MenuPopover, MenuTrigger } from '../components/ui/overlay/Menu';
 import styles from './ModuleRail.module.css';
 
 export interface RailItem {
@@ -50,7 +52,13 @@ export const PRIMARY_DOMAINS: readonly RailItem[] = [
     Icon: QuestionIcon,
     available: true
   },
-  { id: 'task-workspaces', label: '任务', description: '协作文档、任务执行与人工验收。', Icon: CheckIcon, available: true },
+  {
+    id: 'task-workspaces',
+    label: '任务',
+    description: '协作文档、任务执行与人工验收。',
+    Icon: CheckIcon,
+    available: true
+  },
   {
     id: 'learning',
     label: '执行',
@@ -74,6 +82,7 @@ export interface ModuleRailProps {
   activeDomain: WorkDomain | null;
   onSelect(domain: WorkDomain): void;
   onReturnHome(): void;
+  onOpenSearch?(): void;
   onOpenNotifications?(): void;
   onOpenSettings?(): void;
   onOpenAssistant?(): void;
@@ -81,11 +90,15 @@ export interface ModuleRailProps {
   isAssistantActive?: boolean;
 }
 
+/** 左栏只展示已上线的工作域；未上线的入口（执行、我的等）在上线前不占位。 */
+const AVAILABLE_DOMAINS = PRIMARY_DOMAINS.filter(item => item.available);
+
 export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function ModuleRail(
   {
     activeDomain,
     onSelect,
     onReturnHome,
+    onOpenSearch,
     onOpenNotifications,
     onOpenSettings,
     onOpenAssistant,
@@ -95,65 +108,81 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
   ref
 ) {
   return (
-    <nav
-      ref={ref}
-      className={styles.rail}
-      aria-label="工作域导航"
-    >
-      <PressableButton
-        type="button"
-        className={styles.railItem}
-        aria-label="知境工作区"
-        title="知境工作区"
-        onPress={onReturnHome}
-      >
-        <span className={styles.railIcon}><HomeIcon size={21} /></span>
-      </PressableButton>
+    <nav ref={ref} className={styles.rail} aria-label="工作域导航">
+      <div className={styles.railGroup} role="group" aria-label="全局">
+        <PressableButton
+          type="button"
+          className={styles.railItem}
+          aria-label="知境工作区"
+          title="知境工作区"
+          onPress={onReturnHome}
+        >
+          <span className={styles.railIcon}>
+            <HomeIcon size={21} />
+          </span>
+        </PressableButton>
+        {onOpenSearch ? (
+          <PressableButton
+            type="button"
+            className={styles.railItem}
+            aria-label="全局搜索"
+            title="全局搜索（Ctrl+K）"
+            onPress={onOpenSearch}
+          >
+            <span className={styles.railIcon}>
+              <SearchIcon size={21} />
+            </span>
+          </PressableButton>
+        ) : null}
+      </div>
+
+      <span className={styles.railDivider} aria-hidden="true" />
 
       <div className={styles.railGroup} role="group" aria-label="主要工作域">
-        {PRIMARY_DOMAINS.map((item) => (
-          <RailButton
-            key={item.id}
-            item={item}
-            isActive={item.id === activeDomain}
-            onClick={() => onSelect(item.id)}
-          />
+        {AVAILABLE_DOMAINS.map(item => (
+          <RailButton key={item.id} item={item} isActive={item.id === activeDomain} onClick={() => onSelect(item.id)} />
         ))}
       </div>
 
       <div className={cx(styles.railGroup, styles.railGroupUtility)} role="group" aria-label="工具">
-        <PressableButton type="button" className={styles.railItem} onPress={onOpenAssistant}
-          aria-label="AI 助手" title="AI 助手" aria-current={isAssistantActive ? 'page' : undefined}
-          isDisabled={!onOpenAssistant}>
-          <span className={styles.railIcon}><SparkIcon size={21} /></span>
-        </PressableButton>
-        <RailActionButton
-          label="通知"
-          title="通知：尚未上线"
-          Icon={BellIcon}
-          onClick={onOpenNotifications}
-        />
         <PressableButton
           type="button"
           className={styles.railItem}
-          onPress={onOpenSettings}
-          aria-current={isSettingsActive ? 'page' : undefined}
-          aria-label={onOpenSettings ? '设置' : '设置（尚未上线）'}
-          title={onOpenSettings ? '设置' : '设置：尚未上线'}
-          isDisabled={!onOpenSettings}
+          onPress={onOpenAssistant}
+          aria-label="AI 助手"
+          title="AI 助手"
+          aria-current={isAssistantActive ? 'page' : undefined}
+          isDisabled={!onOpenAssistant}
         >
           <span className={styles.railIcon}>
-            <SettingsIcon size={21} />
+            <SparkIcon size={21} />
           </span>
         </PressableButton>
-        {UTILITY_ITEMS.map((item) => (
-          <RailButton
-            key={item.id}
-            item={item}
-            isActive={item.id === activeDomain}
-            onClick={() => onSelect(item.id)}
-          />
-        ))}
+        {onOpenNotifications ? (
+          <RailActionButton label="通知" title="通知" Icon={BellIcon} onClick={onOpenNotifications} />
+        ) : null}
+        {onOpenSettings ? (
+          <MenuTrigger>
+            <PressableButton
+              type="button"
+              className={styles.railItem}
+              aria-label="账户与设置"
+              title="账户与设置"
+              aria-current={isSettingsActive ? 'page' : undefined}
+            >
+              <span className={styles.railIcon}>
+                <UserIcon size={21} />
+              </span>
+            </PressableButton>
+            <MenuPopover placement="right bottom">
+              <Menu ariaLabel="账户与设置" onAction={key => (key === 'settings' ? onOpenSettings() : undefined)}>
+                <MenuItem id="settings" icon={<SettingsIcon size={16} />}>
+                  设置
+                </MenuItem>
+              </Menu>
+            </MenuPopover>
+          </MenuTrigger>
+        ) : null}
       </div>
     </nav>
   );

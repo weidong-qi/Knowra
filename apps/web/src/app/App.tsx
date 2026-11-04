@@ -248,7 +248,7 @@ export function App() {
       contextSidebar={isNotesIndex || isNoteEditor ? (
         <NotesContextSidebar onOpenNote={openNote} onOpenIndex={openNotesIndex} onOpenSearch={() => setSearchOpen(true)} />
       ) : undefined}
-      stageMode={isNoteEditor || isNotesIndex || isTagManager || isSettingsActive || isAssistantActive || isKnowledgeWorkspace || routeDomain === 'training' || routeDomain === 'task-workspaces' ? 'workspace' : 'default'}
+      stageMode={isNoteEditor || isNotesIndex || isTagManager || isSettingsActive || isAssistantActive || isKnowledgeWorkspace || routeDomain === 'training' || routeDomain === 'task-workspaces' || isHome ? 'workspace' : 'default'}
       desktopTitlebarEditor={isNoteEditor && Boolean(editorNote)}
       desktopTitlebarTabs={openNoteTabs.length > 0 ? <EditorTabs
         notes={openNoteTabs}

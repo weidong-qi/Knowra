@@ -20,7 +20,9 @@ for (const path of paths)
   test(`V5 AI/设置表面使用主题令牌：${path}`, () => {
     const css = readFileSync(resolve(root, path), 'utf8');
     assert.doesNotMatch(css, /#[\da-f]{3,8}\b|rgba?\(/i, '业务页面不内嵌主题颜色');
-    assert.doesNotMatch(css, /box-shadow\s*:\s*\d+px\s+\d+px\s+0\s/, '不保留偏移硬阴影');
+    // 手绘首页的纸张便签保留墨线投影；其他表面继续禁止旧版偏移硬阴影。
+    const surfaces = path === 'views/HomeView.module.css' ? css.replace(/\.note\s*\{[^}]*\}/g, '') : css;
+    assert.doesNotMatch(surfaces, /box-shadow\s*:\s*\d+px\s+\d+px\s+0\s/, '不保留偏移硬阴影');
     assert.doesNotMatch(css, /var\(--ink(?:-|\))/, '本批样式使用明确语义令牌');
   });
 test('Markdown 代码字体与危险预算提示保留内容语义', () => {

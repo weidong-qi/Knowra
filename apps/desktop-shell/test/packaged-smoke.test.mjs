@@ -24,7 +24,7 @@ test('打包应用独立启动，隔离资料库正文在立即退出后落盘�
   });
   assert(result.id);
   await page.reload();
-  await page.getByRole('article', { name: '继续上次编辑', exact: true }).getByRole('button', { name: '继续编辑 打包工程检查', exact: true }).click();
+  await page.getByRole('list', { name: '最近编辑', exact: true }).getByRole('button', { name: '继续编辑 打包工程检查', exact: true }).click();
   const editor = page.locator('.ProseMirror');
   await expect(editor).toContainText('原文');
   // 模拟同步/另一端只改元数据，让已打开编辑器的时间戳落后，正文基线保持一致。
@@ -70,7 +70,7 @@ test('保存失败时草稿落盘后才能退出，重启可恢复并再次正�
     return (await (await fetch('/api/knowledge/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spaceId: space.id, title: '恢复测试', rawMarkdown: '原文' }) })).json()).data;
   });
   await page.reload();
-  await page.getByRole('article', { name: '继续上次编辑', exact: true }).getByRole('button', { name: '继续编辑 恢复测试', exact: true }).click();
+  await page.getByRole('list', { name: '最近编辑', exact: true }).getByRole('button', { name: '继续编辑 恢复测试', exact: true }).click();
   await expect(page.locator('.ProseMirror')).toContainText('原文');
   await page.route(`**/api/knowledge/notes/${note.id}`, async route => {
     if (route.request().method() === 'PATCH') await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'INTERNAL_SERVER_ERROR', message: '测试保存失败' } }) });

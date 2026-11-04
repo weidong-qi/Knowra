@@ -696,7 +696,7 @@ test('V4-07 编辑器右键面板复用命令并处理二级菜单跨越与底�
   expect(
     await contextMenu.evaluate(element => Number.parseFloat(getComputedStyle(element).borderTopWidth))
   ).toBeLessThanOrEqual(1);
-  await expect(contextMenu).toHaveCSS('border-radius', '10px');
+  await expect(contextMenu).toHaveCSS('border-radius', '8px');
   const quickButtonBox = await contextMenu.getByRole('menuitem', { name: '剪切', exact: true }).boundingBox();
   // 桌面鼠标采用紧凑32px；窄屏及粗指针44px另有独立交互回归。
   await expect(contextMenu.getByRole('menuitem', { name: '剪切', exact: true })).toHaveCSS('min-height', '32px');
@@ -1845,7 +1845,7 @@ test('V4-07 重点重要等级在正文和检查器中有对应颜色', async ({
     expect(await badge.locator('..').evaluate(element => getComputedStyle(element, '::before').backgroundColor)).toBe(
       await tokenColor(card, badgeToken)
     );
-    await expect(card).toHaveCSS('border-radius', '10px');
+    await expect(card).toHaveCSS('border-radius', '8px');
     expect(await card.evaluate(element => getComputedStyle(element).boxShadow)).not.toContain('inset');
     const mark = editor.locator(`[data-annotation-id="${id}"]`);
     await expect(mark).toHaveAttribute('data-importance', markId);
