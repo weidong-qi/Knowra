@@ -12,9 +12,9 @@
   --ni-glow-dot:0 0 6px color-mix(in srgb,var(--ni-accent) 55%,transparent);
   --shadow-accent:0 0 0 1px color-mix(in srgb,var(--ni-accent) 80%,#000),0 1px 2px rgba(24,30,48,.2),inset 0 1px 0 rgba(255,255,255,.22),0 6px 14px -6px color-mix(in srgb,var(--ni-accent) 55%,transparent);
   --nav-selected-bg:linear-gradient(#ffffffb0,#ffffff65); --nav-selected-line:#dfe2e9; --nav-selected-ink:#283344; --nav-selected-shadow:0 1px 2px #21273506,inset 0 1px #fff;
-  /* 中性为底：accent 走墨色（按钮/选中/焦点），装饰色 deco 单独保留橙色（文件夹、插图、热力格）。 */
-  --ni-accent:#17181b; --ni-accent-ink:#17181b;
-  --ni-deco:#f26b1d; --ni-deco-ink:#c4510c;
+  /* 知境蓝：蓝只管选中、焦点、链接、浅底与装饰；实心按钮走墨色（--button-primary-*）；文件夹保持中性灰。 */
+  --ni-accent:#1f6bff; --ni-accent-ink:#1a68ff;
+  --ni-deco:#1f6bff; --ni-deco-ink:#1a68ff;
   --button-primary-bg:#17181b; --button-primary-hover:#2e3036; --button-primary-ink:#f7f8fa;
   --ni-accent-soft:color-mix(in srgb,var(--ni-accent) 9%,#fff);
   --ni-accent-line:color-mix(in srgb,var(--ni-accent) 24%,#fff);
@@ -48,7 +48,7 @@
 }
 
 .theme {
---ni-f-back:#f2a25f;--ni-f-1:#ffd2a6;--ni-f-2:#ff9f56
+--ni-f-back:#b4bac6;--ni-f-1:#e9ecf1;--ni-f-2:#cdd2dc
 }
 
 .theme {
@@ -110,8 +110,8 @@ color-scheme:dark;
   --ni-glow-dot:0 0 8px color-mix(in srgb,var(--ni-accent) 60%,transparent);
   --shadow-accent:inset 0 1px 0 rgba(255,255,255,.14),0 0 0 1px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.4);
   --nav-selected-bg:linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.055)); --nav-selected-line:rgba(255,255,255,.1); --nav-selected-ink:#f3f4f6; --nav-selected-shadow:0 1px 2px #21273506,inset 0 1px rgba(255,255,255,.07);
-  --ni-accent:#ececee; --ni-accent-ink:#ececee;
-  --ni-deco:#f26b1d; --ni-deco-ink:#ff9a62;
+  --ni-accent:#4584ff; --ni-accent-ink:#5b93ff;
+  --ni-deco:#4584ff; --ni-deco-ink:#5b93ff;
   --ni-accent-soft:color-mix(in srgb,var(--ni-accent) 15%,var(--ni-page)); --ni-accent-line:color-mix(in srgb,var(--ni-accent) 38%,var(--ni-page));
   --ni-st-active:#ffc233; --ni-st-done:#34d27b;
   --ni-ambient:transparent;
@@ -134,7 +134,7 @@ color-scheme:dark;
 }
 
 .theme[data-ni-mode="dark"] {
---ni-f-back:#7a4524;--ni-f-1:#c28050;--ni-f-2:#a3602e;
+--ni-f-back:#4d515b;--ni-f-1:#838896;--ni-f-2:#656a76;
 --ni-f-paper:#cfc9bf;--ni-f-paper-line:#a39b8e;--ni-f-edge:rgba(255,255,255,.2);--ni-f-shadow:rgba(0,0,0,.5)
 }
 
