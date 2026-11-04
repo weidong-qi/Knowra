@@ -190,20 +190,24 @@ export function prepareBatchState(
       collection === 'notes' &&
       old &&
       ((old.contentKind ?? 'markdown') !== (value?.contentKind ?? 'markdown') ||
-        ['attachmentId', 'sha256', 'importRequestHash'].some(
+        (['attachmentId', 'sha256', 'importRequestHash'] as const).some(
           key => old.pdfSource?.[key] !== value?.pdfSource?.[key]
         )) &&
       value
     )
       throw syncError('PDF_SOURCE_IMMUTABLE', '不能改换资料类型或 PDF 主文件。', 422);
     if (collection === 'pdfAnnotations' && old && value) {
-      const fixed = item =>
+      const fixed = (item: object) =>
         Object.fromEntries(
-          ['noteId', 'spaceId', 'attachmentId', 'sha256', 'type', 'segments', 'quoteText'].map(key => [key, item[key]])
+          ['noteId', 'spaceId', 'attachmentId', 'sha256', 'type', 'segments', 'quoteText'].map(key => [
+            key,
+            (item as Record<string, unknown>)[key]
+          ])
         );
       if (!sameEntity(collection, fixed(old), fixed(value)))
         throw syncError('PDF_SOURCE_IMMUTABLE', 'PDF 标注的原文与位置不能改换。', 422);
-      if (value.revision < old.revision) throw syncError('PDF_ANNOTATION_CONFLICT', 'PDF 标注修订不能倒退。', 409);
+      if ((value.revision ?? 0) < (old.revision ?? 0))
+        throw syncError('PDF_ANNOTATION_CONFLICT', 'PDF 标注修订不能倒退。', 409);
     }
     if (value && value.id !== id) throw syncError('SYNC_ENTITY_INVALID', '实体 ID 与操作不一致。', 422);
     if (
