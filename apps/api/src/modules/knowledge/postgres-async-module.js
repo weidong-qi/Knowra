@@ -1,5 +1,5 @@
-import { applyIdentityBindings, withIdentityBindingRefresh } from './application/annotation-identity-binding.js';
 import {
+  degradeInlineSourceEvidenceAsync,
   deriveInlineAnnotations,
   marksOnlyDependencies,
   withInlineAnnotations
@@ -185,8 +185,7 @@ export function createPostgresKnowledgeModule({
       knowledgeItemService: formalServices.knowledgeItemService,
       questionService: formalServices.questionService
     };
-    const lifecycle = deps =>
-      withIdentityBindingRefresh(createAsyncNoteDependencyLifecycle(deps), transaction.contentAnnotationRepository);
+    const lifecycle = deps => createAsyncNoteDependencyLifecycle(deps);
     return {
       noteRepository: transaction.noteRepository,
       annotationRepository: transaction.contentAnnotationRepository,
@@ -195,7 +194,8 @@ export function createPostgresKnowledgeModule({
       ...withInlineAnnotations(lifecycle(dependencies), {
         repository: transaction.contentAnnotationRepository,
         revisionRepository: transaction.annotationRevisionRepository,
-        marksOnlyLifecycle: lifecycle(marksOnlyDependencies(dependencies))
+        marksOnlyLifecycle: lifecycle(marksOnlyDependencies(dependencies)),
+        onSourceChanged: degradeInlineSourceEvidenceAsync(dependencies)
       })
     };
   }
@@ -349,6 +349,7 @@ export function createPostgresKnowledgeModule({
     'retireEvidence',
     'markEvidenceByNoteId',
     'markEvidenceByAnnotationId',
+    'reconcileEvidenceByAnnotationIds',
     'markEvidenceByNoteVersionId'
   ]) {
     knowledgeItemService[method] = (...args) =>
@@ -447,7 +448,6 @@ export function createPostgresKnowledgeModule({
       }
     });
     const scopeService = createAsyncAnnotationScopeService({
-      annotationService,
       annotationRepository: transaction.contentAnnotationRepository,
       exclusionRepository: transaction.annotationExclusionRepository,
       analysisScopeRepository: transaction.analysisScopeRepository,
@@ -465,26 +465,20 @@ export function createPostgresKnowledgeModule({
   const contentAnnotationService = {
     listAnnotationsByNote: (...args) => directAnnotationService.listAnnotationsByNote(...args),
     getAnnotation: (...args) => directAnnotationService.getAnnotation(...args),
-    .../** @type {Pick<ReturnType<typeof createAsyncContentAnnotationService>, 'createAnnotation' | 'updateAnnotation' | 'advanceRevision' | 'archiveAnnotation' | 'deleteAnnotation' | 'restoreAnnotation' | 'updateAnnotationAnchor' | 'confirmAnnotationRange' | 'markAnnotationStale' | 'markStaleForNote' | 'reconcileForNote'>} */ (
-      Object.fromEntries(
-        [
-          'createAnnotation',
-          'updateAnnotation',
-          'advanceRevision',
-          'archiveAnnotation',
-          'deleteAnnotation',
-          'restoreAnnotation',
-          'updateAnnotationAnchor',
-          'confirmAnnotationRange',
-          'markAnnotationStale',
-          'markStaleForNote',
-          'reconcileForNote'
-        ].map(method => [method, annotationMutation(method)])
-      )
+    ...Object.fromEntries(
+      [
+        'createAnnotation',
+        'updateAnnotation',
+        'archiveAnnotation',
+        'deleteAnnotation',
+        'restoreAnnotation',
+        'updateAnnotationAnchor',
+        'confirmAnnotationRange',
+        'reconcileForNote'
+      ].map(method => [method, annotationMutation(method)])
     )
   };
   const directScopeService = createAsyncAnnotationScopeService({
-    annotationService: directAnnotationService,
     annotationRepository: contentAnnotationRepository,
     exclusionRepository: annotationExclusionRepository,
     analysisScopeRepository,
@@ -513,35 +507,12 @@ export function createPostgresKnowledgeModule({
     noteVersionService,
     runTransaction: async operation =>
       runTransaction(async transaction => operation(buildNoteTransactionContext(transaction))),
-    onNoteIdentityChanged: async (note, annotationChange) => {
-      await applyIdentityBindings(
-        contentAnnotationRepository,
-        note,
-        await contentAnnotationRepository.list({ noteId: note.id, includeDeleted: true }),
-        annotationChange?.editorState
-      );
-    },
-    onNoteContentChanged: async (note, version, annotationChange) => {
-      const reconciliation = await contentAnnotationService.reconcileForNote(
-        note.id,
-        version?.contentHash ?? note.contentHash,
-        annotationChange
-      );
-      await applyIdentityBindings(
-        contentAnnotationRepository,
-        note,
-        await contentAnnotationRepository.list({ noteId: note.id, includeDeleted: true }),
-        annotationChange?.editorState
-      );
-      for (const annotationId of reconciliation.contentChangedAnnotationIds) {
-        await knowledgeItemService.markEvidenceByAnnotationId(annotationId, 'stale');
-      }
+    onNoteContentChanged: async (note, version) => {
       await deriveInlineAnnotations(
         { repository: contentAnnotationRepository, revisionRepository: annotationRevisionRepository },
         note,
         version
       );
-      return reconciliation;
     },
     onNoteDeleted: noteId => knowledgeItemService.markEvidenceByNoteId(noteId, 'invalid'),
     onBeforePermanentDelete: async noteId => {

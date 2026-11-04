@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { randomUUID, createHash } from 'node:crypto';
-import { anchorFromProjectedRange, projectMarkdown } from '@study-accelerator/content-anchor';
+import { randomUUID } from 'node:crypto';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
@@ -13,7 +12,7 @@ import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { noteContent } from '../../api/src/modules/sync/journal.ts';
 import { writeJsonFileAtomically } from '../../api/src/infrastructure/atomic-json-file.ts';
 import { readMeta, writeMeta } from '../src/sync-state.mjs';
-import { openWorkspace, temporaryDirectory } from './helpers.mjs';
+import { openWorkspace, temporaryDirectory, markText, inlineId } from './helpers.mjs';
 
 function fullEngine(workspace, directory, options = {}) {
   const entityTransfer = createAttachmentTransfer({
@@ -583,25 +582,11 @@ test('冻结目录冲突丢响应后只阻塞关联笔记，调整归属后继�
 
 test('已有标注与知识证据随正文事务同步，保持不可变来源引用和失效状态', async t => {
   const cloud = await fixture(t);
-  const anchor = anchorFromProjectedRange(projectMarkdown(cloud.note.rawMarkdown), 0, 4);
-  const annotation = cloud.knowledge.contentAnnotationService.createAnnotation({
-    spaceId: cloud.space.id,
-    noteId: cloud.note.id,
-    schemaVersion: 2,
-    scopeType: 'selection',
-    kind: 'important',
-    sourceMode: 'manual',
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    prefixText: anchor.prefixText,
-    suffixText: anchor.suffixText,
-    headingPath: [],
-    anchor,
-    anchorFingerprint: 'test',
-    noteContentHash: createHash('sha256').update(cloud.note.rawMarkdown).digest('hex'),
-    idempotencyKey: randomUUID()
+  const plain = cloud.note.rawMarkdown;
+  cloud.knowledge.noteService.updateNote(cloud.note.id, {
+    rawMarkdown: `${markText(plain.slice(0, 4), 'sync-source')}${plain.slice(4)}`
   });
+  const annotation = cloud.knowledge.contentAnnotationService.getAnnotation(inlineId(cloud.note.id, 'sync-source'));
   cloud.knowledge.knowledgeItemService.createCandidate({
     title: '来源同步验证',
     canonicalStatement: '保持已有来源关系',
@@ -614,10 +599,12 @@ test('已有标注与知识证据随正文事务同步，保持不可变来源�
   a.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '' });
   await a.engine.sync();
   assert.equal(a.engine.status().error, null);
+  assert.equal(a.store.state.contentAnnotations[0].anchorStatus, 'missing');
   assert.equal(
     a.store.state.contentAnnotations[0].anchorStatus,
     cloud.dataStore.state.contentAnnotations[0].anchorStatus
   );
+  assert.equal(a.store.state.knowledgeEvidence[0].status, 'insufficient');
   assert.equal(a.store.state.knowledgeEvidence[0].status, cloud.dataStore.state.knowledgeEvidence[0].status);
   assert(a.store.state.noteVersions.some(version => version.id === a.store.state.knowledgeEvidence[0].noteVersionId));
   const items = cloud.dataStore.getSyncJournal().changes.at(-1).items;

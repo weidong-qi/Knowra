@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 
@@ -174,26 +175,9 @@ export const phase2KnowledgeDomainTests = [
       knowledge.noteService.updateNote(note.id, { title: '标题更新' });
       assert.equal(knowledge.noteVersionService.listVersions({ noteId: note.id }).length, 1);
 
-      const annotation = knowledge.contentAnnotationService.createAnnotation({
-        spaceId: note.spaceId,
-        noteId: note.id,
-        quoteText: '第一版',
-        fromPosition: 2,
-        toPosition: 5,
-        prefixText: '# ',
-        suffixText: '',
-        headingPath: ['版本测试'],
-        anchorFingerprint: 'phase2-anchor',
-        noteContentHash: hash('# 第一版'),
-        idempotencyKey: 'phase2-annotation'
-      });
-      versions = knowledge.noteVersionService.listVersions({ noteId: note.id });
-      assert.equal(annotation.noteVersionId, versions[0].id);
-
       knowledge.noteService.updateNote(note.id, { rawMarkdown: '# 第二版' });
       versions = knowledge.noteVersionService.listVersions({ noteId: note.id });
       assert.equal(versions.length, 2);
-      assert.equal(knowledge.contentAnnotationService.getAnnotation(annotation.id).status, 'stale');
 
       knowledge.noteService.updateNote(note.id, { rawMarkdown: '# 第一版' });
       assert.equal(knowledge.noteVersionService.listVersions({ noteId: note.id }).length, 2);
@@ -384,19 +368,22 @@ export const phase2KnowledgeDomainTests = [
         error => error.code === 'KNOWLEDGE_ITEM_SOURCE_REQUIRED'
       );
 
-      const annotation = knowledge.contentAnnotationService.createAnnotation({
-        spaceId: note.spaceId,
-        noteId: note.id,
-        quoteText: '第二版',
-        fromPosition: 0,
-        toPosition: 3,
-        prefixText: '',
-        suffixText: '内容',
-        headingPath: [],
-        anchorFingerprint: 'phase32-evidence-annotation',
-        noteContentHash: hash('第二版内容'),
-        idempotencyKey: 'phase32-evidence-annotation'
-      });
+      // 库里残留的旧格式行（v1）仍可归档；归档后的重点不能作为有效证据。
+      const annotation = knowledge.repositories.contentAnnotationRepository.save(
+        new ContentAnnotation({
+          id: 'phase32-evidence-annotation',
+          spaceId: note.spaceId,
+          noteId: note.id,
+          noteVersionId: currentVersion.id,
+          quoteText: '第二版',
+          fromPosition: 0,
+          toPosition: 3,
+          anchorFingerprint: 'phase32-evidence-annotation',
+          noteContentHash: hash('第二版内容'),
+          idempotencyKey: 'phase32-evidence-annotation',
+          schemaVersion: 1
+        })
+      );
       knowledge.contentAnnotationService.archiveAnnotation(annotation.id);
       assert.throws(
         () =>

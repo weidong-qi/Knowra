@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { createAppContext } from '../../api/src/app.factory.js';
+import { inlineAnnotationId } from '../../api/src/modules/knowledge/application/inline-annotations.js';
 
 export function temporaryDirectory(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-local-test-'));
@@ -12,7 +13,12 @@ export function temporaryDirectory(t) {
 
 export function openWorkspace(root, options) {
   const store = createSqliteDataStore(path.join(root, 'local.sqlite'), options);
-  const context = createAppContext({ dataStore: store, uploadsDir: path.join(root, 'uploads'), storageRootDir: root, ownerId: 'demo' });
+  const context = createAppContext({
+    dataStore: store,
+    uploadsDir: path.join(root, 'uploads'),
+    storageRootDir: root,
+    ownerId: 'demo'
+  });
   const knowledge = context.modules.knowledge;
   const space = knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
   return { store, knowledge, space };
@@ -39,3 +45,8 @@ export function removeAiTablesForLegacyFixture(db) {
     DROP TABLE ai_scope_snapshots;
     DELETE FROM metadata WHERE key = 'aiRuntimeEpoch';`);
 }
+
+/** 重点写在正文标记里（重点内联化）：测试用带标记的正文造重点，按标记 ID 取回服务端派生的重点行。 */
+export const markText = (text, id, importance = null) =>
+  `<mark data-k="${id}" data-t="key"${importance ? ` data-l="${importance}"` : ''}>${text}</mark>`;
+export const inlineId = (noteId, markId) => inlineAnnotationId(noteId, markId);

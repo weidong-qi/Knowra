@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
-import { anchorFromProjectedRange, projectMarkdown, calculateContentHash } from '@study-accelerator/content-anchor';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
-import { temporaryDirectory } from './helpers.mjs';
+import { temporaryDirectory, markText } from './helpers.mjs';
 
 test('版本引用索引在受限堆内存下不保活整批历史 JSON 字符串', () => {
   const moduleUrl = new URL('../../api/src/modules/knowledge/domain/note-version-references.ts', import.meta.url).href;
@@ -42,24 +41,11 @@ function fixture(t) {
   const store = createFileDataStore(path.join(root, 'cloud.json'));
   const knowledge = createAppContext({ dataStore: store, storageRootDir: root }).modules.knowledge;
   const space = knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
-  const note = knowledge.noteService.createNote({
+  // 带一条正文标记重点，历史里同时有笔记版本、重点行与修订。
+  knowledge.noteService.createNote({
     title: '历史内存回归',
-    rawMarkdown: '需要保留的历史正文',
+    rawMarkdown: `${markText('需要保留', 'memory')}的历史正文`,
     spaceId: space.id
-  });
-  const anchor = anchorFromProjectedRange(projectMarkdown(note.rawMarkdown), 0, 4);
-  knowledge.contentAnnotationService.createAnnotation({
-    spaceId: space.id,
-    noteId: note.id,
-    schemaVersion: 2,
-    scopeType: 'selection',
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    anchorFingerprint: 'memory',
-    anchor,
-    noteContentHash: calculateContentHash(note.rawMarkdown),
-    idempotencyKey: 'memory'
   });
   return store.state;
 }

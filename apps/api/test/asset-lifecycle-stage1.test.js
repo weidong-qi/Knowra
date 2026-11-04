@@ -3,7 +3,7 @@ import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
 import { createInMemoryAnalysisScopeRepository } from '../src/modules/knowledge/infrastructure/annotation-support-repositories.js';
 import { createAnnotationScopeService } from '../src/modules/knowledge/application/annotation-scope-service.js';
-import { anchorFromProjectedRange, projectMarkdown, calculateContentHash } from '@study-accelerator/content-anchor';
+import { annotationOf, markText } from './fixtures/inline-annotation-seed.js';
 
 export const assetLifecycleStage1Tests = [
   {
@@ -16,7 +16,13 @@ export const assetLifecycleStage1Tests = [
       annotations.save({ id: 'a-deleted', noteId: 'n1', lifecycleStatus: 'deleted', revision: 4 });
       const deleted = knowledge.noteService.deleteNote('n1');
       assert.equal(deleted.deleted, true);
-      assert.deepEqual(deleted.deletionPackage.annotationStates.map(item => [item.id, item.lifecycleStatus]), [['a-active', 'active'], ['a-deleted', 'deleted']]);
+      assert.deepEqual(
+        deleted.deletionPackage.annotationStates.map(item => [item.id, item.lifecycleStatus]),
+        [
+          ['a-active', 'active'],
+          ['a-deleted', 'deleted']
+        ]
+      );
       knowledge.noteService.restoreNote('n1');
       assert.equal(annotations.findById('a-active').lifecycleStatus, 'active');
       assert.equal(annotations.findById('a-deleted').lifecycleStatus, 'deleted');
@@ -27,7 +33,13 @@ export const assetLifecycleStage1Tests = [
     run() {
       const knowledge = createKnowledgeModule();
       const service = knowledge.knowledgeItemService;
-      const created = service.createCandidate({ id: 'k1', title: '概念', canonicalStatement: '陈述', sourceMode: 'annotation', evidence: [{ sourceType: 'manual', quoteText: '历史摘录' }] });
+      const created = service.createCandidate({
+        id: 'k1',
+        title: '概念',
+        canonicalStatement: '陈述',
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'manual', quoteText: '历史摘录' }]
+      });
       const confirmed = service.confirmItem('k1');
       const retired = service.retireEvidence('k1', created.evidence[0].id);
       assert.equal(retired.evidence.status, 'valid');
@@ -39,35 +51,63 @@ export const assetLifecycleStage1Tests = [
       assert.equal(service.restoreDeleted('k1').reviewStatus, 'needsRevision');
       const archived = service.archive('k1');
       const trashedArchived = service.trash('k1', { expectedUpdatedAt: archived.updatedAt });
-      assert.equal(service.restoreDeleted('k1', { expectedUpdatedAt: trashedArchived.updatedAt }).reviewStatus, 'archived');
+      assert.equal(
+        service.restoreDeleted('k1', { expectedUpdatedAt: trashedArchived.updatedAt }).reviewStatus,
+        'archived'
+      );
       assert(Date.parse(confirmed.updatedAt) <= Date.parse(retired.item.updatedAt));
     }
   },
   {
-    name: '阶段1 取消标注保留可复核证据并提示原标注已移除；正文变化后恢复不误定位',
+    name: '阶段1 取消重点（删掉正文标记）保留可复核证据并提示原重点已移除；加回标记后恢复',
     run() {
       const knowledge = createKnowledgeModule();
-      const note = knowledge.noteService.createNote({ id: 'source-note', spaceId: 's1', title: '来源', rawMarkdown: '可验证的原文摘录' });
-      const anchor = anchorFromProjectedRange(projectMarkdown(note.rawMarkdown), 0, 5);
-      const annotation = knowledge.contentAnnotationService.createAnnotation({ spaceId: note.spaceId, noteId: note.id, schemaVersion: 2, scopeType: 'selection',
-        quoteText: anchor.quoteText, fromPosition: anchor.sourceStart, toPosition: anchor.sourceEnd, anchorFingerprint: 'stage1-evidence', anchor,
-        noteContentHash: calculateContentHash(note.rawMarkdown), idempotencyKey: 'stage1-evidence' });
-      const { item } = knowledge.knowledgeItemService.createCandidate({ title: '来源知识', canonicalStatement: '原文摘录有依据', sourceMode: 'annotation',
-        evidence: [{ sourceType: 'annotation', annotationId: annotation.id, expectedAnnotationRevision: annotation.revision }] });
-      knowledge.contentAnnotationService.deleteAnnotation(annotation.id);
+      const marked = `${markText('可验证的原', 'ev')}文摘录`;
+      const note = knowledge.noteService.createNote({
+        id: 'source-note',
+        spaceId: 's1',
+        title: '来源',
+        rawMarkdown: marked
+      });
+      const annotation = annotationOf(knowledge, note.id, 'ev');
+      const { item } = knowledge.knowledgeItemService.createCandidate({
+        title: '来源知识',
+        canonicalStatement: '原文摘录有依据',
+        sourceMode: 'annotation',
+        evidence: [
+          { sourceType: 'annotation', annotationId: annotation.id, expectedAnnotationRevision: annotation.revision }
+        ]
+      });
+      const current = knowledge.noteService.updateNote(note.id, { rawMarkdown: '可验证的原文摘录' });
+      assert.equal(knowledge.contentAnnotationService.getAnnotation(annotation.id).lifecycleStatus, 'deleted');
       const historical = knowledge.knowledgeItemService.listEvidence(item.id)[0];
       assert.equal(historical.sourceAnnotationRemoved, true);
       assert.equal(historical.status, 'valid');
-      knowledge.noteService.updateNote(note.id, { rawMarkdown: '完全不同的文字' });
-      const restored = knowledge.contentAnnotationService.restoreAnnotation(annotation.id);
-      assert.notEqual(restored.anchorStatus, 'resolved');
+      knowledge.noteService.updateNote(note.id, { rawMarkdown: marked, expectedUpdatedAt: current.updatedAt });
+      assert.equal(knowledge.contentAnnotationService.getAnnotation(annotation.id).lifecycleStatus, 'active');
       assert.equal(knowledge.knowledgeItemService.listEvidence(item.id)[0].sourceAnnotationRemoved, false);
     }
   },
   {
     name: '阶段1 已保存分析范围可列出、回收和恢复，旧快照内容保持不变',
     run() {
-      const record = { id: 'scope-1', spaceId: 's1', inputHash: 'hash', idempotencyKey: 'key', noteVersions: [], selections: [], segments: [], contextSegments: [], exclusions: [], omittedItems: [], annotationRevisions: [], summary: { noteCount: 0, segmentCount: 0, annotationCount: 0 }, createdAt: '2026-09-23T00:00:00.000Z', updatedAt: '2026-09-23T00:00:00.000Z', deletedAt: null };
+      const record = {
+        id: 'scope-1',
+        spaceId: 's1',
+        inputHash: 'hash',
+        idempotencyKey: 'key',
+        noteVersions: [],
+        selections: [],
+        segments: [],
+        contextSegments: [],
+        exclusions: [],
+        omittedItems: [],
+        annotationRevisions: [],
+        summary: { noteCount: 0, segmentCount: 0, annotationCount: 0 },
+        createdAt: '2026-09-23T00:00:00.000Z',
+        updatedAt: '2026-09-23T00:00:00.000Z',
+        deletedAt: null
+      };
       const repository = createInMemoryAnalysisScopeRepository({ records: [record] });
       const service = createAnnotationScopeService({ analysisScopeRepository: repository });
       assert.equal(service.listAnalysisScopes({ spaceId: 's1' }).length, 1);
@@ -75,23 +115,43 @@ export const assetLifecycleStage1Tests = [
       assert.equal(service.listAnalysisScopes({ spaceId: 's1' }).length, 0);
       assert.equal(service.listAnalysisScopes({ spaceId: 's1', includeDeleted: true }).length, 1);
       assert.deepEqual(deleted.segments, record.segments);
-      assert.throws(() => service.restoreAnalysisScope('scope-1', { spaceId: 's1', expectedUpdatedAt: record.updatedAt }), { code: 'ANALYSIS_SCOPE_UPDATE_CONFLICT' });
-      assert.equal(service.restoreAnalysisScope('scope-1', { spaceId: 's1', expectedUpdatedAt: deleted.updatedAt }).deletedAt, null);
+      assert.throws(
+        () => service.restoreAnalysisScope('scope-1', { spaceId: 's1', expectedUpdatedAt: record.updatedAt }),
+        { code: 'ANALYSIS_SCOPE_UPDATE_CONFLICT' }
+      );
+      assert.equal(
+        service.restoreAnalysisScope('scope-1', { spaceId: 's1', expectedUpdatedAt: deleted.updatedAt }).deletedAt,
+        null
+      );
     }
   },
   {
     name: '阶段1 知识点回收站使正式学习目标退出使用，但保留目标身份与引用',
     run() {
       const knowledge = createKnowledgeModule();
-      const item = knowledge.knowledgeItemService.createCandidate({ id: 'k-objective', title: '目标依据', canonicalStatement: '可核对的概念陈述', sourceMode: 'manual' }).item;
+      const item = knowledge.knowledgeItemService.createCandidate({
+        id: 'k-objective',
+        title: '目标依据',
+        canonicalStatement: '可核对的概念陈述',
+        sourceMode: 'manual'
+      }).item;
       knowledge.knowledgeItemService.confirmItem(item.id);
-      const objective = knowledge.learningObjectiveService.createCandidate({ id: 'objective-1', knowledgeItemId: item.id, objective: '能够解释该概念的含义', actionVerb: 'explain', cognitiveLevel: 'understand' });
+      const objective = knowledge.learningObjectiveService.createCandidate({
+        id: 'objective-1',
+        knowledgeItemId: item.id,
+        objective: '能够解释该概念的含义',
+        actionVerb: 'explain',
+        cognitiveLevel: 'understand'
+      });
       knowledge.learningObjectiveService.confirmObjective(objective.id);
       knowledge.knowledgeItemService.trash(item.id);
       const retained = knowledge.learningObjectiveService.getObjective(objective.id);
       assert.equal(retained.knowledgeItemId, item.id);
       assert.equal(retained.reviewStatus, 'candidate');
-      assert.equal(knowledge.knowledgeItemService.listItems().some(record => record.id === item.id), false);
+      assert.equal(
+        knowledge.knowledgeItemService.listItems().some(record => record.id === item.id),
+        false
+      );
     }
   },
   {
@@ -102,8 +162,20 @@ export const assetLifecycleStage1Tests = [
       folderService.createFolder({ id: 'root', spaceId: 's1', name: '原目录' });
       folderService.createFolder({ id: 'child', spaceId: 's1', parentId: 'root', name: '子目录' });
       folderService.createFolder({ id: 'dest', spaceId: 's1', name: '目标' });
-      noteService.createNote({ id: 'active', spaceId: 's1', folderId: 'child', title: '现有笔记', rawMarkdown: '正文' });
-      noteService.createNote({ id: 'independent', spaceId: 's1', folderId: 'child', title: '先前删除', rawMarkdown: '正文' });
+      noteService.createNote({
+        id: 'active',
+        spaceId: 's1',
+        folderId: 'child',
+        title: '现有笔记',
+        rawMarkdown: '正文'
+      });
+      noteService.createNote({
+        id: 'independent',
+        spaceId: 's1',
+        folderId: 'child',
+        title: '先前删除',
+        rawMarkdown: '正文'
+      });
       noteService.deleteNote('independent');
       const moved = knowledge.deleteFolderAndCleanup('root', { mode: 'keep', destinationId: 'dest' });
       assert.equal(moved.deletionPackage.mode, 'keep');

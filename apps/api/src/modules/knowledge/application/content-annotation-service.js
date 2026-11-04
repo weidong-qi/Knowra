@@ -1,55 +1,71 @@
-import { assertRangeConfirmation } from './annotation-range-preview.js';
-import { reconcileAnnotationSource, reconciledAnnotationFields } from './reconcile-annotation-source.js';
-import { initialIdentityBinding } from './annotation-identity-binding.js';
-import { resolveStoredAnnotation } from './resolve-stored-annotation.js';
 import crypto from 'node:crypto';
-import {
-  calculateContentHash,
-  listTracking,
-  anchorForSection,
-  followSectionAnchor,
-  headingPathForSourceOffset,
-  projectMarkdown,
-  relocateAnchor,
-  resolveAnchor
-} from '@study-accelerator/content-anchor';
+import { calculateContentHash } from '@study-accelerator/content-anchor';
+import { sameKnowraText, stripKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import { createAppError } from '../../../errors/app-error.js';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
-import {
-  buildCreateContentAnnotationDto,
-  buildUpdateAnnotationAnchorDto,
-  buildUpdateContentAnnotationDto
-} from './dto/content-annotation-dto.ts';
+import { buildUpdateContentAnnotationDto } from './dto/content-annotation-dto.ts';
 import { createInMemoryContentAnnotationRepository } from '../infrastructure/content-annotation-repository.js';
+import { resolveLegacyAnnotationAnchor } from './legacy-annotation-anchor.ts';
 
 const contentHash = calculateContentHash;
 const fail = (code, message, statusCode = 400) => createAppError(code, message, statusCode);
-const requestHash = value => contentHash(JSON.stringify(value));
+/** 重点内联化 I4b：重点只能写在正文标记里，旧格式重点不再新建、改范围、确认范围、排除或恢复。 */
+export const legacyAnnotationRemoved = () => fail('ANNOTATION_LEGACY_REMOVED', '重点写在正文里，请在笔记中标记', 410);
+
+/** 历史记录可能只有旧 status 字段；与仓储读取时采用相同的默认值。 */
+export function legacyAnnotationHealth(annotation) {
+  return {
+    lifecycleStatus: annotation?.lifecycleStatus ?? (annotation?.status === 'archived' ? 'archived' : 'active'),
+    anchorStatus: annotation?.anchorStatus ?? (annotation?.status === 'stale' ? 'needsReview' : 'resolved')
+  };
+}
+
+/**
+ * 旧重点不再跟随正文；无法确认原摘录时，保守降级其来源。
+ * @param {{noteId?: unknown, content?: unknown} | null} [sourceVersion]
+ */
+export function legacyAnnotationSourceChange(annotation, before, after, sourceVersion = null) {
+  const { lifecycleStatus, anchorStatus } = legacyAnnotationHealth(annotation);
+  if (
+    !annotation ||
+    annotation.schemaVersion === INLINE_ANNOTATION_SCHEMA ||
+    lifecycleStatus !== 'active' ||
+    typeof before !== 'string' ||
+    typeof after !== 'string' ||
+    sameKnowraText(before, after)
+  )
+    return null;
+  if (!stripKnowraMarks(after).trim()) {
+    return anchorStatus === 'missing' ? null : { anchorStatus: 'missing', anchorReason: 'sourceDeleted' };
+  }
+  if (anchorStatus === 'missing' || anchorStatus === 'needsReview') return null;
+  if (annotation.schemaVersion === 2 && annotation.anchor) {
+    try {
+      const source =
+        sourceVersion?.noteId === annotation.noteId && typeof sourceVersion.content === 'string'
+          ? sourceVersion.content
+          : null;
+      const resolved = resolveLegacyAnnotationAnchor(after, annotation.anchor, source);
+      if (resolved.status === 'resolved' && resolved.quoteText === annotation.quoteText) return null;
+    } catch {
+      // 损坏的旧锚点不应阻止正文保存，需要用户核对。
+    }
+  }
+  return { anchorStatus: 'needsReview', anchorReason: 'sourceChanged' };
+}
 
 /** @param {import('./service-dependencies.ts').ContentAnnotationDependencies} dependencies */
 export function createContentAnnotationService({
   repository = createInMemoryContentAnnotationRepository(),
-  noteRepository,
-  noteVersionRepository,
+  noteRepository = null,
+  noteVersionRepository = null,
   revisionRepository = null,
-  exclusionRepository = null,
   onSourceChanged = null
 } = {}) {
   function requireAnnotation(id) {
     const annotation = repository.findById(id);
     if (!annotation) throw fail('ANNOTATION_NOT_FOUND', '标注不存在', 404);
     return annotation;
-  }
-  function assertCurrentNote(dto) {
-    const note = noteRepository?.findById(dto.noteId);
-    if (!note || note.deleted) throw fail('ANNOTATION_NOTE_NOT_FOUND', '笔记不存在', 404);
-    if (note.spaceId !== dto.spaceId) throw fail('ANNOTATION_SPACE_MISMATCH', '标注空间与笔记不一致', 409);
-    if (contentHash(note.rawMarkdown) !== dto.noteContentHash)
-      throw fail('ANNOTATION_CONTENT_CONFLICT', '笔记内容已变化，请重新选择标注范围', 409);
-    return note;
-  }
-  function nextId() {
-    return `annotation-${crypto.randomUUID()}`;
   }
   // 重点内联化 v3：类型、重要程度、范围与取消/恢复都写在正文标记里，由保存时派生；这里只允许改备注。
   function assertNotTextOwned(annotation, dto = null) {
@@ -61,43 +77,6 @@ export function createContentAnnotationService({
     if (expectedRevision === undefined || expectedRevision === null || Number.isNaN(expectedRevision)) return;
     if (annotation.revision !== Number(expectedRevision))
       throw fail('ANNOTATION_REVISION_CONFLICT', '标注已被其他操作修改，请刷新后重试', 409);
-  }
-  function authoritativeAnchor(note, dto) {
-    if (dto.anchor?.tracking?.empty) throw fail('ANNOTATION_ANCHOR_UNRESOLVED', '空块不能用于新建或重新选择重点', 409);
-    const result = resolveAnchor(note.rawMarkdown, dto.anchor);
-    if (result.status !== 'resolved')
-      throw fail('ANNOTATION_ANCHOR_UNRESOLVED', '无法在当前笔记版本中确认标注范围', 409);
-    if (result.quoteText !== dto.quoteText)
-      throw fail('ANNOTATION_QUOTE_MISMATCH', '所选文字与当前笔记版本不一致', 409);
-    const projection = result.projection;
-    const sourceStart = dto.anchor.segments[0].start;
-    const anchor = {
-      ...structuredClone(dto.anchor.scopeType === 'list' ? result.anchor : dto.anchor),
-      tracking:
-        dto.anchor.scopeType === 'list'
-          ? listTracking(result.projection, result.anchor, note.annotationStructure)
-          : { formatVersion: 1, structureRevision: note.annotationStructure?.revision ?? 0 },
-      pending: null,
-      noteVersionId: null,
-      quoteText: result.quoteText,
-      prefixText: dto.anchor.prefixText ?? '',
-      suffixText: dto.anchor.suffixText ?? ''
-    };
-    return {
-      anchor,
-      projection,
-      quoteText: result.quoteText,
-      headingPath: headingPathForSourceOffset(projection, sourceStart),
-      fromPosition: dto.anchor.sourceStart,
-      toPosition: dto.anchor.sourceEnd,
-      prefixText: anchor.prefixText,
-      suffixText: anchor.suffixText,
-      anchorFingerprint: contentHash(
-        JSON.stringify({ segments: anchor.segments, structurePath: anchor.structurePath })
-      ),
-      resolvedContentHash: contentHash(result.quoteText),
-      boundaryFingerprint: anchor.list?.memberFingerprint ?? dto.anchor.section?.memberFingerprint ?? null
-    };
   }
   function recordRevision(annotation, operation, oldAnchor = null, reason = null) {
     revisionRepository?.save({
@@ -126,63 +105,14 @@ export function createContentAnnotationService({
     return updated;
   }
   return {
-    createAnnotation(input) {
-      const dto = buildCreateContentAnnotationDto(input);
-      const hashedRequest = requestHash(dto);
-      const idempotent = repository.findByIdempotencyKey(dto.noteId, dto.idempotencyKey);
-      if (idempotent) {
-        if (idempotent.requestHash && idempotent.requestHash !== hashedRequest)
-          throw fail('ANNOTATION_IDEMPOTENCY_CONFLICT', '同一幂等键不能用于不同的标注请求', 409);
-        return idempotent;
-      }
-      const note = assertCurrentNote(dto);
-      const version = noteVersionRepository?.findByNoteIdAndContentHash(dto.noteId, dto.noteContentHash);
-      const source = dto.schemaVersion === 2 ? authoritativeAnchor(note, dto) : dto;
-      if (dto.schemaVersion === 2 && !version) throw fail('ANNOTATION_VERSION_NOT_FOUND', '当前笔记版本尚未保存', 409);
-      const duplicateInput = { ...dto, ...source };
-      if (repository.findDuplicate(duplicateInput)) throw fail('ANNOTATION_DUPLICATE', '该范围已存在同类型标记', 409);
-      const anchor = source.anchor
-        ? { ...source.anchor, noteVersionId: /** @type {string} */ (version?.id) ?? null }
-        : null;
-      const originSnapshot = anchor
-        ? {
-            noteVersionId: /** @type {string} */ (version.id),
-            contentHash: dto.noteContentHash,
-            scopeType: dto.scopeType,
-            segments: structuredClone(anchor.segments),
-            quoteText: source.quoteText,
-            headingPath: source.headingPath
-          }
-        : null;
-      const created = repository.save(
-        new ContentAnnotation({
-          ...dto,
-          ...source,
-          anchor,
-          originSnapshot,
-          identityBinding: anchor ? initialIdentityBinding(note, { scopeType: dto.scopeType, anchor }) : null,
-          noteVersionId: /** @type {string} */ (version?.id) ?? null,
-          lifecycleStatus: 'active',
-          anchorStatus: 'resolved',
-          anchorReason: null,
-          requestHash: hashedRequest,
-          id: nextId()
-        })
-      );
-      recordRevision(created, 'created');
-      return created;
+    createAnnotation() {
+      throw legacyAnnotationRemoved();
     },
     listAnnotationsByNote(options) {
       return repository.list(options);
     },
     getAnnotation(id) {
       return requireAnnotation(id);
-    },
-    advanceRevision(id, input = {}) {
-      const annotation = requireAnnotation(id);
-      assertNotTextOwned(annotation);
-      assertRevision(annotation, input.expectedRevision);
-      return saveUpdated(annotation, {}, input.operation ?? 'rangeChanged', input.reason ?? null);
     },
     updateAnnotation(id, input) {
       const annotation = requireAnnotation(id);
@@ -204,211 +134,48 @@ export function createContentAnnotationService({
       if (annotation.lifecycleStatus === 'deleted') return annotation;
       return saveUpdated(annotation, { lifecycleStatus: 'deleted', deletedAt: new Date().toISOString() }, 'deleted');
     },
-    restoreAnnotation(id, input = {}) {
+    restoreAnnotation(id) {
       const annotation = requireAnnotation(id);
       assertNotTextOwned(annotation);
-      assertRevision(annotation, input.expectedRevision);
       if (annotation.lifecycleStatus === 'active') return annotation;
-      const parent = noteRepository?.findById(/** @type {string} */ (annotation.noteId));
-      if (!parent || parent.deleted) throw fail('ANNOTATION_NOTE_IN_TRASH', '请先恢复来源笔记，再恢复标注。', 409);
-      if (annotation.schemaVersion !== 2 || !annotation.anchor)
-        return saveUpdated(
-          annotation,
-          {
-            lifecycleStatus: 'active',
-            anchorStatus: annotation.status === 'stale' ? 'needsReview' : 'resolved',
-            deletedAt: null
-          },
-          'restored'
+      throw legacyAnnotationRemoved();
+    },
+    updateAnnotationAnchor() {
+      throw legacyAnnotationRemoved();
+    },
+    confirmAnnotationRange() {
+      throw legacyAnnotationRemoved();
+    },
+    // 不恢复旧锚点跟随，只在旧来源无法确认时保守降级。
+    reconcileForNote(noteId, _contentHash, context = null) {
+      const rows = repository
+        .list({ noteId, includeDeleted: true })
+        .filter(row => row.schemaVersion !== INLINE_ANNOTATION_SCHEMA);
+      const note = rows.length && typeof context?.before === 'string' ? noteRepository?.findById(noteId) : null;
+      if (!note || note.deleted || sameKnowraText(context.before, note.rawMarkdown))
+        return { annotations: [], contentChangedAnnotationIds: [] };
+      const annotations = [];
+      for (const row of rows) {
+        const sourceVersion =
+          row.schemaVersion === 2 && row.anchor && row.noteVersionId
+            ? noteVersionRepository?.findById(row.noteVersionId)
+            : null;
+        const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown, sourceVersion);
+        if (!change) continue;
+        // 旧记录由领域构造器校验；revision 可能来自历史存储中的数字字符串。
+        const input = /** @type {import('../domain/content-annotation.ts').ContentAnnotationConstructorInput} */ (
+          /** @type {unknown} */ ({
+            ...row,
+            ...change,
+            revision: Number(row.revision) + 1,
+            updatedAt: new Date().toISOString()
+          })
         );
-      const note = noteRepository?.findById(/** @type {string} */ (annotation.noteId));
-      if (!note || note.deleted)
-        return saveUpdated(
-          annotation,
-          { lifecycleStatus: 'active', anchorStatus: 'missing', anchorReason: 'sourceDeleted', deletedAt: null },
-          'restored',
-          'sourceDeleted'
-        );
-      const oldVersion = noteVersionRepository?.findById(/** @type {string} */ (annotation.noteVersionId));
-      const result = reconcileAnnotationSource({ ...annotation, anchorStatus: 'resolved' }, note, oldVersion, null);
-      if (annotation.scopeType === 'list') {
-        const version = noteVersionRepository?.findByNoteIdAndContentHash(
-          note.id,
-          calculateContentHash(note.rawMarkdown)
-        );
-        return saveUpdated(
-          annotation,
-          {
-            ...reconciledAnnotationFields(annotation, note, version, result),
-            lifecycleStatus: 'active',
-            deletedAt: null
-          },
-          'restored',
-          result.reason
-        );
+        const updated = repository.save(new ContentAnnotation(input));
+        recordRevision(updated, 'anchorStatusChanged', row.anchor, change.anchorReason);
+        annotations.push(updated);
       }
-      return saveUpdated(
-        annotation,
-        {
-          lifecycleStatus: 'active',
-          deletedAt: null,
-          anchorStatus: result.status,
-          anchorReason: result.reason,
-          ...(result.status === 'resolved' && result.anchor
-            ? {
-                anchor: { ...result.anchor, noteVersionId: annotation.noteVersionId },
-                quoteText: result.quoteText,
-                fromPosition: result.anchor.sourceStart,
-                toPosition: result.anchor.sourceEnd,
-                resolvedContentHash: contentHash(result.quoteText)
-              }
-            : {})
-        },
-        'restored',
-        result.reason
-      );
-    },
-    updateAnnotationAnchor(id, input) {
-      const annotation = requireAnnotation(id);
-      assertNotTextOwned(annotation);
-      const dto = buildUpdateAnnotationAnchorDto(input);
-      if (
-        annotation.scopeType === 'list' &&
-        /** @type {{scopeType?: unknown} | null | undefined} */ (dto.anchor)?.scopeType !== 'list'
-      )
-        throw fail('ANNOTATION_RANGE_INVALID', '列表重点的新来源必须是完整列表项', 409);
-      assertRevision(annotation, dto.expectedRevision);
-      const note = assertCurrentNote({ ...annotation, ...dto });
-      const version = noteVersionRepository?.findByNoteIdAndContentHash(
-        /** @type {string} */ (annotation.noteId),
-        dto.noteContentHash
-      );
-      const source = dto.anchor ? authoritativeAnchor(note, { ...dto, schemaVersion: 2 }) : dto;
-      if (annotation.schemaVersion === 2 && !version)
-        throw fail('ANNOTATION_VERSION_NOT_FOUND', '当前笔记版本尚未保存', 409);
-      return saveUpdated(
-        annotation,
-        {
-          ...source,
-          noteContentHash: dto.noteContentHash,
-          scopeType: source.anchor?.scopeType ?? annotation.scopeType,
-          anchor: source.anchor
-            ? { ...source.anchor, noteVersionId: /** @type {string} */ (version?.id) ?? null }
-            : annotation.anchor,
-          noteVersionId: /** @type {string} */ (version?.id) ?? null,
-          anchorStatus: 'resolved',
-          anchorReason: null,
-          lifecycleStatus: 'active',
-          deletedAt: null
-        },
-        'anchorUpdated'
-      );
-    },
-    confirmAnnotationRange(id, input) {
-      const annotation = requireAnnotation(id);
-      assertNotTextOwned(annotation);
-      const note = noteRepository.findById(/** @type {string} */ (annotation.noteId));
-      if (!note || note.deleted) throw fail('ANNOTATION_NOTE_NOT_FOUND', '笔记不存在', 404);
-      const anchor = assertRangeConfirmation(annotation, note, input);
-      const version = noteVersionRepository.findByNoteIdAndContentHash(note.id, input.noteContentHash);
-      const result = {
-        status: 'resolved',
-        reason: null,
-        anchor,
-        projection: resolveAnchor(note.rawMarkdown, anchor).projection
-      };
-      return saveUpdated(annotation, reconciledAnnotationFields(annotation, note, version, result), 'rangeConfirmed');
-    },
-    reconcileForNote(noteId, currentContentHash, context = null) {
-      const note = noteRepository?.findById(noteId);
-      if (!note || note.deleted) return { annotations: [], contentChangedAnnotationIds: [] };
-      const version = noteVersionRepository?.findByNoteIdAndContentHash(noteId, currentContentHash);
-      const changed = [];
-      const contentChangedAnnotationIds = [];
-      for (const annotation of repository.list({ noteId, includeDeleted: true })) {
-        // v3 的位置在正文标记里，由保存后的派生维护，不参与旧链路跟随。
-        if (annotation.schemaVersion === INLINE_ANNOTATION_SCHEMA) continue;
-        if (
-          annotation.lifecycleStatus !== 'active' ||
-          (annotation.noteContentHash === currentContentHash && !context?.edits?.length)
-        )
-          continue;
-        if (annotation.schemaVersion !== 2 || !annotation.anchor) {
-          changed.push(
-            saveUpdated(
-              annotation,
-              { anchorStatus: 'needsReview', anchorReason: 'legacyUnverified', noteContentHash: currentContentHash },
-              'anchorStatusChanged',
-              'legacyUnverified'
-            )
-          );
-          continue;
-        }
-        const oldVersion = noteVersionRepository?.findById(/** @type {string} */ (annotation.noteVersionId));
-        let result = reconcileAnnotationSource(annotation, note, oldVersion, context);
-        if (context?.edits?.at(-1)?.history && version) {
-          const revisions = revisionRepository?.list({ annotationId: annotation.id }) ?? [];
-          const historical = [
-            /** @type {import('@study-accelerator/content-anchor').ContentAnchor & { noteVersionId?: string }} */ (
-              annotation.anchor
-            ),
-            ...revisions.flatMap(item => [item.newAnchor, item.oldAnchor]).reverse()
-          ].find(
-            candidate =>
-              candidate?.noteVersionId === version.id &&
-              !candidate.pending &&
-              resolveAnchor(note.rawMarkdown, candidate).status === 'resolved'
-          );
-          if (historical) result = { ...resolveAnchor(note.rawMarkdown, historical), anchor: historical };
-        }
-        const fields = reconciledAnnotationFields(annotation, note, version, result);
-        if (result.status !== 'resolved' || fields.resolvedContentHash !== annotation.resolvedContentHash)
-          contentChangedAnnotationIds.push(annotation.id);
-        changed.push(saveUpdated(annotation, fields, 'sourceReconciled', result.reason));
-        const parentRange = result.status === 'resolved' ? fields.anchor : fields.anchor?.pending?.anchor;
-        for (const exclusion of exclusionRepository?.list({ parentAnnotationId: annotation.id }) ?? []) {
-          const exclusionVersion = noteVersionRepository?.findById(exclusion.noteVersionId);
-          const resolution = reconcileAnnotationSource(
-            {
-              ...annotation,
-              scopeType: exclusion.anchor.scopeType,
-              anchor: exclusion.anchor,
-              anchorStatus: exclusion.anchor.unresolved ? 'needsReview' : 'resolved'
-            },
-            note,
-            exclusionVersion,
-            context
-          );
-          exclusionRepository.save({
-            ...exclusion,
-            revision: exclusion.revision + 1,
-            anchor: {
-              ...(resolution.anchor ?? exclusion.anchor),
-              unresolved:
-                resolution.status !== 'resolved' ||
-                !parentRange ||
-                (resolution.anchor ?? exclusion.anchor).sourceStart < parentRange.sourceStart ||
-                (resolution.anchor ?? exclusion.anchor).sourceEnd > parentRange.sourceEnd
-            },
-            ...(resolution.status === 'resolved' ? { noteVersionId: /** @type {string} */ (version.id) } : {})
-          });
-        }
-      }
-      return { annotations: changed, contentChangedAnnotationIds };
-    },
-    markStaleForNote(noteId, currentContentHash) {
-      return repository.markStaleByNoteId?.(noteId, currentContentHash) ?? [];
-    },
-    markAnnotationStale(id) {
-      const annotation = requireAnnotation(id);
-      return annotation.lifecycleStatus !== 'active' || annotation.schemaVersion === INLINE_ANNOTATION_SCHEMA
-        ? annotation
-        : saveUpdated(
-            annotation,
-            { anchorStatus: 'needsReview', anchorReason: 'contentChanged' },
-            'anchorStatusChanged',
-            'contentChanged'
-          );
+      return { annotations, contentChangedAnnotationIds: annotations.map(annotation => annotation.id) };
     }
   };
 }

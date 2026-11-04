@@ -12,7 +12,7 @@ export function inlineAnnotationSourceRanges(markdown, markId) {
 }
 
 /** 同一次正文解析供多个重点复用，避免摘要派生逐个重解析整篇。 */
-export function createInlineAnnotationSourceResolver(markdown) {
+export function createInlineAnnotationSourceResolver(markdown, { keepWhitespace = false } = {}) {
   const text = String(markdown ?? '');
   const parsed = parseKnowraMarks(text);
   const structure = parseIdentityBlocks(text, { includeContent: true });
@@ -101,8 +101,8 @@ export function createInlineAnnotationSourceResolver(markdown) {
       cursor = Math.max(cursor, span.end);
     }
     if (cursor < to) pieces.push({ start: cursor, end: to });
-    // 去掉只剩空白的碎片（例如行尾注释前后的换行）。
-    return pieces.filter(piece => text.slice(piece.start, piece.end).trim());
+    // 来源变化比较需要这些空白判断连续性；分析范围默认仍去掉纯空白碎片。
+    return keepWhitespace ? pieces : pieces.filter(piece => text.slice(piece.start, piece.end).trim());
   };
   const merge = ranges =>
     ranges

@@ -1,25 +1,6 @@
 import type { Note } from '../../domain/note.ts';
 import type { NoteVersion } from '../../domain/note-version.ts';
 type SavedNote = Note | import('../../../sync/postgres-state-types.ts').SyncMappedEntityMap['notes'];
-/** SDK JSON 没有锚点校验；只在既有动态属性读取与原生调用位置使用。 */
-export interface RawStoredAnchorView {
-  noteVersionId?: unknown;
-  pending?: unknown;
-  scopeType?: unknown;
-  unresolved?: unknown;
-}
-export interface RawStoredAnchorResolver {
-  <Anchor>(
-    markdown: string,
-    anchor: Anchor
-  ): Omit<ReturnType<typeof import('@study-accelerator/content-anchor').resolveAnchor>, 'anchor'> & { anchor?: Anchor };
-}
-export type StoredAnchorReconciliation = Omit<
-  ReturnType<typeof import('../reconcile-annotation-source.js').reconcileAnnotationSource>,
-  'anchor'
-> & {
-  anchor?: import('@prisma/client').Prisma.JsonValue | import('@study-accelerator/content-anchor').ContentAnchor;
-};
 export interface PostgresRepositories {
   pdfAnnotationRepository: ReturnType<
     typeof import('../../../pdf/repository.ts').createPostgresPdfAnnotationRepository

@@ -16,7 +16,6 @@ export function createAsyncNoteService({
   annotationRepository = null,
   runTransaction = operation => operation(),
   onNoteContentChanged = null,
-  onNoteIdentityChanged = null,
   onNoteDeleted = null,
   onBeforePermanentDelete = null
 } = {}) {
@@ -50,8 +49,7 @@ export function createAsyncNoteService({
       async ({
         noteRepository: transactionNoteRepository = repository,
         noteVersionService: transactionNoteVersionService = noteVersionService,
-        onNoteContentChanged: transactionOnNoteContentChanged = onNoteContentChanged,
-        onNoteIdentityChanged: transactionOnNoteIdentityChanged = onNoteIdentityChanged
+        onNoteContentChanged: transactionOnNoteContentChanged = onNoteContentChanged
       } = {}) => {
         const saved = await transactionNoteRepository.save(note, {
           expectedUpdatedAt
@@ -59,8 +57,6 @@ export function createAsyncNoteService({
         if (createVersion && transactionNoteVersionService && note.contentKind !== 'pdf') {
           const version = await transactionNoteVersionService.ensureForNote(saved);
           await transactionOnNoteContentChanged?.(saved, version, annotationChange);
-        } else if (annotationChange) {
-          await transactionOnNoteIdentityChanged?.(saved, annotationChange);
         }
         return saved;
       }
@@ -111,7 +107,11 @@ export function createAsyncNoteService({
     });
     const annotationChange =
       dto.rawMarkdown !== undefined
-        ? prepareAnnotationChange(currentNote, dto.rawMarkdown, updates.annotationMapping)
+        ? prepareAnnotationChange(
+            currentNote,
+            dto.rawMarkdown,
+            dto.expectedUpdatedAt ? null : updates.annotationMapping
+          )
         : null;
     return persistNote(
       new Note({
@@ -132,9 +132,7 @@ export function createAsyncNoteService({
       }),
       {
         annotationChange,
-        createVersion:
-          dto.rawMarkdown !== undefined &&
-          (dto.rawMarkdown !== currentNote.rawMarkdown || annotationChange?.edits?.length > 0),
+        createVersion: dto.rawMarkdown !== undefined && dto.rawMarkdown !== currentNote.rawMarkdown,
         expectedUpdatedAt: currentNote.updatedAt
       }
     );

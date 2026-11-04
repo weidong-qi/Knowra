@@ -72,13 +72,14 @@ export const noteServiceTests = [
       });
 
       assert.throws(
-        () => noteService.createNote({
-          id: 'note-duplicate',
-          title: 'Replacement',
-          rawMarkdown: 'replacement',
-          spaceId: 'space-1'
-        }),
-        (error) => error.statusCode === 409 && error.code === 'NOTE_ID_CONFLICT'
+        () =>
+          noteService.createNote({
+            id: 'note-duplicate',
+            title: 'Replacement',
+            rawMarkdown: 'replacement',
+            spaceId: 'space-1'
+          }),
+        error => error.statusCode === 409 && error.code === 'NOTE_ID_CONFLICT'
       );
       assert.equal(noteService.getNote('note-duplicate').title, 'Original');
     }
@@ -243,10 +244,10 @@ export const noteServiceTests = [
       const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
       const noteService = createNoteService({
         repository: {
-          findById: (noteId) => (noteId === 'note-without-links'
-            ? { id: 'note-without-links', deleted: false, internalLinks: undefined }
-            : null
-          )
+          findById: noteId =>
+            noteId === 'note-without-links'
+              ? { id: 'note-without-links', deleted: false, internalLinks: undefined }
+              : null
         }
       });
 
@@ -806,13 +807,48 @@ export const noteServiceTests = [
       });
 
       assert.throws(
-        () => noteService.updateNote(note.id, {
-          title: 'Stale update',
-          expectedUpdatedAt: note.updatedAt
-        }),
-        (error) => error.code === 'NOTE_UPDATE_CONFLICT' && error.statusCode === 409
+        () =>
+          noteService.updateNote(note.id, {
+            title: 'Stale update',
+            expectedUpdatedAt: note.updatedAt
+          }),
+        error => error.code === 'NOTE_UPDATE_CONFLICT' && error.statusCode === 409
       );
       assert.equal(noteService.getNote(note.id).title, 'First update');
+    }
+  },
+  {
+    name: '旧保存映射在没有时间戳时仍保护正文并发，同步与异步服务一致',
+    async run() {
+      const { calculateContentHash } = await import('@study-accelerator/content-anchor');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createAsyncNoteService } =
+        await import('../src/modules/knowledge/application/postgres-async/note-service.js');
+      const { createInMemoryNoteRepository } =
+        await import('../src/modules/knowledge/infrastructure/note-repository.js');
+      const repository = createInMemoryNoteRepository();
+      const sync = createNoteService({ repository });
+      const asyncService = createAsyncNoteService({ repository });
+      const note = sync.createNote({ id: 'legacy-baseline', spaceId: 'space-1', title: '并发', rawMarkdown: '原文' });
+      const oldMapping = { baseContentHash: calculateContentHash(note.rawMarkdown) };
+      sync.updateNote(note.id, { rawMarkdown: '其他设备的新正文', updatedAt: '2026-11-01T00:00:01.000Z' });
+      assert.throws(() => sync.updateNote(note.id, { rawMarkdown: '过期草稿', annotationMapping: oldMapping }), {
+        code: 'NOTE_UPDATE_CONFLICT'
+      });
+      await assert.rejects(
+        asyncService.updateNote(note.id, { rawMarkdown: '过期草稿', annotationMapping: oldMapping }),
+        {
+          code: 'NOTE_UPDATE_CONFLICT'
+        }
+      );
+      assert.equal(sync.getNote(note.id).rawMarkdown, '其他设备的新正文');
+      const current = sync.getNote(note.id);
+      const saved = await asyncService.updateNote(note.id, {
+        rawMarkdown: '采用时间戳的保存',
+        expectedUpdatedAt: current.updatedAt,
+        annotationMapping: oldMapping
+      });
+      assert.equal(saved.rawMarkdown, '采用时间戳的保存');
     }
   }
 ];

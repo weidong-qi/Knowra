@@ -41,7 +41,6 @@ import { createModelSettingsService } from './modules/ai/model-settings.ts';
 import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
 import { createOptionalAiRuntime } from './modules/ai/runtime.js';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
-import { createJsonlShadowSink } from './infrastructure/annotation-shadow-log.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.ts';
 
@@ -232,16 +231,7 @@ export function createAppContext(options = {}) {
     readPurgeTaskState: createLocalPurgeTaskReader(dataStore),
     getPurgeDatasetEpoch: dataStore?.getSyncJournal ? () => dataStore.getSyncJournal().epoch : undefined,
     enforceReferences: options.enforceReferences ?? true,
-    noteVersionCoalescing: options.noteVersionCoalescing,
-    // 稳定身份迁移 S2a：本地持久化时记录影子比对结论（只含 ID 与结论）。
-    afterCommit: dataStore?.afterCommit,
-    annotationShadowSink:
-      options.annotationShadowSink ??
-      (dataStore
-        ? createJsonlShadowSink(
-            resolveStoragePath('storage/runtime/annotation-shadow.jsonl', options.storageRootDir ?? workspaceRoot)
-          )
-        : null)
+    noteVersionCoalescing: options.noteVersionCoalescing
   });
   const noteDeletionCoordinator = createNoteDeletionCoordinator({
     noteService: knowledge.noteService,
