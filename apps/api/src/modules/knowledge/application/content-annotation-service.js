@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
-import { calculateContentHash, resolveAnchor } from '@study-accelerator/content-anchor';
+import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { sameKnowraText, stripKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import { createAppError } from '../../../errors/app-error.js';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.js';
 import { buildUpdateContentAnnotationDto } from './dto/content-annotation-dto.js';
 import { createInMemoryContentAnnotationRepository } from '../infrastructure/content-annotation-repository.js';
+import { resolveLegacyAnnotationAnchor } from './legacy-annotation-anchor.ts';
 
 const contentHash = calculateContentHash;
 const fail = (code, message, statusCode = 400) => createAppError(code, message, statusCode);
@@ -20,7 +21,7 @@ export function legacyAnnotationHealth(annotation) {
 }
 
 /** 旧重点不再跟随正文；无法确认原摘录时，保守降级其来源。 */
-export function legacyAnnotationSourceChange(annotation, before, after) {
+export function legacyAnnotationSourceChange(annotation, before, after, sourceVersion = null) {
   const { lifecycleStatus, anchorStatus } = legacyAnnotationHealth(annotation);
   if (
     !annotation ||
@@ -37,7 +38,8 @@ export function legacyAnnotationSourceChange(annotation, before, after) {
   if (anchorStatus === 'missing' || anchorStatus === 'needsReview') return null;
   if (annotation.schemaVersion === 2 && annotation.anchor) {
     try {
-      const resolved = resolveAnchor(after, annotation.anchor);
+      const source = sourceVersion?.noteId === annotation.noteId ? sourceVersion.content : null;
+      const resolved = resolveLegacyAnnotationAnchor(after, annotation.anchor, source);
       if (resolved.status === 'resolved' && resolved.quoteText === annotation.quoteText) return null;
     } catch {
       // 损坏的旧锚点不应阻止正文保存，需要用户核对。
@@ -49,6 +51,7 @@ export function legacyAnnotationSourceChange(annotation, before, after) {
 export function createContentAnnotationService({
   repository = createInMemoryContentAnnotationRepository(),
   noteRepository = null,
+  noteVersionRepository = null,
   revisionRepository = null,
   onSourceChanged = null
 } = {}) {
@@ -142,10 +145,15 @@ export function createContentAnnotationService({
         .list({ noteId, includeDeleted: true })
         .filter(row => row.schemaVersion !== INLINE_ANNOTATION_SCHEMA);
       const note = rows.length && typeof context?.before === 'string' ? noteRepository?.findById(noteId) : null;
-      if (!note || note.deleted) return { annotations: [], contentChangedAnnotationIds: [] };
+      if (!note || note.deleted || sameKnowraText(context.before, note.rawMarkdown))
+        return { annotations: [], contentChangedAnnotationIds: [] };
       const annotations = [];
       for (const row of rows) {
-        const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown);
+        const sourceVersion =
+          row.schemaVersion === 2 && row.anchor && row.noteVersionId
+            ? noteVersionRepository?.findById(row.noteVersionId)
+            : null;
+        const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown, sourceVersion);
         if (!change) continue;
         // 旧记录由领域构造器校验；revision 可能来自历史存储中的数字字符串。
         const input = /** @type {import('../domain/content-annotation.ts').ContentAnnotationConstructorInput} */ (

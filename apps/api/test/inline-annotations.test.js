@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
+import {
+  anchorForBlock,
+  anchorForSection,
+  anchorForSourceRange,
+  calculateContentHash,
+  projectMarkdown
+} from '@study-accelerator/content-anchor';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
 import { legacyAnnotationSourceChange } from '../src/modules/knowledge/application/content-annotation-service.js';
@@ -59,6 +65,61 @@ const BASE = [
 ].join('\n');
 
 export const inlineAnnotationTests = [
+  {
+    name: '取消重点后恢复历史版本时，逐条核对恢复后的摘录与已有证据',
+    run() {
+      const module = createKnowledgeModule();
+      let note = createNote(module, '<mark data-k="restored">原文甲</mark>');
+      const original = module.noteVersionService.listVersions({ noteId: note.id })[0].content;
+      note = update(module, note, '<mark data-k="restored">改写乙</mark>');
+      const { item, evidence } = module.knowledgeItemService.createCandidate({
+        spaceId: SPACE,
+        title: '改写后的来源',
+        canonicalStatement: '改写后的来源',
+        knowledgeType: 'concept',
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'annotation', annotationId: inlineAnnotationId(note.id, 'restored') }]
+      });
+      module.knowledgeItemService.confirmItem(item.id);
+      note = update(module, note, '改写乙');
+      assert.equal(module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status, 'valid');
+      note = update(module, note, '<mark data-k="restored">改写乙</mark>');
+      assert.equal(module.repositories.knowledgeItemRepository.findById(item.id).reviewStatus, 'confirmed');
+      note = update(module, note, '改写乙');
+      update(module, note, original);
+      assert.equal(module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status, 'stale');
+      assert.equal(module.repositories.knowledgeItemRepository.findById(item.id).reviewStatus, 'needsRevision');
+    }
+  },
+  {
+    name: '跨文字与代码的重点仅代码范围失效时，即使摘录不变也降级证据',
+    run() {
+      const module = createKnowledgeModule();
+      const marker = `<!--k combined s=code r=0-1 h=${knowraCheck(' ')}-->`;
+      const original = `<mark data-k="combined">文字重点</mark>\n\n${marker}\n\`\`\`\n \n\`\`\``;
+      let note = createNote(module, original);
+      const annotationId = inlineAnnotationId(note.id, 'combined');
+      const { item, evidence } = module.knowledgeItemService.createCandidate({
+        spaceId: SPACE,
+        title: '跨段落和代码的来源',
+        canonicalStatement: '跨段落和代码的来源',
+        knowledgeType: 'concept',
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'annotation', annotationId }]
+      });
+      module.knowledgeItemService.confirmItem(item.id);
+      note = update(module, note, original.replace('\n \n', '\nX\n'));
+      const annotation = module.repositories.contentAnnotationRepository.findById(annotationId);
+      assert.equal(annotation.quoteText, '文字重点');
+      assert.equal(annotation.anchorStatus, 'needsReview');
+      assert.equal(annotation.anchorReason, 'partialCodeChanged');
+      assert.equal(module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status, 'stale');
+      assert.equal(module.repositories.knowledgeItemRepository.findById(item.id).reviewStatus, 'needsRevision');
+      update(module, note, original);
+      assert.equal(module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status, 'valid');
+      assert.equal(module.repositories.knowledgeItemRepository.findById(item.id).reviewStatus, 'needsRevision');
+    }
+  },
   {
     name: '历史重点缺少状态字段时按旧状态解释，不恢复已归档或待核对来源',
     run() {
@@ -887,9 +948,52 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
               'confirmed'
             );
 
-            let old = await makeNote('旧来源正文');
+            let history = await makeNote('<mark data-k="history">原文甲</mark>');
+            const historicalText = (await k.noteVersionService.listVersions({ noteId: history.id }))[0].content;
+            history = await k.noteService.updateNote(history.id, {
+              rawMarkdown: '<mark data-k="history">改写乙</mark>',
+              expectedUpdatedAt: history.updatedAt
+            });
+            const historyEvidence = await makeEvidence(history, inlineAnnotationId(history.id, 'history'));
+            history = await k.noteService.updateNote(history.id, {
+              rawMarkdown: '改写乙',
+              expectedUpdatedAt: history.updatedAt
+            });
+            await k.noteService.updateNote(history.id, {
+              rawMarkdown: historicalText,
+              expectedUpdatedAt: history.updatedAt
+            });
+            assert.equal(
+              (await k.repositories.knowledgeEvidenceRepository.findById(historyEvidence.id)).status,
+              'stale'
+            );
+            assert.equal(
+              (await k.repositories.knowledgeItemRepository.findById(historyEvidence.knowledgeItemId)).reviewStatus,
+              'needsRevision'
+            );
+
+            const codeMarker = `<!--k combined s=code r=0-1 h=${knowraCheck(' ')}-->`;
+            const originalCode = `<mark data-k="combined">文字重点</mark>\n\n${codeMarker}\n\`\`\`\n \n\`\`\``;
+            let combined = await makeNote(originalCode);
+            const combinedId = inlineAnnotationId(combined.id, 'combined');
+            const combinedEvidence = await makeEvidence(combined, combinedId);
+            combined = await k.noteService.updateNote(combined.id, {
+              rawMarkdown: originalCode.replace('\n \n', '\nX\n'),
+              expectedUpdatedAt: combined.updatedAt
+            });
+            assert.equal((await k.contentAnnotationService.getAnnotation(combinedId)).anchorStatus, 'needsReview');
+            assert.equal(
+              (await k.repositories.knowledgeEvidenceRepository.findById(combinedEvidence.id)).status,
+              'stale'
+            );
+            assert.equal(
+              (await k.repositories.knowledgeItemRepository.findById(combinedEvidence.knowledgeItemId)).reviewStatus,
+              'needsRevision'
+            );
+
+            let old = await makeNote('前言\n\n旧来源正文\n\n结尾');
             const [oldVersion] = await k.noteVersionService.listVersions({ noteId: old.id });
-            const anchor = anchorForBlock(projectMarkdown(old.rawMarkdown), 0);
+            const anchor = anchorForBlock(projectMarkdown(old.rawMarkdown), 1);
             const legacy = new ContentAnnotation({
               id: `legacy-${randomUUID()}`,
               spaceId: space.id,
@@ -915,6 +1019,29 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
             });
             await k.repositories.contentAnnotationRepository.save(legacy);
             const legacyEvidence = await makeEvidence(old, legacy.id);
+            old = await k.noteService.updateNote(old.id, {
+              rawMarkdown: '<mark data-k="lead">前言</mark>\n\n旧来源<mark data-k="inner">正文</mark>\n\n结尾',
+              expectedUpdatedAt: old.updatedAt
+            });
+            assert.equal((await k.annotationScopeService.previewAnnotation(legacy.id)).resolution.status, 'resolved');
+            old = await k.noteService.updateNote(old.id, {
+              rawMarkdown: `${old.rawMarkdown}修改`,
+              expectedUpdatedAt: old.updatedAt
+            });
+            const oldScope = await k.annotationScopeService.previewAnalysisScope({
+              spaceId: space.id,
+              mode: 'marked',
+              annotationIds: [legacy.id]
+            });
+            assert.equal(oldScope.segments.map(segment => segment.markdown).join(''), '旧来源正文');
+            assert.equal(
+              (await k.repositories.knowledgeEvidenceRepository.findById(legacyEvidence.id)).status,
+              'valid'
+            );
+            assert.equal(
+              (await k.repositories.knowledgeItemRepository.findById(legacyEvidence.knowledgeItemId)).reviewStatus,
+              'confirmed'
+            );
             old = await k.noteService.updateNote(old.id, { rawMarkdown: '完全改写', expectedUpdatedAt: old.updatedAt });
             assert.equal(
               (await k.repositories.knowledgeEvidenceRepository.findById(legacyEvidence.id)).status,
@@ -925,6 +1052,62 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
               (await k.repositories.knowledgeEvidenceRepository.findById(legacyEvidence.id)).status,
               'insufficient'
             );
+
+            const sectionText =
+              '前言\n\n# 标题\n\n保留<mark data-k="existing">内容</mark>\n\n秘密内容\n\n# 下一节\n\n结尾';
+            let sectionNote = await makeNote(sectionText);
+            const [sectionVersion] = await k.noteVersionService.listVersions({ noteId: sectionNote.id });
+            const sectionAnchor = anchorForSection(projectMarkdown(sectionText), 0);
+            const sectionRow = new ContentAnnotation({
+              id: `section-${randomUUID()}`,
+              spaceId: space.id,
+              noteId: sectionNote.id,
+              noteVersionId: sectionVersion.id,
+              schemaVersion: 2,
+              scopeType: 'section',
+              anchor: sectionAnchor,
+              originSnapshot: {
+                noteVersionId: sectionVersion.id,
+                contentHash: sectionVersion.contentHash,
+                scopeType: 'section',
+                segments: sectionAnchor.segments,
+                quoteText: sectionAnchor.quoteText,
+                headingPath: []
+              },
+              quoteText: sectionAnchor.quoteText,
+              fromPosition: sectionAnchor.sourceStart,
+              toPosition: sectionAnchor.sourceEnd,
+              anchorFingerprint: randomUUID(),
+              noteContentHash: sectionVersion.contentHash,
+              idempotencyKey: randomUUID()
+            });
+            await k.repositories.contentAnnotationRepository.save(sectionRow);
+            const secretStart = sectionText.indexOf('秘密内容');
+            await k.repositories.annotationExclusionRepository.save({
+              id: randomUUID(),
+              parentAnnotationId: sectionRow.id,
+              noteVersionId: sectionVersion.id,
+              anchor: anchorForSourceRange(projectMarkdown(sectionText), secretStart, secretStart + '秘密内容'.length),
+              status: 'active',
+              revision: 1,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+            const sectionMarked = sectionText
+              .replace('前言', '<mark data-k="lead">前言</mark>')
+              .replace('秘密内容', '秘密<mark data-k="inner">内容</mark>');
+            sectionNote = await k.noteService.updateNote(sectionNote.id, {
+              rawMarkdown: sectionMarked,
+              expectedUpdatedAt: sectionNote.updatedAt
+            });
+            const sectionScope = await k.annotationScopeService.previewAnalysisScope({
+              spaceId: space.id,
+              mode: 'marked',
+              annotationIds: [sectionRow.id]
+            });
+            const sectionResult = sectionScope.segments.map(segment => segment.markdown).join('');
+            assert.match(sectionResult, /保留内容/);
+            assert.doesNotMatch(sectionResult, /秘密|<mark/);
           } finally {
             await app?.close?.();
             await database?.close();

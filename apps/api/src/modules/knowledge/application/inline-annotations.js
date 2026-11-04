@@ -319,8 +319,8 @@ function sourceLoss(text, row, before, resolvePreviousSource, context) {
 }
 
 /**
- * 原文（去掉标记后的正文）变化时，哪些活跃的 v3 重点的原文被改或被删：装配层据此把以它们为来源的知识证据降级。
- * 标记还在但摘录变了、或标记连同原文一起被改写算"改"；正文被清空算"删"；只删标记而原文还在是取消重点，不影响证据。
+ * 找出需要重新核对证据的 v3 重点，包括恢复已取消的标记和锚点状态变化。
+ * 标记连同原文被改写算"改"；正文被清空算"删"；只删标记而原文还在是取消重点，不影响证据。
  */
 export function inlineSourceChanges(note, existing, before = null) {
   const marks = inlineMarksOf(note?.rawMarkdown);
@@ -331,13 +331,19 @@ export function inlineSourceChanges(note, existing, before = null) {
   const changed = [],
     removed = [];
   for (const row of existing ?? []) {
-    if (!isInlineAnnotation(row) || row.lifecycleStatus !== 'active') continue;
+    if (!isInlineAnnotation(row)) continue;
     const mark = marks.get(row.anchor.markId);
     if (mark) {
       if (mark.anchorStatus === 'missing') removed.push(row.id);
-      else if (mark.quoteText !== row.quoteText) changed.push(row.id);
+      else if (
+        row.lifecycleStatus !== 'active' ||
+        mark.quoteText !== row.quoteText ||
+        mark.anchorStatus !== row.anchorStatus
+      )
+        changed.push(row.id);
       continue;
     }
+    if (row.lifecycleStatus !== 'active') continue;
     const loss = sourceLoss(text, row, before, resolvePreviousSource, sourceContext);
     if (loss) (loss.anchorStatus === 'missing' ? removed : changed).push(row.id);
   }

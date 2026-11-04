@@ -5,7 +5,13 @@ import { createInMemoryContentAnnotationRepository } from '../src/modules/knowle
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createAsyncContentAnnotationService } from '../src/modules/knowledge/application/postgres-async/content-annotation-service.js';
-import { anchorForSourceRange, projectMarkdown } from '@study-accelerator/content-anchor';
+import { resolveLegacyAnnotationAnchor } from '../src/modules/knowledge/application/legacy-annotation-anchor.ts';
+import {
+  anchorForListItem,
+  anchorForSection,
+  anchorForSourceRange,
+  projectMarkdown
+} from '@study-accelerator/content-anchor';
 
 // 重点内联化 I4b：重点只能写在正文标记里。库里残留的旧格式行（v1）仍可取消、归档和改备注。
 const legacyRow = (overrides = {}) =>
@@ -37,6 +43,247 @@ const legacyRemoved = error => {
 };
 
 export const contentAnnotationServiceTests = [
+  {
+    name: '只改变正文标记时，旧重点协调不读取历史版本',
+    async run() {
+      const before = '原文 其他';
+      const anchor = anchorForSourceRange(projectMarkdown(before), 0, 2);
+      const { repository } = serviceWith([
+        legacyRow({
+          schemaVersion: 2,
+          anchor,
+          noteVersionId: 'old-version',
+          quoteText: '原文',
+          originSnapshot: { noteVersionId: 'old-version', quoteText: '原文', segments: anchor.segments }
+        })
+      ]);
+      const options = {
+        repository,
+        noteRepository: { findById: () => ({ rawMarkdown: '原文 <mark data-k="m">其他</mark>' }) },
+        noteVersionRepository: {
+          findById: () => {
+            throw new Error('标记调整不应读取历史版本');
+          }
+        }
+      };
+      const expected = { annotations: [], contentChangedAnnotationIds: [] };
+      assert.deepEqual(
+        createContentAnnotationService(options).reconcileForNote('note-1', 'hash', { before }),
+        expected
+      );
+      assert.deepEqual(
+        await createAsyncContentAnnotationService(options).reconcileForNote('note-1', 'hash', { before }),
+        expected
+      );
+    }
+  },
+  {
+    name: '旧锚点来源版本不匹配时，即使当前正文碰巧相同也不猜测原位置',
+    run() {
+      const anchor = anchorForSourceRange(projectMarkdown('旧重点'), 0, '旧重点'.length);
+      assert.equal(resolveLegacyAnnotationAnchor('旧重点', anchor, '其他内容').status, 'needsReview');
+    }
+  },
+  {
+    name: '旧重点之前新增正文标记与后续无关编辑不改变来源预览、分析范围和证据',
+    run() {
+      const module = createKnowledgeModule();
+      const original = '前言\n\n旧重点\n\n结尾';
+      let note = module.noteService.createNote({
+        id: 'legacy-marked',
+        spaceId: 'space-old',
+        title: '旧重点',
+        rawMarkdown: original
+      });
+      const version = module.noteVersionService.listVersions({ noteId: note.id })[0];
+      const start = original.indexOf('旧重点');
+      const anchor = anchorForSourceRange(projectMarkdown(original), start, start + '旧重点'.length);
+      const row = legacyRow({
+        id: 'legacy-after-mark',
+        spaceId: note.spaceId,
+        noteId: note.id,
+        quoteText: '旧重点',
+        fromPosition: anchor.sourceStart,
+        toPosition: anchor.sourceEnd,
+        schemaVersion: 2,
+        anchor,
+        noteContentHash: version.contentHash,
+        noteVersionId: version.id,
+        originSnapshot: {
+          noteVersionId: version.id,
+          contentHash: version.contentHash,
+          quoteText: '旧重点',
+          segments: anchor.segments
+        }
+      });
+      module.repositories.contentAnnotationRepository.save(row);
+      const { item, evidence } = module.knowledgeItemService.createCandidate({
+        spaceId: note.spaceId,
+        title: '旧重点来源',
+        canonicalStatement: '来源知识',
+        knowledgeType: 'concept',
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'annotation', annotationId: row.id }]
+      });
+      module.knowledgeItemService.confirmItem(item.id);
+      note = module.noteService.updateNote(note.id, {
+        rawMarkdown: '<mark data-k="new">前言</mark>\n\n旧<mark data-k="inside">重点</mark>\n\n结尾'
+      });
+      assert.equal(module.annotationScopeService.previewAnnotation(row.id).resolution.status, 'resolved');
+      note = module.noteService.updateNote(note.id, { rawMarkdown: `${note.rawMarkdown}修改` });
+      assert.equal(module.annotationScopeService.previewAnnotation(row.id).resolution.status, 'resolved');
+      const scope = module.annotationScopeService.previewAnalysisScope({
+        spaceId: note.spaceId,
+        mode: 'marked',
+        annotationIds: [row.id]
+      });
+      assert.equal(scope.segments.map(segment => segment.markdown).join(''), '旧重点');
+      assert.equal(module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status, 'valid');
+      assert.equal(module.repositories.knowledgeItemRepository.findById(item.id).reviewStatus, 'confirmed');
+      module.noteService.updateNote(note.id, { rawMarkdown: note.rawMarkdown.replace('旧<mark', '新<mark') });
+      assert.equal(module.repositories.knowledgeEvidenceRepository.findById(evidence[0].id).status, 'stale');
+      assert.equal(module.repositories.knowledgeItemRepository.findById(item.id).reviewStatus, 'needsRevision');
+    }
+  },
+  {
+    name: '旧选区的来源版本本身含标记时，去标记后的真实范围仍可验证',
+    run() {
+      const module = createKnowledgeModule();
+      const original = '前<mark data-k="existing">旧</mark>重点后\n\n结尾';
+      let note = module.noteService.createNote({
+        id: 'legacy-existing-mark',
+        spaceId: 'space-old',
+        title: '旧重点',
+        rawMarkdown: original
+      });
+      const version = module.noteVersionService.listVersions({ noteId: note.id })[0];
+      const anchor = anchorForSourceRange(projectMarkdown(original), original.indexOf('旧'), original.indexOf('后'));
+      const row = legacyRow({
+        id: 'old-with-mark',
+        idempotencyKey: 'old-with-mark',
+        spaceId: note.spaceId,
+        noteId: note.id,
+        quoteText: anchor.quoteText,
+        fromPosition: anchor.sourceStart,
+        toPosition: anchor.sourceEnd,
+        schemaVersion: 2,
+        anchor,
+        noteContentHash: version.contentHash,
+        noteVersionId: version.id,
+        originSnapshot: {
+          noteVersionId: version.id,
+          contentHash: version.contentHash,
+          quoteText: anchor.quoteText,
+          segments: anchor.segments
+        }
+      });
+      module.repositories.contentAnnotationRepository.save(row);
+      const marked = original.replace('前', '<mark data-k="lead">前</mark>');
+      note = module.noteService.updateNote(note.id, { rawMarkdown: marked });
+      note = module.noteService.updateNote(note.id, { rawMarkdown: `${note.rawMarkdown}！` });
+      assert.equal(module.annotationScopeService.previewAnnotation(row.id).resolution.status, 'resolved');
+      const scope = module.annotationScopeService.previewAnalysisScope({
+        spaceId: note.spaceId,
+        mode: 'marked',
+        annotationIds: [row.id]
+      });
+      assert.equal(scope.segments.map(segment => segment.markdown).join(''), '旧重点');
+    }
+  },
+  {
+    name: '旧章节与列表范围在标记偏移变化后仍按原始版本精确读取，排除部分不泄漏',
+    run() {
+      const module = createKnowledgeModule();
+      const cases = [
+        {
+          name: 'section',
+          before: '前言\n\n# 标题\n\n保留<mark data-k="existing">内容</mark>\n\n秘密内容\n\n# 下一节\n\n结尾',
+          anchor: projection => anchorForSection(projection, 0),
+          excluded: '秘密内容'
+        },
+        {
+          name: 'list',
+          before: '前言\n\n- 保留<mark data-k="existing">内容</mark>\n  - 子项\n\n结尾',
+          anchor: projection => anchorForListItem(projection, projection.listItems[0].path)
+        }
+      ];
+      for (const entry of cases) {
+        let note = module.noteService.createNote({
+          id: `legacy-${entry.name}`,
+          spaceId: 'space-old',
+          title: entry.name,
+          rawMarkdown: entry.before
+        });
+        const version = module.noteVersionService.listVersions({ noteId: note.id })[0];
+        const anchor = entry.anchor(projectMarkdown(entry.before));
+        const row = legacyRow({
+          id: `old-${entry.name}`,
+          idempotencyKey: `old-${entry.name}`,
+          spaceId: note.spaceId,
+          noteId: note.id,
+          quoteText: anchor.quoteText,
+          fromPosition: anchor.sourceStart,
+          toPosition: anchor.sourceEnd,
+          schemaVersion: 2,
+          scopeType: entry.name,
+          anchor,
+          noteContentHash: version.contentHash,
+          noteVersionId: version.id,
+          originSnapshot: {
+            noteVersionId: version.id,
+            contentHash: version.contentHash,
+            quoteText: anchor.quoteText,
+            segments: anchor.segments
+          }
+        });
+        module.repositories.contentAnnotationRepository.save(row);
+        if (entry.excluded) {
+          const start = entry.before.indexOf(entry.excluded);
+          module.repositories.annotationExclusionRepository.save({
+            id: 'old-exclusion',
+            parentAnnotationId: row.id,
+            noteVersionId: version.id,
+            status: 'active',
+            anchor: anchorForSourceRange(projectMarkdown(entry.before), start, start + entry.excluded.length)
+          });
+        }
+        let marked = entry.before.replace('前言', '<mark data-k="lead">前言</mark>');
+        if (entry.excluded) marked = marked.replace('秘密内容', '秘密<mark data-k="inside">内容</mark>');
+        note = module.noteService.updateNote(note.id, { rawMarkdown: marked });
+        note = module.noteService.updateNote(note.id, { rawMarkdown: `${note.rawMarkdown}！` });
+        assert.equal(module.annotationScopeService.previewAnnotation(row.id).resolution.status, 'resolved');
+        const scope = module.annotationScopeService.previewAnalysisScope({
+          spaceId: note.spaceId,
+          mode: 'marked',
+          annotationIds: [row.id]
+        });
+        const text = scope.segments.map(segment => segment.markdown).join('');
+        assert.match(text, /保留内容/);
+        assert.doesNotMatch(text, /秘密|<mark/);
+        if (entry.excluded) {
+          const outside = entry.before.lastIndexOf('结尾');
+          const exclusion = module.repositories.annotationExclusionRepository.findById('old-exclusion');
+          module.repositories.annotationExclusionRepository.save({
+            ...exclusion,
+            anchor: anchorForSourceRange(projectMarkdown(entry.before), outside, outside + '结尾'.length)
+          });
+          assert.throws(
+            () =>
+              module.annotationScopeService.previewAnalysisScope({
+                spaceId: note.spaceId,
+                mode: 'marked',
+                annotationIds: [row.id]
+              }),
+            { code: 'ANNOTATION_EXCLUSION_CONFLICT' }
+          );
+        }
+        if (entry.name === 'list') {
+          module.noteService.updateNote(note.id, { rawMarkdown: note.rawMarkdown.replace('- 保留', '1. 保留') });
+          assert.equal(module.annotationScopeService.previewAnnotation(row.id).resolution.status, 'needsReview');
+        }
+      }
+    }
+  },
   {
     name: '残留旧重点：只改标记保留证据，原文改写和清空分别降级',
     run() {

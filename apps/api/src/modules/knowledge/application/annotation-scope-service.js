@@ -1,5 +1,6 @@
 import { inlineAnnotationSourceRanges } from './inline-annotation-ranges.js';
 import { legacyAnnotationRemoved } from './content-annotation-service.js';
+import { resolveLegacyAnnotationAnchor } from './legacy-annotation-anchor.ts';
 import crypto from 'node:crypto';
 import { calculateContentHash, projectMarkdown, resolveAnchor } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../../errors/app-error.js';
@@ -33,6 +34,15 @@ export function createAnnotationScopeService({
     return version;
   }
 
+  function resolveLegacy(note, anchor, versionId) {
+    const version = versionId ? noteVersionRepository.findById(versionId) : null;
+    return resolveLegacyAnnotationAnchor(
+      note.rawMarkdown,
+      anchor,
+      version?.noteId === note.id ? version.content : null
+    );
+  }
+
   function previewAnnotation(id) {
     const annotation = requireAnnotation(id);
     const note = requireNote(annotation.noteId);
@@ -41,7 +51,7 @@ export function createAnnotationScopeService({
       annotation.schemaVersion === 3
         ? { status: annotation.anchorStatus ?? 'resolved', reason: annotation.anchorReason ?? null }
         : annotation.anchorStatus === 'resolved' && annotation.schemaVersion === 2 && annotation.anchor
-          ? resolveAnchor(note.rawMarkdown, annotation.anchor)
+          ? resolveLegacy(note, annotation.anchor, annotation.noteVersionId)
           : { status: annotation.anchorStatus ?? 'needsReview', reason: annotation.anchorReason ?? 'legacyUnverified' };
     return {
       annotation,
@@ -123,13 +133,13 @@ export function createAnnotationScopeService({
         const note = noteById.get(annotation.noteId);
         const resolution =
           annotation.anchorStatus && annotation.anchorStatus !== 'resolved'
-            ? { status: annotation.anchorStatus, reason: annotation.anchorReason }
-            : resolveAnchor(note.rawMarkdown, annotation.anchor);
+            ? { status: annotation.anchorStatus, reason: annotation.anchorReason, segments: [] }
+            : resolveLegacy(note, annotation.anchor, annotation.noteVersionId);
         if (resolution.status !== 'resolved') {
           omittedItems.push({ annotationId: annotation.id, reason: resolution.reason });
           continue;
         }
-        for (const segment of annotation.anchor.segments)
+        for (const segment of resolution.segments ?? [])
           contributions.push({ noteId: note.id, start: segment.start, end: segment.end, annotationId: annotation.id });
       }
     }
@@ -152,16 +162,24 @@ export function createAnnotationScopeService({
         if (exclusion.anchor?.unresolved)
           throw fail('ANNOTATION_EXCLUSION_CONFLICT', '局部排除位置待确认，请先修复排除范围', 409);
         const note = noteById.get(annotation.noteId);
+        const sourceVersionId = exclusion.noteVersionId ?? annotation.noteVersionId;
+        const parent = note && resolveLegacy(note, annotation.anchor, annotation.noteVersionId);
+        const excluded = note && resolveLegacy(note, exclusion.anchor, sourceVersionId);
+        const parentStart = parent?.segments?.[0]?.start;
+        const parentEnd = parent?.segments?.at(-1)?.end;
         if (
           !note ||
-          resolveAnchor(note.rawMarkdown, exclusion.anchor).status !== 'resolved' ||
-          exclusion.anchor.sourceStart < annotation.anchor.sourceStart ||
-          exclusion.anchor.sourceEnd > annotation.anchor.sourceEnd
+          parent?.status !== 'resolved' ||
+          excluded?.status !== 'resolved' ||
+          parentStart === undefined ||
+          parentEnd === undefined ||
+          !excluded.segments?.length ||
+          excluded.segments.some(segment => segment.start < parentStart || segment.end > parentEnd)
         ) {
           throw fail('ANNOTATION_EXCLUSION_CONFLICT', '局部排除不在当前重点范围内，请先修复排除范围', 409);
         }
         persistentExclusions.push(
-          ...exclusion.anchor.segments.map(segment => ({
+          ...(excluded.segments ?? []).map(segment => ({
             noteId: annotation.noteId,
             start: segment.start,
             end: segment.end,

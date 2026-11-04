@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
+import { knowraCheck } from '@study-accelerator/shared/knowra-marks';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
@@ -65,9 +66,9 @@ async function fixture(t, options = {}) {
 }
 const clean = device => assert.equal(device.engine.status().error, null, JSON.stringify(device.engine.status()));
 
-function addLegacyAnnotation(cloud, note, id) {
+function addLegacyAnnotation(cloud, note, id, blockIndex = 0) {
   const version = cloud.knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
-  const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), 0);
+  const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), blockIndex);
   return new ContentAnnotation({
     id,
     spaceId: note.spaceId,
@@ -342,6 +343,124 @@ test(
     });
     await engine.configure({ serverUrl: origin });
     clean({ engine });
+    const pgKnowledge = cloud.modules.knowledge;
+    const pgRestore = await pgKnowledge.noteService.createNote({
+      title: 'PG 历史恢复',
+      spaceId: space.id,
+      rawMarkdown: markText('改写乙', 'history')
+    });
+    await engine.sync();
+    clean({ engine });
+    const pgRestoredSource = await pgKnowledge.knowledgeItemService.createCandidate({
+      title: 'PG 历史来源',
+      canonicalStatement: 'PG 历史来源',
+      sourceMode: 'annotation',
+      evidence: [{ sourceType: 'annotation', annotationId: inlineId(pgRestore.id, 'history') }]
+    });
+    await pgKnowledge.knowledgeItemService.confirmItem(pgRestoredSource.item.id);
+    workspace.knowledge.noteService.updateNote(pgRestore.id, { rawMarkdown: '改写乙' });
+    await engine.sync();
+    clean({ engine });
+    workspace.knowledge.noteService.updateNote(pgRestore.id, { rawMarkdown: markText('原文甲', 'history') });
+    await engine.sync();
+    clean({ engine });
+    assert.equal(
+      (await cloud.prisma.knowledgeEvidence.findUnique({ where: { id: pgRestoredSource.evidence[0].id } })).status,
+      'stale'
+    );
+    assert.equal(
+      (await cloud.prisma.knowledgeItem.findUnique({ where: { id: pgRestoredSource.item.id } })).reviewStatus,
+      'needsRevision'
+    );
+
+    const pgMarker = `<!--k pgcode s=code r=0-1 h=${knowraCheck(' ')}-->`;
+    const pgCodeText = `<mark data-k="pgcode">文字重点</mark>\n\n${pgMarker}\n\`\`\`\n \n\`\`\``;
+    const pgCode = await pgKnowledge.noteService.createNote({
+      title: 'PG 代码来源',
+      spaceId: space.id,
+      rawMarkdown: pgCodeText
+    });
+    await engine.sync();
+    clean({ engine });
+    const pgCodeSource = await pgKnowledge.knowledgeItemService.createCandidate({
+      title: 'PG 代码来源知识',
+      canonicalStatement: 'PG 代码来源知识',
+      sourceMode: 'annotation',
+      evidence: [{ sourceType: 'annotation', annotationId: inlineId(pgCode.id, 'pgcode') }]
+    });
+    await pgKnowledge.knowledgeItemService.confirmItem(pgCodeSource.item.id);
+    workspace.knowledge.noteService.updateNote(pgCode.id, { rawMarkdown: pgCodeText.replace('\n \n', '\nX\n') });
+    await engine.sync();
+    clean({ engine });
+    assert.equal(
+      (await cloud.prisma.knowledgeEvidence.findUnique({ where: { id: pgCodeSource.evidence[0].id } })).status,
+      'stale'
+    );
+    assert.equal(
+      (await cloud.prisma.knowledgeItem.findUnique({ where: { id: pgCodeSource.item.id } })).reviewStatus,
+      'needsRevision'
+    );
+
+    const pgOld = await pgKnowledge.noteService.createNote({
+      title: 'PG 旧重点',
+      spaceId: space.id,
+      rawMarkdown: '前言\n\n旧重点\n\n结尾'
+    });
+    await engine.sync();
+    clean({ engine });
+    const [pgOldVersion] = await pgKnowledge.noteVersionService.listVersions({ noteId: pgOld.id });
+    const pgOldAnchor = anchorForBlock(projectMarkdown(pgOld.rawMarkdown), 1);
+    const pgLegacy = new ContentAnnotation({
+      id: 'pg-legacy-after-mark',
+      spaceId: space.id,
+      noteId: pgOld.id,
+      noteVersionId: pgOldVersion.id,
+      schemaVersion: 2,
+      scopeType: 'blocks',
+      anchor: pgOldAnchor,
+      originSnapshot: {
+        noteVersionId: pgOldVersion.id,
+        contentHash: pgOldVersion.contentHash,
+        scopeType: 'blocks',
+        segments: pgOldAnchor.segments,
+        quoteText: pgOldAnchor.quoteText,
+        headingPath: []
+      },
+      quoteText: pgOldAnchor.quoteText,
+      fromPosition: pgOldAnchor.sourceStart,
+      toPosition: pgOldAnchor.sourceEnd,
+      anchorFingerprint: 'pg-legacy-after-mark',
+      noteContentHash: pgOldVersion.contentHash,
+      idempotencyKey: 'pg-legacy-after-mark'
+    });
+    await pgKnowledge.repositories.contentAnnotationRepository.save(pgLegacy);
+    const pgLegacySource = await pgKnowledge.knowledgeItemService.createCandidate({
+      title: 'PG 旧重点来源',
+      canonicalStatement: 'PG 旧重点来源',
+      sourceMode: 'annotation',
+      evidence: [{ sourceType: 'annotation', annotationId: pgLegacy.id }]
+    });
+    await pgKnowledge.knowledgeItemService.confirmItem(pgLegacySource.item.id);
+    const pgMarked = `${markText('前言', 'pg-lead')}\n\n旧重点\n\n结尾`;
+    workspace.knowledge.noteService.updateNote(pgOld.id, { rawMarkdown: pgMarked });
+    await engine.sync();
+    clean({ engine });
+    workspace.knowledge.noteService.updateNote(pgOld.id, { rawMarkdown: `${pgMarked}修改` });
+    await engine.sync();
+    clean({ engine });
+    assert.equal(
+      (await pgKnowledge.annotationScopeService.previewAnnotation(pgLegacy.id)).resolution.status,
+      'resolved'
+    );
+    assert.equal(
+      (await cloud.prisma.knowledgeEvidence.findUnique({ where: { id: pgLegacySource.evidence[0].id } })).status,
+      'valid'
+    );
+    assert.equal(
+      (await cloud.prisma.knowledgeItem.findUnique({ where: { id: pgLegacySource.item.id } })).reviewStatus,
+      'confirmed'
+    );
+
     const folder = workspace.knowledge.folderService.createFolder({
       spaceId: space.id,
       name: `PG 离线目录 ${Date.now()}`
@@ -1058,6 +1177,45 @@ test('旧重点正文离线改写后撤销，保守降级与后续修改仍能�
         { code: 'SYNC_CLIENT_UPGRADE_REQUIRED' }
       );
     });
+});
+
+test('云端旧重点之前新增标记后继续同步，无关修改不降级来源', async t => {
+  const cloud = await fixture(t);
+  const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '前言\n\n旧重点\n\n结尾' });
+  const a = cloud.device('legacy-mark-writer');
+  await a.connect();
+  const row = addLegacyAnnotation(cloud, note, 'legacy-after-mark', 1);
+  cloud.knowledge.repositories.contentAnnotationRepository.save(row);
+  const { item, evidence } = cloud.knowledge.knowledgeItemService.createCandidate({
+    title: '旧重点来源',
+    canonicalStatement: '旧重点来源',
+    sourceMode: 'annotation',
+    evidence: [{ sourceType: 'annotation', annotationId: row.id }]
+  });
+  cloud.knowledge.knowledgeItemService.confirmItem(item.id);
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: `${markText('前言', 'new')}\n\n旧重点\n\n结尾` });
+  await a.engine.sync();
+  clean(a);
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: `${markText('前言', 'new')}\n\n旧重点\n\n结尾修改` });
+  await a.engine.sync();
+  clean(a);
+  const b = cloud.device('legacy-mark-reader');
+  await b.connect();
+  clean(b);
+  for (const device of [a, b]) {
+    assert.equal(device.knowledge.annotationScopeService.previewAnnotation(row.id).resolution.status, 'resolved');
+    const scope = device.knowledge.annotationScopeService.previewAnalysisScope({
+      spaceId: note.spaceId,
+      mode: 'marked',
+      annotationIds: [row.id]
+    });
+    assert.equal(scope.segments.map(segment => segment.markdown).join(''), '旧重点');
+  }
+  for (const state of [a.store.state, cloud.dataStore.state, b.store.state]) {
+    assert.equal(state.contentAnnotations.find(value => value.id === row.id).anchorStatus, 'resolved');
+    assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'valid');
+    assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'confirmed');
+  }
 });
 
 test('云端旧重点缺少生命周期字段时，离线正文改写仍使来源降级', async t => {

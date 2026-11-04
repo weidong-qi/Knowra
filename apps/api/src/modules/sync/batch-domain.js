@@ -111,9 +111,13 @@ export function prepareBatchState(before, changes, ownerId, preparedAttachments 
       const nextHealth = legacyAnnotationHealth(change.value);
       const oldNote = before.notes.find(note => note.id === old?.noteId);
       const incomingNote = changes.find(item => item.collection === 'notes' && item.id === old?.noteId)?.value;
+      const sourceVersion =
+        old?.schemaVersion === 2 && old.noteVersionId
+          ? before.noteVersions.find(version => version.id === old.noteVersionId)
+          : null;
       const loss =
         old && oldNote && incomingNote
-          ? legacyAnnotationSourceChange(old, oldNote.rawMarkdown, incomingNote.rawMarkdown)
+          ? legacyAnnotationSourceChange(old, oldNote.rawMarkdown, incomingNote.rawMarkdown, sourceVersion)
           : null;
       const healthChanged =
         oldHealth.anchorStatus !== nextHealth.anchorStatus ||
@@ -434,7 +438,12 @@ export function prepareBatchState(before, changes, ownerId, preparedAttachments 
       }
       // 恢复旧备份等情况仍可能有旧重点；原文变化时只降级，不推算新位置。
       for (const previous of previousRows) {
-        const loss = legacyAnnotationSourceChange(previous, previousNote.rawMarkdown, note.rawMarkdown);
+        if (previous.schemaVersion === 3) continue;
+        const sourceVersion =
+          previous.schemaVersion === 2 && previous.noteVersionId
+            ? before.noteVersions.find(item => item.id === previous.noteVersionId)
+            : null;
+        const loss = legacyAnnotationSourceChange(previous, previousNote.rawMarkdown, note.rawMarkdown, sourceVersion);
         const current = currentById.get(previous.id);
         if (!loss || !current || current.anchorStatus === 'missing') continue;
         const updated = new ContentAnnotation({ ...current, ...loss });

@@ -3,12 +3,14 @@ import { createAppError } from '../../../../errors/app-error.js';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../../domain/content-annotation.js';
 import { buildUpdateContentAnnotationDto } from '../dto/content-annotation-dto.js';
 import { legacyAnnotationRemoved, legacyAnnotationSourceChange } from '../content-annotation-service.js';
+import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 
 const fail = (code, message, statusCode = 400) => createAppError(code, message, statusCode);
 
 export function createAsyncContentAnnotationService({
   repository,
   noteRepository,
+  noteVersionRepository = null,
   revisionRepository = null,
   onSourceChanged = null
 } = {}) {
@@ -105,10 +107,15 @@ export function createAsyncContentAnnotationService({
         row => row.schemaVersion !== INLINE_ANNOTATION_SCHEMA
       );
       const note = rows.length && typeof context?.before === 'string' ? await noteRepository.findById(noteId) : null;
-      if (!note || note.deleted) return { annotations: [], contentChangedAnnotationIds: [] };
+      if (!note || note.deleted || sameKnowraText(context.before, note.rawMarkdown))
+        return { annotations: [], contentChangedAnnotationIds: [] };
       const annotations = [];
       for (const row of rows) {
-        const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown);
+        const sourceVersion =
+          row.schemaVersion === 2 && row.anchor && row.noteVersionId
+            ? await noteVersionRepository?.findById(row.noteVersionId)
+            : null;
+        const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown, sourceVersion);
         if (!change) continue;
         const updated = await repository.save(
           new ContentAnnotation({ ...row, ...change, revision: row.revision + 1, updatedAt: new Date().toISOString() })
