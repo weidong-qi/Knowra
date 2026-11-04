@@ -36,7 +36,7 @@
 .rowSummary { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12.5px/1.5 var(--font-ui); color: var(--ni-ink-3, var(--text-muted)); }
 .nameCell:disabled, .tile:disabled { opacity: 1; cursor: default; }
 .entryIcon { --knowra-icon-accent: currentColor; flex: none; display: grid; place-items: center; color: var(--ni-ink-3, var(--text-muted)); }
-.entryIcon[data-art-kind='folder'] { color: color-mix(in srgb, var(--ni-deco, var(--ni-accent, var(--accent))) 65%, var(--ni-ink-3, var(--text-muted))); }
+.entryIcon[data-art-kind='folder'] { color: color-mix(in srgb, var(--ni-accent, var(--accent)) 65%, var(--ni-ink-3, var(--text-muted))); }
 .status { --status-color: var(--ni-ink-3, var(--text-muted)); display: inline-flex; align-items: center; gap: 6px; color: var(--ni-ink-2, var(--text-secondary)); font-size: 12px; font-weight: 400; white-space: nowrap; }
 .statusGlyph { flex: none; fill: none; stroke: var(--status-color); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .statusDot { width: 5px; height: 5px; border-radius: 50%; background: var(--status-color, var(--text-muted)); }
