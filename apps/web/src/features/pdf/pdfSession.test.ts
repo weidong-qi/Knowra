@@ -1,5 +1,6 @@
 import { PdfSession } from './pdfSession';
 import { pdfRequest } from './pdfApi';
+import { exportPdfExcerpt } from './pdfGeometry';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 vi.mock('./pdfApi', () => ({
   pdfRequest: vi.fn(),
@@ -70,6 +71,101 @@ it('响应丢失后重开使用同一个操作和请求重试，不重复创建'
   await reopened.flush();
   expect(request.mock.calls[1][1]!.body).toBe(first);
   expect(reopened.drafts.size).toBe(0);
+});
+it.each([false, true])('失败后继续编辑，重放旧请求后仍提交最新评论（重开：%s）', async reopen => {
+  request.mockRejectedValueOnce(new Error('lost response'));
+  let session = new PdfSession('note', base.sha256, 'test-key', () => {});
+  session.items.set(base.id, base);
+  await session.stage(base.id, { comment: '第一版' });
+  await expect(session.flush()).rejects.toThrow('lost response');
+  await session.stage(base.id, { comment: '失败后继续修改' });
+  if (reopen) {
+    session = new PdfSession('note', base.sha256, 'test-key', () => {});
+    session.items.set(base.id, { ...base, revision: 2, comment: '第一版' });
+    session.recover();
+  }
+  request
+    .mockResolvedValueOnce({ ...base, revision: 2, comment: '第一版' })
+    .mockResolvedValueOnce({ ...base, revision: 3, comment: '失败后继续修改' });
+  await session.flush();
+  expect(request).toHaveBeenCalledTimes(3);
+  expect(request.mock.calls[1][1]!.body).toBe(request.mock.calls[0][1]!.body);
+  const replay = JSON.parse(request.mock.calls[1][1]!.body as string);
+  const latest = JSON.parse(request.mock.calls[2][1]!.body as string);
+  expect(latest).toMatchObject({ comment: '失败后继续修改', expectedRevision: 2 });
+  expect(latest.operationId).not.toBe(replay.operationId);
+  expect(session.values()[0]).toMatchObject({ comment: '失败后继续修改', revision: 3 });
+  expect(session.drafts.size).toBe(0);
+  expect(localStorage.getItem('test-key')).toBeNull();
+});
+it('创建回执丢失后删除，先以原方法重放创建，再使用确认修订删除', async () => {
+  request.mockRejectedValueOnce(new Error('lost response'));
+  const session = new PdfSession('note', base.sha256, 'test-key', () => {});
+  await session.stage(base.id, base);
+  await expect(session.flush()).rejects.toThrow('lost response');
+  await session.stage(base.id, {}, true);
+  const reopened = new PdfSession('note', base.sha256, 'test-key', () => {});
+  reopened.recover();
+  request.mockResolvedValueOnce(base).mockResolvedValueOnce({ ...base, revision: 2, deletedAt: '2026-11-04' });
+  await reopened.flush();
+  expect(request.mock.calls.map(([, options]) => options!.method)).toEqual(['PUT', 'PUT', 'DELETE']);
+  expect(request.mock.calls[1][1]!.body).toBe(request.mock.calls[0][1]!.body);
+  expect(JSON.parse(request.mock.calls[2][1]!.body as string)).toMatchObject({ expectedRevision: 1 });
+  expect(reopened.values()).toEqual([]);
+  expect(reopened.drafts.size).toBe(0);
+});
+it('成功删除的墓碑保留修订，但不进入活动标注和摘录', async () => {
+  const session = new PdfSession('note', base.sha256, 'test-key', () => {});
+  session.items.set(base.id, { ...base, comment: '不应导出的已删评论' });
+  request.mockResolvedValueOnce({ ...base, revision: 2, deletedAt: '2026-11-04', comment: '不应导出的已删评论' });
+  await session.stage(base.id, {}, true);
+  expect(session.values()).toEqual([]);
+  await session.flush();
+  expect(session.items.get(base.id)?.revision).toBe(2);
+  expect(session.values()).toEqual([]);
+  expect(exportPdfExcerpt('资料', 'note', session.values())).not.toContain('不应导出的已删评论');
+  expect(session.drafts.size).toBe(0);
+});
+it.each(['edit', 'delete', 'legacy'] as const)('恢复未发送的草稿保留原修订，远端变更必须核对（%s）', async mode => {
+  const original = new PdfSession('note', base.sha256, 'test-key', () => {});
+  original.items.set(base.id, base);
+  await original.stage(base.id, { comment: '本机未保存评论' }, mode === 'delete');
+  if (mode === 'legacy') {
+    const legacy = JSON.parse(localStorage.getItem('test-key')!);
+    delete legacy.drafts[0].expectedRevision;
+    localStorage.setItem('test-key', JSON.stringify(legacy));
+  }
+  const remote = { ...base, revision: 2, comment: '其他窗口的新评论' };
+  const reopened = new PdfSession('note', base.sha256, 'test-key', () => {});
+  reopened.items.set(base.id, remote);
+  reopened.recover();
+  request.mockRejectedValueOnce(Object.assign(new Error('conflict'), { code: 'PDF_ANNOTATION_CONFLICT' }));
+  await expect(reopened.flush()).rejects.toThrow('conflict');
+  expect(JSON.parse(request.mock.calls[0][1]!.body as string)).toMatchObject({ expectedRevision: 1 });
+  expect(reopened.errorCode).toBe('PDF_ANNOTATION_CONFLICT');
+  expect(reopened.drafts.size).toBe(1);
+  expect(localStorage.getItem('test-key')).toContain('本机未保存评论');
+  await reopened.reconcile(base.id, remote, true);
+  request.mockResolvedValueOnce({
+    ...remote,
+    revision: 3,
+    comment: '本机未保存评论',
+    deletedAt: mode === 'delete' ? '2026-11-04' : null
+  });
+  await reopened.flush();
+  expect(JSON.parse(request.mock.calls[1][1]!.body as string)).toMatchObject({ expectedRevision: 2 });
+  expect(reopened.drafts.size).toBe(0);
+});
+it('恢复尚未创建的草稿时，不能把远端同名 ID 当作已确认基线', async () => {
+  const original = new PdfSession('note', base.sha256, 'test-key', () => {});
+  await original.stage(base.id, { type: base.type, segments: base.segments, quoteText: '', comment: '本机新标注' });
+  const reopened = new PdfSession('note', base.sha256, 'test-key', () => {});
+  reopened.items.set(base.id, base);
+  reopened.recover();
+  request.mockRejectedValueOnce(Object.assign(new Error('conflict'), { code: 'PDF_ANNOTATION_CONFLICT' }));
+  await expect(reopened.flush()).rejects.toThrow('conflict');
+  expect(JSON.parse(request.mock.calls[0][1]!.body as string)).toMatchObject({ expectedRevision: 0 });
+  expect(reopened.drafts.size).toBe(1);
 });
 it('未提交标注删除不产生请求；只读状态保留恢复草稿', async () => {
   const session = new PdfSession(
