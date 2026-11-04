@@ -25,7 +25,13 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
 ) {
   const appearance = useScopedAppearance();
   return (
-    <RATooltip ref={ref} offset={6} {...appearance} {...rest} className={cx(styles.tooltip, appearance?.className, className)}>
+    <RATooltip
+      ref={ref}
+      offset={6}
+      {...appearance}
+      {...rest}
+      className={cx(styles.tooltip, appearance?.className, className)}
+    >
       {children}
     </RATooltip>
   );
@@ -39,9 +45,9 @@ export type TooltipTriggerProps = Omit<TooltipTriggerComponentProps, 'children'>
   closeDelay?: number;
 };
 
-export function TooltipTrigger({ children, delay = 250, closeDelay = 300 }: TooltipTriggerProps) {
+export function TooltipTrigger({ children, delay = 250, closeDelay = 300, ...rest }: TooltipTriggerProps) {
   return (
-    <RATooltipTrigger delay={delay} closeDelay={closeDelay}>
+    <RATooltipTrigger delay={delay} closeDelay={closeDelay} {...rest}>
       {children}
     </RATooltipTrigger>
   );

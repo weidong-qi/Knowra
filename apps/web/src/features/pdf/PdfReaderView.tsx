@@ -20,6 +20,7 @@ import { exportPdfExcerpt, moveRect, noteRectAt, rectToPdf, rectToViewport, type
 import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
 import { buildPdfExtractNote } from './pdfExtract';
 import { PdfNoteCard } from './PdfNoteCard';
+import { PdfAnnotationTooltip } from './PdfAnnotationTooltip';
 import { PdfSelectionBar, type PdfBarAnchor, type PdfTextMode } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
@@ -579,6 +580,12 @@ export function PdfReaderView({
             <div className="pdfViewer" />
           </div>
           <PdfPageBar viewer={viewer} />
+          <PdfAnnotationTooltip
+            containerRef={viewer.containerRef}
+            items={items}
+            enabled={tool === 'text' && !pending && !cardOpen}
+            revision={viewer.revision}
+          />
           {cardItem && cardAnchor && !noteMove ? (
             <PdfNoteCard
               left={cardAnchor.left}

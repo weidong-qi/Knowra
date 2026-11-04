@@ -218,7 +218,14 @@
   box-shadow: var(--shadow-control);
   font-weight: 550;
 }
-.panelTabs > [role='tabpanel'] {
+.panelTabs > :global(.react-aria-TabPanels) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.panelTabs [role='tabpanel'] {
   min-height: 0;
   flex: 1;
   overflow: auto;
@@ -236,6 +243,28 @@
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.6;
+}
+.commentAnchor {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.commentTooltip[role='tooltip'] {
+  max-width: min(320px, calc(100vw - 24px));
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+  font-size: var(--font-size-meta);
+  line-height: 1.6;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.commentTooltip strong {
+  font-weight: 550;
+}
+.commentTooltip p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
 }
 .outlineItem {
   display: block;

@@ -102,6 +102,12 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('退出前的本机评论', {
     timeout: 30000
   });
+  const savedMark = await page.locator('[data-knowra-pdf-overlay] [data-type="region"]').boundingBox();
+  assert(savedMark);
+  await page.mouse.move(savedMark.x + savedMark.width / 2, savedMark.y + savedMark.height / 2);
+  await expect(page.getByRole('tooltip')).toContainText('退出前的本机评论');
+  await page.mouse.move(5, 5);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
   const destination = path.join(directory, '原 PDF.pdf');
   await app.evaluate(({ dialog }, destination) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: destination });
