@@ -22,11 +22,11 @@
 .sectionHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .sectionTitle { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text-primary); font: 600 15px/1.5 var(--font-ui); letter-spacing: -.01em; }
 .sectionTitle svg { color: var(--accent-text); }
-.recentEmpty { padding: var(--space-5) var(--space-4); border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-control); }
+.recentEmpty { padding: var(--space-5) var(--space-4); border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-card); }
 
 /* 继续编辑：大卡片 */
-.featured { display: flex; align-items: center; gap: var(--space-5); padding: var(--space-5); border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-card, var(--shadow-control)); }
-.featuredArt { position: relative; flex: 0 0 auto; display: grid; place-items: center; width: 128px; align-self: stretch; border-radius: var(--radius-popover); background: var(--surface-sunken, var(--surface-hover)); }
+.featured { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-card, var(--shadow-control)); }
+.featuredArt { position: relative; flex: 0 0 auto; display: grid; place-items: center; width: 108px; align-self: stretch; border-radius: var(--radius-popover); background: var(--surface-sunken, var(--surface-hover)); }
 .featuredArt::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--ni-art-spot, none); opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
 .featured:hover .featuredArt::before, .featured:focus-within .featuredArt::before { opacity: 1; }
 .featuredBody { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: var(--space-2); }
@@ -46,8 +46,9 @@
 .statusPill[data-status='completed']::before, .statusPill[data-status='published']::before { background: var(--ni-st-done, var(--color-success)); }
 
 /* 更多最近：紧凑行 */
-.upNext { margin: 0; padding: var(--space-1); list-style: none; border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-control); }
-.upNextRow { width: 100%; min-height: 40px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-popover); background: transparent; color: var(--text-primary); font: 450 var(--font-size-ui)/1.5 var(--font-ui); text-align: left; cursor: pointer; transition: background var(--motion-fast) var(--motion-ease); }
+.upNext { margin: 0; padding: 0; list-style: none; overflow: hidden; border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-card); }
+.upNextRow { width: 100%; min-height: 34px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3); border: 0; border-radius: 0; background: transparent; color: var(--text-primary); font: 450 var(--font-size-ui)/1.5 var(--font-ui); text-align: left; cursor: pointer; transition: background var(--motion-fast) var(--motion-ease); }
+.upNext > li + li .upNextRow { box-shadow: inset 0 1px 0 var(--border-subtle); }
 .upNextRow:not(:disabled):hover { background: var(--surface-hover); }
 .upNextRow:focus-visible { outline: 2px solid var(--accent-text); outline-offset: -2px; }
 .upNextRow:disabled { cursor: default; }
@@ -59,7 +60,7 @@
 .upNextRow:hover .upNextArrow, .upNextRow:focus-visible .upNextArrow { opacity: 1; }
 
 /* 活动概览 */
-.activity { min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-control); }
+.activity { min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-card); }
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin: 0; }
 .tiles > div { padding: var(--space-2) var(--space-2) var(--space-2) 0; }
 .tiles dt { color: var(--text-muted); font: 500 var(--font-size-meta)/1.4 var(--font-ui); }
@@ -92,7 +93,7 @@
 /* 工作域：三个紧凑入口 */
 .workbenches { display: flex; flex-direction: column; }
 .workbenchGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-3); }
-.workbench { position: relative; min-width: 0; min-height: 76px; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 0; border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-control); color: var(--text-primary); text-align: left; cursor: pointer; transition: background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
+.workbench { position: relative; min-width: 0; min-height: 64px; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 0; border-radius: var(--radius-panel); background: var(--ni-card-glow, none), var(--surface-raised); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-card); color: var(--text-primary); text-align: left; cursor: pointer; transition: background var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
 .workbench:not(:disabled):hover { background: var(--ni-card-glow, none), var(--surface-sidebar-solid); box-shadow: var(--ni-card-edge, 0 0 0 0 transparent), var(--shadow-page); }
 .workbench:not(:disabled):active { background: var(--surface-pressed); box-shadow: var(--shadow-control); }
 .workbench:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; box-shadow: var(--focus-ring); }

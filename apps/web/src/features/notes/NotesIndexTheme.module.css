@@ -37,7 +37,7 @@
   --ni-sh-page:0 0 0 1px rgba(24,30,48,.09);
   --ni-sh-ctx:0 0 0 1px rgba(24,30,48,.08);
   --ni-sh-pop:inset 0 1px 0 var(--ni-ctx-hl),0 0 0 1px var(--ni-ring),0 2px 4px rgba(24,30,48,.05),0 10px 24px -8px rgba(24,30,48,.14),0 28px 64px -14px rgba(24,30,48,.28);
-  --ni-sh-card:0 0 0 1px rgba(24,30,48,.07),0 1px 2px rgba(24,30,48,.04);
+  --ni-sh-card:0 0 0 1px rgba(24,30,48,.08);
   --ni-ui:"Inter","PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
   --ni-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --ni-ease:cubic-bezier(.4,0,.2,1);
@@ -126,7 +126,7 @@ color-scheme:dark;
   --ni-sh-ctx:0 0 0 1px rgba(255,255,255,.07);
   --ni-sh-page:0 0 0 1px rgba(255,255,255,.08);
   --ni-sh-pop:inset 0 1px 0 var(--ni-ctx-hl),0 0 0 1px rgba(255,255,255,.11),0 2px 4px rgba(0,0,0,.35),0 10px 24px -8px rgba(0,0,0,.5),0 28px 64px -14px rgba(0,0,0,.75);
-  --ni-sh-card:0 0 0 1px rgba(255,255,255,.08),0 1px 2px rgba(0,0,0,.3);
+  --ni-sh-card:0 0 0 1px rgba(255,255,255,.08);
 }
 
 .theme[data-ni-mode="dark"] {
