@@ -4,12 +4,12 @@ import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-clien
 import {
   buildAttachmentRepairRecord,
   inspectAttachmentIntegrity
-} from '../apps/api/src/infrastructure/attachment-integrity.js';
-import { createLocalAttachmentFileManager } from '../apps/api/src/infrastructure/local-attachment-file-manager.js';
+} from '../apps/api/src/infrastructure/attachment-integrity.ts';
+import { createLocalAttachmentFileManager } from '../apps/api/src/infrastructure/local-attachment-file-manager.ts';
 import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.js';
 import { validatePersistedLocalState } from '../apps/api/src/infrastructure/local-data-schema.js';
-import { readJsonFileSync } from '../apps/api/src/infrastructure/json-file-reader.js';
-import { readAttachmentInspectionSource } from '../apps/api/src/infrastructure/attachment-inspection-source.js';
+import { readJsonFileSync } from '../apps/api/src/infrastructure/json-file-reader.ts';
+import { readAttachmentInspectionSource } from '../apps/api/src/infrastructure/attachment-inspection-source.ts';
 
 const options = parseArgs(process.argv.slice(2));
 
@@ -49,7 +49,8 @@ async function run({ driver, sourcePath, storageRootDir, reportPath, repair, att
 function runLocalInspection({ sourcePath, fileManager, generatedAt, repair, attachmentsOnly, ...context }) {
   const absolutePath = path.resolve(sourcePath);
   const parsed = attachmentsOnly ? null : readJsonFileSync(absolutePath);
-  const state = attachmentsOnly ? readAttachmentInspectionSource(absolutePath)
+  const state = attachmentsOnly
+    ? readAttachmentInspectionSource(absolutePath)
     : validatePersistedLocalState(parsed?.data ?? parsed);
   let result = inspectAttachmentIntegrity({
     attachments: state.attachments,
@@ -63,9 +64,7 @@ function runLocalInspection({ sourcePath, fileManager, generatedAt, repair, atta
     dataStore.state.attachments.splice(
       0,
       dataStore.state.attachments.length,
-      ...state.attachments.map((attachment) => (
-        repairs.find((item) => item.id === attachment.id)?.record ?? attachment
-      ))
+      ...state.attachments.map(attachment => repairs.find(item => item.id === attachment.id)?.record ?? attachment)
     );
     dataStore.flush();
     result = inspectAttachmentIntegrity({
@@ -79,7 +78,7 @@ function runLocalInspection({ sourcePath, fileManager, generatedAt, repair, atta
 }
 
 async function runPostgresInspection({ fileManager, generatedAt, repair, ...context }) {
-  const { mapAttachment } = await import('../apps/api/src/modules/knowledge/infrastructure/postgres/mappers.js');
+  const { mapAttachment } = await import('../apps/api/src/modules/knowledge/infrastructure/postgres/mappers.ts');
   const runtime = await createPrismaRuntime({ databaseUrl: process.env.DATABASE_URL });
   await runtime.connect();
   try {
@@ -96,19 +95,21 @@ async function runPostgresInspection({ fileManager, generatedAt, repair, ...cont
 
     if (repair && repairs.length > 0) {
       await runtime.client.$transaction(
-        repairs.map(({ id, record }) => runtime.client.attachment.update({
-          where: { id },
-          data: {
-            size: record.size,
-            sha256: record.sha256,
-            status: record.status,
-            verifiedAt: record.verifiedAt ? new Date(record.verifiedAt) : null
-          }
-        }))
+        repairs.map(({ id, record }) =>
+          runtime.client.attachment.update({
+            where: { id },
+            data: {
+              size: record.size,
+              sha256: record.sha256,
+              status: record.status,
+              verifiedAt: record.verifiedAt ? new Date(record.verifiedAt) : null
+            }
+          })
+        )
       );
-      attachments = attachments.map((attachment) => (
-        repairs.find((item) => item.id === attachment.id)?.record ?? attachment
-      ));
+      attachments = attachments.map(
+        attachment => repairs.find(item => item.id === attachment.id)?.record ?? attachment
+      );
       result = inspectAttachmentIntegrity({
         attachments,
         fileManager,
@@ -124,15 +125,11 @@ async function runPostgresInspection({ fileManager, generatedAt, repair, ...cont
 
 function buildAttachmentRepairs(attachments, result, generatedAt) {
   return result.items
-    .filter((item) => (
-      item.observedStatus !== item.storedStatus
-      || (
-        item.observedStatus === 'ready'
-        && item.warnings.length > 0
-      )
-    ))
-    .map((item) => {
-      const attachment = attachments.find((candidate) => candidate.id === item.attachmentId);
+    .filter(
+      item => item.observedStatus !== item.storedStatus || (item.observedStatus === 'ready' && item.warnings.length > 0)
+    )
+    .map(item => {
+      const attachment = attachments.find(candidate => candidate.id === item.attachmentId);
       return {
         id: item.attachmentId,
         record: buildAttachmentRepairRecord(attachment, item, {
@@ -190,9 +187,7 @@ function parseArgs(args) {
 }
 
 function resolvePath(targetPath, rootDir) {
-  return path.isAbsolute(targetPath)
-    ? targetPath
-    : path.resolve(rootDir, targetPath);
+  return path.isAbsolute(targetPath) ? targetPath : path.resolve(rootDir, targetPath);
 }
 
 function writeReport(reportPath, report) {

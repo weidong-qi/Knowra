@@ -1,4 +1,4 @@
-import { requireText } from './_shared.js';
+import { requireText } from './_shared.ts';
 
 export interface DefaultKnowledgeSpaceDto {
   id: string;

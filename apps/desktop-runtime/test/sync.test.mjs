@@ -7,10 +7,10 @@ import { createFileDataStore } from '../../api/src/infrastructure/file-data-stor
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
-import { syncContract } from '../../api/src/modules/sync/protocol-contract.js';
-import { noteContent } from '../../api/src/modules/sync/journal.js';
-import { writeJsonFileAtomically } from '../../api/src/infrastructure/atomic-json-file.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
+import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
+import { noteContent } from '../../api/src/modules/sync/journal.ts';
+import { writeJsonFileAtomically } from '../../api/src/infrastructure/atomic-json-file.ts';
 import { readMeta, writeMeta } from '../src/sync-state.mjs';
 import { openWorkspace, temporaryDirectory, markText, inlineId } from './helpers.mjs';
 

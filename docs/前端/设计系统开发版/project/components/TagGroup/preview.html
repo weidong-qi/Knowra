@@ -1,0 +1,24 @@
+<!-- @dsCard group="状态" height=120 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>TagGroup</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [items, setItems] = useState([
+    { id: 'ok', label: '已掌握', tone: 'success', count: 18 },
+    { id: 'review', label: '待复习', tone: 'warning', count: 7 },
+    { id: 'wrong', label: '易错', tone: 'danger', count: 3 },
+    { id: 'key', label: '重点', tone: 'accent' },
+    { id: 'none', label: '未分类' },
+  ]);
+  return h('div', { className: 'kn-col' },
+    h(K.TagGroup, { label: '掌握程度（可选择、可移除）', items, selectionMode: 'multiple', defaultSelectedKeys: ['key'], onRemove: (keys) => setItems(items.filter((t) => !keys.has(t.id))) }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

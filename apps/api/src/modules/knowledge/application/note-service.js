@@ -1,6 +1,6 @@
 import { prepareAnnotationChange } from './annotation-change-context.js';
-import { Note } from '../domain/note.js';
-import { buildCreateNoteDto, buildUpdateNoteDto } from './dto/note.dto.js';
+import { Note } from '../domain/note.ts';
+import { buildCreateNoteDto, buildUpdateNoteDto } from './dto/note.dto.ts';
 import { createNoteSummary } from './note-summary.js';
 import { createInMemoryNoteRepository } from '../infrastructure/note-repository.js';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
@@ -22,7 +22,7 @@ export function createNoteService({
   function persistNote(note, { createVersion = false, annotationChange = null } = {}) {
     return runTransaction(() => {
       const saved = repository.save(note);
-      if (createVersion && noteVersionService) {
+      if (createVersion && noteVersionService && note.contentKind !== 'pdf') {
         const version = noteVersionService.ensureForNote(saved);
         onNoteContentChanged?.(saved, version, annotationChange);
       }
@@ -129,6 +129,8 @@ export function createNoteService({
     },
     updateNote(noteId, updates) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
+      if (currentNote.contentKind === 'pdf' && updates.rawMarkdown !== undefined)
+        throw validationError('PDF_IMMUTABLE', 'PDF 原文件不能作为 Markdown 正文修改。');
       const dto = buildUpdateNoteDto(updates);
       if (dto.rawMarkdown !== undefined)
         addedNoteLinkTargets(dto.rawMarkdown, currentNote.rawMarkdown).forEach(id =>

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { AppError } from '../src/errors/app-error.js';
 import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.js';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
-import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
+import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createAsyncContentAnnotationService } from '../src/modules/knowledge/application/postgres-async/content-annotation-service.js';
 import { resolveLegacyAnnotationAnchor } from '../src/modules/knowledge/application/legacy-annotation-anchor.ts';

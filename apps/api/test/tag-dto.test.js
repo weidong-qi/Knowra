@@ -4,7 +4,7 @@ export const tagDtoTests = [
   {
     name: 'buildCreateTagDto trims name and applies default color',
     async run() {
-      const { buildCreateTagDto } = await import('../src/modules/knowledge/application/dto/tag.dto.js');
+      const { buildCreateTagDto } = await import('../src/modules/knowledge/application/dto/tag.dto.ts');
 
       const dto = buildCreateTagDto({
         id: 'tag-dto-1',

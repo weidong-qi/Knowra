@@ -6,12 +6,12 @@ import { once } from 'node:events';
 import { test } from 'node:test';
 import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
 import { knowraCheck } from '@study-accelerator/shared/knowra-marks';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';
-import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.js';
+import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.ts';
 import { temporaryDirectory, openWorkspace, markText, inlineId } from './helpers.mjs';
 
 async function fixture(t, options = {}) {
@@ -775,7 +775,7 @@ test('附件上传失败不发布正文引用；重试后完成全部关联事�
 });
 
 test('JSON 完整事务写盘失败同时回滚业务、日志、序号和回执', async t => {
-  const { writeJsonFileAtomically } = await import('../../api/src/infrastructure/atomic-json-file.js');
+  const { writeJsonFileAtomically } = await import('../../api/src/infrastructure/atomic-json-file.ts');
   let fail = false;
   const cloud = await fixture(t, {
     writeJson: (...args) => {
@@ -1155,7 +1155,7 @@ test('旧重点正文离线改写后撤销，保守降级与后续修改仍能�
       await a.engine.sync();
       clean(a);
       assert.equal(cloud.knowledge.noteService.getNote(note.id).rawMarkdown, '原文 其他，后续修改');
-      const { prepareBatchState } = await import('../../api/src/modules/sync/batch-domain.js');
+      const { prepareBatchState } = await import('../../api/src/modules/sync/batch-domain.ts');
       const current = cloud.dataStore.state.contentAnnotations.find(value => value.id === row.id);
       const forged = { ...current, anchorStatus: 'resolved', anchorReason: null, status: 'active' };
       assert.throws(

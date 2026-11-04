@@ -8,7 +8,7 @@ import {
   projectMarkdown
 } from '@study-accelerator/content-anchor';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
-import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
+import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 import { legacyAnnotationSourceChange } from '../src/modules/knowledge/application/content-annotation-service.js';
 import {
   inlineAnnotationId,
@@ -16,10 +16,10 @@ import {
   isMarksOnlyChange,
   planInlineAnnotations
 } from '../src/modules/knowledge/application/inline-annotations.js';
-import { prepareBatchState } from '../src/modules/sync/batch-domain.js';
+import { prepareBatchState } from '../src/modules/sync/batch-domain.ts';
 import { listAnnotatedRanges } from '../src/modules/ai/annotation-read-tool.js';
-import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.js';
-import { applyPostgresState } from '../src/modules/sync/postgres-batch.js';
+import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.ts';
+import { applyPostgresState } from '../src/modules/sync/postgres-batch.ts';
 import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
 import { knowraCheck } from '@study-accelerator/shared/knowra-marks';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

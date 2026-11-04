@@ -1,5 +1,5 @@
-import { parseBody } from '../../http/request.js';
-import { sendJson } from '../../http/response.js';
+import { parseBody } from '../../http/request.ts';
+import { sendJson } from '../../http/response.ts';
 import { AppError, createAppError } from '../../errors/app-error.js';
 
 /** 用户设置入口；actor/owner 只由服务端注入，模型执行桥不暴露本路由。 */
@@ -22,16 +22,22 @@ export async function handleAiAccessRoute({ request, response, url, access }) {
     }
     const match = url.pathname.match(/^\/api\/ai\/access-policies\/([^/]+)$/);
     if (request.method === 'PATCH' && match) {
-      sendJson(response, 200, { data: await access.narrowPolicy(decodeURIComponent(match[1]),
-        await parseBody(request, { limitBytes: 8192 })) });
+      sendJson(response, 200, {
+        data: await access.narrowPolicy(decodeURIComponent(match[1]), await parseBody(request, { limitBytes: 8192 }))
+      });
       return true;
     }
   } catch (error) {
     if (error instanceof AppError) throw error;
     if (error.code?.startsWith('AI_')) {
-      const status = error.code === 'AI_RECORD_NOT_FOUND' ? 404
-        : ['AI_RECORD_CONFLICT', 'AI_ACCESS_REVOKED', 'AI_DATASET_STALE', 'AI_SCOPE_EXCEEDED'].includes(error.code) ? 409
-          : error.code === 'AI_SCOPE_FORBIDDEN' ? 403 : 422;
+      const status =
+        error.code === 'AI_RECORD_NOT_FOUND'
+          ? 404
+          : ['AI_RECORD_CONFLICT', 'AI_ACCESS_REVOKED', 'AI_DATASET_STALE', 'AI_SCOPE_EXCEEDED'].includes(error.code)
+            ? 409
+            : error.code === 'AI_SCOPE_FORBIDDEN'
+              ? 403
+              : 422;
       throw createAppError(error.code, error.message, status);
     }
     throw error;

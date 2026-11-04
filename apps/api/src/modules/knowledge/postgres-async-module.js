@@ -6,6 +6,7 @@ import {
 } from './application/inline-annotations.js';
 import { createAsyncNoteDependencyLifecycle } from './application/postgres-async/note-dependency-lifecycle.js';
 import { createAsyncSpaceAssetLifecycle } from './application/postgres-async/space-asset-lifecycle.js';
+import { createPostgresPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createAsyncNavigationReferencePolicy } from './application/postgres-async/navigation-reference-policy.js';
 import {
   asyncTaskCoverage,
@@ -24,38 +25,39 @@ import { buildNoteVersionPrunePreview } from './application/note-version-prune-p
 import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.js';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
 import { createAsyncSearchService } from './application/postgres-async/search-service.js';
-import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.js';
-import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.js';
-import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.js';
-import { createPostgresNoteVersionRepository } from './infrastructure/postgres/note-version-repository.js';
-import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres/knowledge-item-repository.js';
+import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.ts';
+import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.ts';
+import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.ts';
+import { createPostgresNoteVersionRepository } from './infrastructure/postgres/note-version-repository.ts';
+import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres/knowledge-item-repository.ts';
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
-import { createPostgresKnowledgeArtifactProvenanceRepository } from './infrastructure/postgres/knowledge-artifact-provenance-repository.js';
-import { createPostgresKnowledgeEvidenceRepository } from './infrastructure/postgres/knowledge-evidence-repository.js';
-import { createPostgresLearningObjectiveRepository } from './infrastructure/postgres/learning-objective-repository.js';
-import { createPostgresExamProfileRepository } from './infrastructure/postgres/exam-profile-repository.js';
-import { createPostgresExamFocusRepository } from './infrastructure/postgres/exam-focus-repository.js';
-import { createPostgresQuestionRepository } from './infrastructure/postgres/question-repository.js';
-import { createPostgresQuestionObjectiveRepository } from './infrastructure/postgres/question-objective-repository.js';
-import { createPostgresQuestionSourceRepository } from './infrastructure/postgres/question-source-repository.js';
+import { createPostgresKnowledgeArtifactProvenanceRepository } from './infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
+import { createPostgresKnowledgeEvidenceRepository } from './infrastructure/postgres/knowledge-evidence-repository.ts';
+import { createPostgresLearningObjectiveRepository } from './infrastructure/postgres/learning-objective-repository.ts';
+import { createPostgresExamProfileRepository } from './infrastructure/postgres/exam-profile-repository.ts';
+import { createPostgresExamFocusRepository } from './infrastructure/postgres/exam-focus-repository.ts';
+import { createPostgresQuestionRepository } from './infrastructure/postgres/question-repository.ts';
+import { createPostgresQuestionObjectiveRepository } from './infrastructure/postgres/question-objective-repository.ts';
+import { createPostgresQuestionSourceRepository } from './infrastructure/postgres/question-source-repository.ts';
 import {
   createPostgresAnalysisScopeRepository,
   createPostgresAnnotationExclusionRepository,
   createPostgresAnnotationRevisionRepository
-} from './infrastructure/postgres/annotation-support-repositories.js';
+} from './infrastructure/postgres/annotation-support-repositories.ts';
 import { createAsyncAnnotationScopeService } from './application/postgres-async/annotation-scope-service.js';
-import { createPostgresKnowledgeSpaceRepository } from './infrastructure/postgres/knowledge-space-repository.js';
-import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-group-repository.js';
-import { createPostgresTagRepository } from './infrastructure/postgres/tag-repository.js';
+import { createPostgresKnowledgeSpaceRepository } from './infrastructure/postgres/knowledge-space-repository.ts';
+import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-group-repository.ts';
+import { createPostgresTagRepository } from './infrastructure/postgres/tag-repository.ts';
 import { createAsyncLearningObjectiveService } from './application/postgres-async/learning-objective-service.js';
 import { createAsyncAssessmentContextService } from './application/postgres-async/assessment-context-service.js';
 import { createAsyncQuestionService } from './application/postgres-async/question-service.js';
 import { createTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
 import { createWorkspaceQueryService } from './application/workspace-query-service.js';
 import { conflictError, validationError } from './application/knowledge-errors.js';
-import { withPostgresErrors } from '../../infrastructure/postgres-errors.js';
+import { withPostgresErrors } from '../../infrastructure/postgres-errors.ts';
 import { withLearningObjectiveReviewErrors } from './application/learning-objective-concurrency.js';
 
+/** @param {import('./application/postgres-async/service-dependencies.ts').PostgresModuleDependencies} dependencies */
 export function createPostgresKnowledgeModule({
   noteRepository,
   folderRepository,
@@ -63,6 +65,7 @@ export function createPostgresKnowledgeModule({
   tagGroupRepository,
   knowledgeSpaceRepository,
   contentAnnotationRepository,
+  pdfAnnotationRepository,
   annotationExclusionRepository,
   annotationRevisionRepository,
   analysisScopeRepository,
@@ -88,6 +91,7 @@ export function createPostgresKnowledgeModule({
     tagGroupRepository,
     knowledgeSpaceRepository,
     contentAnnotationRepository,
+    pdfAnnotationRepository,
     annotationExclusionRepository,
     annotationRevisionRepository,
     analysisScopeRepository,
@@ -117,6 +121,7 @@ export function createPostgresKnowledgeModule({
     knowledgeEvidenceRepository,
     knowledgeArtifactProvenanceRepository,
     contentAnnotationRepository,
+    pdfAnnotationRepository,
     annotationExclusionRepository,
     annotationRevisionRepository,
     analysisScopeRepository,
@@ -210,6 +215,7 @@ export function createPostgresKnowledgeModule({
                 knowledgeEvidenceRepository: createPostgresKnowledgeEvidenceRepository({ db: tx }),
                 knowledgeArtifactProvenanceRepository: createPostgresKnowledgeArtifactProvenanceRepository({ db: tx }),
                 contentAnnotationRepository: createPostgresContentAnnotationRepository({ db: tx }),
+                pdfAnnotationRepository: createPostgresPdfAnnotationRepository({ db: tx }),
                 annotationExclusionRepository: createPostgresAnnotationExclusionRepository({ db: tx }),
                 annotationRevisionRepository: createPostgresAnnotationRevisionRepository({ db: tx }),
                 analysisScopeRepository: createPostgresAnalysisScopeRepository({ db: tx }),
@@ -236,6 +242,7 @@ export function createPostgresKnowledgeModule({
     return String(value ?? '').trim();
   }
 
+  /** @param {import('./application/postgres-async/service-dependencies.ts').SiblingNameInput} input */
   async function assertSiblingNameAvailable({
     spaceId,
     parentId = null,
@@ -441,7 +448,6 @@ export function createPostgresKnowledgeModule({
       }
     });
     const scopeService = createAsyncAnnotationScopeService({
-      annotationService,
       annotationRepository: transaction.contentAnnotationRepository,
       exclusionRepository: transaction.annotationExclusionRepository,
       analysisScopeRepository: transaction.analysisScopeRepository,
@@ -473,7 +479,6 @@ export function createPostgresKnowledgeModule({
     )
   };
   const directScopeService = createAsyncAnnotationScopeService({
-    annotationService: directAnnotationService,
     annotationRepository: contentAnnotationRepository,
     exclusionRepository: annotationExclusionRepository,
     analysisScopeRepository,
@@ -529,7 +534,11 @@ export function createPostgresKnowledgeModule({
       const snapshots = await analysisScopeRepository.list();
       if (
         snapshots.some(snapshot =>
-          snapshot.noteVersions?.some(version => version.noteId === noteId || versionIds.has(version.noteVersionId))
+          /** @type {import('./application/postgres-async/note-dependency-lifecycle.ts').DependencyScopeSnapshot['noteVersions']} */ (
+            snapshot.noteVersions
+          )?.some(
+            version => version.noteId === noteId || /** @type {Set<unknown>} */ (versionIds).has(version.noteVersionId)
+          )
         )
       ) {
         throw conflictError(
@@ -646,6 +655,7 @@ export function createPostgresKnowledgeModule({
       tagRepository,
       tagGroupRepository,
       contentAnnotationRepository,
+      pdfAnnotationRepository,
       analysisScopeRepository,
       noteVersionRepository,
       runTransaction

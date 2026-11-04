@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/web-v4/src/assets/knowra-brand-mark.svg" width="96" height="96" alt="知境 Knowra 标志">
+<img src="apps/web/src/assets/knowra-brand-mark.svg" width="96" height="96" alt="知境 Knowra 标志">
 
 # 知境 · Knowra
 
@@ -165,7 +165,7 @@ flowchart LR
 ```text
 Knowra/
 ├─ apps/
-│  ├─ web-v4/            # 当前唯一可启动的前端（React + TypeScript）
+│  ├─ web/            # 当前唯一可启动的前端（React + TypeScript）
 │  ├─ api/               # API 服务
 │  ├─ desktop-runtime/   # 桌面本地运行时：SQLite、同步引擎、MCP
 │  ├─ desktop-shell/     # macOS 桌面外壳（Electron）

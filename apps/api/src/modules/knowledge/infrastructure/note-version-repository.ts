@@ -1,5 +1,5 @@
 import { createAppError } from '../../../errors/app-error.js';
-import { versionPage } from '../domain/note-version-page.js';
+import { versionPage } from '../domain/note-version-page.ts';
 
 import type { NoteVersion } from '../domain/note-version.ts';
 import type { VersionPage } from '../domain/note-version-page.ts';

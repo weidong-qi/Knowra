@@ -6,10 +6,15 @@ import { startLocalRuntime } from './runtime-server.mjs';
 import { restoreRuntimeBackup } from './backup.mjs';
 import { importJsonSnapshot } from './snapshot-migration.mjs';
 
-const { values } = parseArgs({ options: {
-  'data-dir': { type: 'string' }, 'dist-dir': { type: 'string' },
-  'restore-from': { type: 'string' }, 'import-json': { type: 'string' }, port: { type: 'string' }
-} });
+const { values } = parseArgs({
+  options: {
+    'data-dir': { type: 'string' },
+    'dist-dir': { type: 'string' },
+    'restore-from': { type: 'string' },
+    'import-json': { type: 'string' },
+    port: { type: 'string' }
+  }
+});
 const dataDirectory = path.resolve(values['data-dir'] || defaultDataDirectory());
 if (values['restore-from'] && values['import-json']) throw new Error('恢复备份与导入 JSON 不能同时执行。');
 if (values['import-json']) {
@@ -22,7 +27,7 @@ if (values['restore-from']) {
 }
 const runtime = await startLocalRuntime({
   dataDirectory,
-  distRoot: path.resolve(values['dist-dir'] || fileURLToPath(new URL('../../web-v4/dist', import.meta.url))),
+  distRoot: path.resolve(values['dist-dir'] || fileURLToPath(new URL('../../web/dist', import.meta.url))),
   port: values.port ? Number(values.port) : 0
 });
 console.log(`本地资料目录：${dataDirectory}`);
@@ -31,6 +36,14 @@ console.log('离线保存已启用；可在界面底栏连接云端并同步。�
 if (process.send) process.send({ type: 'ready', launchUrl: runtime.launchUrl, origin: runtime.origin });
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.once(signal, () => {
-    void runtime.close().then(() => { process.exitCode = 0; }).catch(error => { console.error(error); process.exitCode = 1; });
+    void runtime
+      .close()
+      .then(() => {
+        process.exitCode = 0;
+      })
+      .catch(error => {
+        console.error(error);
+        process.exitCode = 1;
+      });
   });
 }

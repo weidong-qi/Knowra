@@ -1,0 +1,24 @@
+<!-- @dsCard group="操作" height=96 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>IconButton</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [on, setOn] = useState(false);
+  return h('div', { className: 'kn-row' },
+    h(K.IconButton, { 'aria-label': '更多' }, h(I.MoreHorizontalIcon, { size: 16 })),
+    h(K.IconButton, { 'aria-label': '编辑' }, h(I.EditIcon, { size: 16 })),
+    h(K.IconButton, { 'aria-label': '侧栏', 'aria-pressed': on, onPress: () => setOn(!on) }, h(I.SidebarIcon, { size: 16 })),
+    h(K.IconButton, { 'aria-label': '关闭', size: 24 }, h(I.CloseIcon, { size: 12 })),
+    h(K.IconButton, { 'aria-label': '搜索', size: 40, tone: 'floating' }, h(I.SearchIcon, { size: 18 })),
+    h(K.IconButton, { 'aria-label': '新建', size: 40, tone: 'primary' }, h(I.PlusIcon, { size: 18 })),
+    h(K.IconButton, { 'aria-label': '删除', isDisabled: true }, h(I.DeleteIcon, { size: 16 })));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

@@ -1,7 +1,8 @@
-import { toQueryObject } from '../../../http/request.js';
-import { sendJson } from '../../../http/response.js';
+import { toQueryObject } from '../../../http/request.ts';
+import { sendJson } from '../../../http/response.ts';
 import { createAppError } from '../../../errors/app-error.js';
 import type { ResponseWriter } from '../../../http/response.ts';
+import type { QuerySource } from '../../../http/request.ts';
 
 export interface NoteVersionRouteParams {
   id: string;
@@ -22,7 +23,7 @@ export interface NoteVersionRouteKnowledge {
 export interface NoteVersionRouteContext {
   request: { method?: unknown };
   response: ResponseWriter;
-  url: { pathname: { match: (pattern: RegExp) => unknown }; searchParams?: unknown };
+  url: QuerySource & { pathname: { match: (pattern: RegExp) => unknown } };
   knowledge: NoteVersionRouteKnowledge;
 }
 

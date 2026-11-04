@@ -4,9 +4,9 @@ coverage/
 storage/
 apps/api/storage/
 apps/android/
-apps/web/
-apps/web-v4/test-results/
-apps/web-v4/playwright-report/
+apps/web-legacy/
+apps/web/test-results/
+apps/web/playwright-report/
 tunnel-client-v0/
 package-lock.json
 docs/

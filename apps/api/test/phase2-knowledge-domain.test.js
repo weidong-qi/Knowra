@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
+import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 
@@ -75,7 +75,7 @@ export const phase2KnowledgeDomainTests = [
     name: 'PostgreSQL 版本分页在数据库层限制条数且不读取历史正文',
     async run() {
       const { createPostgresNoteVersionRepository } =
-        await import('../src/modules/knowledge/infrastructure/postgres/note-version-repository.js');
+        await import('../src/modules/knowledge/infrastructure/postgres/note-version-repository.ts');
       let query;
       const repository = createPostgresNoteVersionRepository({
         db: {

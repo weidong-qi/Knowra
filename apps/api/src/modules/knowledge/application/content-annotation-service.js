@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { sameKnowraText, stripKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import { createAppError } from '../../../errors/app-error.js';
-import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.js';
-import { buildUpdateContentAnnotationDto } from './dto/content-annotation-dto.js';
+import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
+import { buildUpdateContentAnnotationDto } from './dto/content-annotation-dto.ts';
 import { createInMemoryContentAnnotationRepository } from '../infrastructure/content-annotation-repository.js';
 import { resolveLegacyAnnotationAnchor } from './legacy-annotation-anchor.ts';
 
@@ -20,7 +20,10 @@ export function legacyAnnotationHealth(annotation) {
   };
 }
 
-/** 旧重点不再跟随正文；无法确认原摘录时，保守降级其来源。 */
+/**
+ * 旧重点不再跟随正文；无法确认原摘录时，保守降级其来源。
+ * @param {{noteId?: unknown, content?: unknown} | null} [sourceVersion]
+ */
 export function legacyAnnotationSourceChange(annotation, before, after, sourceVersion = null) {
   const { lifecycleStatus, anchorStatus } = legacyAnnotationHealth(annotation);
   if (
@@ -38,7 +41,10 @@ export function legacyAnnotationSourceChange(annotation, before, after, sourceVe
   if (anchorStatus === 'missing' || anchorStatus === 'needsReview') return null;
   if (annotation.schemaVersion === 2 && annotation.anchor) {
     try {
-      const source = sourceVersion?.noteId === annotation.noteId ? sourceVersion.content : null;
+      const source =
+        sourceVersion?.noteId === annotation.noteId && typeof sourceVersion.content === 'string'
+          ? sourceVersion.content
+          : null;
       const resolved = resolveLegacyAnnotationAnchor(after, annotation.anchor, source);
       if (resolved.status === 'resolved' && resolved.quoteText === annotation.quoteText) return null;
     } catch {
@@ -48,6 +54,7 @@ export function legacyAnnotationSourceChange(annotation, before, after, sourceVe
   return { anchorStatus: 'needsReview', anchorReason: 'sourceChanged' };
 }
 
+/** @param {import('./service-dependencies.ts').ContentAnnotationDependencies} dependencies */
 export function createContentAnnotationService({
   repository = createInMemoryContentAnnotationRepository(),
   noteRepository = null,

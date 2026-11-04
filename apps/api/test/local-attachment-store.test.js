@@ -7,14 +7,11 @@ export const localAttachmentStoreTests = [
   {
     name: 'attachment ids use UUID entropy instead of timestamp and Math.random fragments',
     async run() {
-      const { createAttachmentId } = await import('../src/infrastructure/local-attachment-store-utils.js');
+      const { createAttachmentId } = await import('../src/infrastructure/local-attachment-store-utils.ts');
       const firstId = createAttachmentId();
       const secondId = createAttachmentId();
 
-      assert.match(
-        firstId,
-        /^attachment-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      );
+      assert.match(firstId, /^attachment-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
       assert.notEqual(firstId, secondId);
     }
   },
@@ -142,12 +139,13 @@ export const localAttachmentStoreTests = [
         const store = createLocalAttachmentStore({ dataStore, uploadsDir });
 
         assert.throws(
-          () => store.uploadAttachment({
-            noteId: 'note-upload-rollback',
-            fileName: 'rollback.txt',
-            mimeType: 'text/plain',
-            contentBase64: Buffer.from('rollback body').toString('base64')
-          }),
+          () =>
+            store.uploadAttachment({
+              noteId: 'note-upload-rollback',
+              fileName: 'rollback.txt',
+              mimeType: 'text/plain',
+              contentBase64: Buffer.from('rollback body').toString('base64')
+            }),
           /simulated persistence failure/
         );
         assert.deepEqual(dataStore.state.attachments, []);
@@ -183,18 +181,9 @@ export const localAttachmentStoreTests = [
         });
         rejectFlush = true;
 
-        assert.throws(
-          () => store.deleteAttachment(uploaded.id),
-          /simulated persistence failure/
-        );
+        assert.throws(() => store.deleteAttachment(uploaded.id), /simulated persistence failure/);
         assert.equal(dataStore.state.attachments[0].id, uploaded.id);
-        assert.equal(
-          fs.existsSync(path.join(
-            uploadsDir,
-            `${uploaded.id}-${uploaded.fileName}`
-          )),
-          true
-        );
+        assert.equal(fs.existsSync(path.join(uploadsDir, `${uploaded.id}-${uploaded.fileName}`)), true);
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
@@ -265,10 +254,7 @@ export const localAttachmentStoreTests = [
         const renamed = store.renameAttachment(uploaded.id, '中文图片.png');
 
         assert.equal(renamed.fileName, '中文图片.png');
-        assert.equal(
-          fs.existsSync(path.join(uploadsDir, `${uploaded.id}-中文图片.png`)),
-          true
-        );
+        assert.equal(fs.existsSync(path.join(uploadsDir, `${uploaded.id}-中文图片.png`)), true);
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
@@ -301,20 +287,11 @@ export const localAttachmentStoreTests = [
         const originalStoragePath = uploaded.storagePath;
         rejectFlush = true;
 
-        assert.throws(
-          () => store.renameAttachment(uploaded.id, 'after.txt'),
-          /simulated persistence failure/
-        );
+        assert.throws(() => store.renameAttachment(uploaded.id, 'after.txt'), /simulated persistence failure/);
         assert.equal(uploaded.fileName, 'before.txt');
         assert.equal(uploaded.storagePath, originalStoragePath);
-        assert.equal(
-          fs.existsSync(path.join(uploadsDir, `${uploaded.id}-before.txt`)),
-          true
-        );
-        assert.equal(
-          fs.existsSync(path.join(uploadsDir, `${uploaded.id}-after.txt`)),
-          false
-        );
+        assert.equal(fs.existsSync(path.join(uploadsDir, `${uploaded.id}-before.txt`)), true);
+        assert.equal(fs.existsSync(path.join(uploadsDir, `${uploaded.id}-after.txt`)), false);
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
@@ -356,15 +333,17 @@ export const localAttachmentStoreTests = [
 
       const dataStore = {
         state: {
-          attachments: [{
-            id: 'attachment-orphan',
-            noteId: 'note-1',
-            fileName: 'picture.png',
-            mimeType: 'image/png',
-            size: 0,
-            storagePath: path.join(uploadsDir, 'attachment-orphan-picture.png'),
-            createdAt: new Date().toISOString()
-          }]
+          attachments: [
+            {
+              id: 'attachment-orphan',
+              noteId: 'note-1',
+              fileName: 'picture.png',
+              mimeType: 'image/png',
+              size: 0,
+              storagePath: path.join(uploadsDir, 'attachment-orphan-picture.png'),
+              createdAt: new Date().toISOString()
+            }
+          ]
         },
         flush() {}
       };
@@ -400,15 +379,17 @@ export const localAttachmentStoreTests = [
 
       const dataStore = {
         state: {
-          attachments: [{
-            id: 'attachment-cross-platform',
-            noteId: 'note-1',
-            fileName: 'picture.png',
-            mimeType: 'image/png',
-            size: 0,
-            storagePath: `storage\\uploads\\${fileName}`,
-            createdAt: new Date().toISOString()
-          }]
+          attachments: [
+            {
+              id: 'attachment-cross-platform',
+              noteId: 'note-1',
+              fileName: 'picture.png',
+              mimeType: 'image/png',
+              size: 0,
+              storagePath: `storage\\uploads\\${fileName}`,
+              createdAt: new Date().toISOString()
+            }
+          ]
         },
         flush() {}
       };
@@ -442,15 +423,17 @@ export const localAttachmentStoreTests = [
 
       const dataStore = {
         state: {
-          attachments: [{
-            id: 'attachment-legacy',
-            noteId: 'note-1',
-            fileName: 'picture.png',
-            mimeType: 'image/png',
-            size: 0,
-            storagePath: `storage\\uploads\\${fileName}`,
-            createdAt: new Date().toISOString()
-          }]
+          attachments: [
+            {
+              id: 'attachment-legacy',
+              noteId: 'note-1',
+              fileName: 'picture.png',
+              mimeType: 'image/png',
+              size: 0,
+              storagePath: `storage\\uploads\\${fileName}`,
+              createdAt: new Date().toISOString()
+            }
+          ]
         },
         flush() {}
       };
@@ -466,10 +449,7 @@ export const localAttachmentStoreTests = [
 
         assert.equal(content.content.toString('utf8'), 'legacy upload body');
         assert.equal(fs.existsSync(path.join(uploadsDir, fileName)), true);
-        assert.equal(
-          dataStore.state.attachments[0].storagePath,
-          'storage/uploads/attachment-legacy-picture.png'
-        );
+        assert.equal(dataStore.state.attachments[0].storagePath, 'storage/uploads/attachment-legacy-picture.png');
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
@@ -479,9 +459,7 @@ export const localAttachmentStoreTests = [
     name: 'attachment records cannot read or delete files outside the managed uploads directory',
     async run() {
       const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
-      const tempContainer = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-attachments-containment-')
-      );
+      const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-containment-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
       const outsidePath = path.join(tempContainer, 'outside-secret.txt');
@@ -521,13 +499,10 @@ export const localAttachmentStoreTests = [
           storageRootDir
         });
 
-        for (const attachmentId of [
-          'attachment-absolute',
-          'attachment-traversal'
-        ]) {
+        for (const attachmentId of ['attachment-absolute', 'attachment-traversal']) {
           assert.throws(
             () => store.readAttachmentContent(attachmentId),
-            (error) => error.code === 'ATTACHMENT_FILE_MISSING'
+            error => error.code === 'ATTACHMENT_FILE_MISSING'
           );
         }
 
@@ -543,24 +518,14 @@ export const localAttachmentStoreTests = [
   {
     name: 'attachment file cleanup rejects raw absolute, traversal and non-canonical managed paths',
     async run() {
-      const { createLocalAttachmentFileManager } = await import('../src/infrastructure/local-attachment-file-manager.js');
-      const tempContainer = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-attachments-cleanup-path-')
-      );
+      const { createLocalAttachmentFileManager } =
+        await import('../src/infrastructure/local-attachment-file-manager.ts');
+      const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-cleanup-path-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
-      const absoluteOutsidePath = path.join(
-        tempContainer,
-        'absolute-outside.txt'
-      );
-      const traversalOutsidePath = path.join(
-        tempContainer,
-        'traversal-outside.txt'
-      );
-      const unrelatedManagedPath = path.join(
-        uploadsDir,
-        'attachment-victim-safe.txt'
-      );
+      const absoluteOutsidePath = path.join(tempContainer, 'absolute-outside.txt');
+      const traversalOutsidePath = path.join(tempContainer, 'traversal-outside.txt');
+      const unrelatedManagedPath = path.join(uploadsDir, 'attachment-victim-safe.txt');
       fs.mkdirSync(uploadsDir, { recursive: true });
       fs.writeFileSync(absoluteOutsidePath, 'absolute outside');
       fs.writeFileSync(traversalOutsidePath, 'traversal outside');
@@ -574,22 +539,11 @@ export const localAttachmentStoreTests = [
 
         fileManager.removeAttachmentFile(absoluteOutsidePath);
         fileManager.removeAttachmentFile('../traversal-outside.txt');
-        fileManager.removeAttachmentFile(
-          'storage/uploads/attachment-victim-safe.txt'
-        );
+        fileManager.removeAttachmentFile('storage/uploads/attachment-victim-safe.txt');
 
-        assert.equal(
-          fs.readFileSync(absoluteOutsidePath, 'utf8'),
-          'absolute outside'
-        );
-        assert.equal(
-          fs.readFileSync(traversalOutsidePath, 'utf8'),
-          'traversal outside'
-        );
-        assert.equal(
-          fs.readFileSync(unrelatedManagedPath, 'utf8'),
-          'managed victim'
-        );
+        assert.equal(fs.readFileSync(absoluteOutsidePath, 'utf8'), 'absolute outside');
+        assert.equal(fs.readFileSync(traversalOutsidePath, 'utf8'), 'traversal outside');
+        assert.equal(fs.readFileSync(unrelatedManagedPath, 'utf8'), 'managed victim');
       } finally {
         fs.rmSync(tempContainer, { recursive: true, force: true });
       }
@@ -599,16 +553,11 @@ export const localAttachmentStoreTests = [
     name: 'attachment reads and deletes never follow a managed-file symbolic link',
     async run() {
       const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
-      const tempContainer = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-attachments-symlink-')
-      );
+      const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-symlink-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
       const outsidePath = path.join(tempContainer, 'outside-secret.txt');
-      const managedPath = path.join(
-        uploadsDir,
-        'attachment-symlink-secret.txt'
-      );
+      const managedPath = path.join(uploadsDir, 'attachment-symlink-secret.txt');
       fs.mkdirSync(uploadsDir, { recursive: true });
       fs.writeFileSync(outsidePath, 'symbolic-link target');
 
@@ -624,15 +573,17 @@ export const localAttachmentStoreTests = [
 
         const dataStore = {
           state: {
-            attachments: [{
-              id: 'attachment-symlink',
-              noteId: 'note-1',
-              fileName: 'secret.txt',
-              mimeType: 'text/plain',
-              size: 20,
-              storagePath: 'storage/uploads/attachment-symlink-secret.txt',
-              createdAt: new Date().toISOString()
-            }]
+            attachments: [
+              {
+                id: 'attachment-symlink',
+                noteId: 'note-1',
+                fileName: 'secret.txt',
+                mimeType: 'text/plain',
+                size: 20,
+                storagePath: 'storage/uploads/attachment-symlink-secret.txt',
+                createdAt: new Date().toISOString()
+              }
+            ]
           },
           flush() {}
         };
@@ -644,7 +595,7 @@ export const localAttachmentStoreTests = [
 
         assert.throws(
           () => store.readAttachmentContent('attachment-symlink'),
-          (error) => error.code === 'ATTACHMENT_FILE_MISSING'
+          error => error.code === 'ATTACHMENT_FILE_MISSING'
         );
         store.deleteAttachment('attachment-symlink');
 
@@ -659,23 +610,12 @@ export const localAttachmentStoreTests = [
     name: 'legacy attachment migration refuses symbolic links that escape a trusted legacy directory',
     async run() {
       const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
-      const tempContainer = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-attachments-legacy-symlink-')
-      );
+      const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-legacy-symlink-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
-      const legacyUploadsDir = path.join(
-        storageRootDir,
-        'apps',
-        'api',
-        'storage',
-        'uploads'
-      );
+      const legacyUploadsDir = path.join(storageRootDir, 'apps', 'api', 'storage', 'uploads');
       const outsidePath = path.join(tempContainer, 'outside-secret.txt');
-      const legacyPath = path.join(
-        legacyUploadsDir,
-        'attachment-legacy-symlink-secret.txt'
-      );
+      const legacyPath = path.join(legacyUploadsDir, 'attachment-legacy-symlink-secret.txt');
       fs.mkdirSync(legacyUploadsDir, { recursive: true });
       fs.writeFileSync(outsidePath, 'legacy symbolic-link target');
 
@@ -691,15 +631,17 @@ export const localAttachmentStoreTests = [
 
         const dataStore = {
           state: {
-            attachments: [{
-              id: 'attachment-legacy-symlink',
-              noteId: 'note-1',
-              fileName: 'secret.txt',
-              mimeType: 'text/plain',
-              size: 27,
-              storagePath: 'storage/uploads/attachment-legacy-symlink-secret.txt',
-              createdAt: new Date().toISOString()
-            }]
+            attachments: [
+              {
+                id: 'attachment-legacy-symlink',
+                noteId: 'note-1',
+                fileName: 'secret.txt',
+                mimeType: 'text/plain',
+                size: 27,
+                storagePath: 'storage/uploads/attachment-legacy-symlink-secret.txt',
+                createdAt: new Date().toISOString()
+              }
+            ]
           },
           flush() {}
         };
@@ -712,19 +654,10 @@ export const localAttachmentStoreTests = [
 
         assert.throws(
           () => store.readAttachmentContent('attachment-legacy-symlink'),
-          (error) => error.code === 'ATTACHMENT_FILE_MISSING'
+          error => error.code === 'ATTACHMENT_FILE_MISSING'
         );
-        assert.equal(
-          fs.existsSync(path.join(
-            uploadsDir,
-            'attachment-legacy-symlink-secret.txt'
-          )),
-          false
-        );
-        assert.equal(
-          fs.readFileSync(outsidePath, 'utf8'),
-          'legacy symbolic-link target'
-        );
+        assert.equal(fs.existsSync(path.join(uploadsDir, 'attachment-legacy-symlink-secret.txt')), false);
+        assert.equal(fs.readFileSync(outsidePath, 'utf8'), 'legacy symbolic-link target');
       } finally {
         fs.rmSync(tempContainer, { recursive: true, force: true });
       }

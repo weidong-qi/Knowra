@@ -6,18 +6,18 @@ on:
     # 只改实验脚本、实验工作流和讨论记录时不跑全量 CI；实验工作流会先跑自己的无费用测试。
     # 实验自己的测试由实验工作流运行；只要同时改了其他文件，CI 照常运行。
     paths-ignore:
-      - "scripts/experiments/**"
-      - "scripts/test/concept-linking-r2.test.js"
-      - ".github/workflows/knowledge-*.yml"
-      - "docs/知识库与试题模块/讨论记录/**"
+      - 'scripts/experiments/**'
+      - 'scripts/test/concept-linking-r2.test.js'
+      - '.github/workflows/knowledge-*.yml'
+      - 'docs/知识库与试题模块/讨论记录/**'
   push:
     branches:
       - main
     paths-ignore:
-      - "scripts/experiments/**"
-      - "scripts/test/concept-linking-r2.test.js"
-      - ".github/workflows/knowledge-*.yml"
-      - "docs/知识库与试题模块/讨论记录/**"
+      - 'scripts/experiments/**'
+      - 'scripts/test/concept-linking-r2.test.js'
+      - '.github/workflows/knowledge-*.yml'
+      - 'docs/知识库与试题模块/讨论记录/**'
 
 permissions:
   contents: read
@@ -39,7 +39,7 @@ jobs:
       - name: 设置 Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: '3.11'
           cache: pip
           cache-dependency-path: requirements.txt
       - name: 安装测试依赖
@@ -57,7 +57,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: '24'
       - name: Build and verify isolated synthetic containers
         run: bash scripts/smoke-isolated-compose.sh
   checks:
@@ -71,7 +71,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: '24'
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Check changed-file whitespace
@@ -89,7 +89,9 @@ jobs:
             git diff-tree --check --root --no-commit-id -r HEAD
           fi
       - name: Check V4 architecture boundaries
-        run: npm run check:boundaries -w @study-accelerator/web-v4
+        run: npm run check:boundaries -w @study-accelerator/web
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
       - name: Check migrated API TypeScript
         run: npm run typecheck:migrated -w @study-accelerator/api
       - name: Check CI coverage and failure gates
@@ -119,7 +121,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       KNOWRA_SYNC_TEST_DATABASE_URL: postgresql://postgres:knowra_test@127.0.0.1:5432/knowra_sync_test
-      KNOWRA_SYNC_TEST_ALLOW_WRITES: "1"
+      KNOWRA_SYNC_TEST_ALLOW_WRITES: '1'
 
     steps:
       - name: Checkout
@@ -130,7 +132,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: '24'
           cache: npm
 
       - name: Install dependencies
@@ -148,7 +150,7 @@ jobs:
         run: NODE_ENV=production npm run build:web
 
       - name: Check V4 architecture boundaries
-        run: npm run check:boundaries -w @study-accelerator/web-v4
+        run: npm run check:boundaries -w @study-accelerator/web
 
       - name: Verify frontend release identity
         run: node scripts/release-artifact.mjs --verify-web "$GITHUB_WORKSPACE" "$GITHUB_SHA"
@@ -156,8 +158,8 @@ jobs:
       - name: Verify production source maps are absent
         shell: bash
         run: |
-          test -f apps/web-v4/dist/index.html
-          test -z "$(find apps/web-v4/dist -type f -name '*.map' -print -quit)"
+          test -f apps/web/dist/index.html
+          test -z "$(find apps/web/dist -type f -name '*.map' -print -quit)"
 
       - name: Install Chromium and system dependencies
         if: matrix.suite == 'chromium'
@@ -186,8 +188,8 @@ jobs:
         with:
           name: editor-draft-recovery-${{ github.sha }}
           path: |
-            apps/web-v4/test-results/mobile-evidence
-            apps/web-v4/playwright-report/mobile-evidence
+            apps/web/test-results/mobile-evidence
+            apps/web/playwright-report/mobile-evidence
           if-no-files-found: warn
           retention-days: 7
 
@@ -204,7 +206,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
-          node-version: "24"
+          node-version: '24'
           cache: npm
       - name: Require every test job to succeed
         env:

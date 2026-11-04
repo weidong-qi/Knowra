@@ -5,6 +5,7 @@ import {
   withInlineAnnotations
 } from './application/inline-annotations.js';
 import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.js';
+import { createInMemoryPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createNavigationReferencePolicy } from './application/navigation-reference-policy.js';
 import {
   taskCoverage,
@@ -63,6 +64,8 @@ export function createKnowledgeModule(options = {}) {
   const knowledgeSpaceRepository = options.knowledgeSpaceRepository ?? createInMemoryKnowledgeSpaceRepository();
   const contentAnnotationRepository =
     options.contentAnnotationRepository ?? createInMemoryContentAnnotationRepository();
+  const pdfAnnotationRepository =
+    options.pdfAnnotationRepository ?? createInMemoryPdfAnnotationRepository({ records: options.pdfAnnotations ?? [] });
   const annotationExclusionRepository =
     options.annotationExclusionRepository ??
     createInMemoryAnnotationExclusionRepository({ records: options.annotationExclusions ?? [] });
@@ -112,6 +115,7 @@ export function createKnowledgeModule(options = {}) {
     return String(value ?? '').trim();
   }
 
+  /** @param {{spaceId: string, parentId?: string, folderId?: string, title?: string, name?: string, currentFolderId?: string, currentNoteId?: string}} input */
   function assertSiblingNameAvailable({
     spaceId,
     parentId = null,
@@ -258,7 +262,7 @@ export function createKnowledgeModule(options = {}) {
     exclusionRepository: annotationExclusionRepository,
     onSourceChanged: annotation => {
       const changed = knowledgeItemService.markEvidenceByAnnotationId(
-        annotation.id,
+        /** @type {string} */ (annotation.id),
         annotation.anchorStatus === 'missing' ? 'insufficient' : 'stale'
       );
       questionService?.markSourcesStale(
@@ -268,7 +272,6 @@ export function createKnowledgeModule(options = {}) {
     }
   });
   const annotationScopeService = createAnnotationScopeService({
-    annotationService: contentAnnotationService,
     annotationRepository: contentAnnotationRepository,
     exclusionRepository: annotationExclusionRepository,
     analysisScopeRepository,
@@ -535,6 +538,7 @@ export function createKnowledgeModule(options = {}) {
       tagRepository,
       tagGroupRepository,
       contentAnnotationRepository,
+      pdfAnnotationRepository,
       analysisScopeRepository,
       noteVersionRepository,
       runTransaction
@@ -568,6 +572,7 @@ export function createKnowledgeModule(options = {}) {
       tagGroupRepository,
       knowledgeSpaceRepository,
       contentAnnotationRepository,
+      pdfAnnotationRepository,
       annotationExclusionRepository,
       annotationRevisionRepository,
       analysisScopeRepository,

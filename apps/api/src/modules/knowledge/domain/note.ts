@@ -20,13 +20,16 @@ export interface NoteConstructorInput<
   UpdatedAt = string | null,
   FolderDeletionPackageId = string | null,
   DeletionPackage = NoteDeletionPackage | null,
-  TagId = string
+  TagId = string,
+  InternalLink = string
 > {
   id: string;
   spaceId?: string | null;
   folderId?: string | null;
   title: string;
   rawMarkdown: unknown;
+  contentKind?: 'markdown' | 'pdf';
+  pdfSource?: { attachmentId: string; sha256: string; importRequestHash?: string } | null;
   status?: Status | string;
   sourceType?: SourceType | string;
   favorite?: Favorite | boolean;
@@ -34,7 +37,7 @@ export interface NoteConstructorInput<
   deleted?: Deleted | boolean;
   tagIds?: TagId[];
   plainText?: unknown;
-  internalLinks?: string[] | null;
+  internalLinks?: InternalLink[] | null;
   contentHash?: ContentHash | null;
   annotationStructure?: Structure | null;
   createdAt?: CreatedAt | string;
@@ -72,15 +75,18 @@ export class Note<
   UpdatedAt = string | null,
   FolderDeletionPackageId = string | null,
   DeletionPackage = NoteDeletionPackage | null,
-  TagId = string
+  TagId = string,
+  InternalLink = string
 > {
   declare id: string;
   declare spaceId: string | null;
   declare folderId: string | null;
   declare title: string;
   declare rawMarkdown: string;
+  declare contentKind: 'markdown' | 'pdf';
+  declare pdfSource: { attachmentId: string; sha256: string; importRequestHash?: string } | null;
   declare plainText: string;
-  declare internalLinks: string[];
+  declare internalLinks: InternalLink[] | string[];
   declare contentHash: ContentHash | null;
   declare annotationStructure: NonNullable<Structure> | AnnotationStructure;
   declare status: Status | string;
@@ -100,6 +106,8 @@ export class Note<
     folderId = null,
     title,
     rawMarkdown,
+    contentKind = 'markdown',
+    pdfSource = null,
     status = 'draft',
     sourceType = 'manual',
     favorite = false,
@@ -125,7 +133,8 @@ export class Note<
     UpdatedAt,
     FolderDeletionPackageId,
     DeletionPackage,
-    TagId
+    TagId,
+    InternalLink
   >) {
     if (!id?.trim()) {
       throw new Error('Note id is required');
@@ -142,6 +151,8 @@ export class Note<
     this.folderId = folderId;
     this.title = title.trim();
     this.rawMarkdown = rawMarkdown;
+    this.contentKind = contentKind;
+    this.pdfSource = pdfSource ? structuredClone(pdfSource) : null;
     this.plainText = typeof plainText === 'string' ? plainText : stripMarkdown(rawMarkdown);
     this.internalLinks = Array.isArray(internalLinks) ? [...new Set(internalLinks)] : extractInternalLinks(rawMarkdown);
     this.contentHash = contentHash;

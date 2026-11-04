@@ -1,20 +1,21 @@
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { matchesKnowledgeCandidateRequest } from './knowledge-candidate-retry.js';
 import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from './knowledge-item-concurrency.js';
-import { KnowledgeItem } from '../domain/knowledge-item.js';
-import { KnowledgeEvidence } from '../domain/knowledge-evidence.js';
-import { isEvidenceUsable, legacyEvidenceApplicability } from '../domain/evidence-applicability.js';
+import { KnowledgeItem } from '../domain/knowledge-item.ts';
+import { KnowledgeEvidence } from '../domain/knowledge-evidence.ts';
+import { isEvidenceUsable, legacyEvidenceApplicability } from '../domain/evidence-applicability.ts';
 import { deriveEvidenceHealth } from '../domain/evidence-health.ts';
 import {
   buildCreateKnowledgeEvidenceDto,
   buildCreateKnowledgeItemDto,
   buildUpdateKnowledgeItemDto
-} from './dto/knowledge-item.dto.js';
+} from './dto/knowledge-item.dto.ts';
 import { assertKnowledgeItemConfirmable } from './formal-asset-validation.js';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 
 const now = () => new Date().toISOString();
 
+/** @param {import('./service-dependencies.ts').KnowledgeItemDependencies} dependencies */
 export function createKnowledgeItemService({
   repository,
   evidenceRepository,
@@ -28,7 +29,7 @@ export function createKnowledgeItemService({
   if (!repository || !evidenceRepository) throw new TypeError('KnowledgeItem repositories are required');
 
   function requireItem(id) {
-    const item = repository.findById(id);
+    const item = /** @type {import('../domain/knowledge-item.ts').KnowledgeItem} */ (repository.findById(id));
     if (!item || item.deletedAt) throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
     return item;
   }
@@ -182,7 +183,9 @@ export function createKnowledgeItemService({
   function updateItem(id, input = {}) {
     const current = requireItem(id);
     assertKnowledgeItemBaseline(current, input);
-    const dto = buildUpdateKnowledgeItemDto(input);
+    const dto = /** @type {Partial<import('../domain/knowledge-item.ts').KnowledgeItemConstructorInput>} */ (
+      buildUpdateKnowledgeItemDto(input)
+    );
     const textChanged = ['title', 'canonicalStatement', 'userExplanation'].some(
       field => Object.hasOwn(dto, field) && dto[field] !== current[field]
     );
@@ -318,7 +321,9 @@ export function createKnowledgeItemService({
     },
     retireEvidence(knowledgeItemId, evidenceId, input = {}) {
       const currentItem = requireItem(knowledgeItemId);
-      const currentEvidence = evidenceRepository.findById(evidenceId);
+      const currentEvidence = /** @type {import('../domain/knowledge-evidence.ts').KnowledgeEvidence} */ (
+        evidenceRepository.findById(evidenceId)
+      );
       if (!currentEvidence || currentEvidence.knowledgeItemId !== knowledgeItemId) {
         throw notFoundError('KNOWLEDGE_EVIDENCE_NOT_FOUND', 'KnowledgeEvidence not found');
       }
@@ -354,7 +359,9 @@ export function createKnowledgeItemService({
     },
     readoptEvidence(knowledgeItemId, evidenceId, input = {}) {
       const item = requireItem(knowledgeItemId);
-      const current = evidenceRepository.findById(evidenceId);
+      const current = /** @type {import('../domain/knowledge-evidence.ts').KnowledgeEvidence} */ (
+        evidenceRepository.findById(evidenceId)
+      );
       if (!current || current.knowledgeItemId !== knowledgeItemId)
         throw notFoundError('KNOWLEDGE_EVIDENCE_NOT_FOUND', 'KnowledgeEvidence not found');
       if (input.expectedUpdatedAt && input.expectedUpdatedAt !== current.updatedAt)
@@ -363,7 +370,9 @@ export function createKnowledgeItemService({
       if (
         current.status !== 'valid' ||
         (current.sourceType !== 'manual' &&
-          (!version || version.noteId !== current.noteId || !version.content.includes(current.quoteText)))
+          (!version ||
+            version.noteId !== current.noteId ||
+            !(/** @type {string} */ (version.content).includes(current.quoteText))))
       ) {
         throw conflictError('KNOWLEDGE_EVIDENCE_NOT_VERIFIABLE', '来源当前不可独立复核，不能重新采用。');
       }
@@ -372,12 +381,15 @@ export function createKnowledgeItemService({
       );
       return { item, evidence };
     },
+    /** @param {string} noteId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status */
     markEvidenceByNoteId(noteId, status = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteId(noteId, status));
     },
+    /** @param {string} annotationId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status */
     markEvidenceByAnnotationId(annotationId, status = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByAnnotationId(annotationId, status));
     },
+    /** @param {string[]} annotationIds */
     reconcileEvidenceByAnnotationIds(annotationIds) {
       return runTransaction(() => {
         const versions = new Map();
@@ -387,6 +399,7 @@ export function createKnowledgeItemService({
           for (const annotationId of new Set(annotationIds)) {
             const annotation = annotationRepository?.findById(annotationId);
             if (!annotation) throw notFoundError('ANNOTATION_NOT_FOUND', 'Annotation not found');
+            if (typeof annotation.noteId !== 'string') throw notFoundError('NOTE_NOT_FOUND', 'Note not found');
             const note = noteRepository?.findById(annotation.noteId);
             if (!note) throw notFoundError('NOTE_NOT_FOUND', 'Note not found');
             for (const evidence of evidenceRepository.list({ annotationId })) {
@@ -404,7 +417,10 @@ export function createKnowledgeItemService({
               const saved = evidenceRepository.save({
                 ...evidence,
                 status,
-                applicabilityStatus: legacyEvidenceApplicability(evidence),
+                applicabilityStatus:
+                  /** @type {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['applicabilityStatus']} */ (
+                    legacyEvidenceApplicability(evidence)
+                  ),
                 updatedAt: now()
               });
               affected.push(saved);
@@ -416,9 +432,11 @@ export function createKnowledgeItemService({
         return affected;
       });
     },
+    /** @param {string} noteVersionId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['sourceType']} [sourceType] */
     markEvidenceByNoteVersionId(noteVersionId, status = 'stale', sourceType = null) {
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteVersionId(noteVersionId, status, sourceType));
     },
+    /** @param {string[]} noteVersionIds @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['sourceType']} [sourceType] */
     markEvidenceByNoteVersionIds(noteVersionIds, status = 'stale', sourceType = null) {
       return markEvidenceAndReconcile(() =>
         evidenceRepository.markByNoteVersionIds(noteVersionIds, status, sourceType)

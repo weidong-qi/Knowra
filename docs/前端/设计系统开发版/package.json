@@ -1,0 +1,17 @@
+{
+  "name": "knowra-design-system-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "知境设计系统的本地开发与预览副本",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "build": "node scripts/build.mjs",
+    "verify:backup": "node scripts/verify-backup.mjs"
+  },
+  "dependencies": {
+    "marked": "15.0.12",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

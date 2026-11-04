@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
 import { createAppError } from '../../../../errors/app-error.js';
-import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../../domain/content-annotation.js';
-import { buildUpdateContentAnnotationDto } from '../dto/content-annotation-dto.js';
+import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../../domain/content-annotation.ts';
+import { buildUpdateContentAnnotationDto } from '../dto/content-annotation-dto.ts';
 import { legacyAnnotationRemoved, legacyAnnotationSourceChange } from '../content-annotation-service.js';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 
 const fail = (code, message, statusCode = 400) => createAppError(code, message, statusCode);
 
+/** @param {import('./service-dependencies.ts').ContentAnnotationDependencies} dependencies */
 export function createAsyncContentAnnotationService({
   repository,
   noteRepository,
@@ -118,7 +119,16 @@ export function createAsyncContentAnnotationService({
         const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown, sourceVersion);
         if (!change) continue;
         const updated = await repository.save(
-          new ContentAnnotation({ ...row, ...change, revision: row.revision + 1, updatedAt: new Date().toISOString() })
+          new ContentAnnotation(
+            /** @type {import('../../domain/content-annotation.ts').ContentAnnotationConstructorInput} */ (
+              /** @type {unknown} */ ({
+                ...row,
+                ...change,
+                revision: row.revision + 1,
+                updatedAt: new Date().toISOString()
+              })
+            )
+          )
         );
         await recordRevision(updated, 'anchorStatusChanged', row.anchor, change.anchorReason);
         annotations.push(updated);

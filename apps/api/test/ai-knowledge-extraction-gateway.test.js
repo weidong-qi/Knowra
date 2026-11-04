@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAiGateway } from '../src/modules/ai/gateway.js';
-import { createMockAiAdapter } from '../src/modules/ai/infrastructure/providers/mock-adapter.js';
+import { createMockAiAdapter } from '../src/modules/ai/infrastructure/providers/mock-adapter.ts';
 import {
   KNOWLEDGE_EXTRACTION_PROMPT_VERSION,
   prepareKnowledgeExtractionGateway,
@@ -9,14 +9,26 @@ import {
 } from '../src/modules/ai/knowledge-extraction-gateway.js';
 import { createKnowledgeExtractionFixture } from './fixtures/knowledge-extraction.fixture.js';
 
-const prepare = (fixture, extra = {}) => prepareKnowledgeExtractionGateway({
-  scope: fixture.scope, noteVersions: fixture.noteVersions, idempotencyKey: 'extraction-request', ...extra
-});
+const prepare = (fixture, extra = {}) =>
+  prepareKnowledgeExtractionGateway({
+    scope: fixture.scope,
+    noteVersions: fixture.noteVersions,
+    idempotencyKey: 'extraction-request',
+    ...extra
+  });
 const response = (value, finishReason = 'stop', extra = {}) => ({
-  id: 'synthetic-extraction-response', model: 'synthetic-model',
-  choices: [{ finish_reason: finishReason, message: {
-    content: typeof value === 'string' ? value : JSON.stringify(value), ...extra
-  } }], usage: { prompt_tokens: 30, completion_tokens: 20 }
+  id: 'synthetic-extraction-response',
+  model: 'synthetic-model',
+  choices: [
+    {
+      finish_reason: finishReason,
+      message: {
+        content: typeof value === 'string' ? value : JSON.stringify(value),
+        ...extra
+      }
+    }
+  ],
+  usage: { prompt_tokens: 30, completion_tokens: 20 }
 });
 async function complete(fixture, value = fixture.result, finishReason = 'stop', extra = {}) {
   const prepared = prepare(fixture);
@@ -24,9 +36,11 @@ async function complete(fixture, value = fixture.result, finishReason = 'stop', 
   const result = await createAiGateway({ adapter }).complete(prepared.gatewayRequest);
   return { prepared, adapter, result };
 }
-const validate = ({ prepared, result }) => validateKnowledgeExtractionGatewayResult({
-  extractionRequest: prepared.extractionRequest, result
-});
+const validate = ({ prepared, result }) =>
+  validateKnowledgeExtractionGatewayResult({
+    extractionRequest: prepared.extractionRequest,
+    result
+  });
 
 export const aiKnowledgeExtractionGatewayTests = [
   {
@@ -39,7 +53,10 @@ export const aiKnowledgeExtractionGatewayTests = [
       assert.equal(prepared.promptVersion, KNOWLEDGE_EXTRACTION_PROMPT_VERSION);
       assert.deepEqual(prepared.extractionRequest, fixture.request);
       assert.deepEqual(Object.keys(outbound).sort(), ['contractVersion', 'requestId', 'sources']);
-      assert.deepEqual(outbound.sources, fixture.request.sources.map(({ sourceId, markdown }) => ({ sourceId, markdown })));
+      assert.deepEqual(
+        outbound.sources,
+        fixture.request.sources.map(({ sourceId, markdown }) => ({ sourceId, markdown }))
+      );
       assert.equal(JSON.stringify(adapter.calls).includes(fixture.excluded), false);
       assert.equal(JSON.stringify(adapter.calls).includes('仅供理解的上下文'), false);
       assert.equal(JSON.stringify(adapter.calls).includes(fixture.scope.id), false);
@@ -70,13 +87,25 @@ export const aiKnowledgeExtractionGatewayTests = [
       ]) {
         const fixture = createKnowledgeExtractionFixture();
         const outcome = await complete(fixture, fixture.result, reason, extra);
-        assert.throws(() => validate(outcome), error => error.code === code);
+        assert.throws(
+          () => validate(outcome),
+          error => error.code === code
+        );
         assert.equal(fixture.knowledge.knowledgeItemService.listItems().length, 0);
       }
       const fixture = createKnowledgeExtractionFixture();
-      await assert.rejects(complete(fixture, null, 'tool_calls', { tool_calls: [{
-        id: 'synthetic-tool', type: 'function', function: { name: 'notes_create', arguments: '{}' }
-      }] }), error => error.code === 'AI_TOOL_INVALID');
+      await assert.rejects(
+        complete(fixture, null, 'tool_calls', {
+          tool_calls: [
+            {
+              id: 'synthetic-tool',
+              type: 'function',
+              function: { name: 'notes_create', arguments: '{}' }
+            }
+          ]
+        }),
+        error => error.code === 'AI_TOOL_INVALID'
+      );
     }
   },
   {
@@ -84,17 +113,34 @@ export const aiKnowledgeExtractionGatewayTests = [
     async run() {
       const fixture = createKnowledgeExtractionFixture();
       const forged = structuredClone(fixture.result);
-      forged.candidates.push({ ...structuredClone(forged.candidates[0]), citations: [{
-        sourceId: 'forged-source', start: 0, end: 1, quote: '伪'
-      }] });
+      forged.candidates.push({
+        ...structuredClone(forged.candidates[0]),
+        citations: [
+          {
+            sourceId: 'forged-source',
+            start: 0,
+            end: 1,
+            quote: '伪'
+          }
+        ]
+      });
       const awaited = await complete(fixture, forged);
-      assert.throws(() => validate(awaited), error => error.code === 'KNOWLEDGE_EXTRACTION_CITATION_INVALID');
+      assert.throws(
+        () => validate(awaited),
+        error => error.code === 'KNOWLEDGE_EXTRACTION_CITATION_INVALID'
+      );
       const wrongRequest = await complete(fixture, { ...fixture.result, requestId: 'another-request' });
-      assert.throws(() => validate(wrongRequest), error => error.code === 'KNOWLEDGE_EXTRACTION_REQUEST_MISMATCH');
+      assert.throws(
+        () => validate(wrongRequest),
+        error => error.code === 'KNOWLEDGE_EXTRACTION_REQUEST_MISMATCH'
+      );
       const forbidden = structuredClone(fixture.result);
       forbidden.candidates[0].reviewStatus = 'confirmed';
       const forbiddenOutcome = await complete(fixture, forbidden);
-      assert.throws(() => validate(forbiddenOutcome), error => error.code === 'KNOWLEDGE_EXTRACTION_RESULT_INVALID');
+      assert.throws(
+        () => validate(forbiddenOutcome),
+        error => error.code === 'KNOWLEDGE_EXTRACTION_RESULT_INVALID'
+      );
       assert.equal(fixture.knowledge.knowledgeItemService.listItems().length, 0);
     }
   },
@@ -117,12 +163,25 @@ export const aiKnowledgeExtractionGatewayTests = [
       version.content = '"\\\n'.repeat(40_000);
       version.contentHash = calculateContentHash(version.content);
       scope.noteVersions = [{ noteId: version.noteId, noteVersionId: version.id, contentHash: version.contentHash }];
-      scope.segments = [{ noteId: version.noteId, noteVersionId: version.id,
-        start: 0, end: version.content.length, markdown: version.content, annotationIds: [] }];
+      scope.segments = [
+        {
+          noteId: version.noteId,
+          noteVersionId: version.id,
+          start: 0,
+          end: version.content.length,
+          markdown: version.content,
+          annotationIds: []
+        }
+      ];
       assert.equal(version.content.length, 120_000);
-      assert.throws(() => prepareKnowledgeExtractionGateway({ scope, noteVersions: [version], idempotencyKey: 'large-range' }),
-        error => error.code === 'KNOWLEDGE_EXTRACTION_GATEWAY_INPUT_TOO_LARGE');
-      assert.throws(() => prepare(fixture, { maxTokens: 20_001 }), error => error.code === 'AI_REQUEST_INVALID');
+      assert.throws(
+        () => prepareKnowledgeExtractionGateway({ scope, noteVersions: [version], idempotencyKey: 'large-range' }),
+        error => error.code === 'KNOWLEDGE_EXTRACTION_GATEWAY_INPUT_TOO_LARGE'
+      );
+      assert.throws(
+        () => prepare(fixture, { maxTokens: 20_001 }),
+        error => error.code === 'AI_REQUEST_INVALID'
+      );
       assert.equal(prepare(fixture, { maxTokens: 500 }).gatewayRequest.maxTokens, 500);
     }
   },
@@ -135,7 +194,10 @@ export const aiKnowledgeExtractionGatewayTests = [
       const prepared = prepare(fixture);
       const controller = new AbortController();
       controller.abort();
-      await assert.rejects(gateway.complete({ ...prepared.gatewayRequest, signal: controller.signal }), error => error.code === 'AI_CANCELLED');
+      await assert.rejects(
+        gateway.complete({ ...prepared.gatewayRequest, signal: controller.signal }),
+        error => error.code === 'AI_CANCELLED'
+      );
       assert.equal(adapter.calls.length, 0);
       const result = await gateway.complete(prepared.gatewayRequest);
       fixture.knowledge.noteService.updateNote(fixture.note.id, { rawMarkdown: '资料已更新，不能替换保存的引文。' });

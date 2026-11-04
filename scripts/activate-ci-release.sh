@@ -29,11 +29,11 @@ esac
   exit 1
 }
 node "$stage/scripts/release-artifact.mjs" --verify-linux "$stage" "$commit"
-test -f "$stage/apps/web-v4/dist/index.html"
+test -f "$stage/apps/web/dist/index.html"
 test -d "$stage/node_modules"
 test -f "$stage/packages/web-core/dist/index.js"
 test ! -e "$stage/storage"
-if find "$stage/apps/web-v4/dist" -type f -name '*.map' -print -quit | grep -q .; then
+if find "$stage/apps/web/dist" -type f -name '*.map' -print -quit | grep -q .; then
   echo '发布包包含 Source Map。' >&2
   exit 1
 fi
@@ -98,12 +98,33 @@ if [[ -L "$current_link" ]]; then
   previous_release="$(realpath -e "$current_link")"
 fi
 
+# 按当前 PM2 进程确认上一版入口，兼容上一版 web-v4、web-v5 与现役 web 发布。
+previous_web_dir="$(pm2 jlist | node -e '
+const fs = require("node:fs");
+const path = require("node:path");
+let input = "";
+process.stdin.on("data", chunk => input += chunk).on("end", () => {
+  const root = fs.realpathSync(process.argv[1]);
+  const env = JSON.parse(input).find(item => item.name === "knowra-web")?.pm2_env;
+  if (!env || fs.realpathSync(env.pm_cwd) !== root) process.exit(1);
+  const actual = fs.realpathSync(env.pm_exec_path);
+  const dir = ["web", "web-v5", "web-v4"].find(name => {
+    const entry = path.join(root, "apps", name, "server.mjs");
+    return fs.existsSync(entry) && fs.realpathSync(entry) === actual;
+  });
+  if (!dir) process.exit(1);
+  process.stdout.write(dir);
+})' "$previous_release")" || {
+  echo '无法确认上一版本的前端入口，发布已停止。' >&2
+  exit 1
+}
+
 # 已打开的旧页面可能继续请求旧版哈希资源；沿用上一运行版本的资源文件。
-if [[ -d "$previous_release/apps/web-v4/dist/assets" ]]; then
-  mkdir -p "$stage/apps/web-v4/dist/assets"
-  cp -an "$previous_release/apps/web-v4/dist/assets/." "$stage/apps/web-v4/dist/assets/"
+if [[ -d "$previous_release/apps/$previous_web_dir/dist/assets" ]]; then
+  mkdir -p "$stage/apps/web/dist/assets"
+  cp -an "$previous_release/apps/$previous_web_dir/dist/assets/." "$stage/apps/web/dist/assets/"
 fi
-if find "$stage/apps/web-v4/dist" -type f -name '*.map' -print -quit | grep -q .; then
+if find "$stage/apps/web/dist" -type f -name '*.map' -print -quit | grep -q .; then
   echo '候选目录包含 Source Map。' >&2
   exit 1
 fi
@@ -145,13 +166,15 @@ const path = require("node:path");
 let input = "";
 process.stdin.on("data", chunk => input += chunk).on("end", () => {
   const target = fs.realpathSync(process.argv[1]);
+  const webDir = process.argv[2];
+  if (!["web", "web-v5", "web-v4"].includes(webDir)) process.exit(1);
   const apps = JSON.parse(input);
-  for (const [name, script] of [["knowra-api", "apps/api/src/main.js"], ["knowra-web", "apps/web-v4/server.mjs"]]) {
+  for (const [name, script] of [["knowra-api", "apps/api/src/main.js"], ["knowra-web", `apps/${webDir}/server.mjs`]]) {
     const app = apps.find(item => item.name === name);
     const env = app?.pm2_env;
     if (!env || env.status !== "online" || fs.realpathSync(env.pm_cwd) !== target || fs.realpathSync(env.pm_exec_path) !== path.join(target, script)) process.exit(1);
   }
-})' "$1"
+})' "$1" "$2"
 }
 rollback() {
   local result=$?
@@ -169,7 +192,7 @@ rollback() {
       mv -Tf -- "$current_link.rollback.$$" "$current_link" || rollback_failed=1
     fi
     switch_pm2 "$previous_release" >&2 || rollback_failed=1
-    verify_pm2_release "$previous_release" >&2 || rollback_failed=1
+    verify_pm2_release "$previous_release" "$previous_web_dir" >&2 || rollback_failed=1
     pm2 save >&2 || rollback_failed=1
     if [[ "$rollback_failed" == 1 ]]; then
       echo '自动恢复未完成，请立即检查 PM2、current 与 Git HEAD。' >&2
@@ -183,7 +206,7 @@ ln -s "$release_dir" "$current_link.next.$$"
 mv -Tf -- "$current_link.next.$$" "$current_link"
 activated=1
 switch_pm2 "$release_dir"
-verify_pm2_release "$release_dir" || {
+verify_pm2_release "$release_dir" web || {
   echo 'PM2 仍指向旧运行目录，发布已停止。' >&2
   exit 1
 }
@@ -214,4 +237,4 @@ if [[ -f "$incoming_dir/$archive_name" && -f "$incoming_dir/$archive_name.sha256
     echo "发布已成功，但传输目录清理失败：$incoming_dir" >&2
   fi
 fi
-echo "发布成功：$commit；发布前备份：$backup_dir"
+echo "发布成功：${commit}；发布前备份：${backup_dir}"

@@ -1,0 +1,22 @@
+<!-- @dsCard group="表单" height=410 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>TextField</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [name, setName] = useState('期末/复习');
+  const bad = name.includes('/');
+  return h('div', { className: 'kn-col', style: { maxWidth: 340 } },
+    h(K.TextField, { label: '标题', isRequired: true, defaultValue: '线性代数 · 特征值', description: '会显示在标签页和搜索结果里。' }),
+    h(K.TextField, { label: '来源链接', type: 'url', placeholder: 'https://' }),
+    h(K.TextField, { label: '文件夹名（删掉斜杠试试）', value: name, onChange: setName, isInvalid: bad, errorMessage: '名称里不能有斜杠' }),
+    h(K.TextAreaField, { label: '摘要', placeholder: '用两三句话写下这篇笔记讲什么', rows: 3 }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

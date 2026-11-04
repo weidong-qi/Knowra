@@ -1,5 +1,5 @@
-import { parseBody, toQueryObject } from '../../../http/request.js';
-import { sendJson } from '../../../http/response.js';
+import { parseBody, toQueryObject } from '../../../http/request.ts';
+import { sendJson } from '../../../http/response.ts';
 import { createAppError } from '../../../errors/app-error.js';
 
 function decode(value) {
@@ -12,8 +12,12 @@ function decode(value) {
 
 async function parseKnowledgeInput(request) {
   const body = await parseBody(request);
-  if (body?.sourceMode === 'ai') {
-    throw createAppError('KNOWLEDGE_ITEM_AI_SOURCE_RESERVED', 'AI 来源只能由经过校验的提炼结果接纳，不能手动声明。', 422);
+  if (/** @type {{ sourceMode?: unknown }} */ (body)?.sourceMode === 'ai') {
+    throw createAppError(
+      'KNOWLEDGE_ITEM_AI_SOURCE_RESERVED',
+      'AI 来源只能由经过校验的提炼结果接纳，不能手动声明。',
+      422
+    );
   }
   return body;
 }
@@ -22,9 +26,10 @@ export async function handleKnowledgeItemRoute({ request, response, url, knowled
   const root = '/api/knowledge/items';
   if (request.method === 'GET' && url.pathname === root) {
     const query = toQueryObject(url);
-    const data = query.view === 'workspace'
-      ? await knowledge.listWorkspaceKnowledgeItems(query)
-      : await knowledge.listKnowledgeItems(query);
+    const data =
+      query.view === 'workspace'
+        ? await knowledge.listWorkspaceKnowledgeItems(query)
+        : await knowledge.listKnowledgeItems(query);
     sendJson(response, 200, { data });
     return true;
   }
@@ -33,16 +38,27 @@ export async function handleKnowledgeItemRoute({ request, response, url, knowled
     return true;
   }
 
-  const evidenceActionMatch = url.pathname.match(/^\/api\/knowledge\/items\/([^/]+)\/evidence\/([^/]+)\/(retire|readopt)$/);
+  const evidenceActionMatch = url.pathname.match(
+    /^\/api\/knowledge\/items\/([^/]+)\/evidence\/([^/]+)\/(retire|readopt)$/
+  );
   if (evidenceActionMatch && request.method === 'POST') {
-    sendJson(response, 200, { data: await (evidenceActionMatch[3] === 'retire' ? knowledge.retireKnowledgeEvidence : knowledge.readoptKnowledgeEvidence)({
-      id: decode(evidenceActionMatch[1]),
-      evidenceId: decode(evidenceActionMatch[2])
-    }, await parseBody(request)) });
+    sendJson(response, 200, {
+      data: await (
+        evidenceActionMatch[3] === 'retire' ? knowledge.retireKnowledgeEvidence : knowledge.readoptKnowledgeEvidence
+      )(
+        {
+          id: decode(evidenceActionMatch[1]),
+          evidenceId: decode(evidenceActionMatch[2])
+        },
+        await parseBody(request)
+      )
+    });
     return true;
   }
 
-  const actionMatch = url.pathname.match(/^\/api\/knowledge\/items\/([^/]+)\/(confirm|needs-revision|archive|restore|trash|restore-deleted|purge-preview|permanent|evidence|provenance)$/);
+  const actionMatch = url.pathname.match(
+    /^\/api\/knowledge\/items\/([^/]+)\/(confirm|needs-revision|archive|restore|trash|restore-deleted|purge-preview|permanent|evidence|provenance)$/
+  );
   if (actionMatch) {
     const id = decode(actionMatch[1]);
     const action = actionMatch[2];
@@ -55,7 +71,9 @@ export async function handleKnowledgeItemRoute({ request, response, url, knowled
       return true;
     }
     if (action === 'permanent' && request.method === 'DELETE') {
-      sendJson(response, 200, { data: await knowledge.permanentlyDeleteKnowledgeItem({ id }, await parseBody(request)) });
+      sendJson(response, 200, {
+        data: await knowledge.permanentlyDeleteKnowledgeItem({ id }, await parseBody(request))
+      });
       return true;
     }
     if (action === 'evidence' && request.method === 'GET') {
@@ -71,7 +89,9 @@ export async function handleKnowledgeItemRoute({ request, response, url, knowled
       return true;
     }
     if (request.method === 'POST' && action === 'needs-revision') {
-      sendJson(response, 200, { data: await knowledge.markKnowledgeItemNeedsRevision({ id }, await parseBody(request)) });
+      sendJson(response, 200, {
+        data: await knowledge.markKnowledgeItemNeedsRevision({ id }, await parseBody(request))
+      });
       return true;
     }
     if (request.method === 'POST' && action === 'archive') {

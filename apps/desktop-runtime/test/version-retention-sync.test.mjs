@@ -6,10 +6,10 @@ import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-ac
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
-import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.js';
-import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.js';
-import { selectVersionsToPrune } from '../../api/src/modules/knowledge/domain/note-version-retention.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
+import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.ts';
+import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.ts';
+import { selectVersionsToPrune } from '../../api/src/modules/knowledge/domain/note-version-retention.ts';
 import { nextEntityUpload } from '../src/entity-sync-state.mjs';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';

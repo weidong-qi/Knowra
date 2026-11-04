@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
@@ -10,7 +10,7 @@ import { createSyncEngine } from '../src/sync-engine.mjs';
 import { nextEntityUpload } from '../src/entity-sync-state.mjs';
 import { readKnowledgeLifecycleBoundaries } from '../src/knowledge-lifecycle-boundaries.mjs';
 import { readMeta, writeMeta } from '../src/sync-state.mjs';
-import { requestHash } from '../../api/src/modules/sync/journal.js';
+import { requestHash } from '../../api/src/modules/sync/journal.ts';
 import { temporaryDirectory, openWorkspace, markText, inlineId } from './helpers.mjs';
 
 async function fixture(t) {

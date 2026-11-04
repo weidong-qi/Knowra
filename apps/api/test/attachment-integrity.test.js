@@ -7,13 +7,10 @@ export const attachmentIntegrityTests = [
   {
     name: 'attachment integrity inspection identifies repairable metadata',
     async run() {
-      const { createLocalAttachmentFileManager } = await import(
-        '../src/infrastructure/local-attachment-file-manager.js'
-      );
-      const {
-        buildAttachmentRepairRecord,
-        inspectAttachmentIntegrity
-      } = await import('../src/infrastructure/attachment-integrity.js');
+      const { createLocalAttachmentFileManager } =
+        await import('../src/infrastructure/local-attachment-file-manager.ts');
+      const { buildAttachmentRepairRecord, inspectAttachmentIntegrity } =
+        await import('../src/infrastructure/attachment-integrity.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-integrity-ready-'));
       try {
         const fileManager = createLocalAttachmentFileManager({
@@ -27,10 +24,7 @@ export const attachmentIntegrityTests = [
           size: 999,
           storagePath: fileManager.buildStoragePath('attachment-ready', 'diagram.png')
         };
-        fs.writeFileSync(
-          path.join(tempRoot, 'storage', 'uploads', 'attachment-ready-diagram.png'),
-          'diagram'
-        );
+        fs.writeFileSync(path.join(tempRoot, 'storage', 'uploads', 'attachment-ready-diagram.png'), 'diagram');
         const report = inspectAttachmentIntegrity({
           attachments: [attachment],
           fileManager
@@ -38,10 +32,7 @@ export const attachmentIntegrityTests = [
         assert.equal(report.status, 'needs-repair');
         assert.equal(report.counts.repairable, 1);
         assert.equal(report.items[0].observedStatus, 'ready');
-        const repaired = buildAttachmentRepairRecord(
-          attachment,
-          report.items[0]
-        );
+        const repaired = buildAttachmentRepairRecord(attachment, report.items[0]);
         assert.equal(repaired.status, 'ready');
         assert.equal(repaired.size, 7);
         assert.match(repaired.sha256, /^[a-f0-9]{64}$/);
@@ -54,12 +45,9 @@ export const attachmentIntegrityTests = [
   {
     name: 'attachment integrity inspection blocks a hash mismatch',
     async run() {
-      const { createLocalAttachmentFileManager } = await import(
-        '../src/infrastructure/local-attachment-file-manager.js'
-      );
-      const { inspectAttachmentIntegrity } = await import(
-        '../src/infrastructure/attachment-integrity.js'
-      );
+      const { createLocalAttachmentFileManager } =
+        await import('../src/infrastructure/local-attachment-file-manager.ts');
+      const { inspectAttachmentIntegrity } = await import('../src/infrastructure/attachment-integrity.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-integrity-corrupt-'));
       try {
         const fileManager = createLocalAttachmentFileManager({
@@ -69,14 +57,16 @@ export const attachmentIntegrityTests = [
         const filePath = path.join(tempRoot, 'uploads', 'attachment-corrupt-file.txt');
         fs.writeFileSync(filePath, 'actual');
         const report = inspectAttachmentIntegrity({
-          attachments: [{
-            id: 'attachment-corrupt',
-            noteId: 'note-1',
-            fileName: 'file.txt',
-            size: 6,
-            sha256: '0'.repeat(64),
-            storagePath: fileManager.buildStoragePath('attachment-corrupt', 'file.txt')
-          }],
+          attachments: [
+            {
+              id: 'attachment-corrupt',
+              noteId: 'note-1',
+              fileName: 'file.txt',
+              size: 6,
+              sha256: '0'.repeat(64),
+              storagePath: fileManager.buildStoragePath('attachment-corrupt', 'file.txt')
+            }
+          ],
           fileManager
         });
         assert.equal(report.status, 'degraded');
@@ -90,12 +80,9 @@ export const attachmentIntegrityTests = [
   {
     name: 'attachment integrity inspection reports missing and orphan files',
     async run() {
-      const { createLocalAttachmentFileManager } = await import(
-        '../src/infrastructure/local-attachment-file-manager.js'
-      );
-      const { inspectAttachmentIntegrity } = await import(
-        '../src/infrastructure/attachment-integrity.js'
-      );
+      const { createLocalAttachmentFileManager } =
+        await import('../src/infrastructure/local-attachment-file-manager.ts');
+      const { inspectAttachmentIntegrity } = await import('../src/infrastructure/attachment-integrity.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-integrity-missing-'));
       try {
         const uploadsDir = path.join(tempRoot, 'uploads');
@@ -105,13 +92,15 @@ export const attachmentIntegrityTests = [
         });
         fs.writeFileSync(path.join(uploadsDir, 'orphan-file.png'), 'orphan');
         const report = inspectAttachmentIntegrity({
-          attachments: [{
-            id: 'attachment-missing',
-            noteId: 'note-1',
-            fileName: 'missing.png',
-            size: 10,
-            storagePath: fileManager.buildStoragePath('attachment-missing', 'missing.png')
-          }],
+          attachments: [
+            {
+              id: 'attachment-missing',
+              noteId: 'note-1',
+              fileName: 'missing.png',
+              size: 10,
+              storagePath: fileManager.buildStoragePath('attachment-missing', 'missing.png')
+            }
+          ],
           fileManager
         });
         assert.equal(report.status, 'degraded');
@@ -126,12 +115,8 @@ export const attachmentIntegrityTests = [
   {
     name: 'PostgreSQL attachment upload removes an orphan file when its pending row disappeared',
     async run() {
-      const { createPostgresAttachmentStore } = await import(
-        '../src/infrastructure/postgres-attachment-store.js'
-      );
-      const tempRoot = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'knowra-postgres-attachment-race-')
-      );
+      const { createPostgresAttachmentStore } = await import('../src/infrastructure/postgres-attachment-store.js');
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-postgres-attachment-race-'));
       let saveCount = 0;
       const attachmentRepository = {
         async save(attachment) {
@@ -153,17 +138,15 @@ export const attachmentIntegrityTests = [
         });
 
         await assert.rejects(
-          () => store.uploadAttachment({
-            noteId: 'note-deleted-during-upload',
-            fileName: 'race.txt',
-            contentBase64: Buffer.from('race').toString('base64')
-          }),
+          () =>
+            store.uploadAttachment({
+              noteId: 'note-deleted-during-upload',
+              fileName: 'race.txt',
+              contentBase64: Buffer.from('race').toString('base64')
+            }),
           /note was deleted/
         );
-        assert.deepEqual(
-          fs.readdirSync(path.join(tempRoot, 'storage', 'uploads')),
-          []
-        );
+        assert.deepEqual(fs.readdirSync(path.join(tempRoot, 'storage', 'uploads')), []);
       } finally {
         fs.rmSync(tempRoot, { recursive: true, force: true });
       }

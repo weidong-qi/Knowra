@@ -7,9 +7,13 @@ export interface NoteVersionRetentionPolicy {
   maxBytesPerNote: number;
 }
 
+/** 历史 JSON 的时间字段未作结构校验；原 Date.parse 仍负责转换。 */
+export type RetentionJsonValue =
+  string | number | boolean | null | RetentionJsonValue[] | { [key: string]: RetentionJsonValue | undefined };
+
 export interface RetainableNoteVersion {
   id: string;
-  createdAt: string;
+  createdAt?: RetentionJsonValue;
 }
 
 export interface NoteVersionPruneOptions<T extends RetainableNoteVersion> {
@@ -31,8 +35,12 @@ export const NOTE_VERSION_RETENTION: Readonly<NoteVersionRetentionPolicy> = Obje
   maxBytesPerNote: 2 * 1024 * 1024
 });
 
-const bucketOf = (age: number, createdAt: string, policy: Readonly<NoteVersionRetentionPolicy>): string => {
-  const time = Date.parse(createdAt);
+const bucketOf = (
+  age: number,
+  createdAt: RetentionJsonValue | undefined,
+  policy: Readonly<NoteVersionRetentionPolicy>
+): string => {
+  const time = Date.parse(createdAt as string);
   if (age <= policy.recentMs) return `m${Math.floor(time / policy.sampleMs)}`;
   return `d${Math.floor(time / DAY)}`;
 };
@@ -49,14 +57,15 @@ export function selectVersionsToPrune<T extends RetainableNoteVersion>({
   policy = NOTE_VERSION_RETENTION
 }: NoteVersionPruneOptions<T>): string[] {
   const ordered = [...versions].sort(
-    (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt) || right.id.localeCompare(left.id)
+    (left, right) =>
+      Date.parse(right.createdAt as string) - Date.parse(left.createdAt as string) || right.id.localeCompare(left.id)
   );
   const kept = new Set<string>();
   const seen = new Set<string>();
   let count = 0,
     bytes = 0;
   for (const version of ordered) {
-    const age = now - Date.parse(version.createdAt);
+    const age = now - Date.parse(version.createdAt as string);
     if (protectedIds.has(version.id) || !Number.isFinite(age)) {
       kept.add(version.id);
       continue;

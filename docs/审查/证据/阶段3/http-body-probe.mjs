@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { parseBody } from '../../../../apps/api/src/http/request.js';
+import { parseBody } from '../../../../apps/api/src/http/request.ts';
 const request=new EventEmitter();request.headers={'content-type':'application/json'};
 const body=Buffer.from(JSON.stringify({rawMarkdown:'中文审查'}));
 const split=body.indexOf(Buffer.from('中'))+1;

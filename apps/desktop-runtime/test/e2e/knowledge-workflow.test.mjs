@@ -11,7 +11,7 @@ import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
-import { createV4WebServer } from '../../../web-v4/server/app.mjs';
+import { createV4WebServer } from '../../../web/server/app.mjs';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { inlineId } from '../helpers.mjs';
 
@@ -30,7 +30,7 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const origin = `http://127.0.0.1:${server.address().port}`;
-  const distRoot = fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url));
+  const distRoot = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
   const web = createV4WebServer({ distRoot, getApiOrigin: () => origin });
   web.listen(0, '127.0.0.1');
   await once(web, 'listening');

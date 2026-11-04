@@ -6,12 +6,12 @@ import { test } from 'node:test';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
-import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { nextEntityUpload, acknowledgeEntityUpload } from '../src/entity-sync-state.mjs';
-import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.js';
-import { TRAINING_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.js';
-import { assertSyncContract, syncContract } from '../../api/src/modules/sync/protocol-contract.js';
+import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
+import { TRAINING_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.ts';
+import { assertSyncContract, syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { temporaryDirectory, openWorkspace, markText, inlineId } from './helpers.mjs';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { readExamFocusReviewBoundaries } from '../src/exam-focus-review-boundaries.mjs';
@@ -339,14 +339,14 @@ test('训练冲突可采用本地并保留恢复记录，旧编辑不能自动�
   assert.equal(b.store.state.questions[0].deletedAt, null);
 });
 
-test('训练契约沿用schema8，双方旧能力拒绝，原始冻结请求哈希不改写', async t => {
+test('训练契约升级schema9，双方旧能力拒绝，原始冻结请求哈希不改写', async t => {
   const cloud = await fixture(t);
   const a = cloud.device('a');
   await a.connect();
   assets(a.knowledge);
   const frozen = nextEntityUpload(a.store);
   const contract = syncContract();
-  assert.equal(contract.entitySchemaVersion, 8);
+  assert.equal(contract.entitySchemaVersion, 9);
   assert(contract.capabilities.includes('training-assets-v1'));
   assert.throws(
     () =>

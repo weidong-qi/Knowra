@@ -4,11 +4,11 @@ import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
-import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.js';
+import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
 import { temporaryDirectory, markText } from './helpers.mjs';
 
 test('版本引用索引在受限堆内存下不保活整批历史 JSON 字符串', () => {
-  const moduleUrl = new URL('../../api/src/modules/knowledge/domain/note-version-references.js', import.meta.url).href;
+  const moduleUrl = new URL('../../api/src/modules/knowledge/domain/note-version-references.ts', import.meta.url).href;
   const script = `
     import assert from 'node:assert/strict';
     import { createNoteVersionReferenceIndex } from ${JSON.stringify(moduleUrl)};

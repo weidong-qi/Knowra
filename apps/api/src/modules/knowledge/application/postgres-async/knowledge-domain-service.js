@@ -1,20 +1,21 @@
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { matchesKnowledgeCandidateRequest } from '../knowledge-candidate-retry.js';
 import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from '../knowledge-item-concurrency.js';
-import { KnowledgeItem } from '../../domain/knowledge-item.js';
-import { KnowledgeEvidence } from '../../domain/knowledge-evidence.js';
-import { isEvidenceUsable, legacyEvidenceApplicability } from '../../domain/evidence-applicability.js';
+import { KnowledgeItem } from '../../domain/knowledge-item.ts';
+import { KnowledgeEvidence } from '../../domain/knowledge-evidence.ts';
+import { isEvidenceUsable, legacyEvidenceApplicability } from '../../domain/evidence-applicability.ts';
 import { deriveEvidenceHealth } from '../../domain/evidence-health.ts';
 import {
   buildCreateKnowledgeEvidenceDto,
   buildCreateKnowledgeItemDto,
   buildUpdateKnowledgeItemDto
-} from '../dto/knowledge-item.dto.js';
+} from '../dto/knowledge-item.dto.ts';
 import { assertKnowledgeItemConfirmable } from '../formal-asset-validation.js';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 
 const now = () => new Date().toISOString();
 
+/** @param {import('./service-dependencies.ts').KnowledgeItemDependencies} dependencies */
 export function createAsyncKnowledgeItemService({
   repository,
   evidenceRepository,

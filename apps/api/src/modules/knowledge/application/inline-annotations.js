@@ -7,8 +7,8 @@ import {
   stripKnowraMarksMapped
 } from '@study-accelerator/shared/knowra-marks';
 import { createInlineAnnotationSourceResolver } from './inline-annotation-ranges.js';
-import { ContentAnnotation, INLINE_ANCHOR_FORMAT, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.js';
-import { isEvidenceUsable } from '../domain/evidence-applicability.js';
+import { ContentAnnotation, INLINE_ANCHOR_FORMAT, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
+import { isEvidenceUsable } from '../domain/evidence-applicability.ts';
 
 /**
  * 重点内联化 I2（《重点标记内联化方案》3.2）：正文是重点位置的唯一来源，保存时从正文标记派生元数据行。
@@ -143,7 +143,10 @@ export function inlineMarksOf(markdown) {
 
 const sameJson = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 
-/** 对比正文标记与已有的 v3 行，得出需要写入的行与修订记录。 */
+/**
+ * 对比正文标记与已有的 v3 行，得出需要写入的行与修订记录。
+ * @param {string | null} [before]
+ */
 export function planInlineAnnotations(note, version, existing, now = new Date().toISOString(), before = null) {
   const rows = (existing ?? []).filter(isInlineAnnotation);
   const marks = inlineMarksOf(note?.rawMarkdown);
@@ -403,7 +406,7 @@ export function marksOnlyDependencies(dependencies) {
  */
 export function withInlineAnnotations(
   lifecycle,
-  { repository, revisionRepository, marksOnlyLifecycle = null, onSourceChanged = null, now }
+  { repository, revisionRepository, marksOnlyLifecycle = null, onSourceChanged = null, now = undefined }
 ) {
   return {
     ...lifecycle,

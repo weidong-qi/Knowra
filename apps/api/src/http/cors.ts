@@ -6,12 +6,12 @@ export interface CorsRequest {
 }
 
 export interface CorsHeaderWriter {
-  setHeader(name: string, value: string): unknown;
+  setHeader(name: string, value: string): void;
 }
 
 export interface CorsPreflightWriter extends CorsHeaderWriter {
-  writeHead(statusCode: number, headers?: OutgoingHttpHeaders): unknown;
-  end(content?: string): unknown;
+  writeHead(statusCode: number, headers?: OutgoingHttpHeaders): void;
+  end(content?: string): void;
 }
 
 export interface CorsPreflightOptions {

@@ -1,4 +1,4 @@
 import fs from 'node:fs';
-import {writeJsonFileAtomically} from '../../../../apps/api/src/infrastructure/atomic-json-file.js';
+import {writeJsonFileAtomically} from '../../../../apps/api/src/infrastructure/atomic-json-file.ts';
 const [target,mode]=process.argv.slice(2);let calls=0;
 writeJsonFileAtomically(target,{spaces:[],folders:[],tags:[],tagGroups:[],notes:[],noteVersions:[],knowledgeItems:[],knowledgeEvidence:[],learningObjectives:[],examProfiles:[],examFocuses:[],questions:[],questionObjectives:[],questionSources:[],attachments:[],contentAnnotations:[],review:'new'},{fileSystem:{...fs,renameSync(from,to){calls++;if(mode==='fallback-gap'&&calls===1){const e=new Error('simulate Windows replacement denial');e.code='EPERM';throw e;}if(mode==='before-rename'&&calls===1)process.kill(process.pid,'SIGKILL');fs.renameSync(from,to);if((mode==='after-rename'&&calls===1)||(mode==='fallback-gap'&&calls===2))process.kill(process.pid,'SIGKILL');}}});

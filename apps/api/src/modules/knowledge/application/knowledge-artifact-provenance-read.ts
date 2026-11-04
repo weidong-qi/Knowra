@@ -2,7 +2,7 @@ import { createAppError } from '../../../errors/app-error.js';
 import {
   validateKnowledgeArtifactProvenance,
   resolveKnowledgeArtifactProvenanceSource
-} from '../domain/knowledge-artifact-provenance-contract.js';
+} from '../domain/knowledge-artifact-provenance-contract.ts';
 
 import type {
   KnowledgeArtifactProvenance,

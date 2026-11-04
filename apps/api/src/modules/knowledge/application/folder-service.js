@@ -1,10 +1,7 @@
-import { Folder } from '../domain/folder.js';
-import { buildCreateFolderDto, buildUpdateFolderDto } from './dto/folder.dto.js';
+import { Folder } from '../domain/folder.ts';
+import { buildCreateFolderDto, buildUpdateFolderDto } from './dto/folder.dto.ts';
 import { createInMemoryFolderRepository } from '../infrastructure/folder-repository.js';
-import {
-  conflictError,
-  notFoundError
-} from './knowledge-errors.js';
+import { conflictError, notFoundError } from './knowledge-errors.js';
 
 export function createFolderService({
   repository = createInMemoryFolderRepository(),
@@ -28,11 +25,13 @@ export function createFolderService({
   }
 
   function normalizeSegment(name) {
-    return String(name ?? '')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'folder';
+    return (
+      String(name ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'folder'
+    );
   }
 
   function buildPathCache({ name, parentFolder }) {
@@ -57,20 +56,14 @@ export function createFolderService({
     const parentFolder = requireActiveFolder(parentId);
 
     if (parentFolder.spaceId !== spaceId) {
-      throw conflictError(
-        'FOLDER_SPACE_MISMATCH',
-        'Parent folder must belong to the same space'
-      );
+      throw conflictError('FOLDER_SPACE_MISMATCH', 'Parent folder must belong to the same space');
     }
 
     if (currentFolderId) {
       let cursor = parentFolder;
       while (cursor) {
         if (cursor.id === currentFolderId) {
-          throw conflictError(
-            'FOLDER_DESCENDANT_CONFLICT',
-            'Folder cannot move under its descendant'
-          );
+          throw conflictError('FOLDER_DESCENDANT_CONFLICT', 'Folder cannot move under its descendant');
         }
         cursor = cursor.parentId ? repository.findById(cursor.parentId) : null;
       }
@@ -80,10 +73,11 @@ export function createFolderService({
   }
 
   function reindexDescendants(parentFolder) {
-    const descendants = repository.list({ spaceId: parentFolder.spaceId })
-      .filter((folder) => folder.parentId === parentFolder.id);
+    const descendants = repository
+      .list({ spaceId: parentFolder.spaceId })
+      .filter(folder => folder.parentId === parentFolder.id);
 
-    descendants.forEach((folder) => {
+    descendants.forEach(folder => {
       const updatedFolder = new Folder({
         ...folder,
         pathCache: buildPathCache({
@@ -104,8 +98,8 @@ export function createFolderService({
     while (queue.length) {
       const currentId = queue.shift();
       allFolders
-        .filter((folder) => folder.parentId === currentId)
-        .forEach((folder) => {
+        .filter(folder => folder.parentId === currentId)
+        .forEach(folder => {
           if (!ids.has(folder.id)) {
             ids.add(folder.id);
             queue.push(folder.id);
@@ -120,10 +114,7 @@ export function createFolderService({
     createFolder(input) {
       const dto = buildCreateFolderDto(input);
       if (repository.findById(dto.id)) {
-        throw conflictError(
-          'FOLDER_ID_CONFLICT',
-          'A folder with the same id already exists'
-        );
+        throw conflictError('FOLDER_ID_CONFLICT', 'A folder with the same id already exists');
       }
       validateSpaceReference?.(dto.spaceId);
       validateSiblingNameConflict?.({
@@ -173,14 +164,33 @@ export function createFolderService({
       requireActiveFolder(folderId);
       const deletedIds = collectSubtreeIds(folderId);
       const deletedAt = new Date().toISOString();
-      return deletedIds.map(id => repository.save(new Folder({ ...requireActiveFolder(id), deletedAt, deletionPackage: id === folderId ? deletionPackage : null, updatedAt: deletedAt })));
+      return deletedIds.map(id =>
+        repository.save(
+          new Folder({
+            ...requireActiveFolder(id),
+            deletedAt,
+            deletionPackage: id === folderId ? deletionPackage : null,
+            updatedAt: deletedAt
+          })
+        )
+      );
     },
     restoreDeletedFolder(folderId) {
       const root = requireFolder(folderId);
       if (!root.deletedAt || !root.deletionPackage) throw conflictError('FOLDER_NOT_IN_TRASH', '文件夹不在回收站中');
       const folders = root.deletionPackage.folderIds.map(id => requireFolder(id));
-      for (const folder of folders) validateSiblingNameConflict?.({ spaceId: folder.spaceId, parentId: folder.parentId, name: folder.name, currentFolderId: folder.id });
-      return folders.map(folder => repository.save(new Folder({ ...folder, deletedAt: null, deletionPackage: null, updatedAt: new Date().toISOString() })));
+      for (const folder of folders)
+        validateSiblingNameConflict?.({
+          spaceId: folder.spaceId,
+          parentId: folder.parentId,
+          name: folder.name,
+          currentFolderId: folder.id
+        });
+      return folders.map(folder =>
+        repository.save(
+          new Folder({ ...folder, deletedAt: null, deletionPackage: null, updatedAt: new Date().toISOString() })
+        )
+      );
     },
     listFolders(options = {}) {
       return repository.list(options);
@@ -189,7 +199,7 @@ export function createFolderService({
       const folders = repository.list(options);
       const byParent = new Map();
 
-      folders.forEach((folder) => {
+      folders.forEach(folder => {
         const key = folder.parentId ?? '__root__';
         const list = byParent.get(key) ?? [];
         list.push(folder);
@@ -200,7 +210,7 @@ export function createFolderService({
         const key = parentId ?? '__root__';
         return (byParent.get(key) ?? [])
           .sort((left, right) => left.name.localeCompare(right.name))
-          .map((folder) => ({
+          .map(folder => ({
             ...folder,
             children: buildNodes(folder.id)
           }));

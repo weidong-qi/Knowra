@@ -7,12 +7,12 @@ import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createAsyncKnowledgeItemService } from '../src/modules/knowledge/application/postgres-async/knowledge-domain-service.js';
 import { createInMemoryKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/knowledge-item-repository.js';
 import { createInMemoryKnowledgeEvidenceRepository } from '../src/modules/knowledge/infrastructure/knowledge-evidence-repository.js';
-import { createPostgresKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/postgres/knowledge-item-repository.js';
+import { createPostgresKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.js';
 import { createServer } from '../src/server.js';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
-import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.js';
+import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import { annotationOf, markText } from './fixtures/inline-annotation-seed.js';
 
 const manual = { title: '人工候选', canonicalStatement: '确认前需要核对来源与知识内容', sourceMode: 'manual' };

@@ -1,0 +1,19 @@
+<!-- @dsCard group="表单" height=120 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Switch</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  return h('div', { className: 'kn-col', style: { maxWidth: 300 } },
+    h(K.Switch, { defaultSelected: true }, '自动保存'),
+    h(K.Switch, null, '减少动效'),
+    h(K.Switch, { isDisabled: true }, '局域网同步'));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

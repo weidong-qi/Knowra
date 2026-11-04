@@ -9,24 +9,17 @@ export const knowledgeBaseSnapshotServiceTests = [
     async run() {
       const fixture = await createFixture('success');
       try {
-        const imported = fixture.storage.importKnowledgeBase(
-          createImportedSnapshot()
-        );
+        const imported = fixture.storage.importKnowledgeBase(createImportedSnapshot());
 
-        assert.equal(imported.schemaVersion, 7);
+        assert.equal(imported.schemaVersion, 8);
         assert.equal(imported.data.notes[0].id, 'note-imported');
         assert.equal(imported.attachmentFiles[0].id, 'attachment-imported');
         assert.equal(fixture.dataStore.state.notes[0].id, 'note-imported');
         assert.equal(
-          fixture.attachmentStore.readAttachmentContent(
-            'attachment-imported'
-          ).content.toString('utf8'),
+          fixture.attachmentStore.readAttachmentContent('attachment-imported').content.toString('utf8'),
           'imported attachment'
         );
-        assert.equal(
-          fixture.attachmentStore.getAttachment(fixture.oldAttachment.id),
-          null
-        );
+        assert.equal(fixture.attachmentStore.getAttachment(fixture.oldAttachment.id), null);
       } finally {
         fixture.cleanup();
       }
@@ -39,30 +32,28 @@ export const knowledgeBaseSnapshotServiceTests = [
       try {
         const before = fixture.readPersistedData();
         assert.throws(
-          () => fixture.storage.importKnowledgeBase({
-            version: 'v1-local-json',
-            schemaVersion: 1,
-            data: createSnapshotData({
-              spaces: [createSpace('space-imported')],
-              notes: [{
-                ...createNote('note-imported', 'Imported'),
-                rawMarkdown: '![unsafe](http://example.com/image.png)'
-              }]
+          () =>
+            fixture.storage.importKnowledgeBase({
+              version: 'v1-local-json',
+              schemaVersion: 1,
+              data: createSnapshotData({
+                spaces: [createSpace('space-imported')],
+                notes: [
+                  {
+                    ...createNote('note-imported', 'Imported'),
+                    rawMarkdown: '![unsafe](http://example.com/image.png)'
+                  }
+                ]
+              }),
+              attachmentFiles: []
             }),
-            attachmentFiles: []
-          }),
-          (error) => (
-            error.code === 'INSECURE_IMAGE_URL'
-            && error.statusCode === 422
-          )
+          error => error.code === 'INSECURE_IMAGE_URL' && error.statusCode === 422
         );
 
         assert.equal(fixture.readPersistedData(), before);
         assert.equal(fixture.dataStore.state.notes[0].id, 'note-current');
         assert.equal(
-          fixture.attachmentStore.readAttachmentContent(
-            fixture.oldAttachment.id
-          ).content.toString('utf8'),
+          fixture.attachmentStore.readAttachmentContent(fixture.oldAttachment.id).content.toString('utf8'),
           'old attachment'
         );
       } finally {
@@ -82,24 +73,17 @@ export const knowledgeBaseSnapshotServiceTests = [
 
       try {
         assert.throws(
-          () => fixture.storage.importKnowledgeBase(
-            createImportedSnapshot()
-          ),
+          () => fixture.storage.importKnowledgeBase(createImportedSnapshot()),
           /simulated JSON commit failure/
         );
 
         assert.equal(fixture.readPersistedData(), persistedBefore);
         assert.equal(fixture.dataStore.state.notes[0].id, 'note-current');
         assert.equal(
-          fixture.attachmentStore.readAttachmentContent(
-            fixture.oldAttachment.id
-          ).content.toString('utf8'),
+          fixture.attachmentStore.readAttachmentContent(fixture.oldAttachment.id).content.toString('utf8'),
           'old attachment'
         );
-        assert.equal(
-          fixture.attachmentStore.getAttachment('attachment-imported'),
-          null
-        );
+        assert.equal(fixture.attachmentStore.getAttachment('attachment-imported'), null);
       } finally {
         fixture.dataStore.commitImport = originalCommitImport;
         fixture.cleanup();
@@ -129,17 +113,12 @@ export const knowledgeBaseSnapshotServiceTests = [
       try {
         assert.throws(
           () => fixture.storage.importKnowledgeBase(snapshot),
-          (error) => (
-            error.code === 'STORAGE_ATTACHMENT_SNAPSHOT_INVALID'
-            && error.statusCode === 422
-          )
+          error => error.code === 'STORAGE_ATTACHMENT_SNAPSHOT_INVALID' && error.statusCode === 422
         );
         assert.equal(fixture.readPersistedData(), persistedBefore);
         assert.equal(fixture.dataStore.state.notes[0].id, 'note-current');
         assert.equal(
-          fixture.attachmentStore.readAttachmentContent(
-            fixture.oldAttachment.id
-          ).content.toString('utf8'),
+          fixture.attachmentStore.readAttachmentContent(fixture.oldAttachment.id).content.toString('utf8'),
           'old attachment'
         );
       } finally {
@@ -151,18 +130,10 @@ export const knowledgeBaseSnapshotServiceTests = [
 
 async function createFixture(suffix) {
   const { createAppContext } = await import('../src/app.factory.js');
-  const { createFileDataStore } = await import(
-    '../src/infrastructure/file-data-store.js'
-  );
-  const { createLocalAttachmentStore } = await import(
-    '../src/infrastructure/local-attachment-store.js'
-  );
-  const tempDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), `study-import-${suffix}-`)
-  );
-  const dataStore = createFileDataStore(
-    path.join(tempDir, 'data', 'knowledge-base.json')
-  );
+  const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+  const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `study-import-${suffix}-`));
+  const dataStore = createFileDataStore(path.join(tempDir, 'data', 'knowledge-base.json'));
   dataStore.state.spaces.push(createSpace('space-current'));
   dataStore.state.notes.push(createNote('note-current', 'Current'));
   dataStore.flush();
@@ -187,10 +158,7 @@ async function createFixture(suffix) {
     oldAttachment,
     storage: app.http.storage,
     readPersistedData() {
-      return fs.readFileSync(
-        path.join(tempDir, 'data', 'knowledge-base.json'),
-        'utf8'
-      );
+      return fs.readFileSync(path.join(tempDir, 'data', 'knowledge-base.json'), 'utf8');
     },
     cleanup() {
       fs.rmSync(tempDir, { recursive: true, force: true });
@@ -206,22 +174,26 @@ function createImportedSnapshot() {
     data: createSnapshotData({
       spaces: [createSpace('space-imported')],
       notes: [createNote('note-imported', 'Imported')],
-      attachments: [{
+      attachments: [
+        {
+          id: 'attachment-imported',
+          noteId: 'note-imported',
+          fileName,
+          mimeType: 'text/plain',
+          size: 19,
+          storagePath: 'storage/uploads/attachment-imported-imported.txt'
+        }
+      ]
+    }),
+    attachmentFiles: [
+      {
         id: 'attachment-imported',
         noteId: 'note-imported',
         fileName,
         mimeType: 'text/plain',
-        size: 19,
-        storagePath: 'storage/uploads/attachment-imported-imported.txt'
-      }]
-    }),
-    attachmentFiles: [{
-      id: 'attachment-imported',
-      noteId: 'note-imported',
-      fileName,
-      mimeType: 'text/plain',
-      contentBase64: Buffer.from('imported attachment').toString('base64')
-    }]
+        contentBase64: Buffer.from('imported attachment').toString('base64')
+      }
+    ]
   };
 }
 

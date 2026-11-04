@@ -8,15 +8,19 @@ export const suites = Object.freeze({
   desktop: ['test:desktop'],
   chromium: [
     'test:e2e -w @study-accelerator/desktop-runtime',
-    'test:e2e -w @study-accelerator/web-v4 -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
-    'test:e2e -w @study-accelerator/web-v4 -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts'
+    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
+    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts'
   ]
 });
 
 export function requireSuccessfulJobs(needs) {
   const expected = ['checks', 'suites', 'isolated-image'];
-  if (!needs || typeof needs !== 'object' || Array.isArray(needs)
-      || Object.keys(needs).sort().join(',') !== expected.sort().join(',')) {
+  if (
+    !needs ||
+    typeof needs !== 'object' ||
+    Array.isArray(needs) ||
+    Object.keys(needs).sort().join(',') !== expected.sort().join(',')
+  ) {
     throw new Error('CI 前置作业不完整或发生未审核的变化。');
   }
   for (const name of expected) {
@@ -28,7 +32,8 @@ export function runSuite(name, run = spawnSync) {
   if (!Object.hasOwn(suites, name)) throw new Error(`未知 CI 套件：${name}`);
   for (const command of suites[name]) {
     const result = run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', ...command.split(' ')], {
-      stdio: 'inherit', env: process.env
+      stdio: 'inherit',
+      env: process.env
     });
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`CI 套件失败：${command} (${result.signal || result.status})`);

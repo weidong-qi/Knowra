@@ -6,14 +6,14 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
 import { buildKnowledgeProposalPlan, proposeKnowledge } from '../src/modules/ai/knowledge-propose-tool.js';
-import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.js';
+import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.ts';
 import { proposalProgress } from '../src/modules/ai/agent-worker.js';
 import { markParagraphs } from './fixtures/inline-annotation-seed.js';
 import { createAgentKnowledgeCommitService } from '../src/modules/ai/agent-knowledge-commit.js';
 import {
   createCoreOperationReceipt,
   validateCoreOperationReceipt
-} from '../src/infrastructure/core-operation-contract.js';
+} from '../src/infrastructure/core-operation-contract.ts';
 
 const priceProfile = {
   version: 'propose-synthetic-v1',
@@ -560,7 +560,7 @@ export const aiKnowledgePropose = [
           await app.coreOperationStore.get({
             ownerId: 'test',
             datasetId: identity.datasetId,
-            operationId: `knowledge-propose-${(await import('../src/modules/ai/record-contract.js')).hashRecord([origin.turnId, origin.toolCallId])}`
+            operationId: `knowledge-propose-${(await import('../src/modules/ai/record-contract.ts')).hashRecord([origin.turnId, origin.toolCallId])}`
           }),
           null
         );

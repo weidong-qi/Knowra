@@ -1,0 +1,20 @@
+<!-- @dsCard group="导航" height=210 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>SideNavItem</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [current, setCurrent] = useState('notes');
+  const rows = [['notes', '全部笔记', I.NoteIcon, 128], ['kb', '知识库', I.KnowledgeIcon, 46], ['quiz', '试题与考卷', I.QuestionIcon], ['inbox', '收件箱', I.InboxIcon, 3]];
+  return h('div', { className: 'kn-col', style: { maxWidth: 240, gap: 2, background: 'var(--surface-sidebar)' } },
+    rows.map(([id, label, Icon, count]) => h(K.SideNavItem, { key: id, label, count, icon: h(Icon, { size: 16 }), 'aria-current': current === id ? 'page' : undefined, onPress: () => setCurrent(id) })),
+    h(K.SideNavItem, { label: '学习计划', icon: h(I.BookIcon, { size: 16 }), isDisabled: true }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

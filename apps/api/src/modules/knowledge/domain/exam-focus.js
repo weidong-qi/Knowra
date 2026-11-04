@@ -1,6 +1,0 @@
-export {
-  ExamFocus,
-  EXAM_FOCUS_REVIEW_STATUSES,
-  EXAM_FOCUS_SOURCE_TYPES,
-  EXAM_FOCUS_DIFFICULTY_HINTS
-} from './exam-focus.ts';

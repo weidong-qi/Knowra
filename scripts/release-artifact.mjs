@@ -12,15 +12,18 @@ const equalIdentity = (left, right) => {
 };
 
 export function assertWebBuild(root, commit) {
-  return readBuildInfo(path.join(root, 'apps/web-v4/dist/build-info.json'), {
-    version: readReleaseVersion(root), commit, requireClean: true
+  return readBuildInfo(path.join(root, 'apps/web/dist/build-info.json'), {
+    version: readReleaseVersion(root),
+    commit,
+    requireClean: true
   });
 }
 
 export function assertDesktopBuild(application, expected) {
   const resources = path.join(application, 'Contents/Resources/app');
   const info = readBuildInfo(path.join(resources, 'build-info.json'), expected);
-  if (readJson(path.join(resources, 'package.json')).version !== info.version) throw new Error('APP 清单版本与构建标识不符。');
+  if (readJson(path.join(resources, 'package.json')).version !== info.version)
+    throw new Error('APP 清单版本与构建标识不符。');
   equalIdentity(info, readBuildInfo(path.join(resources, 'web/build-info.json')));
   return info;
 }
@@ -34,14 +37,19 @@ export function assertMacDistribution(archive, application, expected) {
   const manifest = readJson(`${archive}.build-info.json`);
   assertBuildInfo(manifest.buildInfo, expected);
   equalIdentity(info, manifest.buildInfo);
-  if (manifest.platform !== 'darwin-arm64' || manifest.archive !== path.basename(archive)
-    || manifest.sha256 !== sha256(archive)) throw new Error('Mac 分发包校验和或构建标识不符。');
+  if (
+    manifest.platform !== 'darwin-arm64' ||
+    manifest.archive !== path.basename(archive) ||
+    manifest.sha256 !== sha256(archive)
+  )
+    throw new Error('Mac 分发包校验和或构建标识不符。');
   return info;
 }
 
 export function assertLinuxRelease(root, commit) {
   const manifest = readJson(path.join(root, '.knowra-release.json'));
-  if (manifest.commit !== commit || manifest.platform !== 'linux-x64' || manifest.nodeMajor !== 24) throw new Error('Linux 发布清单与目标提交或运行平台不符。');
+  if (manifest.commit !== commit || manifest.platform !== 'linux-x64' || manifest.nodeMajor !== 24)
+    throw new Error('Linux 发布清单与目标提交或运行平台不符。');
   assertBuildInfo(manifest.buildInfo, { version: readReleaseVersion(root), commit, requireClean: true });
   equalIdentity(manifest.buildInfo, assertWebBuild(root, commit));
   return manifest;
@@ -53,6 +61,9 @@ if (isDirectExecution(import.meta.url)) {
   else if (action === '--verify-linux') assertLinuxRelease(root, commit);
   else if (action === '--write-linux') {
     const buildInfo = assertWebBuild(root, commit);
-    fs.writeFileSync(path.join(root, '.knowra-release.json'), `${JSON.stringify({ commit, platform: 'linux-x64', nodeMajor: 24, buildInfo }, null, 2)}\n`);
+    fs.writeFileSync(
+      path.join(root, '.knowra-release.json'),
+      `${JSON.stringify({ commit, platform: 'linux-x64', nodeMajor: 24, buildInfo }, null, 2)}\n`
+    );
   } else throw new Error('未知的发布产物校验命令。');
 }

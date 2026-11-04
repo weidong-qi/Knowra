@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { validateKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.js';
+import { validateKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
 export function dbUser(user) {
   return {
@@ -63,6 +63,8 @@ export function dbNote(note) {
     title: note.title,
     annotationStructure: note.annotationStructure ?? undefined,
     rawMarkdown: note.rawMarkdown,
+    contentKind: note.contentKind ?? 'markdown',
+    pdfSource: note.pdfSource ?? undefined,
     plainText: note.plainText,
     internalLinks: note.internalLinks,
     contentHash: note.contentHash,
@@ -116,15 +118,33 @@ export function dbAnnotation(annotation) {
 }
 
 export function dbAnnotationExclusion(record) {
-  return { ...record, noteVersionId: record.noteVersionId ?? null, createdAt: new Date(record.createdAt), updatedAt: new Date(record.updatedAt) };
+  return {
+    ...record,
+    noteVersionId: record.noteVersionId ?? null,
+    createdAt: new Date(record.createdAt),
+    updatedAt: new Date(record.updatedAt)
+  };
 }
 
 export function dbAnnotationRevision(record) {
-  return { ...record, oldAnchor: record.oldAnchor ?? null, newAnchor: record.newAnchor ?? null, rangeSummary: record.rangeSummary ?? null, reason: record.reason ?? null, createdAt: new Date(record.createdAt) };
+  return {
+    ...record,
+    oldAnchor: record.oldAnchor ?? null,
+    newAnchor: record.newAnchor ?? null,
+    rangeSummary: record.rangeSummary ?? null,
+    reason: record.reason ?? null,
+    createdAt: new Date(record.createdAt)
+  };
 }
 
 export function dbAnalysisScopeSnapshot(record) {
-  return { ...record, mode: record.mode ?? 'marked', createdAt: new Date(record.createdAt), updatedAt: new Date(record.updatedAt ?? record.createdAt), deletedAt: record.deletedAt ? new Date(record.deletedAt) : null };
+  return {
+    ...record,
+    mode: record.mode ?? 'marked',
+    createdAt: new Date(record.createdAt),
+    updatedAt: new Date(record.updatedAt ?? record.createdAt),
+    deletedAt: record.deletedAt ? new Date(record.deletedAt) : null
+  };
 }
 
 export function dbNoteVersion(version) {
@@ -296,8 +316,25 @@ export function dbTagGroup(group) {
     updatedAt: new Date(group.updatedAt)
   };
 }
+/**
+ * @param {unknown} input
+ * @returns {import('../../modules/knowledge/infrastructure/postgres/knowledge-graph-repository-types.ts').ProvenanceWriteData}
+ */
 export function dbKnowledgeArtifactProvenance(input) {
   const record = validateKnowledgeArtifactProvenance(input);
-  return { id: record.id, artifactId: record.artifactId, schemaVersion: record.schemaVersion,
-    state: record.state, provenanceHash: record.provenanceHash, payload: structuredClone(record) };
+  return {
+    id: record.id,
+    artifactId: record.artifactId,
+    schemaVersion: record.schemaVersion,
+    state: record.state,
+    provenanceHash: record.provenanceHash,
+    payload: structuredClone(record)
+  };
 }
+
+export const dbPdfAnnotation = value => ({
+  id: value.id,
+  noteId: value.noteId,
+  revision: value.revision,
+  payload: value
+});

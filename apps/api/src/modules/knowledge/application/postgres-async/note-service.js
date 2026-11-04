@@ -1,11 +1,12 @@
 import { prepareAnnotationChange } from '../annotation-change-context.js';
-import { Note } from '../../domain/note.js';
-import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.js';
+import { Note } from '../../domain/note.ts';
+import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.ts';
 import { createNoteSummary } from '../note-summary.js';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 import { createAsyncNoteAssociationOperations } from './note-association-operations.js';
 import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from '../note-link-relations.js';
 
+/** @param {import('./service-dependencies.ts').NoteDependencies} dependencies */
 export function createAsyncNoteService({
   repository,
   validateSiblingNameConflict = null,
@@ -53,7 +54,7 @@ export function createAsyncNoteService({
         const saved = await transactionNoteRepository.save(note, {
           expectedUpdatedAt
         });
-        if (createVersion && transactionNoteVersionService) {
+        if (createVersion && transactionNoteVersionService && note.contentKind !== 'pdf') {
           const version = await transactionNoteVersionService.ensureForNote(saved);
           await transactionOnNoteContentChanged?.(saved, version, annotationChange);
         }
@@ -81,6 +82,8 @@ export function createAsyncNoteService({
 
   async function updateNote(noteId, updates) {
     const currentNote = await requireNote(noteId, { includeDeleted: true });
+    if (currentNote.contentKind === 'pdf' && updates.rawMarkdown !== undefined)
+      throw validationError('PDF_IMMUTABLE', 'PDF 原文件不能作为 Markdown 正文修改。');
     const dto = buildUpdateNoteDto(updates);
     if (dto.rawMarkdown !== undefined)
       for (const id of addedNoteLinkTargets(dto.rawMarkdown, currentNote.rawMarkdown)) {

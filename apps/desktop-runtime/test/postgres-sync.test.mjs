@@ -1,4 +1,4 @@
-import { syncContract } from '../../api/src/modules/sync/protocol-contract.js';
+import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
-import { noteContent } from '../../api/src/modules/sync/journal.js';
+import { noteContent } from '../../api/src/modules/sync/journal.ts';
 import { temporaryDirectory, markText, inlineId } from './helpers.mjs';
 
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';

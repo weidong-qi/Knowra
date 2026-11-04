@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
 import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.js';
-import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
+import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 import { annotationOf } from './fixtures/inline-annotation-seed.js';
 
 // 章节重点写在正文标记里（重点内联化），排除用 `<!--k- id-->` 标在被排除的块上。

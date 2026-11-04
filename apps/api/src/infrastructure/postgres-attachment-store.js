@@ -1,13 +1,20 @@
-import { inspectAttachmentFile, assertReadableStatus, throwFileHealth, prepareAttachmentRestore, assertSameAttachment, recoverAttachmentRestores } from './attachment-recovery.js';
-import { decodeAttachmentBytes } from './attachment-recovery.js';
+import {
+  inspectAttachmentFile,
+  assertReadableStatus,
+  throwFileHealth,
+  prepareAttachmentRestore,
+  assertSameAttachment,
+  recoverAttachmentRestores
+} from './attachment-recovery.ts';
+import { decodeAttachmentBytes } from './attachment-recovery.ts';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { createAppError } from '../errors/app-error.js';
-import { createLocalAttachmentFileManager } from './local-attachment-file-manager.js';
-import { ATTACHMENT_STATUS } from './attachment-status.js';
-import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.js';
-import { inspectAttachmentDeletion } from './attachment-deletion-preflight.js';
+import { createLocalAttachmentFileManager } from './local-attachment-file-manager.ts';
+import { ATTACHMENT_STATUS } from './attachment-status.ts';
+import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.ts';
+import { inspectAttachmentDeletion } from './attachment-deletion-preflight.ts';
 import {
   createAttachmentId,
   moveFileSafely,
@@ -15,8 +22,9 @@ import {
   scheduleFileCleanup,
   sha256Buffer,
   writeFileAtomicallyAsync
-} from './local-attachment-store-utils.js';
+} from './local-attachment-store-utils.ts';
 
+/** @param {import('./postgres-storage-types.ts').PostgresAttachmentStoreOptions} options */
 export function createPostgresAttachmentStore({
   attachmentRepository,
   uploadsDir = path.join('storage', 'uploads'),
@@ -52,7 +60,7 @@ export function createPostgresAttachmentStore({
       mimeType,
       size: buffer.byteLength,
       sha256: contentSha256,
-      status: ATTACHMENT_STATUS.PENDING,
+      status: /** @type {import('./attachment-status.ts').AttachmentStatus} */ (ATTACHMENT_STATUS.PENDING),
       storagePath,
       verifiedAt: null,
       createdAt: new Date().toISOString()
@@ -153,7 +161,8 @@ export function createPostgresAttachmentStore({
       return updated;
     } catch (error) {
       const current = await getAttachment(id).catch(() => null);
-      if (current && current.fileName === original.fileName && current.storagePath === original.storagePath) transaction.rollback();
+      if (current && current.fileName === original.fileName && current.storagePath === original.storagePath)
+        transaction.rollback();
       // 并发删除／重命名时保留恢复材料，不改写新的文件路径。
       throw error;
     }
@@ -167,7 +176,9 @@ export function createPostgresAttachmentStore({
     const nextAbsolutePath = fileManager.resolveManagedAbsolutePath(attachment.id, nextSafeName);
     const nextStoragePath = fileManager.buildStoragePath(attachment.id, nextSafeName);
     const previous = { fileName: attachment.fileName, storagePath: attachment.storagePath, size: attachment.size };
-    const fileMoved = Boolean(currentReadablePath && path.normalize(currentReadablePath) !== path.normalize(nextAbsolutePath));
+    const fileMoved = Boolean(
+      currentReadablePath && path.normalize(currentReadablePath) !== path.normalize(nextAbsolutePath)
+    );
     if (fileMoved) moveFileSafely(currentReadablePath, nextAbsolutePath);
     const updated = {
       ...attachment,
@@ -227,7 +238,8 @@ export function createPostgresAttachmentStore({
     const result = [];
     for (const attachment of attachments) {
       const readablePath = fileManager.resolveReadableAttachmentPath(attachment);
-      if (!readablePath) throw createAppError('ATTACHMENT_FILE_MISSING', `Attachment file missing: ${attachment.id}`, 404);
+      if (!readablePath)
+        throw createAppError('ATTACHMENT_FILE_MISSING', `Attachment file missing: ${attachment.id}`, 404);
       result.push({ ...attachment, contentBase64: (await fsp.readFile(readablePath)).toString('base64') });
     }
     return result;
@@ -258,9 +270,7 @@ async function removeFileOrSchedule(attachment, fileManager, originalError) {
   try {
     fileManager.removeAttachmentFile(attachment);
   } catch (cleanupError) {
-    scheduleFileCleanup(
-      fileManager.resolveManagedAttachmentPath(attachment)
-    );
+    scheduleFileCleanup(fileManager.resolveManagedAttachmentPath(attachment));
     originalError.cleanupError = cleanupError;
   }
 }

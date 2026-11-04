@@ -1,3 +1,4 @@
+import { pdfMaterialsTests } from './pdf-materials.test.js';
 import { taskWorkspaceCommitGuardTests } from './task-workspace-commit-guard.test.js';
 import { taskWorkspaceDiskIdentityTests } from './task-workspace-disk-identity.test.js';
 import { taskWorkspaceBoundaryTests } from './task-workspace-boundaries.test.js';
@@ -127,6 +128,7 @@ import { coreOperationPostgresTests } from './core-operation-postgres.test.js';
 import { aiConversationPostgresTests } from './ai-conversation-postgres.test.js';
 
 const tests = [
+  ...pdfMaterialsTests,
   ...taskWorkspaceServiceTests,
   ...taskWorkspaceHttpTests,
   ...taskWorkspacePersistenceTests,

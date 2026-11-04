@@ -40,7 +40,7 @@ export type DerivedQuestionSourceStatus = 'active' | 'stale';
 
 import { validateQuestionStructure } from './question-validation.js';
 import { validationError } from './knowledge-errors.js';
-import { isEvidenceUsable } from '../domain/evidence-applicability.js';
+import { isEvidenceUsable } from '../domain/evidence-applicability.ts';
 
 const ACTION_VERB_LEVELS: Readonly<Record<string, unknown>> = Object.freeze({
   identify: new Set(['remember']),

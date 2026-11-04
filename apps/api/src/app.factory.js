@@ -1,7 +1,8 @@
-import { createTaskWorkspaceService } from './modules/task-workspaces/service.js';
-import { createTaskWorkspaceFiles } from './infrastructure/task-workspace-files.js';
-import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-state.js';
-import { createAttachmentTransfer } from './modules/sync/attachment-transfer.js';
+import { createPdfService } from './modules/pdf/service.ts';
+import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
+import { createTaskWorkspaceFiles } from './infrastructure/task-workspace-files.ts';
+import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-state.ts';
+import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createKnowledgeModule } from './modules/knowledge/index.js';
@@ -11,6 +12,7 @@ import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-
 import { createFileDataStore } from './infrastructure/file-data-store.js';
 import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.js';
 import { createInMemoryNoteRepository } from './modules/knowledge/infrastructure/note-repository.js';
+import { createInMemoryPdfAnnotationRepository } from './modules/pdf/repository.ts';
 import { createInMemoryFolderRepository } from './modules/knowledge/infrastructure/folder-repository.js';
 import { createInMemoryTagRepository } from './modules/knowledge/infrastructure/tag-repository.js';
 import { createInMemoryTagGroupRepository } from './modules/knowledge/infrastructure/tag-group-repository.js';
@@ -34,13 +36,13 @@ import {
 import { createKnowledgeBaseSnapshotService } from './modules/knowledge/application/knowledge-base-snapshot-service.js';
 import { createNoteDeletionCoordinator } from './modules/knowledge/application/note-deletion-coordinator.js';
 import { createStorageConfig } from './config/storage.config.js';
-import { createLocalSyncService } from './modules/sync/local-provider.js';
-import { createModelSettingsService } from './modules/ai/model-settings.js';
-import { createAiFeatureSettings } from './modules/ai/feature-settings.js';
+import { createLocalSyncService } from './modules/sync/local-provider.ts';
+import { createModelSettingsService } from './modules/ai/model-settings.ts';
+import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
 import { createOptionalAiRuntime } from './modules/ai/runtime.js';
-import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.js';
-import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.js';
-import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.js';
+import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
+import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
+import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +51,7 @@ const workspaceRoot = path.resolve(__dirname, '..', '..', '..');
 export function createAppContext(options = {}) {
   const dataStore = options.dataStore;
   ensureDataCollections(dataStore, [
+    'pdfAnnotations',
     'noteVersions',
     'knowledgeItems',
     'knowledgeEvidence',
@@ -77,6 +80,11 @@ export function createAppContext(options = {}) {
       : null);
 
   const knowledge = createKnowledgeModule({
+    pdfAnnotationRepository:
+      options.pdfAnnotationRepository ??
+      (dataStore
+        ? createInMemoryPdfAnnotationRepository({ records: dataStore.state.pdfAnnotations, onChange: dataStore.flush })
+        : undefined),
     noteRepository:
       options.noteRepository ??
       (dataStore
@@ -233,6 +241,11 @@ export function createAppContext(options = {}) {
     annotationExclusionRepository: knowledge.repositories.annotationExclusionRepository,
     annotationRevisionRepository: knowledge.repositories.annotationRevisionRepository,
     attachmentStore,
+    removePdfAnnotations: ids => {
+      if (dataStore)
+        for (let i = dataStore.state.pdfAnnotations.length - 1; i >= 0; i--)
+          if (ids.includes(dataStore.state.pdfAnnotations[i].noteId)) dataStore.state.pdfAnnotations.splice(i, 1);
+    },
     runTransaction: dataStore?.runTransaction ? operation => dataStore.runTransaction(operation) : undefined
   });
 
@@ -297,6 +310,13 @@ export function createAppContext(options = {}) {
       knowledge
     },
     http: {
+      pdf: createPdfService({
+        dataStore,
+        knowledge,
+        uploadsDir: options.uploadsDir ?? resolveStoragePath('storage/uploads'),
+        storageRootDir: options.storageRootDir ?? workspaceRoot,
+        ownerId
+      }),
       sync: dataStore
         ? createLocalSyncService(
             dataStore,
@@ -323,6 +343,7 @@ export function createAppContext(options = {}) {
   };
 }
 
+/** @param {{storageRootDir?: string, dataFilePath?: string, uploadsDir?: string, persistenceDriver?: 'postgres' | 'local-json', databaseUrl?: string, client?: import('./infrastructure/postgres-transaction-port.ts').PostgresTransactionHost, ownerId?: string}} options */
 export function createPersistentAppContext({
   storageRootDir = workspaceRoot,
   dataFilePath = resolveStoragePath('storage/data/knowledge-base.json', storageRootDir),

@@ -1,0 +1,22 @@
+<!-- @dsCard group="导航" height=260 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Tree</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const items = [
+    { id: 'math', label: '高等数学', count: 24, children: [{ id: 'la', label: '线性代数', count: 9 }, { id: 'prob', label: '概率论', count: 6 }] },
+    { id: 'ds', label: '数据结构', count: 15, children: [{ id: 'graph', label: '图', count: 4 }] },
+    { id: 'en', label: '英语', count: 8 },
+  ];
+  return h('div', { style: { padding: 16, maxWidth: 300 } },
+    h(K.Tree, { items, ariaLabel: '文件夹', selectionMode: 'single', defaultExpandedKeys: ['math'], defaultSelectedKeys: ['la'] }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>
