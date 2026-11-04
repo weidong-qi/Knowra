@@ -1,7 +1,7 @@
 // V5 首页：由小组件按布局配置（homeWidgets.tsx）渲染；左侧最近编辑，右侧概览，底部工作域入口。
 // 所有数字、时间、标签均来自工作区数据；训练域尚未上线时保持锁定。
 
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import type { Note, Folder, Tag } from '@study-accelerator/web-core';
 import { Button } from '../components/ui/button/Button';
 import { EmptyState, LoadingState } from '../components/ui/status';
@@ -107,6 +107,7 @@ export function HomeView({
   const renderArea = (area: HomeWidgetArea) =>
     DEFAULT_HOME_LAYOUT.filter(item => item.area === area && !item.hidden).map(item => {
       const def = HOME_WIDGETS[item.id];
+      if (def.bare) return <Fragment key={item.id}>{def.render(ctx)}</Fragment>;
       return (
         <HomeWidget
           key={item.id}
@@ -120,19 +121,12 @@ export function HomeView({
         </HomeWidget>
       );
     });
+  const belowAreas = (['main', 'side', 'wide'] as const).filter(area =>
+    DEFAULT_HOME_LAYOUT.some(item => item.area === area && !item.hidden)
+  );
 
   return (
     <div className={styles.view}>
-      <HomeHero
-        id="home-title"
-        today={today}
-        title={greeting}
-        subtitle={loadState === 'error' ? '当前显示最近一次本地缓存。连接恢复后可继续编辑。' : summaryLine(stats)}
-        onOpenCreate={onOpenCreate}
-        onOpenSchedule={onOpenSchedule}
-        onOpenSearch={onOpenSearch}
-      />
-
       {loadState === 'error' ? (
         <div className={styles.errorBanner} role="alert">
           <span className={styles.errorDot} aria-hidden="true" />
@@ -144,11 +138,30 @@ export function HomeView({
         </div>
       ) : null}
 
-      <div className={styles.main}>
-        <div className={styles.mainCol}>{renderArea('main')}</div>
-        <div className={styles.sideCol}>{renderArea('side')}</div>
-      </div>
-      <div className={styles.wideCol}>{renderArea('wide')}</div>
+      <HomeHero
+        id="home-title"
+        today={today}
+        title={greeting}
+        subtitle={loadState === 'error' ? '当前显示最近一次本地缓存。连接恢复后可继续编辑。' : summaryLine(stats)}
+        onOpenCreate={onOpenCreate}
+        onOpenSchedule={onOpenSchedule}
+        onOpenSearch={onOpenSearch}
+      >
+        {renderArea('hero')}
+      </HomeHero>
+
+      {belowAreas.length ? (
+        <div className={styles.below}>
+          {belowAreas.map(area => (
+            <div
+              key={area}
+              className={area === 'side' ? styles.sideCol : area === 'wide' ? styles.wideCol : styles.mainCol}
+            >
+              {renderArea(area)}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

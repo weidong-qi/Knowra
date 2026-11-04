@@ -1,71 +1,172 @@
-/* 首页欢迎区：像网站首屏，文案在左、插画在右；窄屏上下堆叠。 */
+/* 首页首屏：铺满整页的艺术背景 + 超大标题 + 浮出的彩色便签卡片。 */
 .hero {
+  --hero-top: #fff1e2;
+  --hero-mid: #ffd3b3;
+  --hero-bottom: #ffb69c;
+  --art-dots: #ffffff;
+  --art-dots-b: #ffffff;
+  --art-wave-back: #c9c0ff;
+  --art-wave-mid: #ff8a5c;
+  --art-wave-front: #2b2f7a;
+  --art-squiggle: #ffffff;
+  --art-squiggle-b: #ff7a2f;
+  --art-spark-a: #ffd23f;
+  --art-spark-b: #ff7aa8;
+  --art-spark-c: #ffffff;
+  --art-spark-d: #8f7bff;
+  --art-ring: #ffffff;
+  --art-ring-b: #2b2f7a;
+  --art-dot: #ffffff;
+  --art-dot-b: #2b2f7a;
+  --art-pencil: #ff6a1a;
+  --art-stamp: #6f5cff;
+  --sun-a: #ffb46b;
+  --sun-b: #ff6a1a;
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-5);
-  padding: var(--space-6) var(--space-6);
-  border-radius: var(--radius-panel);
+  isolation: isolate;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  background: radial-gradient(520px 320px at 100% 0%, var(--accent-soft), transparent 70%), var(--surface-raised);
-  box-shadow: var(--shadow-card);
+  background: linear-gradient(175deg, var(--hero-top) 0%, var(--hero-mid) 48%, var(--hero-bottom) 100%);
 }
+:global([data-ni-mode='dark']) .hero {
+  --hero-top: #17141f;
+  --hero-mid: #271a2a;
+  --hero-bottom: #3a2023;
+  --art-dots: #7d6cff;
+  --art-dots-b: #ff8a4c;
+  --art-wave-back: #3a3570;
+  --art-wave-mid: #c2562f;
+  --art-wave-front: #0e1030;
+  --art-squiggle: rgb(255 255 255 / 55%);
+  --art-squiggle-b: #ff8a4c;
+  --art-ring: rgb(255 255 255 / 55%);
+  --art-ring-b: #7d6cff;
+  --art-dot: rgb(255 255 255 / 70%);
+  --art-dot-b: #7d6cff;
+  --art-stamp: #8a78ff;
+  --sun-a: #ff9a5c;
+  --sun-b: #e8501c;
+}
+
+.sun {
+  position: absolute;
+  z-index: 0;
+  right: clamp(24px, 7vw, 120px);
+  top: clamp(40px, 7vh, 88px);
+  width: clamp(170px, 22vw, 300px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 34% 28%, var(--sun-a), var(--sun-b) 72%);
+  box-shadow:
+    0 0 0 clamp(10px, 1.4vw, 18px) rgb(255 255 255 / 32%),
+    0 0 0 clamp(22px, 3vw, 40px) rgb(255 255 255 / 16%),
+    0 30px 60px -20px rgb(232 80 28 / 55%);
+}
+.sunFace {
+  --pf-color: #2a1a12;
+  transform: scale(2.3);
+}
+
 .copy {
-  min-width: 0;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
+  max-width: min(760px, 100%);
+  padding: clamp(40px, 9vh, 96px) clamp(24px, 6vw, 96px) 0;
 }
 .kicker {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-3);
-  margin: 0 0 var(--space-1);
-  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
   font: 500 var(--font-size-meta)/1.5 var(--font-ui);
 }
+.kickerPill {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 55%);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px rgb(24 30 48 / 8%);
+}
+:global([data-ni-mode='dark']) .kickerPill {
+  background: rgb(255 255 255 / 10%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 14%);
+}
 .version {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .title {
   margin: 0;
   color: var(--text-primary);
-  font-size: clamp(34px, 5vw, 52px);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-size: clamp(48px, 9vw, 116px);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.04;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
 .subtitle {
-  max-width: 460px;
-  margin: var(--space-2) 0 var(--space-3);
-  color: var(--text-body, var(--text-secondary));
-  font-size: 16px;
-  line-height: 1.7;
+  max-width: 520px;
+  margin: var(--space-3) 0 var(--space-4);
+  color: var(--text-primary);
+  font-size: clamp(16px, 1.6vw, 20px);
+  line-height: 1.6;
+  opacity: 0.8;
   overflow-wrap: anywhere;
 }
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
+}
+.actions button {
+  height: 46px;
+  padding-inline: 22px;
+  font-size: 14px;
 }
 .actions kbd {
   margin-left: var(--space-1);
   font: 500 11px/1 var(--font-ui);
   opacity: 0.7;
 }
+.createButton {
+  box-shadow: 0 10px 22px -8px rgb(196 81 12 / 60%);
+}
+.ghostButton {
+  background: rgb(255 255 255 / 70%);
+  backdrop-filter: blur(10px);
+}
+:global([data-ni-mode='dark']) .ghostButton {
+  background: rgb(255 255 255 / 10%);
+}
+
+/* 底部：彩色便签卡片，部分被页面底边裁切，像从下方翻出来 */
+.stage {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  padding: clamp(32px, 6vh, 64px) clamp(16px, 4vw, 64px) 0;
+}
+
 @media (max-width: 860px) {
-  .hero {
-    grid-template-columns: minmax(0, 1fr);
-    padding: var(--space-5);
+  .sun {
+    width: 130px;
+    right: 16px;
+    top: 20px;
   }
-  .hero > :last-child {
-    order: -1;
-    max-width: 300px;
-    justify-self: center;
+  .sunFace {
+    transform: scale(1.5);
+  }
+  .copy {
+    padding-top: 120px;
   }
 }

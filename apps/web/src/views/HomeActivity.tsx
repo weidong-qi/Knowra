@@ -1,11 +1,11 @@
 // 首页小组件的内容部分：最近编辑、统计数字、热力图、状态分布、常用标签。
 // 外壳（标题行、卡片外观）由 HomeWidget 提供，这里只负责各自的 body。
 
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type { Note, Tag } from '@study-accelerator/web-core';
 import { PressableButton } from '../components/ui/button/PressableButton';
 import { MathText } from '../components/math/MathText';
-import { NotesIndexArt } from '../features/notes/NotesIndexArt';
+import { notePreview } from '../features/notes/NotesIndexItemMeta';
 import { buildNoteUpdateDistribution } from '../features/notes/notesIndexUpdateDistribution';
 import { TagChip } from '../features/tags';
 import { formatRecentTime, statusLabel, type HomeStats } from './homeViewModel';
@@ -13,41 +13,48 @@ import styles from './HomeView.module.css';
 
 type OpenNote = (noteId: string, title: string) => void;
 
-/** 最近编辑：横排卡片，缩略图在上；第一张是「继续上次编辑」。 */
-export function RecentCards({ notes, tags, onOpen }: { notes: Note[]; tags: Tag[]; onOpen?: OpenNote }) {
+const NOTE_TONES = ['#ff8fb1', '#ffc933', '#4fd1a1', '#7aa7ff', '#b79bff', '#ff9a4d'] as const;
+const NOTE_TILTS = [-5, 2, -2.5, 4] as const;
+const NOTE_LIFTS = [22, 0, 12, 26] as const;
+
+/** 最近编辑：彩色便签卡片，轻微倾斜、从页面底部翻出；第一张是「继续上次编辑」。 */
+export function RecentCards({ notes, onOpen }: { notes: Note[]; tags: Tag[]; onOpen?: OpenNote }) {
   if (!notes.length) return null;
   return (
-    <ul className={styles.cards} aria-label="最近编辑">
+    <ul className={styles.notes} aria-label="最近编辑">
       {notes.map((note, index) => {
         const title = note.title || '无标题';
-        const noteTags = note.tagIds
-          .map(id => tags.find(tag => tag.id === id))
-          .filter((tag): tag is Tag => Boolean(tag));
+        const preview = notePreview(note);
+        const tone = NOTE_TONES[index % NOTE_TONES.length];
+        const cardStyle = {
+          '--tone': tone,
+          '--tilt': `${NOTE_TILTS[index % NOTE_TILTS.length]}deg`,
+          '--lift': `${NOTE_LIFTS[index % NOTE_LIFTS.length]}px`
+        } as CSSProperties;
         return (
-          <li key={note.id}>
+          <li key={note.id} className={styles.noteItem} style={cardStyle}>
             <PressableButton
               type="button"
-              className={styles.card}
-              data-lead={index === 0 || undefined}
+              className={styles.note}
               onPress={onOpen ? () => onOpen(note.id, title) : undefined}
               isDisabled={!onOpen}
               aria-label={index === 0 ? `继续编辑 ${title}` : undefined}
             >
-              <span className={styles.cardArt}>
-                <NotesIndexArt item={{ kind: 'note', note }} tags={noteTags} />
+              <span className={styles.noteEyebrow}>
+                {index === 0 ? '继续上次编辑' : statusLabel(note)}
+                {' · '}
+                <time dateTime={note.updatedAt ?? note.createdAt ?? ''}>
+                  {formatRecentTime(note.updatedAt ?? note.createdAt)}
+                </time>
               </span>
-              <span className={styles.cardBody}>
-                <span className={styles.cardEyebrow}>
-                  {index === 0 ? '继续上次编辑' : statusLabel(note)}
-                  {' · '}
-                  <time dateTime={note.updatedAt ?? note.createdAt ?? ''}>
-                    {formatRecentTime(note.updatedAt ?? note.createdAt)}
-                  </time>
-                </span>
-                <span className={styles.cardTitle}>
-                  <MathText text={title} inlineOnly />
-                </span>
+              <span className={styles.noteTitle}>
+                <MathText text={title} inlineOnly />
               </span>
+              {preview ? (
+                <span className={styles.noteBody}>
+                  <MathText text={preview} inlineOnly />
+                </span>
+              ) : null}
             </PressableButton>
           </li>
         );

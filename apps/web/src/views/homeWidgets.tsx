@@ -12,8 +12,8 @@ import { HeatmapBlock, RecentCards, StatsTiles, StatusBlock, TagsBlock } from '.
 import { Workbenches } from './HomeWorkbenches';
 
 export type HomeWidgetId = 'recent' | 'stats' | 'heatmap' | 'status' | 'tags' | 'workbenches';
-/** main：左侧主列；side：右侧窄列；wide：通栏。 */
-export type HomeWidgetArea = 'main' | 'side' | 'wide';
+/** hero：首屏底部浮出区；main：主列；side：两栏小卡；wide：通栏。 */
+export type HomeWidgetArea = 'hero' | 'main' | 'side' | 'wide';
 
 export interface HomeWidgetLayoutItem {
   id: HomeWidgetId;
@@ -22,12 +22,12 @@ export interface HomeWidgetLayoutItem {
 }
 
 export const DEFAULT_HOME_LAYOUT: readonly HomeWidgetLayoutItem[] = [
-  { id: 'recent', area: 'main' },
-  { id: 'stats', area: 'side' },
-  { id: 'heatmap', area: 'side' },
+  { id: 'recent', area: 'hero' },
+  { id: 'stats', area: 'side', hidden: true },
+  { id: 'heatmap', area: 'side', hidden: true },
   { id: 'status', area: 'side', hidden: true },
   { id: 'tags', area: 'side', hidden: true },
-  { id: 'workbenches', area: 'wide' }
+  { id: 'workbenches', area: 'wide', hidden: true }
 ];
 
 export interface HomeWidgetContext {
@@ -46,6 +46,8 @@ export interface HomeWidgetDefinition {
   title: string;
   icon?: ReactNode;
   flush?: boolean;
+  /** 不套 HomeWidget 外壳，由组件自己决定外观。 */
+  bare?: boolean;
   actions?: (ctx: HomeWidgetContext) => ReactNode;
   render: (ctx: HomeWidgetContext) => ReactNode;
 }
@@ -53,6 +55,7 @@ export interface HomeWidgetDefinition {
 export const HOME_WIDGETS: Record<HomeWidgetId, HomeWidgetDefinition> = {
   recent: {
     title: '最近编辑',
+    bare: true,
     icon: <ClockIcon size={14} />,
     actions: ctx => (
       <Button variant="ghost" size="compact" onClick={ctx.onOpenMaterials} isDisabled={!ctx.onOpenMaterials}>
