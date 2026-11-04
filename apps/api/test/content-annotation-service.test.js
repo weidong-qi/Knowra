@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { AppError } from '../src/errors/app-error.js';
-import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.js';
+import {
+  createContentAnnotationService,
+  legacyAnnotationSourceChange
+} from '../src/modules/knowledge/application/content-annotation-service.js';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
@@ -82,6 +85,75 @@ export const contentAnnotationServiceTests = [
     run() {
       const anchor = anchorForSourceRange(projectMarkdown('旧重点'), 0, '旧重点'.length);
       assert.equal(resolveLegacyAnnotationAnchor('旧重点', anchor, '其他内容').status, 'needsReview');
+    }
+  },
+  {
+    name: '旧来源版本含行尾块级标记时，章节、列表和跨段选区的旧锚点仍可解析',
+    run() {
+      const cases = [
+        ['# 标题 <!--k already s=section-->\n\n正文\n', m => anchorForSection(projectMarkdown(m), 0)],
+        [
+          '- 条目 <!--k already s=list-->\n- 其他\n',
+          m => {
+            const projection = projectMarkdown(m);
+            return anchorForListItem(projection, projection.listItems[0].path, false);
+          }
+        ],
+        [
+          '甲段 <!--k already s=block-->\n\n乙段\n',
+          m => anchorForSourceRange(projectMarkdown(m), 0, m.indexOf('乙') + 1, { scopeType: 'selection' })
+        ]
+      ];
+      for (const [source, build] of cases) {
+        const anchor = build(source);
+        assert.equal(resolveLegacyAnnotationAnchor(`${source}\n追加`, anchor, source).status, 'resolved');
+        assert.equal(
+          resolveLegacyAnnotationAnchor(
+            source.replace('甲', '丙').replace('条目', '改动').replace('标题', '改题'),
+            anchor,
+            source
+          ).status,
+          'needsReview'
+        );
+      }
+    }
+  },
+  {
+    name: '旧来源含行尾块级标记时，编辑无关正文不会把旧重点降级为来源变化',
+    run() {
+      const cases = [
+        ['# 标题 <!--k already s=section-->\n\n正文\n', m => anchorForSection(projectMarkdown(m), 0)],
+        [
+          '- 条目 <!--k already s=list-->\n- 其他\n',
+          m => {
+            const projection = projectMarkdown(m);
+            return anchorForListItem(projection, projection.listItems[0].path, false);
+          }
+        ],
+        [
+          '甲段 <!--k already s=block-->\n\n乙段\n',
+          m => anchorForSourceRange(projectMarkdown(m), 0, m.indexOf('乙') + 1, { scopeType: 'selection' })
+        ]
+      ];
+      for (const [source, build] of cases) {
+        const anchor = build(source);
+        const annotation = legacyRow({
+          schemaVersion: 2,
+          quoteText: anchor.quoteText,
+          fromPosition: anchor.sourceStart,
+          toPosition: anchor.sourceEnd,
+          anchor,
+          originSnapshot: { quoteText: anchor.quoteText, segments: anchor.segments }
+        });
+        const sourceVersion = { noteId: annotation.noteId, content: source };
+        assert.equal(legacyAnnotationSourceChange(annotation, source, `${source}\n追加`, sourceVersion), null);
+        const changed = source.replace('甲', '丙').replace('条目', '改动').replace('标题', '改题');
+        assert.equal(
+          legacyAnnotationSourceChange(annotation, source, changed, sourceVersion)?.anchorStatus,
+          'needsReview',
+          '真实原文改变仍降级，不把行尾空白兼容扩展为正文跟随'
+        );
+      }
     }
   },
   {
