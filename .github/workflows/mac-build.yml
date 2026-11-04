@@ -2,7 +2,19 @@ name: Mac 候选构建（不发布）
 
 on:
   workflow_dispatch:
+  # PR 只在会进入桌面包的改动时构建（macOS 分钟数贵）；main push 与手动触发始终构建。
   pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'apps/desktop-runtime/**'
+      - 'apps/desktop-shell/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'prisma/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/mac-build.yml'
   push:
     branches: [main]
 
