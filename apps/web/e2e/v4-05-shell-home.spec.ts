@@ -11,11 +11,11 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     for (const width of [1024, 1280, 1440, 2048]) {
       await page.setViewportSize({ width, height: width === 1280 ? 720 : 1024 });
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.getByText(/版本 v\d+\.\d+\.\d+/)).toBeVisible();
-      const overflow = await page.evaluate(() => (
-        document.documentElement.scrollWidth - document.documentElement.clientWidth
-      ));
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
       expect(overflow, `${width}px 视口出现横向滚动`).toBeLessThanOrEqual(2);
       await expect(page.getByRole('button', { name: '工作区状态' })).toBeVisible();
       await expect(page.getByRole('contentinfo', { name: '状态栏' })).toHaveCount(0);
@@ -55,12 +55,12 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     const rail = page.getByRole('navigation', { name: '工作域导航' });
     await expect(rail.getByRole('button', { name: /知识/ })).toBeEnabled();
     await expect(rail.getByRole('button', { name: /试题/ })).toBeEnabled();
-    await expect(rail.getByRole('button', { name: '设置' })).toBeEnabled();
-    await expect(page.getByRole('button', { name: '通知（尚未上线）' })).toBeDisabled();
-    await expect(rail.getByRole('button', { name: '全局搜索' })).toHaveCount(0);
+    await expect(rail.getByRole('button', { name: '账户与设置' })).toBeEnabled();
+    // 未上线的入口不占位：通知、执行、我的都不出现在左栏。
+    await expect(rail.getByRole('button', { name: /通知|执行|我的/ })).toHaveCount(0);
+    await expect(rail.getByRole('button', { name: '全局搜索' })).toHaveCount(1);
     await expect(rail.getByRole('button', { name: '新建笔记' })).toHaveCount(0);
     await expect(rail.getByRole('button', { name: '组件库' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '新建笔记（Ctrl+N）' })).toBeEnabled();
 
     await page.goto('/#/showcase');
     await expect(page).toHaveURL(/#\/showcase$/);
@@ -87,19 +87,29 @@ test.describe('V4-05 公共 Shell 与主页', () => {
       await expect(button).toHaveCSS('width', '36px');
       await expect(button).toHaveCSS('height', '36px');
     }
+    // 全局组（主页、搜索）按钮间距紧凑；之后是分隔线与工作域。
+    const search = rail.getByRole('button', { name: '全局搜索' });
     const homeBox = await home.boundingBox();
-    const selectedBox = await selected.boundingBox();
-    expect(selectedBox!.y - homeBox!.y - homeBox!.height).toBe(4);
-    const appearance = () => selected.evaluate(element => {
-      const style = getComputedStyle(element);
-      return { background: style.backgroundImage, color: style.color, shadow: style.boxShadow, transform: style.transform };
-    });
+    const searchBox = await search.boundingBox();
+    expect(searchBox!.y - homeBox!.y - homeBox!.height).toBe(4);
+    const appearance = () =>
+      selected.evaluate(element => {
+        const style = getComputedStyle(element);
+        return {
+          background: style.backgroundImage,
+          color: style.color,
+          shadow: style.boxShadow,
+          transform: style.transform
+        };
+      });
     await home.hover();
     // 定稿外观全局使用 .045 悬停令牌；Chromium 的 alpha 会量化至 8 bit。
-    expect(await home.evaluate(element => {
-      const style = getComputedStyle(element);
-      return style.getPropertyValue('--surface-hover').trim() === style.getPropertyValue('--ni-hover').trim();
-    })).toBe(true);
+    expect(
+      await home.evaluate(element => {
+        const style = getComputedStyle(element);
+        return style.getPropertyValue('--surface-hover').trim() === style.getPropertyValue('--ni-hover').trim();
+      })
+    ).toBe(true);
     await expect(home).toHaveCSS('background-color', 'rgba(24, 30, 48, 0.043)');
     const resting = await appearance();
     expect(resting.background).toContain('linear-gradient');
@@ -129,11 +139,14 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await page.goto('/#/materials');
     const toggle = page.getByRole('button', { name: '切换侧栏' });
     const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
-    const module = page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: '资料', exact: true });
+    const module = page
+      .getByRole('navigation', { name: '工作域导航' })
+      .getByRole('button', { name: '资料', exact: true });
     await expect(sidebar).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(toggle).toHaveCSS('background-color', /rgba\(24, 30, 48, 0\.08[56]\)/);
-    const toggleBox = await toggle.boundingBox(), moduleBox = await module.boundingBox();
+    const toggleBox = await toggle.boundingBox(),
+      moduleBox = await module.boundingBox();
     expect(toggleBox!.x + toggleBox!.width / 2).toBe(moduleBox!.x + moduleBox!.width / 2);
     await toggle.click();
     await page.mouse.move(1000, 20);
@@ -155,12 +168,16 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     const forward = top.getByRole('button', { name: '前进' });
     await expect(back).toBeDisabled();
     await expect(forward).toBeDisabled();
-    await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: '资料', exact: true }).click();
+    await page
+      .getByRole('navigation', { name: '工作域导航' })
+      .getByRole('button', { name: '资料', exact: true })
+      .click();
     await expect(page).toHaveURL(/#\/materials$/);
     await expect(back).toBeEnabled();
     await expect(forward).toBeDisabled();
     const sidebarToggle = await top.getByRole('button', { name: '切换侧栏' }).boundingBox();
-    const backBox = await back.boundingBox(), forwardBox = await forward.boundingBox();
+    const backBox = await back.boundingBox(),
+      forwardBox = await forward.boundingBox();
     const tabsBox = await top.getByRole('tablist', { name: '打开的笔记' }).boundingBox();
     expect(sidebarToggle!.x + sidebarToggle!.width).toBeLessThan(backBox!.x);
     expect(backBox!.x + backBox!.width).toBeLessThan(forwardBox!.x);
@@ -180,7 +197,11 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await back.click();
     await expect(page).toHaveURL(/#\/materials$/);
     await expect(forward).toBeEnabled();
-    await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: '设置', exact: true }).click();
+    await page
+      .getByRole('navigation', { name: '工作域导航' })
+      .getByRole('button', { name: '账户与设置', exact: true })
+      .click();
+    await page.getByRole('menuitem', { name: '设置', exact: true }).click();
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(forward).toBeDisabled();
     await top.getByRole('tab', { name: '设计复盘' }).click();
@@ -200,7 +221,8 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     const search = sidebar.getByRole('button', { name: '搜索笔记', exact: true });
     const create = sidebar.getByRole('button', { name: '新建', exact: true });
     await expect(sidebar.getByRole('searchbox')).toHaveCount(0);
-    const searchBox = await search.boundingBox(), createBox = await create.boundingBox();
+    const searchBox = await search.boundingBox(),
+      createBox = await create.boundingBox();
     expect(searchBox!.x + searchBox!.width).toBeLessThan(createBox!.x);
     await expect(create).toHaveCSS('border-radius', '999px');
     expect(await create.evaluate(element => getComputedStyle(element).backgroundImage)).toContain('linear-gradient');
@@ -233,17 +255,31 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(page.getByRole('heading', { name: '设置', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: '设置分类' })).toBeVisible();
-    const selectedCategory = page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /全部设置/ });
+    const selectedCategory = page
+      .getByRole('navigation', { name: '设置分类' })
+      .getByRole('button', { name: /全部设置/ });
     await expect(selectedCategory).toHaveAttribute('aria-pressed', 'true');
-    expect(await selectedCategory.evaluate((element) => { const style = getComputedStyle(element); return Number.parseFloat(style.borderLeftWidth) <= 1 && style.borderLeftWidth === style.borderRightWidth && style.borderLeftColor === style.borderRightColor; })).toBe(true);
+    expect(
+      await selectedCategory.evaluate(element => {
+        const style = getComputedStyle(element);
+        return (
+          Number.parseFloat(style.borderLeftWidth) <= 1 &&
+          style.borderLeftWidth === style.borderRightWidth &&
+          style.borderLeftColor === style.borderRightColor
+        );
+      })
+    ).toBe(true);
     const selectionBackground = await selectedCategory.evaluate(element => {
       // 在被测控件的主题作用域解析令牌，保留已定稿的渐变选中态。
       const probe = document.createElement('span');
       probe.style.background = 'var(--nav-selected-bg, var(--surface-raised))';
       element.append(probe);
-      const actual = getComputedStyle(element), expected = getComputedStyle(probe);
-      const result = { actual: { image: actual.backgroundImage, color: actual.backgroundColor },
-        expected: { image: expected.backgroundImage, color: expected.backgroundColor } };
+      const actual = getComputedStyle(element),
+        expected = getComputedStyle(probe);
+      const result = {
+        actual: { image: actual.backgroundImage, color: actual.backgroundColor },
+        expected: { image: expected.backgroundImage, color: expected.backgroundColor }
+      };
       probe.remove();
       return result;
     });
@@ -256,15 +292,22 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await expect(page.getByRole('button', { name: '保存配置' })).toBeEnabled();
     await page.getByLabel('API Key').fill('');
     await page.getByRole('button', { name: '大（19 像素）' }).click();
-    await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /辅助体验/ }).click();
+    await page
+      .getByRole('navigation', { name: '设置分类' })
+      .getByRole('button', { name: /辅助体验/ })
+      .click();
     await page.getByRole('checkbox', { name: '减少界面动效' }).locator('xpath=ancestor::label').click();
-    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--note-font-size'))).toBe('19px');
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--note-font-size')))
+      .toBe('19px');
     await page.reload();
     await expect(page.getByRole('button', { name: '大（19 像素）' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('checkbox', { name: '减少界面动效' })).toBeChecked();
 
     await page.setViewportSize({ width: 390, height: 843 });
-    await expect(page.getByRole('navigation', { name: '移动端模块导航' }).getByRole('button', { name: '设置', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('navigation', { name: '移动端模块导航' }).getByRole('button', { name: '设置', exact: true })
+    ).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(2);
   });
 
@@ -286,10 +329,14 @@ test.describe('V4-05 公共 Shell 与主页', () => {
 
     await page.setViewportSize({ width: 390, height: 843 });
     // viewport 更新先于浏览器 resize/media-query 布局提交；在连续渲染帧后验证相同溢出上限。
-    await expect.poll(async () => {
-      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-      return horizontalOverflow(page);
-    }).toBeLessThanOrEqual(2);
+    await expect
+      .poll(async () => {
+        await page.evaluate(
+          () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+        );
+        return horizontalOverflow(page);
+      })
+      .toBeLessThanOrEqual(2);
   });
 
   test('移动端与 200% 缩放保留核心入口且无横向滚动', async ({ page }) => {
@@ -297,18 +344,27 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await page.goto('/');
     await expect(page.getByRole('navigation', { name: '移动端模块导航' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: '工作域导航' })).toBeHidden();
-    await expect(page.getByRole('navigation', { name: '移动端模块导航', exact: true }).getByRole('button', { name: '打开全局搜索', exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole('navigation', { name: '移动端模块导航', exact: true })
+        .getByRole('button', { name: '打开全局搜索', exact: true })
+    ).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(2);
 
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
-    await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = '2';
+    });
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(2);
   });
 
   test('最近资料可通过键盘聚焦并触发可感知反馈', async ({ page }) => {
     await page.goto('/');
-    const note = page.getByRole('button', { name: '设计复盘', exact: true });
+    const note = page
+      .getByRole('list', { name: '最近编辑' })
+      .getByRole('button', { name: /设计复盘/ })
+      .first();
     await note.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('status')).toContainText('设计复盘');
@@ -338,7 +394,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
 
   test('桌面与移动端视觉证据无 console warning/error', async ({ page }) => {
     const consoleProblems: string[] = [];
-    page.on('console', (message) => {
+    page.on('console', message => {
       if (message.type() === 'error' || message.type() === 'warning') {
         consoleProblems.push(`${message.type()}: ${message.text()}`);
       }
@@ -346,7 +402,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
 
     await page.setViewportSize({ width: 1440, height: 1024 });
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.screenshot({
       path: 'e2e/visual-baseline/screenshots/v4-05-home-1440.png',
       fullPage: false
@@ -370,14 +426,14 @@ async function horizontalOverflow(page: Page): Promise<number> {
 
 async function mockWorkspace(page: Page): Promise<void> {
   await mockShellServices(page);
-  await page.route('**/api/ai/model-settings', async (route) => {
+  await page.route('**/api/ai/model-settings', async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ data: { provider: 'deepseek', modelId: 'deepseek-flash', configured: false } })
     });
   });
-  await page.route('**/api/knowledge/**', async (route) => {
+  await page.route('**/api/knowledge/**', async route => {
     const url = new URL(route.request().url());
     let data: unknown = [];
     if (url.pathname.endsWith('/search/notes') && url.searchParams.get('result') === 'command') {
@@ -387,25 +443,39 @@ async function mockWorkspace(page: Page): Promise<void> {
     } else if (url.pathname.endsWith('/folders/tree')) {
       data = [{ id: 'folder-1', name: '工作', parentId: null, children: [] }];
     } else if (url.pathname.endsWith('/notes')) {
-      data = [{
+      data = [
+        {
+          id: 'note-1',
+          spaceId: 'space-1',
+          title: '设计复盘',
+          folderId: 'folder-1',
+          tagIds: ['tag-1'],
+          internalLinks: [],
+          rawMarkdown: '',
+          contentLoaded: false,
+          favorite: true,
+          deleted: false,
+          createdAt: '2026-08-18T08:00:00.000Z',
+          updatedAt: '2026-08-20T08:00:00.000Z'
+        }
+      ];
+    } else if (url.pathname.endsWith('/notes/note-1')) {
+      data = {
         id: 'note-1',
-        spaceId: 'space-1',
         title: '设计复盘',
+        spaceId: 'space-1',
         folderId: 'folder-1',
         tagIds: ['tag-1'],
         internalLinks: [],
-        rawMarkdown: '',
-        contentLoaded: false,
+        rawMarkdown: '合成设计复盘正文',
+        contentLoaded: true,
+        sourceType: 'note',
+        status: 'draft',
         favorite: true,
         deleted: false,
         createdAt: '2026-08-18T08:00:00.000Z',
         updatedAt: '2026-08-20T08:00:00.000Z'
-      }];
-    } else if (url.pathname.endsWith('/notes/note-1')) {
-      data = { id: 'note-1', title: '设计复盘', spaceId: 'space-1', folderId: 'folder-1',
-        tagIds: ['tag-1'], internalLinks: [], rawMarkdown: '合成设计复盘正文', contentLoaded: true,
-        sourceType: 'note', status: 'draft', favorite: true, deleted: false,
-        createdAt: '2026-08-18T08:00:00.000Z', updatedAt: '2026-08-20T08:00:00.000Z' };
+      };
     } else if (url.pathname.endsWith('/tags')) {
       data = [{ id: 'tag-1', name: '设计' }];
     }

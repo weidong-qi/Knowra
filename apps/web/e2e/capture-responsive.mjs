@@ -161,7 +161,7 @@ for (const [width, height] of sizes) {
   await page.route('**/api/ai/inbox**', r => r.fulfill({ json: { data: [action] } }));
   await page.route('**/api/ai/actions**', r => r.fulfill({ json: { data: [] } }));
   for (const [name, url, ready] of [
-    ['home', '/', () => page.getByRole('heading', { name: '笔记工作台' }).waitFor()],
+    ['home', '/', () => page.getByRole('heading', { level: 1 }).waitFor()],
     ['editor', '/#/materials/notes/note-1', () => page.locator('[data-editor-ready="true"]').waitFor()],
     [
       'assistant',

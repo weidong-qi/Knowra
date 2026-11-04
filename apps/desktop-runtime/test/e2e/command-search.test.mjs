@@ -119,8 +119,12 @@ test('真实生产页面 CmdK：SQLite 未预载长中文正文的可见命中�
     assert.equal(pageSummaryResponse.request().frame(), page.mainFrame());
     const summaryPageUrl = page.url();
     const summaries = (await pageSummaryResponse.json()).data;
-    await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
-    await expect(page.getByRole('button', { name: preloaded.title, exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(
+      page
+        .getByRole('list', { name: '最近编辑' })
+        .getByRole('button', { name: `继续编辑 ${preloaded.title}`, exact: true })
+    ).toBeVisible();
     const summary = summaries.find(item => item.id === preloaded.id);
     assert.equal(summary.summary.length, 240);
     assert.equal(summary.summary.includes(query), false);

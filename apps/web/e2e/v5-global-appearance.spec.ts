@@ -43,7 +43,7 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
     const radius = await shell.evaluate(element =>
       getComputedStyle(element).getPropertyValue('--radius-control').trim()
     );
-    expect(radius).toBe('7px');
+    expect(radius).toBe('6px');
   }
   await page.reload();
   await expect(shell).toHaveAttribute('data-ni-mode', 'dark');
