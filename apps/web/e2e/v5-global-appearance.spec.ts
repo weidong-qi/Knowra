@@ -187,8 +187,8 @@ test('热力图随标签区域滚动，桌面和窄屏新建入口保持尺寸�
     await create.click();
     const menu = page.getByRole('menu', { name: '新建', exact: true });
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('menuitem')).toHaveText(['新建笔记', '新建文件夹', '导入 Markdown']);
-    for (const name of ['新建笔记', '新建文件夹', '导入 Markdown']) {
+    await expect(menu.getByRole('menuitem')).toHaveText(['新建笔记', '新建文件夹', '导入 PDF', '导入 Markdown']);
+    for (const name of ['新建笔记', '新建文件夹', '导入 PDF', '导入 Markdown']) {
       await expect(menu.getByRole('menuitem', { name, exact: true })).toBeEnabled();
     }
     await page.keyboard.press('Escape');

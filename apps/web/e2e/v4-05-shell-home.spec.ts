@@ -246,7 +246,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     });
     expect(selectionBackground.expected.image).toContain('linear-gradient');
     expect(selectionBackground.actual).toEqual(selectionBackground.expected);
-    await expect(page.getByText('显示 9 / 9 项设置')).toBeVisible();
+    await expect(page.getByText('显示 10 / 10 项设置')).toBeVisible();
     await expect(page.getByRole('heading', { name: '模型接入' })).toBeVisible();
     await expect(page.getByText('尚未配置')).toBeVisible();
     await page.getByLabel('API Key').fill('synthetic-no-save');
