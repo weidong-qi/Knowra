@@ -4,7 +4,7 @@ export const folderDtoTests = [
   {
     name: 'buildCreateFolderDto trims name and keeps ids',
     async run() {
-      const { buildCreateFolderDto } = await import('../src/modules/knowledge/application/dto/folder.dto.js');
+      const { buildCreateFolderDto } = await import('../src/modules/knowledge/application/dto/folder.dto.ts');
 
       const dto = buildCreateFolderDto({
         id: 'folder-dto-1',

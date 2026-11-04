@@ -81,6 +81,8 @@ Git 仓库远程地址：`git@github.com:1848956505/Knowra.git`（部署用 Depl
 
 当前运行方式（首次 CI 发布包激活前）：
 
+> 下方 `web-v4` 路径记录当时的服务器状态。仓库现行前端目录已改为 `apps/web`；服务器实际运行版本和路径需以部署后的 PM2 状态为准。
+
 - Node.js monorepo（Git 克隆）
 - 前端服务：`apps/web-v4/server.mjs`（静态服务 + `/api/*` 同源代理）
 - 后端服务：`apps/api/src/main.js`
@@ -200,8 +202,8 @@ npm run check:attachments -- \
 CI 构建完成后必须确认 V4 入口存在且不包含 Source Map：
 
 ```bash
-test -f apps/web-v4/dist/index.html
-test -z "$(find apps/web-v4/dist -type f -name '*.map' -print -quit)"
+test -f apps/web/dist/index.html
+test -z "$(find apps/web/dist -type f -name '*.map' -print -quit)"
 ```
 
 `Transformer` 历史资料中的 5 张 HTTP 外链图使用以下脚本迁移。脚本默认只读预检，备份数据后才能显式执行：

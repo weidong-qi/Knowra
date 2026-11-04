@@ -6,11 +6,11 @@ import path from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '..');
-const requireFromWeb = createRequire(path.join(workspaceRoot, 'apps', 'web', 'package.json'));
+const requireFromWeb = createRequire(path.join(workspaceRoot, 'apps', 'web-legacy', 'package.json'));
 const { build } = requireFromWeb('esbuild');
 
-const entryFile = path.join(workspaceRoot, 'apps', 'web', 'lib', 'editor', 'milkdown-entry.js');
-const outfile = path.join(workspaceRoot, 'apps', 'web', 'lib', 'editor', 'milkdown-bundle.js');
+const entryFile = path.join(workspaceRoot, 'apps', 'web-legacy', 'lib', 'editor', 'milkdown-entry.js');
+const outfile = path.join(workspaceRoot, 'apps', 'web-legacy', 'lib', 'editor', 'milkdown-bundle.js');
 const outputCssFile = path.join(path.dirname(outfile), 'milkdown-bundle.css');
 const isProductionBuild = process.env.NODE_ENV === 'production';
 

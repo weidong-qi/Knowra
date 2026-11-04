@@ -1,5 +1,5 @@
 // 生成 preview.html：新旧图标并排对比。用法：node build-preview.mjs
-// 旧图标直接从 apps/web-v4/src/components/icons/knowra/icons/*.tsx 解析，保证对比的是线上真实版本。
+// 旧图标直接从 apps/web-v5/src/components/icons/knowra/icons/*.tsx 解析，保证对比的是线上真实版本。
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +7,7 @@ import { GROUPS } from './icons-v2.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../../..');
-const oldDir = path.join(root, 'apps/web-v4/src/components/icons/knowra/icons');
+const oldDir = path.join(root, 'apps/web-v5/src/components/icons/knowra/icons');
 const OLD_ACCENT = '#2563eb';
 
 const oldIcons = {};

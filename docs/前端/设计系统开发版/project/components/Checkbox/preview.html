@@ -1,0 +1,21 @@
+<!-- @dsCard group="表单" height=180 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>Checkbox</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [items, setItems] = useState([true, false, true]);
+  const all = items.every(Boolean), some = items.some(Boolean);
+  return h('div', { className: 'kn-col' },
+    h(K.Checkbox, { isSelected: all, isIndeterminate: some && !all, onChange: (v) => setItems(items.map(() => v)) }, '全选试题'),
+    ['第 1 题', '第 2 题', '第 3 题'].map((label, i) => h(K.Checkbox, { key: i, isSelected: items[i], onChange: (v) => setItems(items.map((x, j) => j === i ? v : x)) }, label)),
+    h(K.Checkbox, { isDisabled: true }, '同步到云端（未开启）'));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

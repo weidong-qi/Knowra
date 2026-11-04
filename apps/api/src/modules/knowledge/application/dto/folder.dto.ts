@@ -1,4 +1,4 @@
-import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.js';
+import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.ts';
 
 export interface FolderDtoInput {
   id?: unknown;
@@ -31,6 +31,10 @@ function createFolderId({ id, name }: { id?: unknown; name: string }): string {
   return createPrefixedId('folder', name || 'item');
 }
 
+export function buildCreateFolderDto<Input extends FolderDtoInput>(
+  input: Input
+): Omit<CreateFolderDto, 'pathCache'> & { pathCache: NonNullable<Input['pathCache']> | '/' };
+export function buildCreateFolderDto(input?: FolderDtoInput): CreateFolderDto;
 export function buildCreateFolderDto(input: FolderDtoInput = {}): CreateFolderDto {
   const name = requireText(input.name, 'FOLDER_NAME_REQUIRED', 'Folder name is required');
 

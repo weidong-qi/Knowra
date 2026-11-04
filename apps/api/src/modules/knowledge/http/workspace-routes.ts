@@ -1,9 +1,10 @@
-import { toQueryObject } from '../../../http/request.js';
-import { sendJson } from '../../../http/response.js';
+import { toQueryObject } from '../../../http/request.ts';
+import { sendJson } from '../../../http/response.ts';
 import type { ResponseWriter } from '../../../http/response.ts';
+import type { QuerySource } from '../../../http/request.ts';
 import type { WorkspaceQueryInput } from '../application/workspace-query-utils.ts';
 
-/** 查询对象由原 toQueryObject 创建；自定义 entries 的值不保证为字符串。 */
+/** 查询对象由 HTTP URL 的 searchParams.entries 创建。 */
 export type WorkspaceRouteQuery = WorkspaceQueryInput &
   Record<PropertyKey, unknown> & {
     [Member in keyof typeof Object.prototype]: unknown;
@@ -19,7 +20,7 @@ export interface WorkspaceRouteKnowledge {
 export interface WorkspaceRouteContext {
   request: { method?: unknown };
   response: ResponseWriter;
-  url: { pathname?: unknown; searchParams?: unknown };
+  url: QuerySource & { pathname?: unknown };
   knowledge: WorkspaceRouteKnowledge;
 }
 

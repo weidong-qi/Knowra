@@ -90,7 +90,7 @@ export function createAsyncNoteDeletionCoordinator({
       const retained = preflight.references.filter(
         reference =>
           !(
-            ['notes', 'noteVersions', 'contentAnnotations'].includes(reference.collection) &&
+            ['notes', 'noteVersions', 'contentAnnotations', 'pdfAnnotations'].includes(reference.collection) &&
             noteIdSet.has(reference.noteId ?? reference.id)
           )
       );

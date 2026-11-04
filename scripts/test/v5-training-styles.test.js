@@ -2,13 +2,22 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
-const workspace = readFileSync(resolve(import.meta.dirname, '../../apps/web-v4/src/features/training/TrainingWorkspaceView.module.css'), 'utf8');
-const detail = readFileSync(resolve(import.meta.dirname, '../../apps/web-v4/src/features/training/QuestionDetailPanel.module.css'), 'utf8');
+const workspace = readFileSync(
+  resolve(import.meta.dirname, '../../apps/web/src/features/training/TrainingWorkspaceView.module.css'),
+  'utf8'
+);
+const detail = readFileSync(
+  resolve(import.meta.dirname, '../../apps/web/src/features/training/QuestionDetailPanel.module.css'),
+  'utf8'
+);
 
 describe('训练模块 V5 样式约束', () => {
   it('业务样式只引用可替换的语义颜色，移除旧选中竖线和硬阴影', () => {
     for (const css of [workspace, detail]) {
-      assert.doesNotMatch(css, /#[\da-f]{3,8}\b|var\(--ink(?:-|\))|var\(--index-|border-left|font-mono|text-transform:\s*uppercase/i);
+      assert.doesNotMatch(
+        css,
+        /#[\da-f]{3,8}\b|var\(--ink(?:-|\))|var\(--index-|border-left|font-mono|text-transform:\s*uppercase/i
+      );
       assert.ok(css.includes('var(--surface-page)'));
       assert.ok(css.includes('var(--border-subtle)'));
       assert.ok(css.includes('var(--radius-panel)'));

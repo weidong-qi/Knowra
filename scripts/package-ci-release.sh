@@ -19,12 +19,12 @@ root="$(git rev-parse --show-toplevel)"
   echo '发布提交与当前检出的提交不一致。' >&2
   exit 1
 }
-test -f "$root/apps/web-v4/dist/index.html"
+test -f "$root/apps/web/dist/index.html"
 node "$root/scripts/release-artifact.mjs" --verify-web "$root" "$commit"
 test -f "$root/packages/web-core/dist/index.js"
 test -f "$root/packages/shared/src/attachments.js"
 test -f "$root/packages/shared/src/attachments.d.ts"
-if find "$root/apps/web-v4/dist" -type f -name '*.map' -print -quit | grep -q .; then
+if find "$root/apps/web/dist" -type f -name '*.map' -print -quit | grep -q .; then
   echo '生产前端产物包含 Source Map。' >&2
   exit 1
 fi
@@ -32,15 +32,15 @@ fi
 stage="$(mktemp -d)"
 trap 'rm -rf -- "$stage"' EXIT
 git -C "$root" archive "$commit" | tar -xf - -C "$stage"
-mkdir -p "$stage/apps/web-v4/dist" "$stage/packages/web-core/dist"
-cp -a "$root/apps/web-v4/dist/." "$stage/apps/web-v4/dist/"
+mkdir -p "$stage/apps/web/dist" "$stage/packages/web-core/dist"
+cp -a "$root/apps/web/dist/." "$stage/apps/web/dist/"
 cp -a "$root/packages/web-core/dist/." "$stage/packages/web-core/dist/"
 
 # 全新安装 Linux 生产依赖；不把 CI 的测试依赖或 Mac 原生模块放入发布包。
 (
   cd "$stage"
   npm ci --omit=dev --ignore-scripts
-  node --input-type=module -e "await import('@study-accelerator/shared/attachments'); await import('./apps/api/src/app.factory.js'); await import('./apps/web-v4/server/app.mjs')"
+  node --input-type=module -e "await import('@study-accelerator/shared/attachments'); await import('./apps/api/src/app.factory.js'); await import('./apps/web/server/app.mjs')"
 )
 
 node "$stage/scripts/release-artifact.mjs" --write-linux "$stage" "$commit"

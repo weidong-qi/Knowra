@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const root = resolve(import.meta.dirname, '../../apps/web-v4/src');
+const root = resolve(import.meta.dirname, '../../apps/web/src');
 const paths = [
   'features/knowledge/KnowledgeWorkspaceView.module.css',
   'features/knowledge/KnowledgeSourceComparisonDialog.module.css',
@@ -11,15 +11,16 @@ const paths = [
   'features/training/QuestionDetailPanel.module.css',
   'features/tags/TagManagerView.module.css'
 ];
-for (const path of paths) test(`V5 领域样式使用可定制语义表面：${path}`, () => {
-  const css = readFileSync(resolve(root, path), 'utf8');
-  assert.doesNotMatch(css, /#[\da-f]{3,8}\b|rgba?\(/i, '业务面板不内嵌主题颜色');
-  assert.doesNotMatch(css, /box-shadow\s*:\s*\d+px\s+\d+px\s+0\s/, '不保留旧偏移硬阴影');
-  assert.doesNotMatch(css, /--index-(?:blue|tile-shadow)/, '不依赖旧视觉别名');
-  assert.match(css, /var\(--surface-/);
-  assert.match(css, /var\(--text-/);
-  assert.match(css, /var\(--radius-/);
-});
+for (const path of paths)
+  test(`V5 领域样式使用可定制语义表面：${path}`, () => {
+    const css = readFileSync(resolve(root, path), 'utf8');
+    assert.doesNotMatch(css, /#[\da-f]{3,8}\b|rgba?\(/i, '业务面板不内嵌主题颜色');
+    assert.doesNotMatch(css, /box-shadow\s*:\s*\d+px\s+\d+px\s+0\s/, '不保留旧偏移硬阴影');
+    assert.doesNotMatch(css, /--index-(?:blue|tile-shadow)/, '不依赖旧视觉别名');
+    assert.match(css, /var\(--surface-/);
+    assert.match(css, /var\(--text-/);
+    assert.match(css, /var\(--radius-/);
+  });
 test('领域选择态无左侧强调条，标签蓝色不跟随品牌橙色', () => {
   const knowledge = readFileSync(resolve(root, paths[0]), 'utf8');
   const training = readFileSync(resolve(root, paths[2]), 'utf8');

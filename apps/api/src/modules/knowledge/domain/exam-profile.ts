@@ -1,15 +1,15 @@
-export interface ExamProfileConstructorInput {
+export interface ExamProfileConstructorInput<CreatedAt = string, UpdatedAt = CreatedAt> {
   id: string;
   name: string;
   description?: string;
-  scope?: unknown[];
+  scope?: unknown;
   language?: string;
-  commonQuestionTypes?: unknown[];
+  commonQuestionTypes?: unknown;
   difficultyProfile?: object;
   archivedAt?: string | null;
   deletedAt?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: CreatedAt | string;
+  updatedAt?: UpdatedAt | CreatedAt | string;
 }
 
 function cloneJson<T>(value: T | null | undefined, fallback: T): T {
@@ -17,7 +17,7 @@ function cloneJson<T>(value: T | null | undefined, fallback: T): T {
   return structuredClone(value);
 }
 
-export class ExamProfile {
+export class ExamProfile<CreatedAt = string, UpdatedAt = CreatedAt> {
   declare id: string;
   declare name: string;
   declare description: string;
@@ -27,8 +27,8 @@ export class ExamProfile {
   declare difficultyProfile: object;
   declare archivedAt: string | null;
   declare deletedAt: string | null;
-  declare createdAt: string;
-  declare updatedAt: string;
+  declare createdAt: Exclude<CreatedAt, undefined> | string;
+  declare updatedAt: Exclude<UpdatedAt | CreatedAt, undefined> | string;
 
   constructor({
     id,
@@ -42,7 +42,7 @@ export class ExamProfile {
     deletedAt = null,
     createdAt = new Date().toISOString(),
     updatedAt = createdAt
-  }: ExamProfileConstructorInput) {
+  }: ExamProfileConstructorInput<CreatedAt, UpdatedAt>) {
     if (!id?.trim()) throw new Error('ExamProfile id is required');
     if (typeof name !== 'string' || !name.trim()) throw new Error('ExamProfile name is required');
     if (typeof description !== 'string' || typeof language !== 'string')

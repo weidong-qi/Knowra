@@ -9,7 +9,7 @@ import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
-import { createV4WebServer } from '../../../web-v4/server/app.mjs';
+import { createV4WebServer } from '../../../web/server/app.mjs';
 
 async function fixture(t, rawMarkdown) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-code-boundary-'));
@@ -22,7 +22,7 @@ async function fixture(t, rawMarkdown) {
   api.listen(0, '127.0.0.1');
   await once(api, 'listening');
   const web = createV4WebServer({
-    distRoot: fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url)),
+    distRoot: fileURLToPath(new URL('../../../web/dist/', import.meta.url)),
     getApiOrigin: () => `http://127.0.0.1:${api.address().port}`
   });
   web.listen(0, '127.0.0.1');
@@ -93,6 +93,62 @@ for (const scope of ['blocks', 'selection'])
     await expect.poll(async () => (await highlighted.allTextContents()).join('')).toContain('新增行');
     assert.equal(await highlighted.first().evaluate(el => getComputedStyle(el).color), color);
   });
+
+test('真实章节重点：代码新增内容后保存、重新选来源和重开均保留核心颜色', { timeout: 60000 }, async t => {
+  const { page, editor, k, annotations } = await fixture(
+    t,
+    '## 合成章节\n\n说明文字\n\n```\n原始甲\n原始乙\n```\n\n## 下一章\n\n尾段'
+  );
+  await editor.locator('h2').first().hover();
+  await page.getByRole('button', { name: '标题重点菜单', exact: true }).click();
+  await page.getByRole('menuitem', { name: '标记本节为重点', exact: true }).hover();
+  await page.getByRole('menuitem', { name: '核心', exact: true }).click();
+  await expect.poll(() => annotations().length).toBe(1);
+  const annotation = annotations()[0];
+  const code = editor.locator('pre code');
+  const heading = editor.locator('h2').first().locator(`[data-annotation-id="${annotation.id}"]`);
+  await expect(heading).toHaveAttribute('data-importance', 'core');
+  const expectedColor = await heading.evaluate(el => getComputedStyle(el).color);
+  const codeColors = () =>
+    code.evaluate(el => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const colors = [];
+      while (walker.nextNode()) {
+        if (walker.currentNode.textContent.trim()) colors.push(getComputedStyle(walker.currentNode.parentElement).color);
+      }
+      return colors;
+    });
+  const expectCodeColor = async () => {
+    await expect.poll(codeColors).not.toEqual([]);
+    await expect.poll(codeColors).toEqual(expect.arrayContaining([expectedColor]));
+    assert.ok((await codeColors()).every(color => color === expectedColor));
+  };
+  await expectCodeColor();
+  await selectCode(code, true);
+  await page.keyboard.press('Enter');
+  await page.keyboard.insertText('新增行');
+  await expect(code).toContainText('新增行');
+  await expectCodeColor();
+  await expect.poll(() => k.contentAnnotationService.getAnnotation(annotation.id).quoteText).toContain('新增行');
+  await editor.locator('h2').first().evaluate(el => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(true);
+    el.closest('[contenteditable]').focus();
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+  });
+  await page.getByRole('button', { name: '切换文档检查器', exact: true }).click();
+  await page.getByRole('tab', { name: '标注', exact: true }).click();
+  await page.getByRole('button', { name: '重点 1 更多操作' }).click();
+  await page.getByRole('menuitem', { name: '重新选择来源', exact: true }).click();
+  await expectCodeColor();
+  await page.reload();
+  await expect(code).toContainText('新增行');
+  await expectCodeColor();
+  assert.equal(k.contentAnnotationService.getAnnotation(annotation.id).anchorStatus, 'resolved');
+});
 
 test('真实选区工具：普通、重点、核心直接创建，重开保留对应等级', { timeout: 60000 }, async t => {
   const { page, editor, annotations } = await fixture(t, '## 合成选区\n\n普通摘录\n\n重点摘录\n\n核心摘录');

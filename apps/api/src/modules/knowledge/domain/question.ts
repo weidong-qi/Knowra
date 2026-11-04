@@ -1,18 +1,23 @@
-export interface QuestionConstructorInput {
+export interface QuestionConstructorInput<
+  QuestionType = string,
+  Difficulty = string | null,
+  CreatedAt = string,
+  UpdatedAt = CreatedAt
+> {
   id: string;
-  questionType?: string;
-  stem?: string;
-  options?: unknown[] | null;
+  questionType?: QuestionType | string;
+  stem?: unknown;
+  options?: unknown;
   referenceAnswer?: unknown;
   rubric?: unknown;
-  explanation?: string;
-  difficulty?: string | null;
+  explanation?: unknown;
+  difficulty?: Difficulty | string | null;
   reviewStatus?: string;
   sourceMode?: string;
   version?: unknown;
   deletedAt?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: CreatedAt | string;
+  updatedAt?: UpdatedAt | CreatedAt | string;
 }
 
 const QUESTION_TYPE_SET = new Set(['singleChoice', 'multipleChoice', 'trueFalse', 'shortAnswer']);
@@ -24,7 +29,7 @@ function cloneOrNull<T>(value: T | null | undefined): T | null {
   return value === undefined || value === null ? null : structuredClone(value);
 }
 
-export class Question {
+export class Question<QuestionType = string, Difficulty = string | null, CreatedAt = string, UpdatedAt = CreatedAt> {
   declare id: string;
   declare questionType: 'singleChoice' | 'multipleChoice' | 'trueFalse' | 'shortAnswer';
   declare stem: string;
@@ -37,8 +42,8 @@ export class Question {
   declare sourceMode: 'manual' | 'ai' | 'import';
   declare version: number;
   declare deletedAt: string | null;
-  declare createdAt: string;
-  declare updatedAt: string;
+  declare createdAt: Exclude<CreatedAt, undefined> | string;
+  declare updatedAt: Exclude<UpdatedAt | CreatedAt, undefined> | string;
 
   constructor({
     id,
@@ -55,12 +60,14 @@ export class Question {
     deletedAt = null,
     createdAt = new Date().toISOString(),
     updatedAt = createdAt
-  }: QuestionConstructorInput) {
+  }: QuestionConstructorInput<QuestionType, Difficulty, CreatedAt, UpdatedAt>) {
     if (!id?.trim()) throw new Error('Question id is required');
-    if (!QUESTION_TYPE_SET.has(questionType)) throw new Error('Question questionType is invalid');
+    if (!(QUESTION_TYPE_SET as ReadonlySet<unknown>).has(questionType))
+      throw new Error('Question questionType is invalid');
     if (!REVIEW_STATUS_SET.has(reviewStatus) || !SOURCE_MODE_SET.has(sourceMode))
       throw new Error('Question status or sourceMode is invalid');
-    if (difficulty && !DIFFICULTY_SET.has(difficulty)) throw new Error('Question difficulty is invalid');
+    if (difficulty && !(DIFFICULTY_SET as ReadonlySet<unknown>).has(difficulty))
+      throw new Error('Question difficulty is invalid');
     if (!Number.isInteger(Number(version)) || Number(version) < 1) throw new Error('Question version is invalid');
     if (typeof stem !== 'string' || typeof explanation !== 'string')
       throw new Error('Question text fields are invalid');

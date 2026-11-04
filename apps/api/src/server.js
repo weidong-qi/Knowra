@@ -1,40 +1,56 @@
-import { createTaskWorkspaceService } from './modules/task-workspaces/service.js';
-import { handleTaskWorkspaceRoute } from './modules/task-workspaces/routes.js';
+import { handlePdfRoute } from './modules/pdf/routes.ts';
+import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
+import { handleTaskWorkspaceRoute } from './modules/task-workspaces/routes.ts';
 import { handleActionRoute } from './modules/ai/action-routes.js';
 import { URL } from 'node:url';
 import http from 'node:http';
-import { applyCorsHeaders, handleCorsPreflight } from './http/cors.js';
-import { sendError, sendJson } from './http/response.js';
-import { handleStorageRoute } from './http/storage-routes.js';
+import { applyCorsHeaders, handleCorsPreflight } from './http/cors.ts';
+import { sendError, sendJson } from './http/response.ts';
+import { handleStorageRoute } from './http/storage-routes.ts';
 import { handleKnowledgeRoute } from './modules/knowledge/http/knowledge-routes.js';
 import { AppError } from './errors/app-error.js';
-import { handleSyncRoute } from './modules/sync/routes.js';
-import { handleModelSettingsRoute } from './modules/ai/model-settings-routes.js';
-import { handleAiFeatureRoute } from './modules/ai/feature-settings-routes.js';
+import { handleSyncRoute } from './modules/sync/routes.ts';
+import { handleModelSettingsRoute } from './modules/ai/model-settings-routes.ts';
+import { handleAiFeatureRoute } from './modules/ai/feature-settings-routes.ts';
 import { handleBudgetRoute } from './modules/ai/budget-routes.js';
 import { createAiAssistantService } from './modules/ai/assistant-service.js';
 import { handleAssistantRoute } from './modules/ai/assistant-routes.js';
 import { handleAiAccessRoute } from './modules/ai/access-routes.js';
 import { handleConversationRoute } from './modules/ai/conversation-routes.js';
 import { handleConversationAttachmentRoute } from './modules/ai/conversation-attachment-routes.js';
-import { handleAiJobRoute } from './modules/ai/job-routes.js';
-import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-extraction-http-service.js';
-import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.js';
+import { handleAiJobRoute } from './modules/ai/job-routes.ts';
+import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-extraction-http-service.ts';
+import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { isWriteMethod, writeOriginDecision } from '@study-accelerator/shared/http-origin';
 
-export function createServer({ appContext, cors = {}, logger = console }) {
+export function createServer({ appContext, cors = /** @type {{allowedOrigins?: string[]}} */ ({}), logger = console }) {
   const taskWorkspaces = appContext.taskWorkspaces ?? createTaskWorkspaceService({ store: null });
-  const taskWorkspaceContext = appContext.taskWorkspaceContext ?? (() => ({ actor: { kind: 'user', id: 'unavailable' } }));
+  const taskWorkspaceContext =
+    appContext.taskWorkspaceContext ?? (() => ({ actor: { kind: 'user', id: 'unavailable' } }));
   const allowedOrigins = cors.allowedOrigins ?? [];
-  const extraction = createKnowledgeExtractionHttpService({ tasks: appContext.knowledgeExtractionTasks,
-    location: appContext.aiLocation ?? 'server', logger });
-  const assistant = appContext.ai && appContext.aiOwnerId
-    ? createAiAssistantService({ getRuntime: () => appContext.ai, ownerId: appContext.aiOwnerId,
-      location: appContext.aiLocation ?? 'server', logger }) : null;
+  const extraction = createKnowledgeExtractionHttpService({
+    tasks: appContext.knowledgeExtractionTasks,
+    location: appContext.aiLocation ?? 'server',
+    logger
+  });
+  const assistant =
+    appContext.ai && appContext.aiOwnerId
+      ? createAiAssistantService({
+          getRuntime: () => appContext.ai,
+          ownerId: appContext.aiOwnerId,
+          location: appContext.aiLocation ?? 'server',
+          logger
+        })
+      : null;
   const aiLifecycle = aiRuntimeLifecycle(appContext.ai);
-  const aiRecovery = appContext.aiLocation === 'local' ? Promise.resolve() : aiLifecycle.recover()
-    .catch(error => logger.warn?.('AI task recovery failed', { code: error.code ?? 'AI_RECOVERY_FAILED' }));
+  const aiRecovery =
+    appContext.aiLocation === 'local'
+      ? Promise.resolve()
+      : aiLifecycle
+          .recover()
+          .catch(error => logger.warn?.('AI task recovery failed', { code: error.code ?? 'AI_RECOVERY_FAILED' }));
 
+  /** @type {http.Server & {closeAi?: typeof aiLifecycle.close}} */
   const server = http.createServer(async (request, response) => {
     try {
       const url = new URL(request.url, 'http://localhost');
@@ -68,7 +84,18 @@ export function createServer({ appContext, cors = {}, logger = console }) {
         return;
       }
 
-      if (await handleTaskWorkspaceRoute({ request, response, url, service: taskWorkspaces, context: taskWorkspaceContext })) return;
+      if (
+        await handleTaskWorkspaceRoute({
+          request,
+          response,
+          url,
+          service: taskWorkspaces,
+          context: taskWorkspaceContext
+        })
+      )
+        return;
+
+      if (await handlePdfRoute({ request, response, url, pdf: appContext.http.pdf })) return;
 
       if (await handleStorageRoute({ request, response, url, storage })) {
         return;
@@ -76,14 +103,26 @@ export function createServer({ appContext, cors = {}, logger = console }) {
 
       if (await handleSyncRoute({ request, response, url, sync: appContext.http.sync })) return;
 
-      if (await handleModelSettingsRoute({ request, response, url, modelSettings: appContext.http.modelSettings })) return;
+      if (await handleModelSettingsRoute({ request, response, url, modelSettings: appContext.http.modelSettings }))
+        return;
       if (await handleAiFeatureRoute({ request, response, url, features: appContext.http.aiFeatures })) return;
-      if (await handleBudgetRoute({ request, response, url, authority: appContext.http.aiBudget, policy: appContext.ai?.budgetPolicy ?? null })) return;
+      if (
+        await handleBudgetRoute({
+          request,
+          response,
+          url,
+          authority: appContext.http.aiBudget,
+          policy: appContext.ai?.budgetPolicy ?? null
+        })
+      )
+        return;
       if (await handleAiJobRoute({ request, response, url, extraction })) return;
       if (await handleAiAccessRoute({ request, response, url, access: appContext.ai?.access })) return;
       if (await handleActionRoute({ request, response, url, actions: appContext.ai?.actions })) return;
-      if (url.pathname.startsWith('/api/ai/conversations/') && url.pathname.split('/')[5] === 'attachments') await aiRecovery;
-      if (await handleConversationAttachmentRoute({ request, response, url, attachments: appContext.ai?.attachments })) return;
+      if (url.pathname.startsWith('/api/ai/conversations/') && url.pathname.split('/')[5] === 'attachments')
+        await aiRecovery;
+      if (await handleConversationAttachmentRoute({ request, response, url, attachments: appContext.ai?.attachments }))
+        return;
       if (await handleConversationRoute({ request, response, url, conversation: appContext.ai?.conversation })) return;
       if (url.pathname.startsWith('/api/ai/assistant')) await aiRecovery;
       if (url.pathname.startsWith('/api/ai/conversations')) await aiRecovery;
@@ -100,21 +139,24 @@ export function createServer({ appContext, cors = {}, logger = console }) {
         }
       });
     } catch (error) {
+      if (response.headersSent || response.destroyed) {
+        response.destroy();
+        return;
+      }
       if (error instanceof AppError) {
         sendError(response, error.statusCode, error.code, error.message);
         return;
       }
 
-      if (request.url?.startsWith('/api/sync/')) logger.error?.('Sync request failed', { code: error.code ?? 'INTERNAL_SERVER_ERROR' });
+      if (request.url?.startsWith('/api/sync/'))
+        logger.error?.('Sync request failed', { code: error.code ?? 'INTERNAL_SERVER_ERROR' });
       else logger.error?.('Unhandled request error', error);
-      sendError(
-        response,
-        500,
-        'INTERNAL_SERVER_ERROR',
-        'Internal server error'
-      );
+      sendError(response, 500, 'INTERNAL_SERVER_ERROR', 'Internal server error');
     }
   });
+  // 同步持久化阻塞事件循环时，已在空闲连接上排队的请求仍可能尚未被解析。
+  // 保留对外 5 秒的空闲提示，但延后实际断开，避免代理收到 ECONNRESET。
+  server.keepAliveTimeoutBuffer = 60_000;
   // 原生 close/close 事件仍只表示网络关闭；持库宿主另等 closeAi 或 context.close。
   server.closeAi = aiLifecycle.close;
   return server;

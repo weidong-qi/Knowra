@@ -1,4 +1,4 @@
-import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.js';
+import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.ts';
 import { validationError } from '../knowledge-errors.js';
 
 export interface TagDtoInput {
@@ -55,6 +55,10 @@ function normalizeColor(value: unknown = 'neutral'): unknown {
   return color;
 }
 
+export function buildCreateTagDto(
+  input: TagDtoInput & { color?: string | null }
+): Omit<CreateTagDto, 'color'> & { color: string };
+export function buildCreateTagDto(input?: TagDtoInput): CreateTagDto;
 export function buildCreateTagDto(input: TagDtoInput = {}): CreateTagDto {
   const name = normalizeName(input.name);
   return {

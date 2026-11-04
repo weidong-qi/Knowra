@@ -1,0 +1,21 @@
+<!-- @dsCard group="表单" height=220 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>SearchBox</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var K = window.Knowra, I = K.Icons, h = React.createElement, useState = React.useState;
+
+function Demo() {
+  const [q, setQ] = useState('特征值');
+  return h('div', { className: 'kn-col', style: { maxWidth: 360 } },
+    h(K.SearchBox, { label: '搜索', size: 'field', placeholder: '搜索笔记、知识点和试题', shortcut: '⌘K' }),
+    h(K.SearchBox, { label: '筛选', size: 'toolbar', placeholder: '筛选当前列表' }),
+    h(K.SearchBox, { label: '搜索（可清除）', size: 'field', value: q, onChange: (e) => setQ(e.target.value), onClear: () => setQ('') }),
+    h(K.SearchBox, { label: '命令', size: 'command', placeholder: '输入命令或搜索' }));
+}
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Demo));
+</script>
+</body>
+</html>

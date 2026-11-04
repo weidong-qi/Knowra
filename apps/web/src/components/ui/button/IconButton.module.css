@@ -1,0 +1,97 @@
+/* 图标按钮：base 为透明 ghost；floating 为通透玻璃圆形；primary 为柔橙实心。 */
+.base {
+  --knowra-icon-accent: currentColor;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--icon-button-radius, var(--radius-pill));
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.size24 { width: 24px; height: 24px; }
+.size28 { width: 28px; height: 28px; }
+.size30 { width: 30px; height: 30px; }
+.size40 { width: 40px; height: 40px; }
+
+.base:hover:not(:disabled),
+.base[data-force-hover]:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.base:active:not(:disabled),
+.base[data-force-active]:not(:disabled) {
+  background: var(--surface-pressed);
+  color: var(--text-primary);
+}
+
+.base[aria-pressed='true']:not(:disabled) {
+  background: var(--surface-pressed);
+  color: var(--text-primary);
+}
+
+/* floating 通透玻璃：保留背景透色，用薄亮边与内侧高光建立轮廓。 */
+.floating {
+  border: 1px solid var(--border-action-crystal);
+  border-radius: var(--radius-pill);
+  background: var(--surface-action-crystal);
+  color: var(--icon-action-crystal);
+  box-shadow: var(--shadow-action-crystal);
+  -webkit-backdrop-filter: blur(9px) saturate(135%);
+  backdrop-filter: blur(9px) saturate(135%);
+}
+.floating:hover:not(:disabled), .floating[data-force-hover]:not(:disabled),
+.floating[aria-expanded='true']:not(:disabled), .floating[aria-pressed='true']:not(:disabled) {
+  background: var(--surface-action-crystal);
+  color: var(--icon-action-crystal);
+  box-shadow: var(--shadow-action-crystal-hover);
+}
+.floating:active:not(:disabled), .floating[data-force-active]:not(:disabled) {
+  background: var(--surface-action-crystal);
+  color: var(--icon-action-crystal);
+  box-shadow: var(--shadow-action-crystal-pressed);
+}
+.floating:disabled { border-color: var(--border-subtle); background: var(--surface-hover); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* primary 柔橙缎面：顶边高光、短投影与内凹按压；独立于业务页面的光晕样式。 */
+.primary {
+  border: 1px solid var(--border-action-satin);
+  border-radius: var(--radius-pill);
+  background: var(--surface-action-satin);
+  color: var(--text-on-action-satin);
+  box-shadow: var(--shadow-action-satin);
+}
+.primary:hover:not(:disabled), .primary[data-force-hover]:not(:disabled),
+.primary[aria-expanded='true']:not(:disabled), .primary[aria-pressed='true']:not(:disabled) {
+  background: var(--surface-action-satin);
+  color: var(--text-on-action-satin);
+  box-shadow: var(--shadow-action-satin-hover);
+}
+.primary:active:not(:disabled), .primary[data-force-active]:not(:disabled) {
+  background: var(--surface-action-satin);
+  color: var(--text-on-action-satin);
+  box-shadow: var(--shadow-action-satin-pressed);
+}
+.primary:disabled { border-color: var(--border-subtle); background: var(--surface-hover); box-shadow: none; }
+
+.base:focus-visible,
+.base[data-force-focus] {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.base:disabled { color: var(--text-muted); cursor: not-allowed; opacity: 0.5; }
+
+@media (max-width: 767px) {
+  .base { min-width: 44px; min-height: 44px; }
+}

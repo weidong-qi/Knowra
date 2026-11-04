@@ -10,8 +10,14 @@ export const phase1PostgresTests = [
     async run() {
       const { createStorageConfig } = await import('../src/config/storage.config.js');
       assert.equal(createStorageConfig({}).persistenceDriver, 'local-json');
-      assert.equal(createStorageConfig({ PERSISTENCE_DRIVER: 'postgres', DATABASE_URL: 'postgresql://db' }).persistenceDriver, 'postgres');
-      assert.equal(createStorageConfig({ PERSISTENCE_DRIVER: 'postgres', DATABASE_URL: 'postgresql://db' }).databaseUrl, 'postgresql://db');
+      assert.equal(
+        createStorageConfig({ PERSISTENCE_DRIVER: 'postgres', DATABASE_URL: 'postgresql://db' }).persistenceDriver,
+        'postgres'
+      );
+      assert.equal(
+        createStorageConfig({ PERSISTENCE_DRIVER: 'postgres', DATABASE_URL: 'postgresql://db' }).databaseUrl,
+        'postgresql://db'
+      );
       assert.throws(() => createStorageConfig({ PERSISTENCE_DRIVER: 'sqlite' }), /Unsupported PERSISTENCE_DRIVER/);
     }
   },
@@ -22,8 +28,12 @@ export const phase1PostgresTests = [
       let connected = 0;
       let disconnected = 0;
       const client = {
-        async $connect() { connected += 1; },
-        async $disconnect() { disconnected += 1; }
+        async $connect() {
+          connected += 1;
+        },
+        async $disconnect() {
+          disconnected += 1;
+        }
       };
       const runtime = createPrismaRuntime({ client });
       await runtime.connect();
@@ -43,14 +53,16 @@ export const phase1PostgresTests = [
           spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
           folders: [],
           tags: [{ id: 'tag-中文', spaceId: 'space-demo', name: '中文', color: '#fff' }],
-          notes: [{
-            id: 'note-1',
-            spaceId: 'space-demo',
-            title: 'Deleted',
-            rawMarkdown: 'hello [[note-2]]',
-            deleted: true,
-            tagIds: ['tag-中文']
-          }],
+          notes: [
+            {
+              id: 'note-1',
+              spaceId: 'space-demo',
+              title: 'Deleted',
+              rawMarkdown: 'hello [[note-2]]',
+              deleted: true,
+              tagIds: ['tag-中文']
+            }
+          ],
           attachments: [],
           contentAnnotations: []
         },
@@ -61,10 +73,16 @@ export const phase1PostgresTests = [
       assert.equal(result.plan.notes[0].deletedAt, fallbackTimestamp);
       assert.deepEqual(result.plan.notes[0].tagIds, ['tag-中文']);
       assert.deepEqual(result.plan.notes[0].internalLinks, ['note-2']);
-      assert.equal(result.plan.notes[0].contentHash, crypto.createHash('sha256').update('hello [[note-2]]').digest('hex'));
+      assert.equal(
+        result.plan.notes[0].contentHash,
+        crypto.createHash('sha256').update('hello [[note-2]]').digest('hex')
+      );
       assert.equal(result.plan.noteVersions.length, 1);
       assert.equal(result.plan.noteVersions[0].content, 'hello [[note-2]]');
-      assert.equal(result.report.repairs.some((item) => item.code === 'NOTE_CREATED_AT_DEFAULTED'), true);
+      assert.equal(
+        result.report.repairs.some(item => item.code === 'NOTE_CREATED_AT_DEFAULTED'),
+        true
+      );
     }
   },
   {
@@ -76,19 +94,45 @@ export const phase1PostgresTests = [
       let provenanceSchemaChecks = 0;
       try {
         const model = () => ({
-          async findUnique() { return null; },
-          async findMany() { return []; },
-          async findFirst() { return null; },
-          async upsert() { return {}; },
-          async count() { return 0; },
-          async delete() { return {}; },
-          async deleteMany() { return { count: 0 }; },
-          async create() { return {}; },
-          async createMany() { return { count: 0 }; },
-          async update() { return {}; }
+          async findUnique() {
+            return null;
+          },
+          async findMany() {
+            return [];
+          },
+          async findFirst() {
+            return null;
+          },
+          async upsert() {
+            return {};
+          },
+          async count() {
+            return 0;
+          },
+          async delete() {
+            return {};
+          },
+          async deleteMany() {
+            return { count: 0 };
+          },
+          async create() {
+            return {};
+          },
+          async createMany() {
+            return { count: 0 };
+          },
+          async update() {
+            return {};
+          }
         });
         const client = {
-          user: { ...model(), async upsert() { ownerUpserts += 1; return {}; } },
+          user: {
+            ...model(),
+            async upsert() {
+              ownerUpserts += 1;
+              return {};
+            }
+          },
           knowledgeSpace: model(),
           folder: model(),
           tag: model(),
@@ -96,6 +140,7 @@ export const phase1PostgresTests = [
           note: model(),
           noteTag: model(),
           attachment: model(),
+          pdfAnnotation: model(),
           contentAnnotation: model(),
           noteVersion: model(),
           knowledgeItem: model(),
@@ -120,8 +165,12 @@ export const phase1PostgresTests = [
             }
             return [];
           },
-          async $executeRawUnsafe() { return 0; },
-          async $transaction(operation) { return operation(this); }
+          async $executeRawUnsafe() {
+            return 0;
+          },
+          async $transaction(operation) {
+            return operation(this);
+          }
         };
         const app = await createPostgresAppContext({ client, storageRootDir: tempRoot });
         assert.equal(app.driver, 'postgres');
@@ -144,7 +193,16 @@ export const phase1PostgresTests = [
         folders: [],
         tags: [],
         notes: [{ id: 'note-1', spaceId: 'space-demo', title: 'Note', rawMarkdown: 'body' }],
-        attachments: [{ id: 'attachment-1', noteId: 'note-1', fileName: 'missing.txt', mimeType: 'text/plain', size: 3, storagePath: 'storage/uploads/attachment-1-missing.txt' }],
+        attachments: [
+          {
+            id: 'attachment-1',
+            noteId: 'note-1',
+            fileName: 'missing.txt',
+            mimeType: 'text/plain',
+            size: 3,
+            storagePath: 'storage/uploads/attachment-1-missing.txt'
+          }
+        ],
         contentAnnotations: []
       };
       const blocked = buildJsonMigrationPlan({ input, storageRootDir: os.tmpdir() });
@@ -170,7 +228,16 @@ export const phase1PostgresTests = [
             folders: [],
             tags: [],
             notes: [{ id: 'note-1', spaceId: 'space-demo', title: 'Note', rawMarkdown: 'body' }],
-            attachments: [{ id: 'attachment-1', noteId: 'note-1', fileName: 'file.txt', mimeType: 'text/plain', size: 99, storagePath: 'storage/uploads/attachment-1-file.txt' }],
+            attachments: [
+              {
+                id: 'attachment-1',
+                noteId: 'note-1',
+                fileName: 'file.txt',
+                mimeType: 'text/plain',
+                size: 99,
+                storagePath: 'storage/uploads/attachment-1-file.txt'
+              }
+            ],
             contentAnnotations: []
           },
           storageRootDir: tempRoot
@@ -178,7 +245,10 @@ export const phase1PostgresTests = [
         assert.equal(result.canApply, true);
         assert.equal(result.plan.attachments[0].size, 3);
         assert.equal(result.report.attachmentFiles[0].exists, true);
-        assert.equal(result.report.repairs.some((item) => item.code === 'ATTACHMENT_SIZE_REPAIRED'), true);
+        assert.equal(
+          result.report.repairs.some(item => item.code === 'ATTACHMENT_SIZE_REPAIRED'),
+          true
+        );
       } finally {
         fs.rmSync(tempRoot, { recursive: true, force: true });
       }
@@ -196,12 +266,14 @@ export const phase1PostgresTests = [
             spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
             folders: [],
             tags: [],
-            notes: [{
-              id: 'note-broken-space',
-              spaceId: 'space-missing',
-              title: 'Broken',
-              rawMarkdown: 'body'
-            }],
+            notes: [
+              {
+                id: 'note-broken-space',
+                spaceId: 'space-missing',
+                title: 'Broken',
+                rawMarkdown: 'body'
+              }
+            ],
             attachments: [],
             contentAnnotations: []
           }
@@ -221,13 +293,15 @@ export const phase1PostgresTests = [
           spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
           folders: [],
           tags: [],
-          notes: [{
-            id: 'note-hash-mismatch',
-            spaceId: 'space-demo',
-            title: 'Hash mismatch',
-            rawMarkdown: 'actual content',
-            contentHash: '0'.repeat(64)
-          }],
+          notes: [
+            {
+              id: 'note-hash-mismatch',
+              spaceId: 'space-demo',
+              title: 'Hash mismatch',
+              rawMarkdown: 'actual content',
+              contentHash: '0'.repeat(64)
+            }
+          ],
           attachments: [],
           contentAnnotations: []
         }
@@ -235,7 +309,7 @@ export const phase1PostgresTests = [
 
       assert.equal(result.canApply, false);
       assert.equal(
-        result.report.errors.some((item) => item.code === 'NOTE_CONTENT_HASH_MISMATCH'),
+        result.report.errors.some(item => item.code === 'NOTE_CONTENT_HASH_MISMATCH'),
         true
       );
       assert.equal(
@@ -253,12 +327,14 @@ export const phase1PostgresTests = [
           spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
           folders: [],
           tags: [],
-          notes: [{
-            id: 'note-insecure-image',
-            spaceId: 'space-demo',
-            title: 'Insecure image',
-            rawMarkdown: '![diagram](http://example.test/diagram.png)'
-          }],
+          notes: [
+            {
+              id: 'note-insecure-image',
+              spaceId: 'space-demo',
+              title: 'Insecure image',
+              rawMarkdown: '![diagram](http://example.test/diagram.png)'
+            }
+          ],
           attachments: [],
           contentAnnotations: []
         }
@@ -266,7 +342,7 @@ export const phase1PostgresTests = [
 
       assert.equal(result.canApply, false);
       assert.deepEqual(
-        result.report.errors.find((error) => error.code === 'INSECURE_IMAGE_URL'),
+        result.report.errors.find(error => error.code === 'INSECURE_IMAGE_URL'),
         {
           code: 'INSECURE_IMAGE_URL',
           message: 'Note contains insecure HTTP image sources and must be repaired before migration',
@@ -294,7 +370,7 @@ export const phase1PostgresTests = [
 
       assert.equal(result.canApply, false);
       assert.equal(
-        result.report.errors.some((item) => item.code === 'OWNER_BOUNDARY_VIOLATION'),
+        result.report.errors.some(item => item.code === 'OWNER_BOUNDARY_VIOLATION'),
         true
       );
     }
@@ -317,23 +393,24 @@ export const phase1PostgresTests = [
       });
 
       assert.equal(result.canApply, true);
-      assert.deepEqual(result.plan.users, [{
-        id: 'demo',
-        email: null,
-        passwordHash: null,
-        nickname: null,
-        status: 'active',
-        createdAt: '2026-07-30T00:00:00.000Z',
-        updatedAt: '2026-07-30T00:00:00.000Z'
-      }]);
+      assert.deepEqual(result.plan.users, [
+        {
+          id: 'demo',
+          email: null,
+          passwordHash: null,
+          nickname: null,
+          status: 'active',
+          createdAt: '2026-07-30T00:00:00.000Z',
+          updatedAt: '2026-07-30T00:00:00.000Z'
+        }
+      ]);
     }
   },
   {
     name: 'PostgreSQL note repository rejects a lost-update race',
     async run() {
-      const { createPostgresNoteRepository } = await import(
-        '../src/modules/knowledge/infrastructure/postgres/note-repository.js'
-      );
+      const { createPostgresNoteRepository } =
+        await import('../src/modules/knowledge/infrastructure/postgres/note-repository.ts');
       const existing = {
         id: 'note-race',
         spaceId: 'space-demo',
@@ -353,68 +430,71 @@ export const phase1PostgresTests = [
       };
       const db = {
         note: {
-          async findUnique() { return existing; },
-          async updateMany() { return { count: 0 }; }
+          async findUnique() {
+            return existing;
+          },
+          async updateMany() {
+            return { count: 0 };
+          }
         },
         noteTag: {
           async deleteMany() {},
           async createMany() {}
         },
-        async $transaction(operation) { return operation(this); }
+        async $transaction(operation) {
+          return operation(this);
+        }
       };
       const repository = createPostgresNoteRepository({ db });
 
       await assert.rejects(
-        () => repository.save({
-          ...existing,
-          createdAt: existing.createdAt.toISOString(),
-          updatedAt: '2026-07-30T00:02:00.000Z',
-          tagIds: []
-        }, {
-          expectedUpdatedAt: '2026-07-30T00:00:00.000Z'
-        }),
-        (error) => (
-          error.code === 'NOTE_UPDATE_CONFLICT'
-          && error.statusCode === 409
-        )
+        () =>
+          repository.save(
+            {
+              ...existing,
+              createdAt: existing.createdAt.toISOString(),
+              updatedAt: '2026-07-30T00:02:00.000Z',
+              tagIds: []
+            },
+            {
+              expectedUpdatedAt: '2026-07-30T00:00:00.000Z'
+            }
+          ),
+        error => error.code === 'NOTE_UPDATE_CONFLICT' && error.statusCode === 409
       );
     }
   },
   {
     name: 'PostgreSQL error wrapper preserves domain errors and maps transaction retries',
     async run() {
-      const { withPostgresErrors } = await import(
-        '../src/infrastructure/postgres-errors.js'
-      );
+      const { withPostgresErrors } = await import('../src/infrastructure/postgres-errors.ts');
       const domainError = new Error('domain conflict');
       domainError.code = 'NOTE_HAS_QUESTION_SOURCE';
       domainError.statusCode = 409;
       await assert.rejects(
-        () => withPostgresErrors(async () => {
-          throw domainError;
-        }),
-        (error) => error === domainError
+        () =>
+          withPostgresErrors(async () => {
+            throw domainError;
+          }),
+        error => error === domainError
       );
 
       await assert.rejects(
-        () => withPostgresErrors(async () => {
-          const retryError = new Error('serialization failure');
-          retryError.code = 'P2034';
-          throw retryError;
-        }),
-        (error) => (
-          error.code === 'DATABASE_CONCURRENT_UPDATE'
-          && error.statusCode === 409
-        )
+        () =>
+          withPostgresErrors(async () => {
+            const retryError = new Error('serialization failure');
+            retryError.code = 'P2034';
+            throw retryError;
+          }),
+        error => error.code === 'DATABASE_CONCURRENT_UPDATE' && error.statusCode === 409
       );
     }
   },
   {
     name: 'PostgreSQL recycle-bin cleanup preflights every formal evidence reference before deleting',
     async run() {
-      const { createAsyncNoteService } = await import(
-        '../src/modules/knowledge/application/postgres-async/note-service.js'
-      );
+      const { createAsyncNoteService } =
+        await import('../src/modules/knowledge/application/postgres-async/note-service.js');
       const notes = [
         {
           id: 'note-unreferenced',
@@ -450,10 +530,7 @@ export const phase1PostgresTests = [
 
       await assert.rejects(
         () => service.emptyRecycleBin('space-demo'),
-        (error) => (
-          error.code === 'NOTE_HAS_KNOWLEDGE_EVIDENCE'
-          && error.statusCode === 409
-        )
+        error => error.code === 'NOTE_HAS_KNOWLEDGE_EVIDENCE' && error.statusCode === 409
       );
       assert.equal(deleteCalls, 0);
     }
@@ -461,15 +538,13 @@ export const phase1PostgresTests = [
   {
     name: 'maintenance gate drains active work and blocks later operations during maintenance',
     async run() {
-      const { createMaintenanceGate } = await import(
-        '../src/infrastructure/maintenance-gate.js'
-      );
+      const { createMaintenanceGate } = await import('../src/infrastructure/maintenance-gate.ts');
       const gate = createMaintenanceGate();
       const events = [];
       let releaseActive;
       const active = gate.runOperation(async () => {
         events.push('active:start');
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           releaseActive = resolve;
         });
         events.push('active:end');
@@ -486,31 +561,24 @@ export const phase1PostgresTests = [
 
       releaseActive();
       await Promise.all([active, maintenance, later]);
-      assert.deepEqual(events, [
-        'active:start',
-        'active:end',
-        'maintenance',
-        'later'
-      ]);
+      assert.deepEqual(events, ['active:start', 'active:end', 'maintenance', 'later']);
     }
   },
   {
     name: 'maintenance gate serializes multiple maintenance waiters after draining active work',
     async run() {
-      const { createMaintenanceGate } = await import(
-        '../src/infrastructure/maintenance-gate.js'
-      );
+      const { createMaintenanceGate } = await import('../src/infrastructure/maintenance-gate.ts');
       const gate = createMaintenanceGate();
       const events = [];
       let releaseActive;
       let releaseFirstMaintenance;
       let markFirstMaintenanceStarted;
-      const firstMaintenanceStarted = new Promise((resolve) => {
+      const firstMaintenanceStarted = new Promise(resolve => {
         markFirstMaintenanceStarted = resolve;
       });
       const active = gate.runOperation(async () => {
         events.push('active:start');
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           releaseActive = resolve;
         });
         events.push('active:end');
@@ -519,7 +587,7 @@ export const phase1PostgresTests = [
       const firstMaintenance = gate.runMaintenance(async () => {
         events.push('maintenance:1:start');
         markFirstMaintenanceStarted();
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           releaseFirstMaintenance = resolve;
         });
         events.push('maintenance:1:end');
@@ -534,19 +602,10 @@ export const phase1PostgresTests = [
       releaseActive();
       await firstMaintenanceStarted;
       await Promise.resolve();
-      assert.deepEqual(events, [
-        'active:start',
-        'active:end',
-        'maintenance:1:start'
-      ]);
+      assert.deepEqual(events, ['active:start', 'active:end', 'maintenance:1:start']);
 
       releaseFirstMaintenance();
-      await Promise.all([
-        active,
-        firstMaintenance,
-        secondMaintenance,
-        later
-      ]);
+      await Promise.all([active, firstMaintenance, secondMaintenance, later]);
       assert.deepEqual(events, [
         'active:start',
         'active:end',
@@ -560,9 +619,7 @@ export const phase1PostgresTests = [
   {
     name: 'PostgreSQL advisory lock separates shared reads from exclusive mutations',
     async run() {
-      const {
-        createPostgresAdvisoryLock
-      } = await import('../src/infrastructure/postgres-advisory-lock.js');
+      const { createPostgresAdvisoryLock } = await import('../src/infrastructure/postgres-advisory-lock.ts');
       const lockCalls = [];
       const client = {
         async $transaction(operation, options) {
@@ -589,10 +646,8 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration apply holds the exclusive PostgreSQL advisory lock',
     async run() {
-      const {
-        applyJsonMigration,
-        buildJsonMigrationPlan
-      } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { applyJsonMigration, buildJsonMigrationPlan } =
+        await import('../src/infrastructure/migration/json-to-postgres.js');
       const prepared = buildJsonMigrationPlan({
         ownerId: 'demo',
         input: {
@@ -622,8 +677,16 @@ export const phase1PostgresTests = [
                 events.push(`spaces:${data.length}`);
               }
             },
-            tagGroup: { async createMany({ data }) { events.push(`groups:${data.length}`); } },
-            knowledgeArtifactProvenance: { async findMany() { return []; } }
+            tagGroup: {
+              async createMany({ data }) {
+                events.push(`groups:${data.length}`);
+              }
+            },
+            knowledgeArtifactProvenance: {
+              async findMany() {
+                return [];
+              }
+            }
           });
         }
       };
@@ -646,7 +709,9 @@ export const phase1PostgresTests = [
       let disconnectCalls = 0;
       const client = {
         user: {
-          async upsert() { return {}; }
+          async upsert() {
+            return {};
+          }
         },
         knowledgeSpace: {
           async findMany() {
@@ -654,18 +719,18 @@ export const phase1PostgresTests = [
           }
         },
         async $connect() {},
-        async $disconnect() { disconnectCalls += 1; }
+        async $disconnect() {
+          disconnectCalls += 1;
+        }
       };
 
       await assert.rejects(
-        () => createPostgresAppContext({
-          client,
-          ownerId: 'owner-a'
-        }),
-        (error) => (
-          error.code === 'OWNER_BOUNDARY_VIOLATION'
-          && error.statusCode === 409
-        )
+        () =>
+          createPostgresAppContext({
+            client,
+            ownerId: 'owner-a'
+          }),
+        error => error.code === 'OWNER_BOUNDARY_VIOLATION' && error.statusCode === 409
       );
       assert.equal(disconnectCalls, 1);
     }
@@ -673,18 +738,17 @@ export const phase1PostgresTests = [
   {
     name: 'single-owner boundary rejects mixed local knowledge spaces',
     async run() {
-      const { resolveSingleOwnerId } = await import(
-        '../src/infrastructure/owner-boundary.js'
-      );
+      const { resolveSingleOwnerId } = await import('../src/infrastructure/owner-boundary.ts');
 
       assert.throws(
-        () => resolveSingleOwnerId({
-          spaces: [
-            { id: 'space-a', userId: 'owner-a' },
-            { id: 'space-b', userId: 'owner-b' }
-          ]
-        }),
-        (error) => error.code === 'OWNER_BOUNDARY_VIOLATION'
+        () =>
+          resolveSingleOwnerId({
+            spaces: [
+              { id: 'space-a', userId: 'owner-a' },
+              { id: 'space-b', userId: 'owner-b' }
+            ]
+          }),
+        error => error.code === 'OWNER_BOUNDARY_VIOLATION'
       );
     }
   },
@@ -692,33 +756,35 @@ export const phase1PostgresTests = [
     name: 'JSON migration blocks absolute, traversal and symbolic-link attachment paths even when missing files are allowed',
     async run() {
       const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
-      const tempContainer = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'knowra-phase1-path-safety-')
-      );
+      const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-phase1-path-safety-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
       const outsidePath = path.join(tempContainer, 'outside-secret.txt');
       fs.mkdirSync(uploadsDir, { recursive: true });
       fs.writeFileSync(outsidePath, 'migration must not read this');
 
-      const buildInput = (attachment) => ({
+      const buildInput = attachment => ({
         spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
         folders: [],
         tags: [],
-        notes: [{
-          id: 'note-1',
-          spaceId: 'space-demo',
-          title: 'Note',
-          rawMarkdown: 'body'
-        }],
-        attachments: [{
-          id: 'attachment-unsafe',
-          noteId: 'note-1',
-          fileName: 'secret.txt',
-          mimeType: 'text/plain',
-          size: 0,
-          ...attachment
-        }],
+        notes: [
+          {
+            id: 'note-1',
+            spaceId: 'space-demo',
+            title: 'Note',
+            rawMarkdown: 'body'
+          }
+        ],
+        attachments: [
+          {
+            id: 'attachment-unsafe',
+            noteId: 'note-1',
+            fileName: 'secret.txt',
+            mimeType: 'text/plain',
+            size: 0,
+            ...attachment
+          }
+        ],
         contentAnnotations: []
       });
 
@@ -730,9 +796,7 @@ export const phase1PostgresTests = [
         });
         assert.equal(absolute.canApply, false);
         assert.equal(
-          absolute.report.errors.some(
-            (item) => item.code === 'ATTACHMENT_PATH_UNSAFE'
-          ),
+          absolute.report.errors.some(item => item.code === 'ATTACHMENT_PATH_UNSAFE'),
           true
         );
 
@@ -743,16 +807,11 @@ export const phase1PostgresTests = [
         });
         assert.equal(traversal.canApply, false);
         assert.equal(
-          traversal.report.errors.some(
-            (item) => item.code === 'ATTACHMENT_PATH_UNSAFE'
-          ),
+          traversal.report.errors.some(item => item.code === 'ATTACHMENT_PATH_UNSAFE'),
           true
         );
 
-        const symlinkPath = path.join(
-          uploadsDir,
-          'attachment-unsafe-secret.txt'
-        );
+        const symlinkPath = path.join(uploadsDir, 'attachment-unsafe-secret.txt');
         try {
           fs.symlinkSync(outsidePath, symlinkPath);
         } catch (error) {
@@ -770,15 +829,10 @@ export const phase1PostgresTests = [
         });
         assert.equal(symlink.canApply, false);
         assert.equal(
-          symlink.report.errors.some(
-            (item) => item.code === 'ATTACHMENT_PATH_SYMLINK'
-          ),
+          symlink.report.errors.some(item => item.code === 'ATTACHMENT_PATH_SYMLINK'),
           true
         );
-        assert.equal(
-          fs.readFileSync(outsidePath, 'utf8'),
-          'migration must not read this'
-        );
+        assert.equal(fs.readFileSync(outsidePath, 'utf8'), 'migration must not read this');
       } finally {
         fs.rmSync(tempContainer, { recursive: true, force: true });
       }

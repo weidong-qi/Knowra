@@ -1,7 +1,16 @@
-import { calculateContentHash } from '../domain/note-version.js';
-import { resolveAnalysisScopeNoteVersion } from '../domain/analysis-scope-version-alias.js';
+import { calculateContentHash } from '../domain/note-version.ts';
+import { resolveAnalysisScopeNoteVersion } from '../domain/analysis-scope-version-alias.ts';
 
-export function buildNoteVersionPrunePreview({ note, versions, evidence, provenance = [], questionSources, annotations, exclusions, analysisScopes }) {
+export function buildNoteVersionPrunePreview({
+  note,
+  versions,
+  evidence,
+  provenance = [],
+  questionSources,
+  annotations,
+  exclusions,
+  analysisScopes
+}) {
   const currentHash = calculateContentHash(note.rawMarkdown);
   const evidenceByVersion = new Map();
   const versionsByEvidence = new Map();
@@ -32,25 +41,36 @@ export function buildNoteVersionPrunePreview({ note, versions, evidence, provena
       for (const id of evidenceByVersion.get(version.id) ?? []) references.push({ type: 'knowledgeEvidence', id });
       for (const record of provenance) {
         // 保留 some 的原顺序和短路；未到达的来源不能因预建索引而提前报错。
-        if (record.sources?.some(source => {
-          if (!provenanceMatches.has(source)) {
-            provenanceMatches.set(source, source.noteId === note.id
-              ? new Set([source.originNoteVersionId, ...(versionsByEvidence.get(source.evidenceId) ?? [])])
-              : new Set());
-          }
-          return provenanceMatches.get(source).has(version.id);
-        })) references.push({ type: 'knowledgeArtifactProvenance', id: record.id });
+        if (
+          record.sources?.some(source => {
+            if (!provenanceMatches.has(source)) {
+              provenanceMatches.set(
+                source,
+                source.noteId === note.id
+                  ? new Set([source.originNoteVersionId, ...(versionsByEvidence.get(source.evidenceId) ?? [])])
+                  : new Set()
+              );
+            }
+            return provenanceMatches.get(source).has(version.id);
+          })
+        )
+          references.push({ type: 'knowledgeArtifactProvenance', id: record.id });
       }
       for (const id of questionReferences(version.id)) references.push({ type: 'questionSource', id });
       for (const id of annotationReferences(version.id)) references.push({ type: 'contentAnnotation', id });
       for (const id of exclusionReferences(version.id)) references.push({ type: 'annotationExclusion', id });
-      for (const scope of analysisScopes) if (scope.noteVersions?.some(binding => {
-        if (binding.noteId !== note.id) return false;
-        const resolved = resolvedScopes.get(scope) ?? new Map();
-        resolvedScopes.set(scope, resolved);
-        if (!resolved.has(binding)) resolved.set(binding, resolveAnalysisScopeNoteVersion(scope, binding, versions).id);
-        return resolved.get(binding) === version.id;
-      })) references.push({ type: 'analysisScopeSnapshot', id: scope.id });
+      for (const scope of analysisScopes)
+        if (
+          scope.noteVersions?.some(binding => {
+            if (binding.noteId !== note.id) return false;
+            const resolved = resolvedScopes.get(scope) ?? new Map();
+            resolvedScopes.set(scope, resolved);
+            if (!resolved.has(binding))
+              resolved.set(binding, resolveAnalysisScopeNoteVersion(scope, binding, versions).id);
+            return resolved.get(binding) === version.id;
+          })
+        )
+          references.push({ type: 'analysisScopeSnapshot', id: scope.id });
       return {
         id: version.id,
         createdAt: version.createdAt,

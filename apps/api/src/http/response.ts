@@ -1,11 +1,11 @@
 import type { OutgoingHttpHeaders } from 'node:http';
 
 export interface ResponseWriter {
-  writeHead(statusCode: number, headers?: OutgoingHttpHeaders): unknown;
-  end(content?: string | Uint8Array): unknown;
+  writeHead(statusCode: number, headers?: OutgoingHttpHeaders): void;
+  end(content?: string | Uint8Array): void;
 }
 
-export function sendJson(response: ResponseWriter, statusCode: number, payload: unknown): void {
+export function sendJson<Payload>(response: ResponseWriter, statusCode: number, payload: Payload): void {
   response.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8'
   });
@@ -33,6 +33,7 @@ const ACTIVE_CONTENT_TYPES = new Set([
   'text/xml'
 ]);
 
+/** MIME 与文件名可来自导入或持久化的外部元数据，在响应边界保留原有归一化。 */
 export function sendBinary(
   response: ResponseWriter,
   statusCode: number,

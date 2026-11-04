@@ -104,22 +104,25 @@ export function anchorForSourceRange(
 ): ContentAnchor;
 export function anchorForBlock(projection: MarkdownProjection, blockIndex: number): ContentAnchor;
 export function anchorForSection(projection: MarkdownProjection, headingIndex: number): ContentAnchor;
-export function resolveAnchor(
-  markdown: string,
-  anchor: ContentAnchor
-): {
+type AnchorResolution<Anchor = ContentAnchor> = {
   status: 'resolved' | 'needsReview' | 'missing';
   reason: string | null;
-  anchor?: ContentAnchor;
+  anchor?: Anchor;
   projection: MarkdownProjection;
   quoteText?: string;
   segments?: AnchorSegment[];
 };
+export function resolveAnchor(markdown: string, anchor: ContentAnchor): AnchorResolution;
+export function resolveAnchor(
+  markdown: string,
+  anchor: Partial<ContentAnchor>
+): AnchorResolution<Partial<ContentAnchor>>;
+
 export function relocateAnchor(
   markdown: string,
   anchor: ContentAnchor
-): ReturnType<typeof resolveAnchor> & { candidates?: ContentAnchor[] };
-export function followSectionAnchor(markdown: string, anchor: ContentAnchor): ReturnType<typeof resolveAnchor>;
+): AnchorResolution & { candidates?: ContentAnchor[] };
+export function followSectionAnchor(markdown: string, anchor: ContentAnchor): AnchorResolution;
 export function headingPathForSourceOffset(projection: MarkdownProjection, sourceOffset: number): string[];
 
 export interface SourceEdit {
@@ -228,10 +231,21 @@ export function adoptIdentityIds(
   identity: unknown,
   editorBlocks: IdentityEditorBlock[]
 ): Map<number, string> | null;
+export interface IdentitySourceAnnotation {
+  id?: string;
+  scopeType?: string;
+  anchorStatus?: string;
+  anchorReason?: string | null;
+  lifecycleStatus?: string;
+  anchor?: Partial<Pick<ContentAnchor, 'sourceStart' | 'sourceEnd' | 'quoteText'>> | null;
+  fromPosition?: number;
+  toPosition?: number;
+  quoteText?: string;
+}
 export function compareIdentityShadow(input: {
   markdown: string;
   editorState: unknown;
-  annotations: Array<Record<string, any>>;
+  annotations: IdentitySourceAnnotation[];
 }): IdentityShadowResult;
 export interface AnnotationStructure {
   formatVersion: 1;
@@ -248,7 +262,7 @@ export function followAnchorChanges(
   after: string,
   anchor: ContentAnchor,
   edits?: SourceEdit[] | null
-): ReturnType<typeof resolveAnchor>;
+): AnchorResolution;
 export function updateStructure(
   before: string,
   after: string,
@@ -262,7 +276,7 @@ export function anchorForListItem(
   itemPath: string,
   allowEmpty?: boolean
 ): ContentAnchor;
-export function followListAnchor(markdown: string, anchor: ContentAnchor): ReturnType<typeof resolveAnchor>;
+export function followListAnchor(markdown: string, anchor: ContentAnchor): AnchorResolution;
 export function listTracking(
   projection: MarkdownProjection,
   anchor: ContentAnchor,
@@ -274,7 +288,7 @@ export function followListAnchorChanges(
   anchor: ContentAnchor,
   edits?: SourceEdit[] | null,
   structures?: { before?: AnnotationStructure | null; after?: AnnotationStructure | null }
-): ReturnType<typeof resolveAnchor>;
+): AnchorResolution;
 
 /** 块内偏移模型：与 parseIdentityBlocks 同序，非文本块为 null。 */
 export interface InlineOffsetModel {
@@ -305,18 +319,35 @@ export type IdentityBinding = { formatVersion: 2; contentHash: string } & (
   | { scopeType: 'blocks'; startBlockId: string; endBlockId: string }
   | { scopeType: 'section' | 'list'; rootBlockId: string }
 );
+export interface IdentityBindingCache {
+  markdown?: string;
+  identitySignature?: string;
+  context?: {
+    blocks: ReturnType<typeof parseIdentityBlocks>;
+    models: IdentityBlockModel[];
+    ids: string[];
+    contentHash: string;
+  } | null;
+}
 export const IDENTITY_BINDING_FORMAT: 2;
 export function bindingFromAnchor(
   markdown: string,
   identity: unknown,
-  annotation: Record<string, any>
+  annotation: IdentitySourceAnnotation,
+  cache?: IdentityBindingCache | null
 ): IdentityBinding | null;
 export function bindingFromEditor(
   markdown: string,
   identity: unknown,
-  reported: IdentityEditorAnnotation
+  reported: IdentityEditorAnnotation,
+  cache?: IdentityBindingCache | null
 ): IdentityBinding | null;
-export function validBinding(markdown: string, identity: unknown, binding: unknown): binding is IdentityBinding;
+export function validBinding(
+  markdown: string,
+  identity: unknown,
+  binding: unknown,
+  cache?: IdentityBindingCache | null
+): binding is IdentityBinding;
 export function bindingSourceRange(
   markdown: string,
   identity: unknown,

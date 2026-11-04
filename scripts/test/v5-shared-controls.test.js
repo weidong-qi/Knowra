@@ -3,8 +3,8 @@ import { join, resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-const directory = resolve(import.meta.dirname, '../../apps/web-v4/src/components/ui');
-const readCss = (file) => readFileSync(join(directory, file), 'utf8');
+const directory = resolve(import.meta.dirname, '../../apps/web/src/components/ui');
+const readCss = file => readFileSync(join(directory, file), 'utf8');
 
 const css = {
   button: readCss('./button/Button.module.css'),
@@ -19,7 +19,7 @@ const css = {
 
 function declarations(source, selector) {
   return [...source.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-    .filter(([, selectors]) => selectors.split(',').some((value) => value.trim() === selector))
+    .filter(([, selectors]) => selectors.split(',').some(value => value.trim() === selector))
     .map(([, , body]) => body)
     .join('\n');
 }
@@ -52,12 +52,15 @@ describe('V5 shared control styles', () => {
     const normal = index.split('@container (max-width:560px)')[0];
     assert.doesNotMatch(declarations(normal, '.breadcrumb'), /display:\s*none/);
     assert.match(declarations(index, '.heading strong'), /text-overflow:\s*ellipsis/);
-    assert.match(header, /path\.filter\(\(segment, index\) => index < path\.length - 1 && !segment\.current && segment\.onNavigate\)/);
-    assert.match(header, /\{ancestors\.length \? <SubmenuTrigger>/);
+    assert.match(
+      header,
+      /path\.filter\(\(segment, index\) => index < path\.length - 1 && !segment\.current && segment\.onNavigate\)/
+    );
+    assert.match(header, /\{ancestors\.length\s*\?\s*(?:\(\s*)?<SubmenuTrigger>/);
     assert.match(header, /<MenuItem id="path-navigation">路径导航<\/MenuItem>/);
-    assert.match(header, /<Menu ariaLabel="路径导航"/);
+    assert.match(header, /<Menu\s+ariaLabel="路径导航"/);
     assert.match(header, /ancestors\.find\(segment => segment\.id === key\)\?\.onNavigate\?\.\(\)/);
-    assert.match(header, /ancestors\.map\(segment => <MenuItem/);
+    assert.match(header, /ancestors\.map\(segment\s*=>\s*(?:\(\s*)?<MenuItem/);
   });
 
   it('reserves an independently reachable notes body in short viewports', () => {
@@ -119,7 +122,10 @@ describe('V5 shared control styles', () => {
     assert.match(searchFocus, /border-color:\s*var\(--border-strong\)/);
     assert.doesNotMatch(searchFocus, /--accent/);
     assert.ok(searchForced, 'search shell needs a forced-color fallback');
-    assert.match(declarations(searchForced, '.shell:not([data-disabled]):focus-within'), /outline:\s*2px solid Highlight/);
+    assert.match(
+      declarations(searchForced, '.shell:not([data-disabled]):focus-within'),
+      /outline:\s*2px solid Highlight/
+    );
   });
 
   it('keeps invalid states distinct without requiring a thick normal-theme outline', () => {
@@ -146,23 +152,39 @@ describe('V5 shared control styles', () => {
     }
   });
 
-  it('keeps button targets wide enough on touch screens', () => {
-    const touch = css.button.split('@media (max-width: 767px), (any-pointer: coarse)')[1];
-    assert.match(declarations(touch, '.btn'), /--button-min-height:\s*44px/);
+  it('uses 44px button targets on phones and regular sizes on tablets and desktops', () => {
+    const [regular, phone] = css.button.split('@media (max-width: 767px) {');
+    assert.ok(phone, '44px button targets must use the phone-width media condition only');
+    assert.match(declarations(regular, '.btn'), /(?:^|;)\s*height:\s*36px(?:;|$)/);
+    assert.match(declarations(regular, '.btn'), /--button-min-height:\s*36px/);
+    assert.doesNotMatch(declarations(regular, '.btn'), /(?:--button-min-height|min-height):\s*44px/);
+    assert.match(declarations(phone, '.btn'), /--button-min-height:\s*44px/);
+    assert.match(declarations(phone, '.btn'), /min-height:\s*var\(--button-min-height\)/);
   });
 
   it('styles React Aria select options through their accessible role', () => {
-    assert.ok(declarations(css.collection, ".listbox [role='option']").includes('border-radius: var(--radius-control)'));
+    assert.ok(
+      declarations(css.collection, ".listbox [role='option']").includes('border-radius: var(--radius-control)')
+    );
     assert.ok(declarations(css.collection, ".listbox [role='option'][data-selected]").includes('var(--accent-text)'));
     assert.ok(declarations(css.collection, ".listbox [role='option'][data-disabled]").includes('cursor: not-allowed'));
   });
 
-  it('keeps sidebar navigation neutral until selected and preserves touch targets', () => {
+  it('keeps sidebar navigation neutral and expands ghost targets only on phone-width viewports', () => {
     assert.ok(declarations(css.navigation, '.icon').includes('--knowra-icon-accent: currentColor'));
-    assert.ok(declarations(css.navigation, ".item[aria-current='page']").includes('color: var(--nav-selected-ink, var(--text-primary))'));
+    assert.ok(
+      declarations(css.navigation, ".item[aria-current='page']").includes(
+        'color: var(--nav-selected-ink, var(--text-primary))'
+      )
+    );
     assert.ok(declarations(css.navigation, ".item[aria-current='page'] .icon").includes('color: var(--accent)'));
     assert.ok(declarations(css.navigation, '.compact').includes('min-height: 30px'));
-    assert.ok(css.ghost.includes('(any-pointer: coarse)'));
-    assert.ok(css.ghost.includes('min-width: 44px; min-height: 44px'));
+    const [regular, phone] = css.ghost.split('@media (max-width: 767px) {');
+    assert.ok(phone, '44px ghost targets must use the phone-width media condition only');
+    assert.match(declarations(regular, '.size30'), /(?:^|;)\s*width:\s*30px(?:;|$)/);
+    assert.match(declarations(regular, '.size30'), /(?:^|;)\s*height:\s*30px(?:;|$)/);
+    assert.doesNotMatch(declarations(regular, '.base'), /min-(?:width|height):\s*44px/);
+    assert.match(declarations(phone, '.base'), /min-width:\s*44px/);
+    assert.match(declarations(phone, '.base'), /min-height:\s*44px/);
   });
 });

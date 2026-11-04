@@ -2,8 +2,14 @@ import { createNoteDependencyLifecycle } from './application/note-dependency-lif
 import { withIdentityBindingRefresh } from './application/annotation-identity-binding.js';
 import { marksOnlyDependencies, withInlineAnnotations } from './application/inline-annotations.js';
 import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.js';
+import { createInMemoryPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createNavigationReferencePolicy } from './application/navigation-reference-policy.js';
-import { taskCoverage, supplementPurgePreview, assertPurgeDatasetEpoch, assertManualPurgeScope } from './application/asset-purge-guard.js';
+import {
+  taskCoverage,
+  supplementPurgePreview,
+  assertPurgeDatasetEpoch,
+  assertManualPurgeScope
+} from './application/asset-purge-guard.js';
 import { createNoteService } from './application/note-service.js';
 import { createFolderService } from './application/folder-service.js';
 import { createTagService } from './application/tag-service.js';
@@ -46,41 +52,68 @@ import { createQuestionService } from './application/question-service.js';
 import { createLocalTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
 import { createWorkspaceQueryService } from './application/workspace-query-service.js';
 import { bindLocalServiceTransactions } from './application/local-service-transactions.js';
-import {
-  conflictError,
-  validationError
-} from './application/knowledge-errors.js';
+import { conflictError, validationError } from './application/knowledge-errors.js';
 
 export function createKnowledgeModule(options = {}) {
   const noteRepository = options.noteRepository ?? createInMemoryNoteRepository();
   const folderRepository = options.folderRepository ?? createInMemoryFolderRepository();
   const tagRepository = options.tagRepository ?? createInMemoryTagRepository();
   const tagGroupRepository = options.tagGroupRepository ?? createInMemoryTagGroupRepository();
-  const knowledgeSpaceRepository =
-    options.knowledgeSpaceRepository ?? createInMemoryKnowledgeSpaceRepository();
+  const knowledgeSpaceRepository = options.knowledgeSpaceRepository ?? createInMemoryKnowledgeSpaceRepository();
   const contentAnnotationRepository =
     options.contentAnnotationRepository ?? createInMemoryContentAnnotationRepository();
-  const annotationExclusionRepository = options.annotationExclusionRepository ?? createInMemoryAnnotationExclusionRepository({ records: options.annotationExclusions ?? [] });
-  const annotationRevisionRepository = options.annotationRevisionRepository ?? createInMemoryAnnotationRevisionRepository({ records: options.annotationRevisions ?? [] });
-  const analysisScopeRepository = options.analysisScopeRepository ?? createInMemoryAnalysisScopeRepository({ records: options.analysisScopeSnapshots ?? [] });
-  const noteVersionRepository = options.noteVersionRepository ?? createInMemoryNoteVersionRepository({ records: options.noteVersions ?? [] });
-  const knowledgeItemRepository = options.knowledgeItemRepository ?? createInMemoryKnowledgeItemRepository({ records: options.knowledgeItems ?? [] });
-  const knowledgeEvidenceRepository = options.knowledgeEvidenceRepository ?? createInMemoryKnowledgeEvidenceRepository({ records: options.knowledgeEvidence ?? [] });
-  const knowledgeArtifactProvenanceRepository = options.knowledgeArtifactProvenanceRepository ?? createInMemoryKnowledgeArtifactProvenanceRepository({ records: options.knowledgeArtifactProvenance ?? [] });
-  const getKnowledgeProvenance = createKnowledgeArtifactProvenanceReader({ knowledgeArtifactProvenanceRepository, knowledgeItemRepository, knowledgeEvidenceRepository, noteRepository, noteVersionRepository, knowledgeSpaceRepository });
-  const learningObjectiveRepository = options.learningObjectiveRepository ?? createInMemoryLearningObjectiveRepository({ records: options.learningObjectives ?? [] });
-  const examProfileRepository = options.examProfileRepository ?? createInMemoryExamProfileRepository({ records: options.examProfiles ?? [] });
-  const examFocusRepository = options.examFocusRepository ?? createInMemoryExamFocusRepository({ records: options.examFocuses ?? [] });
-  const questionRepository = options.questionRepository ?? createInMemoryQuestionRepository({ records: options.questions ?? [] });
-  const questionObjectiveRepository = options.questionObjectiveRepository ?? createInMemoryQuestionObjectiveRepository({ records: options.questionObjectives ?? [] });
-  const questionSourceRepository = options.questionSourceRepository ?? createInMemoryQuestionSourceRepository({ records: options.questionSources ?? [] });
+  const pdfAnnotationRepository =
+    options.pdfAnnotationRepository ?? createInMemoryPdfAnnotationRepository({ records: options.pdfAnnotations ?? [] });
+  const annotationExclusionRepository =
+    options.annotationExclusionRepository ??
+    createInMemoryAnnotationExclusionRepository({ records: options.annotationExclusions ?? [] });
+  const annotationRevisionRepository =
+    options.annotationRevisionRepository ??
+    createInMemoryAnnotationRevisionRepository({ records: options.annotationRevisions ?? [] });
+  const analysisScopeRepository =
+    options.analysisScopeRepository ??
+    createInMemoryAnalysisScopeRepository({ records: options.analysisScopeSnapshots ?? [] });
+  const noteVersionRepository =
+    options.noteVersionRepository ?? createInMemoryNoteVersionRepository({ records: options.noteVersions ?? [] });
+  const knowledgeItemRepository =
+    options.knowledgeItemRepository ?? createInMemoryKnowledgeItemRepository({ records: options.knowledgeItems ?? [] });
+  const knowledgeEvidenceRepository =
+    options.knowledgeEvidenceRepository ??
+    createInMemoryKnowledgeEvidenceRepository({ records: options.knowledgeEvidence ?? [] });
+  const knowledgeArtifactProvenanceRepository =
+    options.knowledgeArtifactProvenanceRepository ??
+    createInMemoryKnowledgeArtifactProvenanceRepository({ records: options.knowledgeArtifactProvenance ?? [] });
+  const getKnowledgeProvenance = createKnowledgeArtifactProvenanceReader({
+    knowledgeArtifactProvenanceRepository,
+    knowledgeItemRepository,
+    knowledgeEvidenceRepository,
+    noteRepository,
+    noteVersionRepository,
+    knowledgeSpaceRepository
+  });
+  const learningObjectiveRepository =
+    options.learningObjectiveRepository ??
+    createInMemoryLearningObjectiveRepository({ records: options.learningObjectives ?? [] });
+  const examProfileRepository =
+    options.examProfileRepository ?? createInMemoryExamProfileRepository({ records: options.examProfiles ?? [] });
+  const examFocusRepository =
+    options.examFocusRepository ?? createInMemoryExamFocusRepository({ records: options.examFocuses ?? [] });
+  const questionRepository =
+    options.questionRepository ?? createInMemoryQuestionRepository({ records: options.questions ?? [] });
+  const questionObjectiveRepository =
+    options.questionObjectiveRepository ??
+    createInMemoryQuestionObjectiveRepository({ records: options.questionObjectives ?? [] });
+  const questionSourceRepository =
+    options.questionSourceRepository ??
+    createInMemoryQuestionSourceRepository({ records: options.questionSources ?? [] });
   const enforceReferences = options.enforceReferences ?? false;
-  const runTransaction = options.runTransaction ?? ((operation) => operation());
+  const runTransaction = options.runTransaction ?? (operation => operation());
 
   function normalizeComparableName(value) {
     return String(value ?? '').trim();
   }
 
+  /** @param {{spaceId: string, parentId?: string, folderId?: string, title?: string, name?: string, currentFolderId?: string, currentNoteId?: string}} input */
   function assertSiblingNameAvailable({
     spaceId,
     parentId = null,
@@ -95,35 +128,40 @@ export function createKnowledgeModule(options = {}) {
       return;
     }
 
-    const conflictingFolder = folderRepository.list({ spaceId }).find((folder) => (
-      folder.parentId === parentId
-      && folder.id !== currentFolderId
-      && normalizeComparableName(folder.name) === candidate
-    ));
-    if (conflictingFolder) {
-      throw conflictError(
-        'SIBLING_NAME_CONFLICT',
-        'A file or folder with the same name already exists'
+    const conflictingFolder = folderRepository
+      .list({ spaceId })
+      .find(
+        folder =>
+          folder.parentId === parentId &&
+          folder.id !== currentFolderId &&
+          normalizeComparableName(folder.name) === candidate
       );
+    if (conflictingFolder) {
+      throw conflictError('SIBLING_NAME_CONFLICT', 'A file or folder with the same name already exists');
     }
 
-    const conflictingNote = noteRepository.list({ spaceId, includeDeleted: true }).find((note) => (
-      !note.deleted
-      && note.folderId === folderId
-      && note.id !== currentNoteId
-      && normalizeComparableName(note.title) === candidate
-    ));
-    if (conflictingNote) {
-      throw conflictError(
-        'SIBLING_NAME_CONFLICT',
-        'A file or folder with the same name already exists'
+    const conflictingNote = noteRepository
+      .list({ spaceId, includeDeleted: true })
+      .find(
+        note =>
+          !note.deleted &&
+          note.folderId === folderId &&
+          note.id !== currentNoteId &&
+          normalizeComparableName(note.title) === candidate
       );
+    if (conflictingNote) {
+      throw conflictError('SIBLING_NAME_CONFLICT', 'A file or folder with the same name already exists');
     }
   }
 
-  const { assertSpaceReference, assertNoteReferences, assertTagGroupReference, normalizeTagIds } = createNavigationReferencePolicy({
-    knowledgeSpaceRepository, folderRepository, tagRepository, tagGroupRepository, enforceReferences
-  });
+  const { assertSpaceReference, assertNoteReferences, assertTagGroupReference, normalizeTagIds } =
+    createNavigationReferencePolicy({
+      knowledgeSpaceRepository,
+      folderRepository,
+      tagRepository,
+      tagGroupRepository,
+      enforceReferences
+    });
 
   const noteVersionService = createNoteVersionService({ repository: noteVersionRepository });
   let learningObjectiveService = null;
@@ -135,7 +173,7 @@ export function createKnowledgeModule(options = {}) {
     annotationRepository: contentAnnotationRepository,
     noteRepository,
     getTombstone: options.getPurgeTombstone,
-    onItemInvalidated: (knowledgeItemId) => {
+    onItemInvalidated: knowledgeItemId => {
       learningObjectiveService?.invalidateByKnowledgeItemId(knowledgeItemId);
       questionService?.markSourcesStale('knowledgeItem', [knowledgeItemId]);
     },
@@ -145,7 +183,7 @@ export function createKnowledgeModule(options = {}) {
     repository: learningObjectiveRepository,
     knowledgeItemRepository,
     getTombstone: options.getPurgeTombstone,
-    onObjectiveInvalidated: (learningObjectiveId) => {
+    onObjectiveInvalidated: learningObjectiveId => {
       questionService?.invalidateByObjectiveId(learningObjectiveId);
     },
     runTransaction
@@ -171,8 +209,16 @@ export function createKnowledgeModule(options = {}) {
     runTransaction
   });
   const trainingAssetLifecycle = createLocalTrainingAssetLifecycle({
-    repositories: { learningObjectiveRepository, examProfileRepository, examFocusRepository, questionRepository,
-      questionObjectiveRepository, questionSourceRepository, knowledgeItemRepository, analysisScopeRepository },
+    repositories: {
+      learningObjectiveRepository,
+      examProfileRepository,
+      examFocusRepository,
+      questionRepository,
+      questionObjectiveRepository,
+      questionSourceRepository,
+      knowledgeItemRepository,
+      analysisScopeRepository
+    },
     runTransaction,
     getTombstone: options.getPurgeTombstone,
     readPurgeTaskState: options.readPurgeTaskState,
@@ -180,7 +226,7 @@ export function createKnowledgeModule(options = {}) {
   });
   const folderService = createFolderService({
     repository: folderRepository,
-    validateSpaceReference: (spaceId) => assertSpaceReference(spaceId, 'FOLDER'),
+    validateSpaceReference: spaceId => assertSpaceReference(spaceId, 'FOLDER'),
     validateSiblingNameConflict: ({ spaceId, parentId, name, currentFolderId }) => {
       assertSiblingNameAvailable({
         spaceId,
@@ -193,13 +239,13 @@ export function createKnowledgeModule(options = {}) {
   });
   const tagService = createTagService({
     repository: tagRepository,
-    validateSpaceReference: (spaceId) => assertSpaceReference(spaceId, 'TAG'),
+    validateSpaceReference: spaceId => assertSpaceReference(spaceId, 'TAG'),
     validateGroupReference: assertTagGroupReference
   });
   const tagGroupService = createTagGroupService({
     repository: tagGroupRepository,
     tagRepository,
-    validateSpaceReference: (spaceId) => assertSpaceReference(spaceId, 'TAG_GROUP')
+    validateSpaceReference: spaceId => assertSpaceReference(spaceId, 'TAG_GROUP')
   });
   const knowledgeSpaceService = createKnowledgeSpaceService({
     repository: knowledgeSpaceRepository,
@@ -212,9 +258,15 @@ export function createKnowledgeModule(options = {}) {
     noteVersionRepository,
     revisionRepository: annotationRevisionRepository,
     exclusionRepository: annotationExclusionRepository,
-    onSourceChanged: (annotation) => {
-      const changed = knowledgeItemService.markEvidenceByAnnotationId(annotation.id, annotation.anchorStatus === 'missing' ? 'insufficient' : 'stale');
-      questionService?.markSourcesStale('knowledgeEvidence', changed.map((evidence) => evidence.id));
+    onSourceChanged: annotation => {
+      const changed = knowledgeItemService.markEvidenceByAnnotationId(
+        /** @type {string} */ (annotation.id),
+        annotation.anchorStatus === 'missing' ? 'insufficient' : 'stale'
+      );
+      questionService?.markSourcesStale(
+        'knowledgeEvidence',
+        changed.map(evidence => evidence.id)
+      );
     }
   });
   const annotationScopeService = createAnnotationScopeService({
@@ -230,20 +282,22 @@ export function createKnowledgeModule(options = {}) {
   // 仅在调用方提供 canDiscard（桌面端用它确认版本尚未同步、未被 AI 等外部记录引用）时启用。
   const versionCoalescing = options.noteVersionCoalescing ?? null;
   function isNoteVersionReferenced(version, noteId) {
-    const mentions = (record) => {
+    const mentions = record => {
       const text = JSON.stringify(record);
       return text.includes(version.id) || text.includes(version.contentHash);
     };
     const annotations = contentAnnotationRepository.list({ noteId, includeDeleted: true });
-    const annotationIds = new Set(annotations.map((item) => item.id));
-    return annotations.some(mentions)
-      || annotationRevisionRepository.list().some((item) => annotationIds.has(item.annotationId) && mentions(item))
-      || annotationExclusionRepository.list({ includeDeleted: true }).some(mentions)
-      || knowledgeEvidenceRepository.list({ noteId }).some(mentions)
-      || knowledgeEvidenceRepository.list({ noteVersionId: version.id }).length > 0
-      || knowledgeArtifactProvenanceRepository.list().some(mentions)
-      || questionSourceRepository.list().some(mentions)
-      || analysisScopeRepository.list({ includeDeleted: true }).some(mentions);
+    const annotationIds = new Set(annotations.map(item => item.id));
+    return (
+      annotations.some(mentions) ||
+      annotationRevisionRepository.list().some(item => annotationIds.has(item.annotationId) && mentions(item)) ||
+      annotationExclusionRepository.list({ includeDeleted: true }).some(mentions) ||
+      knowledgeEvidenceRepository.list({ noteId }).some(mentions) ||
+      knowledgeEvidenceRepository.list({ noteVersionId: version.id }).length > 0 ||
+      knowledgeArtifactProvenanceRepository.list().some(mentions) ||
+      questionSourceRepository.list().some(mentions) ||
+      analysisScopeRepository.list({ includeDeleted: true }).some(mentions)
+    );
   }
   function coalescePreviousVersion(note, version, annotationChange) {
     if (!versionCoalescing?.canDiscard) return;
@@ -257,19 +311,33 @@ export function createKnowledgeModule(options = {}) {
     });
     // 只合并本次编辑的直接前像。A→B→恢复A→C 时，B 是恢复检查点而非 C 的前像；
     // 该边界由持久版本和当前正文推导，重启后仍有效。
-    if (!previous || previous.content !== annotationChange?.before || isNoteVersionReferenced(previous, note.id) || !versionCoalescing.canDiscard(previous)) return;
+    if (
+      !previous ||
+      previous.content !== annotationChange?.before ||
+      isNoteVersionReferenced(previous, note.id) ||
+      !versionCoalescing.canDiscard(previous)
+    )
+      return;
     noteVersionRepository.deleteById(previous.id);
   }
   const annotationIdentityShadow = createAnnotationIdentityShadow({
     // 影子比对只针对旧链路重点；v3（内联重点）的位置在正文标记里。
-    listAnnotations: (noteId) => contentAnnotationRepository.list({ noteId, includeDeleted: true }).filter((item) => item.schemaVersion !== 3),
+    listAnnotations: noteId =>
+      contentAnnotationRepository.list({ noteId, includeDeleted: true }).filter(item => item.schemaVersion !== 3),
     sink: options.annotationShadowSink ?? null,
     afterCommit: options.afterCommit
   });
   const noteDependencies = {
-    contentAnnotationService, contentAnnotationRepository, annotationIdentityShadow,
-    knowledgeItemService, questionService, noteVersionService, noteVersionRepository,
-    knowledgeEvidenceRepository, questionSourceRepository, analysisScopeRepository,
+    contentAnnotationService,
+    contentAnnotationRepository,
+    annotationIdentityShadow,
+    knowledgeItemService,
+    questionService,
+    noteVersionService,
+    noteVersionRepository,
+    knowledgeEvidenceRepository,
+    questionSourceRepository,
+    analysisScopeRepository,
     coalescePreviousVersion
   };
   const noteService = createNoteService({
@@ -280,11 +348,17 @@ export function createKnowledgeModule(options = {}) {
     noteVersionService,
     runTransaction,
     // 重点内联化：只改标记的保存不让旧版本证据过期；级联完成后从正文派生内联重点行。
-    ...withInlineAnnotations(withIdentityBindingRefresh(createNoteDependencyLifecycle(noteDependencies), contentAnnotationRepository), {
-      repository: contentAnnotationRepository,
-      revisionRepository: annotationRevisionRepository,
-      marksOnlyLifecycle: withIdentityBindingRefresh(createNoteDependencyLifecycle(marksOnlyDependencies(noteDependencies)), contentAnnotationRepository)
-    }),
+    ...withInlineAnnotations(
+      withIdentityBindingRefresh(createNoteDependencyLifecycle(noteDependencies), contentAnnotationRepository),
+      {
+        repository: contentAnnotationRepository,
+        revisionRepository: annotationRevisionRepository,
+        marksOnlyLifecycle: withIdentityBindingRefresh(
+          createNoteDependencyLifecycle(marksOnlyDependencies(noteDependencies)),
+          contentAnnotationRepository
+        )
+      }
+    ),
     validateSiblingNameConflict: ({ spaceId, folderId, title, currentNoteId }) => {
       assertSiblingNameAvailable({
         spaceId,
@@ -296,8 +370,8 @@ export function createKnowledgeModule(options = {}) {
     }
   });
   const searchService = createSearchService({
-    findKnowledgeSpace: (spaceId) => knowledgeSpaceRepository.findById(spaceId),
-    listNotes: (options) => noteService.listNotes(options)
+    findKnowledgeSpace: spaceId => knowledgeSpaceRepository.findById(spaceId),
+    listNotes: options => noteService.listNotes(options)
   });
   const workspaceQueryService = createWorkspaceQueryService({
     repositories: {
@@ -319,18 +393,29 @@ export function createKnowledgeModule(options = {}) {
       const subtreeIds = folderService.getFolderSubtreeIds(folderId);
       const root = folderRepository.findById(folderId);
       const mode = input.mode;
-      if (!['keep', 'with-content'].includes(mode)) throw validationError('FOLDER_DELETE_MODE_REQUIRED', '请选择保留并移动内容，或将内容一起移入回收站');
-      const destinationId = Object.hasOwn(input, 'destinationId') ? input.destinationId : root.parentId ?? null;
+      if (!['keep', 'with-content'].includes(mode))
+        throw validationError('FOLDER_DELETE_MODE_REQUIRED', '请选择保留并移动内容，或将内容一起移入回收站');
+      const destinationId = Object.hasOwn(input, 'destinationId') ? input.destinationId : (root.parentId ?? null);
       if (mode === 'keep' && destinationId) {
         const destination = folderRepository.findById(destinationId);
-        if (!destination || destination.deletedAt || destination.spaceId !== root.spaceId || subtreeIds.includes(destinationId)) throw conflictError('FOLDER_DESTINATION_INVALID', '目标文件夹不可用');
+        if (
+          !destination ||
+          destination.deletedAt ||
+          destination.spaceId !== root.spaceId ||
+          subtreeIds.includes(destinationId)
+        )
+          throw conflictError('FOLDER_DESTINATION_INVALID', '目标文件夹不可用');
       }
-      const notes = noteRepository.list({ spaceId: root.spaceId, includeDeleted: true }).filter(note => subtreeIds.includes(note.folderId));
+      const notes = noteRepository
+        .list({ spaceId: root.spaceId, includeDeleted: true })
+        .filter(note => subtreeIds.includes(note.folderId));
       const packageId = `folder-${folderId}-${Date.now()}`;
       const noteIds = [];
       for (const note of notes.filter(note => !note.deleted)) {
-        if (mode === 'keep') { noteService.updateNote(note.id, { folderId: destinationId }); noteIds.push(note.id); }
-        else {
+        if (mode === 'keep') {
+          noteService.updateNote(note.id, { folderId: destinationId });
+          noteIds.push(note.id);
+        } else {
           const deleted = noteService.deleteNote(note.id);
           noteRepository.save({ ...deleted, folderDeletionPackageId: packageId });
           noteIds.push(note.id);
@@ -369,7 +454,8 @@ export function createKnowledgeModule(options = {}) {
     const target = tagRepository.findById(targetTagId);
     if (!source || !target) throw validationError('TAG_MERGE_TARGET_INVALID', 'Both tags must exist');
     if (source.isSystem) throw conflictError('SYSTEM_TAG_PROTECTED', 'System tags cannot be merged');
-    if (source.spaceId !== target.spaceId) throw validationError('TAG_SPACE_MISMATCH', 'Tags must belong to the same space');
+    if (source.spaceId !== target.spaceId)
+      throw validationError('TAG_SPACE_MISMATCH', 'Tags must belong to the same space');
     return runTransaction(() => {
       noteService.replaceTagInAllNotes(sourceTagId, targetTagId);
       tagRepository.delete(sourceTagId);
@@ -379,14 +465,18 @@ export function createKnowledgeModule(options = {}) {
 
   function inspectKnowledgePurge(id) {
     const item = knowledgeItemRepository.findById(id);
-    return supplementPurgePreview(inspectKnowledgeItemPurge({
-      item,
-      evidence: knowledgeEvidenceRepository.list({ knowledgeItemId: id }),
-      provenance: knowledgeArtifactProvenanceRepository.list({ artifactId: id }),
-      learningObjectives: learningObjectiveRepository.list({ includeArchived: true, includeDeleted: true }),
-      questionSources: questionSourceRepository.list(),
-      analysisScopes: analysisScopeRepository.list({ includeDeleted: true })
-    }), taskCoverage(options.readPurgeTaskState), options.getPurgeDatasetEpoch?.());
+    return supplementPurgePreview(
+      inspectKnowledgeItemPurge({
+        item,
+        evidence: knowledgeEvidenceRepository.list({ knowledgeItemId: id }),
+        provenance: knowledgeArtifactProvenanceRepository.list({ artifactId: id }),
+        learningObjectives: learningObjectiveRepository.list({ includeArchived: true, includeDeleted: true }),
+        questionSources: questionSourceRepository.list(),
+        analysisScopes: analysisScopeRepository.list({ includeDeleted: true })
+      }),
+      taskCoverage(options.readPurgeTaskState),
+      options.getPurgeDatasetEpoch?.()
+    );
   }
 
   function permanentlyDeleteKnowledgeItem(id, input = {}) {
@@ -395,21 +485,41 @@ export function createKnowledgeModule(options = {}) {
       assertPurgeDatasetEpoch(input, options.getPurgeDatasetEpoch?.());
       if (!knowledgeItemRepository.findById(id)) {
         const tombstone = options.getPurgeTombstone?.('knowledgeItems', id);
-        if (!expectedUpdatedAt || !tombstone || (tombstone.previousUpdatedAt && tombstone.previousUpdatedAt !== expectedUpdatedAt)) {
+        if (
+          !expectedUpdatedAt ||
+          !tombstone ||
+          (tombstone.previousUpdatedAt && tombstone.previousUpdatedAt !== expectedUpdatedAt)
+        ) {
           throw validationError('KNOWLEDGE_ITEM_NOT_FOUND', '知识点不存在');
         }
-        return { status: 'already-purged', asset: { type: 'knowledgeItem', id }, exclusiveRecordsDeleted: { knowledgeEvidence: 0, knowledgeArtifactProvenance: 0 }, offlineDevices: 'pending-sync', backups: 'retention-managed' };
+        return {
+          status: 'already-purged',
+          asset: { type: 'knowledgeItem', id },
+          exclusiveRecordsDeleted: { knowledgeEvidence: 0, knowledgeArtifactProvenance: 0 },
+          offlineDevices: 'pending-sync',
+          backups: 'retention-managed'
+        };
       }
       const preflight = inspectKnowledgePurge(id);
       assertKnowledgeItemPurgeAllowed(preflight, expectedUpdatedAt);
-      assertManualPurgeScope('knowledgeItem', knowledgeItemRepository.findById(id), input, knowledgeArtifactProvenanceRepository.list({ artifactId: id }));
+      assertManualPurgeScope(
+        'knowledgeItem',
+        knowledgeItemRepository.findById(id),
+        input,
+        knowledgeArtifactProvenanceRepository.list({ artifactId: id })
+      );
       const removedProvenance = knowledgeArtifactProvenanceRepository.deleteByKnowledgeItemId(id);
       const removedEvidence = knowledgeEvidenceRepository.deleteByKnowledgeItemId(id);
       knowledgeItemRepository.delete(id);
       return {
-        status: 'subject-purged', asset: preflight.asset,
-        exclusiveRecordsDeleted: { knowledgeEvidence: removedEvidence.length, knowledgeArtifactProvenance: removedProvenance.length },
-        offlineDevices: 'pending-sync', backups: 'retention-managed'
+        status: 'subject-purged',
+        asset: preflight.asset,
+        exclusiveRecordsDeleted: {
+          knowledgeEvidence: removedEvidence.length,
+          knowledgeArtifactProvenance: removedProvenance.length
+        },
+        offlineDevices: 'pending-sync',
+        backups: 'retention-managed'
       };
     });
   }
@@ -429,10 +539,19 @@ export function createKnowledgeModule(options = {}) {
     });
   }
 
-  const { inspectEmptySpaceDeletion, deleteEmptySpace, previewSpaceMigration, migrateSpaceAssets } = createSpaceAssetLifecycle({
-    knowledgeSpaceRepository, folderRepository, noteRepository, tagRepository, tagGroupRepository,
-    contentAnnotationRepository, analysisScopeRepository, noteVersionRepository, runTransaction
-  });
+  const { inspectEmptySpaceDeletion, deleteEmptySpace, previewSpaceMigration, migrateSpaceAssets } =
+    createSpaceAssetLifecycle({
+      knowledgeSpaceRepository,
+      folderRepository,
+      noteRepository,
+      tagRepository,
+      tagGroupRepository,
+      contentAnnotationRepository,
+      pdfAnnotationRepository,
+      analysisScopeRepository,
+      noteVersionRepository,
+      runTransaction
+    });
 
   // New service operations default to a transaction; only explicitly read-only
   // methods skip the snapshot/commit boundary. Nested writes share one commit.
@@ -462,6 +581,7 @@ export function createKnowledgeModule(options = {}) {
       tagGroupRepository,
       knowledgeSpaceRepository,
       contentAnnotationRepository,
+      pdfAnnotationRepository,
       annotationExclusionRepository,
       annotationRevisionRepository,
       analysisScopeRepository,

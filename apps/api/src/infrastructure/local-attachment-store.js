@@ -1,20 +1,22 @@
-import { inspectAttachmentFile, assertReadableStatus, throwFileHealth, prepareAttachmentRestore, assertSameAttachment, recoverAttachmentRestores } from './attachment-recovery.js';
+import {
+  inspectAttachmentFile,
+  assertReadableStatus,
+  throwFileHealth,
+  prepareAttachmentRestore,
+  assertSameAttachment,
+  recoverAttachmentRestores
+} from './attachment-recovery.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createAppError } from '../errors/app-error.js';
-import { createLocalAttachmentFileManager } from './local-attachment-file-manager.js';
-import {
-  createLocalAttachmentDeletionManager
-} from './local-attachment-deletion.js';
-import { createLocalAttachmentSnapshotStore } from './local-attachment-snapshot-store.js';
-import { ATTACHMENT_STATUS } from './attachment-status.js';
-import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.js';
-import { reconcileAttachmentIntegrity } from './attachment-record-reconciliation.js';
-import { createLocalAttachmentUpload } from './local-attachment-upload.js';
-import {
-  moveFileSafely,
-  sanitizeFileName
-} from './local-attachment-store-utils.js';
+import { createLocalAttachmentFileManager } from './local-attachment-file-manager.ts';
+import { createLocalAttachmentDeletionManager } from './local-attachment-deletion.ts';
+import { createLocalAttachmentSnapshotStore } from './local-attachment-snapshot-store.ts';
+import { ATTACHMENT_STATUS } from './attachment-status.ts';
+import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.ts';
+import { reconcileAttachmentIntegrity } from './attachment-record-reconciliation.ts';
+import { createLocalAttachmentUpload } from './local-attachment-upload.ts';
+import { moveFileSafely, sanitizeFileName } from './local-attachment-store-utils.ts';
 
 export function createLocalAttachmentStore({
   dataStore,
@@ -40,14 +42,12 @@ export function createLocalAttachmentStore({
   function reconcileStoredAttachments() {
     let changed = false;
 
-    dataStore.state.attachments.forEach((attachment) => {
+    dataStore.state.attachments.forEach(attachment => {
       const recordReconciled = fileManager.reconcileAttachmentRecord(attachment);
-      const readablePath = fileManager.getAttachmentCandidatePaths(attachment)
-        .find((candidatePath) => fs.existsSync(candidatePath));
-      const integrityReconciled = reconcileAttachmentIntegrity(
-        attachment,
-        readablePath
-      );
+      const readablePath = fileManager
+        .getAttachmentCandidatePaths(attachment)
+        .find(candidatePath => fs.existsSync(candidatePath));
+      const integrityReconciled = reconcileAttachmentIntegrity(attachment, readablePath);
       if (recordReconciled || integrityReconciled) {
         changed = true;
       }
@@ -60,20 +60,15 @@ export function createLocalAttachmentStore({
 
   reconcileStoredAttachments();
 
+  /** @param {{noteId?: string}} query */
   function listAttachments({ noteId } = {}) {
     return dataStore.state.attachments
-      .filter((attachment) => (
-        noteId ? attachment.noteId === noteId : true
-      ))
-      .sort((left, right) => (
-        new Date(right.createdAt).getTime()
-        - new Date(left.createdAt).getTime()
-      ));
+      .filter(attachment => (noteId ? attachment.noteId === noteId : true))
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
   }
 
   function getAttachment(attachmentId) {
-    return dataStore.state.attachments
-      .find((attachment) => attachment.id === attachmentId) ?? null;
+    return dataStore.state.attachments.find(attachment => attachment.id === attachmentId) ?? null;
   }
 
   function requiredAttachment(id) {
@@ -88,7 +83,12 @@ export function createLocalAttachmentStore({
     const { content, ...health } = inspectAttachmentFile(attachment, fileManager);
     if (attachment.status !== health.status || attachment.verifiedAt !== health.verifiedAt) {
       Object.assign(attachment, health);
-      try { flush(); } catch (error) { Object.assign(attachment, previous); throw error; }
+      try {
+        flush();
+      } catch (error) {
+        Object.assign(attachment, previous);
+        throw error;
+      }
     }
     return requiredAttachment(id);
   }
@@ -112,20 +112,24 @@ export function createLocalAttachmentStore({
       transaction.commit();
       const current = requiredAttachment(id);
       Object.assign(current, { status: 'ready', verifiedAt: new Date().toISOString() });
-      try { flush(); } catch (error) { Object.assign(current, original); throw error; }
+      try {
+        flush();
+      } catch (error) {
+        Object.assign(current, original);
+        throw error;
+      }
       transaction.finalize();
       return requiredAttachment(id);
-    } catch (error) { transaction.rollback(); throw error; }
+    } catch (error) {
+      transaction.rollback();
+      throw error;
+    }
   }
 
   function renameAttachment(attachmentId, fileName) {
     const attachment = getAttachment(attachmentId);
     if (!attachment) {
-      throw createAppError(
-        'ATTACHMENT_NOT_FOUND',
-        'Attachment not found',
-        404
-      );
+      throw createAppError('ATTACHMENT_NOT_FOUND', 'Attachment not found', 404);
     }
 
     if (!String(fileName ?? '').trim()) {
@@ -133,16 +137,9 @@ export function createLocalAttachmentStore({
     }
 
     const nextSafeName = sanitizeFileName(fileName);
-    const currentReadablePath = fileManager
-      .resolveReadableAttachmentPath(attachment);
-    const nextAbsolutePath = fileManager.resolveManagedAbsolutePath(
-      attachment.id,
-      nextSafeName
-    );
-    const nextStoragePath = fileManager.buildStoragePath(
-      attachment.id,
-      nextSafeName
-    );
+    const currentReadablePath = fileManager.resolveReadableAttachmentPath(attachment);
+    const nextAbsolutePath = fileManager.resolveManagedAbsolutePath(attachment.id, nextSafeName);
+    const nextStoragePath = fileManager.buildStoragePath(attachment.id, nextSafeName);
     const previousFileName = attachment.fileName;
     const previousStoragePath = attachment.storagePath;
     const previousSize = attachment.size;
@@ -150,8 +147,7 @@ export function createLocalAttachmentStore({
     const previousStatus = attachment.status ?? ATTACHMENT_STATUS.READY;
     const previousVerifiedAt = attachment.verifiedAt ?? null;
     const fileMoved = Boolean(
-      currentReadablePath
-      && path.normalize(currentReadablePath) !== path.normalize(nextAbsolutePath)
+      currentReadablePath && path.normalize(currentReadablePath) !== path.normalize(nextAbsolutePath)
     );
 
     if (fileMoved) {

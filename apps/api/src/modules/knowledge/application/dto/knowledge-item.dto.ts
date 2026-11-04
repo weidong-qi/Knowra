@@ -1,4 +1,4 @@
-import { createPrefixedId, requireText } from './_shared.js';
+import { createPrefixedId, requireText } from './_shared.ts';
 import { validationError } from '../knowledge-errors.js';
 
 export interface KnowledgeItemDtoInput {
@@ -93,6 +93,15 @@ function optionalText(value: unknown, code: string, message: string): string | n
   return value.trim() || null;
 }
 
+export function buildCreateKnowledgeItemDto<Input extends KnowledgeItemDtoInput>(
+  input: Input
+): Omit<CreateKnowledgeItemDto, 'knowledgeType' | 'sourceMode' | 'createdAt' | 'updatedAt'> & {
+  knowledgeType: NonNullable<Input['knowledgeType']> | 'concept';
+  sourceMode: NonNullable<Input['sourceMode']> | 'manual';
+  createdAt: Input['createdAt'];
+  updatedAt: Input['updatedAt'];
+};
+export function buildCreateKnowledgeItemDto(input?: KnowledgeItemDtoInput): CreateKnowledgeItemDto;
 export function buildCreateKnowledgeItemDto(input: KnowledgeItemDtoInput = {}): CreateKnowledgeItemDto {
   const title = optionalText(input.title, 'KNOWLEDGE_ITEM_TITLE_INVALID', 'KnowledgeItem title is invalid') ?? '';
   const canonicalStatement =
@@ -164,6 +173,13 @@ export function buildUpdateKnowledgeItemDto(input: KnowledgeItemDtoInput = {}): 
   return dto;
 }
 
+export function buildCreateKnowledgeEvidenceDto<Input extends KnowledgeEvidenceDtoInput>(
+  input: Input
+): Omit<CreateKnowledgeEvidenceDto, 'sourceType' | 'relationType'> & {
+  sourceType: NonNullable<Input['sourceType']> | 'manual';
+  relationType: NonNullable<Input['relationType']> | 'supports';
+};
+export function buildCreateKnowledgeEvidenceDto(input?: KnowledgeEvidenceDtoInput): CreateKnowledgeEvidenceDto;
 export function buildCreateKnowledgeEvidenceDto(input: KnowledgeEvidenceDtoInput = {}): CreateKnowledgeEvidenceDto {
   const sourceType = input.sourceType ?? 'manual';
   if (!SOURCE_TYPES.has(sourceType)) {

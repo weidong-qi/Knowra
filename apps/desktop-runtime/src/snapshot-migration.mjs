@@ -3,7 +3,7 @@ import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { validateLocalSnapshot } from '../../api/src/infrastructure/local-data-schema.js';
-import { createLocalAttachmentFileManager } from '../../api/src/infrastructure/local-attachment-file-manager.js';
+import { createLocalAttachmentFileManager } from '../../api/src/infrastructure/local-attachment-file-manager.ts';
 import { createSqliteDataStore } from './sqlite-data-store.mjs';
 
 const hash = content => createHash('sha256').update(content).digest('hex');
@@ -13,8 +13,11 @@ export function exportJsonBaseline({ sourcePath, storageRootDir, outputPath }) {
   const source = fs.readFileSync(sourcePath);
   const snapshot = validateLocalSnapshot(JSON.parse(source));
   const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
-  if (snapshot.data.attachments.length && !fs.existsSync(uploadsDir)) throw new Error('默认附件目录不存在，请使用包含附件的整库导出快照。');
-  const fileManager = snapshot.data.attachments.length ? createLocalAttachmentFileManager({ uploadsDir, storageRootDir }) : null;
+  if (snapshot.data.attachments.length && !fs.existsSync(uploadsDir))
+    throw new Error('默认附件目录不存在，请使用包含附件的整库导出快照。');
+  const fileManager = snapshot.data.attachments.length
+    ? createLocalAttachmentFileManager({ uploadsDir, storageRootDir })
+    : null;
   const attachmentFiles = snapshot.data.attachments.map(item => {
     const file = fileManager.resolveReadableAttachmentPath(item);
     if (!file) throw new Error(`基线附件缺失：${item.id}`);
@@ -26,7 +29,13 @@ export function exportJsonBaseline({ sourcePath, storageRootDir, outputPath }) {
   const output = JSON.stringify({ ...snapshot, exportedAt: new Date().toISOString(), attachmentFiles });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true, mode: 0o700 });
   fs.writeFileSync(outputPath, output, { flag: 'wx', mode: 0o600 });
-  return { outputPath, sourceSha256: hash(source), snapshotSha256: hash(output), notes: snapshot.data.notes.length, attachments: attachmentFiles.length };
+  return {
+    outputPath,
+    sourceSha256: hash(source),
+    snapshotSha256: hash(output),
+    notes: snapshot.data.notes.length,
+    attachments: attachmentFiles.length
+  };
 }
 
 /** 一次性迁移到新目录。原快照不变，失败不发布半成品资料库。 */
@@ -38,7 +47,12 @@ export function importJsonSnapshot(sourcePath, destination) {
   let store;
   try {
     store = createSqliteDataStore(path.join(staging, 'local.sqlite'));
-    const context = createAppContext({ dataStore: store, storageRootDir: staging, uploadsDir: path.join(staging, 'uploads'), ownerId: 'demo' });
+    const context = createAppContext({
+      dataStore: store,
+      storageRootDir: staging,
+      uploadsDir: path.join(staging, 'uploads'),
+      ownerId: 'demo'
+    });
     context.http.storage.importKnowledgeBase(input);
     store.close();
     store = null;

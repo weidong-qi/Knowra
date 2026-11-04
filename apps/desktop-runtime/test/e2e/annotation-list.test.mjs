@@ -11,11 +11,11 @@ import { createFileDataStore } from '../../../api/src/infrastructure/file-data-s
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
-import { createV4WebServer } from '../../../web-v4/server/app.mjs';
+import { createV4WebServer } from '../../../web/server/app.mjs';
 
 async function fixture(t, driver, rawMarkdown = '- 父项\n  - 子项\n- 相邻') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-list-page-'));
-  const distRoot = fileURLToPath(new URL('../../../web-v4/dist/', import.meta.url));
+  const distRoot = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
   const runtime =
     driver === 'sqlite'
       ? await startLocalRuntime({

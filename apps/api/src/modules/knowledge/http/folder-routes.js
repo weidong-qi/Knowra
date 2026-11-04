@@ -1,5 +1,5 @@
-import { parseBody, toQueryObject } from '../../../http/request.js';
-import { sendJson } from '../../../http/response.js';
+import { parseBody, toQueryObject } from '../../../http/request.ts';
+import { sendJson } from '../../../http/response.ts';
 
 export async function handleFolderRoute({ request, response, url, knowledge }) {
   if (request.method === 'POST' && url.pathname === '/api/knowledge/folders') {
