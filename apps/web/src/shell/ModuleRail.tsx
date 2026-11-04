@@ -6,15 +6,21 @@ import { forwardRef, type ReactNode } from 'react';
 import { PressableButton } from '../components/ui/button/PressableButton';
 import {
   KnowledgeIcon,
-  BellIcon,
   CheckIcon,
   HomeIcon,
   NoteIcon,
   QuestionIcon,
-  SparkIcon,
-  SearchIcon,
   SettingsIcon,
   UserIcon,
+  DoodleBellIcon,
+  DoodleHomeIcon,
+  DoodleKnowledgeIcon,
+  DoodleNoteIcon,
+  DoodleQuestionIcon,
+  DoodleSearchIcon,
+  DoodleSparkIcon,
+  DoodleTaskIcon,
+  DoodleUserIcon,
   type KnowraIconProps
 } from '../components/icons/knowra';
 import type { WorkDomain } from '../store/types';
@@ -118,7 +124,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
           onPress={onReturnHome}
         >
           <span className={styles.railIcon}>
-            <HomeIcon size={21} />
+            <DoodleHomeIcon size={24} />
           </span>
         </PressableButton>
         {onOpenSearch ? (
@@ -130,7 +136,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
             onPress={onOpenSearch}
           >
             <span className={styles.railIcon}>
-              <SearchIcon size={21} />
+              <DoodleSearchIcon size={24} />
             </span>
           </PressableButton>
         ) : null}
@@ -155,11 +161,11 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
           isDisabled={!onOpenAssistant}
         >
           <span className={styles.railIcon}>
-            <SparkIcon size={21} />
+            <DoodleSparkIcon size={24} />
           </span>
         </PressableButton>
         {onOpenNotifications ? (
-          <RailActionButton label="通知" title="通知" Icon={BellIcon} onClick={onOpenNotifications} />
+          <RailActionButton label="通知" title="通知" Icon={DoodleBellIcon} onClick={onOpenNotifications} />
         ) : null}
         {onOpenSettings ? (
           <MenuTrigger>
@@ -171,7 +177,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
               aria-current={isSettingsActive ? 'page' : undefined}
             >
               <span className={styles.railIcon}>
-                <UserIcon size={21} />
+                <DoodleUserIcon size={24} />
               </span>
             </PressableButton>
             <MenuPopover placement="right bottom">
@@ -194,8 +200,17 @@ interface RailButtonProps {
   onClick(): void;
 }
 
+/** 左栏使用手绘涂鸦版图标；没有对应涂鸦图标的工作域沿用原图标。 */
+const DOODLE_ICONS: Partial<Record<WorkDomain, RailItem['Icon']>> = {
+  materials: DoodleNoteIcon,
+  knowledge: DoodleKnowledgeIcon,
+  training: DoodleQuestionIcon,
+  'task-workspaces': DoodleTaskIcon
+};
+
 function RailButton({ item, isActive, onClick }: RailButtonProps) {
-  const { Icon, label, description, id, available } = item;
+  const { label, description, id, available } = item;
+  const Icon = DOODLE_ICONS[id] ?? item.Icon;
   const ariaCurrent = isActive ? 'page' : undefined;
   if (!available) {
     return (
@@ -208,7 +223,7 @@ function RailButton({ item, isActive, onClick }: RailButtonProps) {
         title={`${label}：${description}`}
       >
         <span className={styles.railIcon}>
-          <Icon size={21} />
+          <Icon size={24} />
         </span>
       </PressableButton>
     );
@@ -224,7 +239,7 @@ function RailButton({ item, isActive, onClick }: RailButtonProps) {
       title={`${label}：${description}`}
     >
       <span className={styles.railIcon}>
-        <Icon size={21} />
+        <Icon size={24} />
       </span>
     </PressableButton>
   );
@@ -248,7 +263,7 @@ function RailActionButton({ label, title, Icon, onClick }: RailActionButtonProps
       isDisabled={!onClick}
     >
       <span className={styles.railIcon}>
-        <Icon size={21} />
+        <Icon size={24} />
       </span>
     </PressableButton>
   );
