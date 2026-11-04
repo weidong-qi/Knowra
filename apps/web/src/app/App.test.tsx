@@ -101,7 +101,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '工作区状态' })).toBeInTheDocument();
 
-    expect(within(rail).queryByRole('button', { name: '全局搜索' })).not.toBeInTheDocument();
+    expect(within(rail).getByRole('button', { name: '全局搜索' })).toBeInTheDocument();
     expect(within(rail).queryByRole('button', { name: '新建笔记' })).not.toBeInTheDocument();
     expect(within(rail).queryByRole('button', { name: '组件库' })).not.toBeInTheDocument();
 
@@ -374,9 +374,11 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     const training = within(rail).getByRole('button', { name: /试题/ });
     expect(training).toBeEnabled();
     expect(within(rail).getByRole('button', { name: /知识/ })).toBeEnabled();
-    expect(within(rail).getByRole('button', { name: '设置' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '通知（尚未上线）' })).toBeDisabled();
-    expect(within(rail).getByRole('button', { name: /执行/ })).toBeDisabled();
+    expect(within(rail).getByRole('button', { name: '账户与设置' })).toBeEnabled();
+    // 未上线的入口不占位：执行、通知、我的都不出现在左栏。
+    expect(within(rail).queryByRole('button', { name: /执行/ })).not.toBeInTheDocument();
+    expect(within(rail).queryByRole('button', { name: /通知/ })).not.toBeInTheDocument();
+    expect(within(rail).queryByRole('button', { name: /我的/ })).not.toBeInTheDocument();
   });
 
   it('opens settings and applies local preferences', async () => {
@@ -401,8 +403,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       </RouterProvider>
     );
     fireEvent.click(
-      within(screen.getByRole('navigation', { name: '工作域导航' })).getByRole('button', { name: '设置' })
+      within(screen.getByRole('navigation', { name: '工作域导航' })).getByRole('button', { name: '账户与设置' })
     );
+    fireEvent.click(await screen.findByRole('menuitem', { name: '设置' }));
     expect(navigate).toHaveBeenCalledWith('/settings');
     view.unmount();
 

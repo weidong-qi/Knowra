@@ -84,7 +84,9 @@ export function AppShell({
   focusMode = false
 }: AppShellProps) {
   const desktop = typeof window !== 'undefined' && Boolean(window.knowraDesktop);
-  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && (window.matchMedia?.('(max-width: 920px)').matches ?? false));
+  const [compact, setCompact] = useState(
+    () => typeof window !== 'undefined' && (window.matchMedia?.('(max-width: 920px)').matches ?? false)
+  );
   const [sidebarOverlayOpen, setSidebarOverlayOpen] = useState(false);
   const [skipFocused, setSkipFocused] = useState(false);
   useEffect(() => {
@@ -94,85 +96,133 @@ export function AppShell({
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
-  useEffect(() => { setSidebarOverlayOpen(false); setSkipFocused(false); }, [navigationKey]);
-  useEffect(() => { if (focusMode) setSidebarOverlayOpen(false); }, [focusMode]);
+  useEffect(() => {
+    setSidebarOverlayOpen(false);
+    setSkipFocused(false);
+  }, [navigationKey]);
+  useEffect(() => {
+    if (focusMode) setSidebarOverlayOpen(false);
+  }, [focusMode]);
   const sidebarVisible = !focusMode && (compact ? sidebarOverlayOpen : contextSidebarOpen);
-  const toolbarStatus = { ...statusbar, panels: statusbar.panels?.filter(panel => !focusMode || panel.id !== 'sidebar').map(panel => panel.id === 'sidebar' ? { ...panel, active: sidebarVisible, onToggle: compact ? () => setSidebarOverlayOpen(open => !open) : panel.onToggle } : panel) };
+  const toolbarStatus = {
+    ...statusbar,
+    panels: statusbar.panels
+      ?.filter(panel => !focusMode || panel.id !== 'sidebar')
+      .map(panel =>
+        panel.id === 'sidebar'
+          ? {
+              ...panel,
+              active: sidebarVisible,
+              onToggle: compact ? () => setSidebarOverlayOpen(open => !open) : panel.onToggle
+            }
+          : panel
+      )
+  };
   const [titlebarHost, setTitlebarHost] = useState<HTMLDivElement | null>(null);
   return (
     <DesktopTitlebarContext.Provider value={{ enabled: desktop, host: titlebarHost }}>
-    <div {...appearance} className={cx(
-      styles.shell,
-      appearance?.className,
-      desktop ? styles.desktopShell : undefined,
-      contextSidebar && sidebarVisible && !focusMode && !compact ? styles.shellWithSidebar : undefined,
-      focusMode ? styles.focusShell : undefined
-    )} data-desktop={desktop || undefined}>
-      <a href="#feature-stage" className={styles.skipLink} onClick={event => {
-        event.preventDefault();
-        setSkipFocused(true);
-        document.getElementById('feature-stage')?.focus({ preventScroll: true });
-      }}>
-        跳到主内容
-      </a>
-
-      <header className={styles.desktopTitlebar} aria-label={desktop ? 'Mac 窗口标题栏' : '全局顶栏'}>
-        <ShellToolbar status={toolbarStatus}>
-          <div ref={setTitlebarHost} className={styles.desktopTitlebarHost}>
-            {!desktopTitlebarEditor ? desktopTitlebarTabs ?? <span className={styles.desktopTitle}>知境</span> : null}
-          </div>
-          {toolbarAccessories ? <span className={styles.toolbarDivider} aria-hidden="true" /> : null}
-          {toolbarAccessories}
-        </ShellToolbar>
-      </header>
-
-      {!focusMode ? <ModuleRail
-        activeDomain={activeDomain}
-        onSelect={onSelectDomain}
-        onReturnHome={onReturnHome}
-        onOpenNotifications={onOpenNotifications}
-        onOpenSettings={onOpenSettings}
-        onOpenAssistant={onOpenAssistant}
-        isSettingsActive={isSettingsActive}
-        isAssistantActive={isAssistantActive}
-      /> : null}
-
-      {contextSidebar && !focusMode ? (
-        <aside className={styles.contextSidebar} hidden={!sidebarVisible} aria-label="笔记上下文导航" data-compact={compact || undefined} data-open={sidebarVisible || undefined}>
-          <ResponsivePanel title="笔记导航" modal={compact} isOpen={sidebarVisible} onClose={() => setSidebarOverlayOpen(false)} className={styles.sidebarDialog}>
-            {compact && sidebarVisible ? <div className={styles.sidebarClose}><IconButton aria-label="关闭笔记导航" onPress={() => setSidebarOverlayOpen(false)}><CloseIcon size={18} /></IconButton></div> : null}
-            {contextSidebar}
-          </ResponsivePanel>
-        </aside>
-      ) : null}
-
-      <main
-        id="feature-stage"
-        data-skip-focused={skipFocused || undefined}
-        onBlur={() => setSkipFocused(false)}
-        className={cx(styles.stage, stageMode === 'workspace' ? styles.workspaceStage : undefined)}
-        tabIndex={-1}
+      <div
+        {...appearance}
+        className={cx(
+          styles.shell,
+          appearance?.className,
+          desktop ? styles.desktopShell : undefined,
+          contextSidebar && sidebarVisible && !focusMode && !compact ? styles.shellWithSidebar : undefined,
+          focusMode ? styles.focusShell : undefined
+        )}
+        data-desktop={desktop || undefined}
       >
-        {children}
-      </main>
+        <a
+          href="#feature-stage"
+          className={styles.skipLink}
+          onClick={event => {
+            event.preventDefault();
+            setSkipFocused(true);
+            document.getElementById('feature-stage')?.focus({ preventScroll: true });
+          }}
+        >
+          跳到主内容
+        </a>
 
+        <header className={styles.desktopTitlebar} aria-label={desktop ? 'Mac 窗口标题栏' : '全局顶栏'}>
+          <ShellToolbar status={toolbarStatus}>
+            <div ref={setTitlebarHost} className={styles.desktopTitlebarHost}>
+              {!desktopTitlebarEditor
+                ? (desktopTitlebarTabs ?? <span className={styles.desktopTitle}>知境</span>)
+                : null}
+            </div>
+            {toolbarAccessories ? <span className={styles.toolbarDivider} aria-hidden="true" /> : null}
+            {toolbarAccessories}
+          </ShellToolbar>
+        </header>
 
-      {mobileTabs && !focusMode ? (
-        <MobileTabs
-          activeDomain={activeDomain}
-          onSelect={onSelectDomain}
-          onOpenSearch={onOpenSearch}
-          onOpenSettings={onOpenSettings}
-          onOpenAssistant={onOpenAssistant}
-          isSettingsActive={isSettingsActive}
-          isAssistantActive={isAssistantActive}
-        />
-      ) : null}
+        {!focusMode ? (
+          <ModuleRail
+            activeDomain={activeDomain}
+            onSelect={onSelectDomain}
+            onReturnHome={onReturnHome}
+            onOpenSearch={onOpenSearch}
+            onOpenNotifications={onOpenNotifications}
+            onOpenSettings={onOpenSettings}
+            onOpenAssistant={onOpenAssistant}
+            isSettingsActive={isSettingsActive}
+            isAssistantActive={isAssistantActive}
+          />
+        ) : null}
 
-      <div className={styles.liveRegion} role="status" aria-live="polite">
-        {liveAnnouncement ?? ''}
+        {contextSidebar && !focusMode ? (
+          <aside
+            className={styles.contextSidebar}
+            hidden={!sidebarVisible}
+            aria-label="笔记上下文导航"
+            data-compact={compact || undefined}
+            data-open={sidebarVisible || undefined}
+          >
+            <ResponsivePanel
+              title="笔记导航"
+              modal={compact}
+              isOpen={sidebarVisible}
+              onClose={() => setSidebarOverlayOpen(false)}
+              className={styles.sidebarDialog}
+            >
+              {compact && sidebarVisible ? (
+                <div className={styles.sidebarClose}>
+                  <IconButton aria-label="关闭笔记导航" onPress={() => setSidebarOverlayOpen(false)}>
+                    <CloseIcon size={18} />
+                  </IconButton>
+                </div>
+              ) : null}
+              {contextSidebar}
+            </ResponsivePanel>
+          </aside>
+        ) : null}
+
+        <main
+          id="feature-stage"
+          data-skip-focused={skipFocused || undefined}
+          onBlur={() => setSkipFocused(false)}
+          className={cx(styles.stage, stageMode === 'workspace' ? styles.workspaceStage : undefined)}
+          tabIndex={-1}
+        >
+          {children}
+        </main>
+
+        {mobileTabs && !focusMode ? (
+          <MobileTabs
+            activeDomain={activeDomain}
+            onSelect={onSelectDomain}
+            onOpenSearch={onOpenSearch}
+            onOpenSettings={onOpenSettings}
+            onOpenAssistant={onOpenAssistant}
+            isSettingsActive={isSettingsActive}
+            isAssistantActive={isAssistantActive}
+          />
+        ) : null}
+
+        <div className={styles.liveRegion} role="status" aria-live="polite">
+          {liveAnnouncement ?? ''}
+        </div>
       </div>
-    </div>
     </DesktopTitlebarContext.Provider>
   );
 }
