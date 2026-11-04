@@ -14,8 +14,8 @@ import styles from './HomeView.module.css';
 type OpenNote = (noteId: string, title: string) => void;
 
 const NOTE_TONES = ['#ff8fb1', '#ffc933', '#4fd1a1', '#7aa7ff', '#b79bff', '#ff9a4d'] as const;
-const NOTE_TILTS = [-5, 2, -2.5, 4] as const;
-const NOTE_LIFTS = [22, 0, 12, 26] as const;
+const NOTE_TILTS = [-3, 1.5, -1.5, 2.5] as const;
+const NOTE_LIFTS = [14, 0, 8, 16] as const;
 
 /** 最近编辑：彩色便签卡片，轻微倾斜、从页面底部翻出；第一张是「继续上次编辑」。 */
 export function RecentCards({ notes, onOpen }: { notes: Note[]; tags: Tag[]; onOpen?: OpenNote }) {

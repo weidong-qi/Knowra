@@ -5,9 +5,9 @@
   --hero-bottom: #ffb69c;
   --art-dots: #ffffff;
   --art-dots-b: #ffffff;
-  --art-wave-back: #c9c0ff;
-  --art-wave-mid: #ff8a5c;
-  --art-wave-front: #2b2f7a;
+  --art-wave-back: #ddd7ff;
+  --art-wave-mid: #ffae8a;
+  --art-wave-front: #4a4f9a;
   --art-squiggle: #ffffff;
   --art-squiggle-b: #ff7a2f;
   --art-spark-a: #ffd23f;
@@ -55,20 +55,19 @@
   z-index: 0;
   right: clamp(24px, 7vw, 120px);
   top: clamp(40px, 7vh, 88px);
-  width: clamp(170px, 22vw, 300px);
+  width: clamp(140px, 17vw, 230px);
   aspect-ratio: 1;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: radial-gradient(circle at 34% 28%, var(--sun-a), var(--sun-b) 72%);
   box-shadow:
-    0 0 0 clamp(10px, 1.4vw, 18px) rgb(255 255 255 / 32%),
-    0 0 0 clamp(22px, 3vw, 40px) rgb(255 255 255 / 16%),
-    0 30px 60px -20px rgb(232 80 28 / 55%);
+    0 0 0 clamp(8px, 1vw, 14px) rgb(255 255 255 / 28%),
+    0 24px 48px -22px rgb(232 80 28 / 45%);
 }
 .sunFace {
   --pf-color: #2a1a12;
-  transform: scale(2.3);
+  transform: scale(1.8);
 }
 
 .copy {
@@ -106,9 +105,9 @@
 .title {
   margin: 0;
   color: var(--text-primary);
-  font-size: clamp(48px, 9vw, 116px);
-  font-weight: 800;
-  letter-spacing: -0.045em;
+  font-size: clamp(42px, 7vw, 88px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
   line-height: 1.04;
   text-wrap: balance;
   overflow-wrap: anywhere;

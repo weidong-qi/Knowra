@@ -88,11 +88,11 @@
 .notes { margin: 0 0 -120px; padding: 0; list-style: none; display: flex; justify-content: center; align-items: flex-end; gap: clamp(10px, 1.6vw, 22px); }
 .noteItem { flex: 0 1 clamp(190px, 21vw, 270px); min-width: 0; transform: translateY(var(--lift)) rotate(var(--tilt)); transition: transform 220ms var(--motion-ease); }
 .noteItem:hover, .noteItem:focus-within { transform: translateY(-16px) rotate(0deg); z-index: 1; }
-.note { width: 100%; height: 300px; display: flex; flex-direction: column; gap: var(--space-2); padding: 18px; border: 3px solid var(--tone); border-radius: 20px; background: color-mix(in srgb, var(--tone) 22%, var(--surface-raised)); box-shadow: 0 22px 34px -16px rgb(24 30 48 / 38%); color: var(--text-primary); text-align: left; cursor: pointer; }
+.note { width: 100%; height: 300px; display: flex; flex-direction: column; gap: var(--space-2); padding: 18px; border: 2px solid var(--tone); border-radius: 16px; background: color-mix(in srgb, var(--tone) 22%, var(--surface-raised)); box-shadow: 0 16px 26px -16px rgb(24 30 48 / 30%); color: var(--text-primary); text-align: left; cursor: pointer; }
 .note:focus-visible { outline: 3px solid var(--text-primary); outline-offset: 3px; }
 .note:disabled { cursor: default; }
 .noteEyebrow { color: var(--text-secondary); font: 600 var(--font-size-meta)/1.5 var(--font-ui); }
-.noteTitle { font: 800 19px/1.3 var(--font-ui); letter-spacing: -0.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.noteTitle { font: 700 18px/1.3 var(--font-ui); letter-spacing: -0.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .noteBody { color: var(--text-secondary); font-size: 13px; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 @media (max-width: 720px) {
   .notes { justify-content: flex-start; overflow-x: auto; padding: 0 var(--space-4) 0; margin-bottom: -150px; scrollbar-width: none; }

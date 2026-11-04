@@ -1,5 +1,6 @@
 // 首页整页背景插画：日出渐变 + 撕纸感层叠波浪 + 半调点、星芒、波浪线，以及铅笔与印章。
 // 全部铺满父容器（slice 裁切、底部对齐）；颜色取自 HomeHero.module.css 里按明暗切换的变量。
+// 装饰刻意克制：主体靠波浪与两件物品，其余只留少量点缀。
 
 import styles from './HomeArt.module.css';
 
@@ -18,12 +19,9 @@ export function HomeArt() {
         <pattern id="home-halftone" width="16" height="16" patternUnits="userSpaceOnUse">
           <circle cx="4" cy="4" r="2.2" style={{ fill: 'var(--art-dots)' }} />
         </pattern>
-        <pattern id="home-halftone-b" width="16" height="16" patternUnits="userSpaceOnUse">
-          <circle cx="4" cy="4" r="2.2" style={{ fill: 'var(--art-dots-b)' }} />
-        </pattern>
         <filter id="home-torn" x="-2%" y="-5%" width="104%" height="110%">
           <feTurbulence type="fractalNoise" baseFrequency="0.018 0.05" numOctaves="3" seed="7" result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="26" xChannelSelector="R" yChannelSelector="G" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G" />
         </filter>
         <filter id="home-grain" x="0" y="0" width="100%" height="100%">
           <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
@@ -32,7 +30,6 @@ export function HomeArt() {
       </defs>
 
       <rect className={styles.dots} x="330" y="110" width="340" height="260" fill="url(#home-halftone)" />
-      <rect className={styles.dotsB} x="980" y="430" width="300" height="160" fill="url(#home-halftone-b)" />
 
       <g filter="url(#home-torn)">
         <path
@@ -50,28 +47,15 @@ export function HomeArt() {
       </g>
 
       <path className={styles.squiggle} d="M300 560 q26 -36 52 0 t52 0 t52 0 t52 0 t52 0" />
-      <path className={styles.squiggleB} d="M1330 120 q22 -30 44 0 t44 0 t44 0 t44 0" />
 
       <g transform="translate(1210 150)">
         <path className={styles.sparkA} d={SPARKLE} />
       </g>
-      <g transform="translate(460 470) scale(.8)">
-        <path className={styles.sparkB} d={SPARKLE} />
-      </g>
       <g transform="translate(1250 480) scale(1.1)">
         <path className={styles.sparkC} d={SPARKLE} />
       </g>
-      <g transform="translate(760 96) scale(.6)">
-        <path className={styles.sparkD} d={SPARKLE} />
-      </g>
-      <g transform="translate(330 250) scale(.5)">
-        <path className={styles.sparkC} d={SPARKLE} />
-      </g>
       <circle className={styles.ring} cx="1300" cy="330" r="46" />
-      <circle className={styles.ringB} cx="400" cy="330" r="22" />
       <circle className={styles.dotSolid} cx="560" cy="170" r="7" />
-      <circle className={styles.dotSolidB} cx="1040" cy="260" r="10" />
-      <circle className={styles.dotSolid} cx="1360" cy="260" r="6" />
 
       <g transform="translate(420 650) rotate(-30)">
         <g className={styles.floatB}>
