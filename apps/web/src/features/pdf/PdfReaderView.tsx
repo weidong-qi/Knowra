@@ -67,7 +67,8 @@ export function PdfReaderView({
       () => {
         if (alive.current) render(value => value + 1);
       },
-      () => permission.current && alive.current
+      () => permission.current && alive.current,
+      true
     );
   }
   const session = sessionRef.current;

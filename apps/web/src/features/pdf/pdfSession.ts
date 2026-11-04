@@ -20,15 +20,21 @@ export class PdfSession {
   private readonly headers = pdfHeaders();
   private persistence: Promise<void> = Promise.resolve();
   private recoveryError: Error | null = null;
+  /** 恢复完成前不得写入持久化草稿，否则内存为空会覆盖或清除已有草稿。 */
+  private recovered: boolean;
   constructor(
     readonly noteId: string,
     readonly sha256: string,
     readonly key: string,
     private changed: () => void,
-    private canWrite = () => true
-  ) {}
+    private canWrite = () => true,
+    requireRecovery = false
+  ) {
+    this.recovered = !requireRecovery;
+  }
   async persist() {
     if (this.recoveryError) throw this.recoveryError;
+    if (!this.recovered) return;
     const value = this.drafts.size ? { version: 1, sha256: this.sha256, drafts: [...this.drafts.values()] } : null;
     const save = async () => {
       if (window.knowraDesktop?.writeRecoveryDraft) await window.knowraDesktop.writeRecoveryDraft(this.key, value);
@@ -44,7 +50,10 @@ export class PdfSession {
         ? window.knowraDesktop.readRecoveryDrafts()[this.key]
         : JSON.parse(localStorage.getItem(this.key) ?? 'null');
       const value = raw as { version?: number; sha256?: string; drafts?: PdfDraft[] } | undefined;
-      if (!value) return;
+      if (!value) {
+        this.recovered = true;
+        return;
+      }
       if (value.version !== 1 || value.sha256 !== this.sha256 || !Array.isArray(value.drafts))
         throw new Error('PDF 恢复草稿与原文件不匹配');
       const valid = value.drafts.every(
@@ -74,6 +83,7 @@ export class PdfSession {
         return { ...draft, expectedRevision };
       });
       for (const draft of drafts) this.drafts.set(draft.id, draft);
+      this.recovered = true;
     } catch (error) {
       this.recoveryError = error instanceof Error ? error : new Error('PDF 恢复草稿读取失败');
       throw this.recoveryError;

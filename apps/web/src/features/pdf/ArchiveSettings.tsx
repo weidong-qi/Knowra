@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Checkbox, Dialog, DialogBody, DialogFooter, FileDropField } from '../../components/ui';
 import { flushBeforeWorkspaceRestore } from '../../app/desktopLifecycle';
 import { useAppStore } from '../../store/AppStoreProvider';
-import { pdfRequest } from './pdfApi';
+import { pdfRequest, randomId } from './pdfApi';
 import styles from '../settings/SettingsView.module.css';
 
 type Preview = { token: string; notes: number; pdfs: number; annotations: number; attachments: number };
 async function discardPreview(preview: Preview | null) {
   if (preview) await pdfRequest(`/api/storage/archive/${preview.token}`, { method: 'DELETE' });
+}
+/** 请求在拿到 token 前被放弃（取消、断网、卸载）时，服务端可能已创建预检；按操作 ID 释放。 */
+function abandonInspection(operationId: string) {
+  return pdfRequest(`/api/storage/archive/operations/${operationId}`, { method: 'DELETE' }).catch(() => undefined);
 }
 export function ArchiveSettings() {
   const canWrite = useAppStore(state => state.canWriteWorkspace());
@@ -46,6 +50,8 @@ export function ArchiveSettings() {
     const controller = new AbortController();
     abort.current = controller;
     const isCurrent = () => abort.current === controller && !controller.signal.aborted;
+    const operationId = randomId();
+    let received = false;
     try {
       await releasePreview();
       if (!isCurrent()) return;
@@ -54,9 +60,13 @@ export function ArchiveSettings() {
       const value = await pdfRequest<Preview>('/api/storage/archive/inspect', {
         method: 'POST',
         signal: controller.signal,
-        headers: { 'Content-Type': file.name.toLowerCase().endsWith('.json') ? 'application/json' : 'application/zip' },
+        headers: {
+          'Content-Type': file.name.toLowerCase().endsWith('.json') ? 'application/json' : 'application/zip',
+          'X-Knowra-Operation-Id': operationId
+        },
         body: file
       });
+      received = true;
       if (!isCurrent()) {
         await discardPreview(value);
         return;
@@ -64,6 +74,9 @@ export function ArchiveSettings() {
       previewRef.current = value;
       setPreview(value);
     } catch (reason) {
+      // 服务端已返回错误响应时没有预检残留；只有取消或网络中断才可能留下拿不到 token 的预检。
+      const lost = reason instanceof TypeError || (reason instanceof DOMException && reason.name === 'AbortError');
+      if (!received && lost) void abandonInspection(operationId);
       if (isCurrent()) setError(reason instanceof Error ? reason.message : '备份检查失败');
     } finally {
       if (isCurrent()) setBusy(false);

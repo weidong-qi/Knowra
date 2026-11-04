@@ -13,6 +13,7 @@ interface PendingArchive {
   entries: Map<string, StagedEntry>;
   expires: number;
   baseline: string;
+  operationId: string;
 }
 interface ArchiveManifest {
   format: string;
@@ -55,6 +56,8 @@ export function createPdfArchive({
   beforeImport = async () => {}
 }: PdfArchiveOptions) {
   const pending = new Map<string, PendingArchive>();
+  // 客户端在拿到 token 前放弃的预检操作：晚到的检查结果直接丢弃，避免占用待确认名额。
+  const abandoned = new Map<string, number>();
   const uploadsDir = files.fileManager.getManagedUploadsDirectory();
   const exportsDir = path.resolve(storageRootDir, process.env.STORAGE_EXPORTS_DIR || 'storage/exports');
   const tempRoot = path.resolve(storageRootDir, process.env.STORAGE_TEMP_DIR || 'storage/temp');
@@ -69,6 +72,7 @@ export function createPdfArchive({
         };
   }
   function cleanup() {
+    for (const [id, expires] of abandoned) if (expires < Date.now()) abandoned.delete(id);
     for (const [id, item] of pending)
       if (item.expires < Date.now()) {
         fs.rmSync(item.directory, { recursive: true, force: true });
@@ -143,7 +147,7 @@ export function createPdfArchive({
       throw error;
     }
   }
-  async function inspect(stream: BinaryStream) {
+  async function inspect(stream: BinaryStream, operationId = '') {
     cleanup();
     if (pending.size >= 3) throw pdfError('ARCHIVE_BUSY', '已有待确认的导入，请完成或稍后重试。', 409);
     fs.mkdirSync(tempRoot, { recursive: true, mode: 0o700 });
@@ -258,12 +262,15 @@ export function createPdfArchive({
           throw pdfError('ARCHIVE_INVALID', '备份原文件大小或哈希不匹配。');
       }
       const token = randomUUID();
+      const baseline = digest(JSON.stringify((await snapshot()).data));
+      if (operationId && abandoned.has(operationId)) throw pdfError('ARCHIVE_CANCELLED', '备份检查已取消。', 409);
       pending.set(token, {
         directory,
         snapshot: { ...raw, ...current },
         entries,
         expires: Date.now() + 10 * 60 * 1000,
-        baseline: digest(JSON.stringify((await snapshot()).data))
+        baseline,
+        operationId
       });
       return {
         token,
@@ -347,7 +354,7 @@ export function createPdfArchive({
       throw error;
     }
   }
-  async function inspectLegacy(value: unknown) {
+  async function inspectLegacy(value: unknown, operationId = '') {
     const input = value as LegacySnapshot;
     const validated = readSnapshot(input);
     const entries: Record<string, Uint8Array> = {},
@@ -369,10 +376,19 @@ export function createPdfArchive({
     };
     entries['snapshot.json'] = snapshotBytes;
     entries['manifest.json'] = strToU8(JSON.stringify(manifest));
-    return inspect(Readable.from([zipSync(entries, { level: 0 })]));
+    return inspect(Readable.from([zipSync(entries, { level: 0 })]), operationId);
   }
   return {
     inspectLegacy,
+    cancelOperation(operationId: string) {
+      if (!operationId) return;
+      abandoned.set(operationId, Date.now() + 10 * 60 * 1000);
+      for (const [token, item] of pending)
+        if (item.operationId === operationId) {
+          fs.rmSync(item.directory, { recursive: true, force: true });
+          pending.delete(token);
+        }
+    },
     cancel(token: string) {
       const item = pending.get(token);
       if (item) fs.rmSync(item.directory, { recursive: true, force: true });

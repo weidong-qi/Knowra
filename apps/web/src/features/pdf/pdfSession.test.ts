@@ -235,3 +235,25 @@ it('并发冲突经用户核对后以最新修订保存；远端删除时保留�
   await session.flush();
   expect(JSON.parse(request.mock.calls[2][1]!.body as string).expectedRevision).toBe(0);
 });
+it('恢复完成前离开不会清除已有的持久化草稿', async () => {
+  const stored = JSON.stringify({
+    version: 1,
+    sha256: base.sha256,
+    drafts: [{ id: base.id, fields: base, expectedRevision: 0 }]
+  });
+  localStorage.setItem('guard-key', stored);
+  const session = new PdfSession(
+    'note',
+    base.sha256,
+    'guard-key',
+    () => {},
+    () => true,
+    true
+  );
+  await session.persist();
+  expect(localStorage.getItem('guard-key')).toBe(stored);
+  session.recover();
+  expect(session.drafts.size).toBe(1);
+  await session.persist();
+  expect(localStorage.getItem('guard-key')).not.toBeNull();
+});

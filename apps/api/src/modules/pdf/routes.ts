@@ -24,11 +24,24 @@ export async function handlePdfRoute({ request, response, url, pdf }: PdfRouteCo
     return true;
   }
   if (url.pathname === '/api/storage/archive/inspect' && request.method === 'POST') {
-    sendJson(response, 200, {
-      data: await (String(request.headers['content-type']).includes('application/json')
-        ? pdf.archive.inspectLegacy(await parseBody(request))
-        : pdf.archive.inspect(request))
-    });
+    const header = request.headers['x-knowra-operation-id'];
+    const operationId = typeof header === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(header) ? header : '';
+    const preview = (await (String(request.headers['content-type']).includes('application/json')
+      ? pdf.archive.inspectLegacy(await parseBody(request), operationId)
+      : pdf.archive.inspect(request, operationId))) as { token: string };
+    // 检查完成时连接已断开，客户端不会拿到 token，直接释放。
+    if (response.destroyed || request.socket?.destroyed) {
+      pdf.archive.cancel(preview.token);
+      return true;
+    }
+    sendJson(response, 200, { data: preview });
+    return true;
+  }
+  const abandon = /^\/api\/storage\/archive\/operations\/([A-Za-z0-9-]{8,64})$/.exec(url.pathname);
+  if (abandon && request.method === 'DELETE') {
+    // 客户端在响应返回前取消时拿不到 token：按操作 ID 释放已创建或仍在检查的预检。
+    pdf.archive.cancelOperation(abandon[1]);
+    sendJson(response, 200, { data: { discarded: true } });
     return true;
   }
   if (url.pathname === '/api/storage/archive/restore' && request.method === 'POST') {

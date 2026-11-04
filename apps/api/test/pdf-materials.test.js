@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { once } from 'node:events';
+import http from 'node:http';
 import { zipSync, strToU8 } from 'fflate';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
@@ -287,6 +288,47 @@ export const pdfMaterialsTests = [
         const legacyPreview = await pdf.archive.inspectLegacy(legacy);
         assert.equal(legacyPreview.pdfs, 1);
         pdf.archive.cancel(legacyPreview.token);
+      })
+  },
+  {
+    name: 'PDF 备份预检在响应送达前被取消时，按操作 ID 释放名额（含检查尚未完成）',
+    run: () =>
+      fixture(async ({ pdf, context, origin }) => {
+        const body = JSON.stringify(await context.http.storage.exportKnowledgeBase());
+        const operations = ['aaaaaaaa-1', 'aaaaaaaa-2', 'aaaaaaaa-3', 'aaaaaaaa-4'];
+        for (const operationId of operations) {
+          const request = http.request(`${origin}/api/storage/archive/inspect`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(body),
+              'X-Knowra-Operation-Id': operationId
+            }
+          });
+          const closed = new Promise(resolve => request.once('close', resolve));
+          request.on('error', () => undefined);
+          request.end(body, () => request.destroy());
+          await closed;
+        }
+        // 取消请求可能先于或晚于检查完成；两种顺序都不得占用名额。
+        for (const operationId of operations)
+          assert.equal(
+            (await fetch(`${origin}/api/storage/archive/operations/${operationId}`, { method: 'DELETE' })).status,
+            200
+          );
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const preview = await pdf.archive.inspectLegacy(await context.http.storage.exportKnowledgeBase());
+        const tokens = [preview.token];
+        for (let index = 0; index < 2; index += 1)
+          tokens.push((await pdf.archive.inspectLegacy(await context.http.storage.exportKnowledgeBase())).token);
+        for (const token of tokens) pdf.archive.cancel(token);
+        // 已取消的操作 ID 即使检查晚到完成也直接丢弃。
+        await assert.rejects(
+          pdf.archive.inspectLegacy(await context.http.storage.exportKnowledgeBase(), 'aaaaaaaa-1'),
+          {
+            code: 'ARCHIVE_CANCELLED'
+          }
+        );
       })
   }
 ];

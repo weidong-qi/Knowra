@@ -9,7 +9,7 @@ vi.mock('../../store/AppStoreProvider', () => ({
     selector({ canWriteWorkspace: () => true })
 }));
 vi.mock('../../app/desktopLifecycle', () => ({ flushBeforeWorkspaceRestore: vi.fn() }));
-vi.mock('./pdfApi', () => ({ pdfRequest: vi.fn() }));
+vi.mock('./pdfApi', () => ({ pdfRequest: vi.fn(), randomId: () => 'operation-id-0001' }));
 
 const request = vi.mocked(pdfRequest);
 const flush = vi.mocked(flushBeforeWorkspaceRestore);
@@ -148,5 +148,19 @@ it('恢复进行中卸载不能提前释放原文件，恢复失败后再清理�
   await act(async () => pending.reject(new Error('恢复失败')));
   await waitFor(() =>
     expect(request).toHaveBeenLastCalledWith('/api/storage/archive/restore-token', { method: 'DELETE' })
+  );
+});
+
+it('响应返回前取消检查时按操作 ID 释放服务端预检', async () => {
+  const pending = deferred<unknown>();
+  request.mockReturnValueOnce(pending.promise).mockResolvedValue({ discarded: true });
+  const { input, unmount } = await open();
+  await userEvent.upload(input, file());
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(request.mock.calls[0][1]!.headers).toMatchObject({ 'X-Knowra-Operation-Id': 'operation-id-0001' });
+  unmount();
+  await act(async () => pending.reject(new DOMException('aborted', 'AbortError')));
+  await waitFor(() =>
+    expect(request).toHaveBeenLastCalledWith('/api/storage/archive/operations/operation-id-0001', { method: 'DELETE' })
   );
 });
