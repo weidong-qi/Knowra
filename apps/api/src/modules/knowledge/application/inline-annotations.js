@@ -58,6 +58,7 @@ export function inlineMarksOf(markdown) {
   const parsed = parseKnowraMarks(text);
   const lines = text.split('\n');
   const clean = stripKnowraMarksMapped(text);
+  const sourceEmpty = !clean.markdown.trim();
   const projection = projectMarkdown(clean.markdown, { includeMath: true });
   const paths = headingPaths(lines, projection, clean.toClean);
   const entry = (id, attrs) => {
@@ -126,8 +127,14 @@ export function inlineMarksOf(markdown) {
       importance: LEVELS.has(item.attrs.l) ? item.attrs.l : 'normal',
       roles: (item.attrs.t ?? '').split(/\s+/).filter(Boolean),
       // 代码块在编辑器外被改写、校验不符：标记仍在正文里，但这一段需要用户确认。
-      anchorStatus: item.unresolved ? 'needsReview' : 'resolved',
-      anchorReason: item.unresolved ? (item.resolved ? 'partialCodeChanged' : 'codeChanged') : null
+      anchorStatus: sourceEmpty ? 'missing' : item.unresolved ? 'needsReview' : 'resolved',
+      anchorReason: sourceEmpty
+        ? 'sourceDeleted'
+        : item.unresolved
+          ? item.resolved
+            ? 'partialCodeChanged'
+            : 'codeChanged'
+          : null
     });
   }
   return result;
@@ -238,11 +245,13 @@ export function planInlineAnnotations(note, version, existing, now = new Date().
     }
   }
   let text = null;
-  const resolvePreviousSource = typeof before === 'string' ? createInlineAnnotationSourceResolver(before) : null;
+  const sourceContext = {};
+  const resolvePreviousSource =
+    typeof before === 'string' ? createInlineAnnotationSourceResolver(before, { keepWhitespace: true }) : null;
   for (const row of rows) {
     if (row.lifecycleStatus !== 'active' || marks.has(row.anchor.markId)) continue;
     text ??= stripKnowraMarks(String(note.rawMarkdown ?? ''));
-    const source = sourceLoss(text, row, before, resolvePreviousSource);
+    const source = sourceLoss(text, row, before, resolvePreviousSource, sourceContext);
     push(
       row,
       {
@@ -265,7 +274,7 @@ const then = (value, next) => (value && typeof value.then === 'function' ? value
  * 标记消失时原文的去向（与旧链路一致）：原摘录还在正文里是取消重点（null）；
  * 正文已清空算原文缺失（证据依据不足）；其余是原文被改写，需要核对（不等同于删除）。
  */
-function sourceLoss(text, row, before, resolvePreviousSource) {
+function sourceLoss(text, row, before, resolvePreviousSource, context) {
   const source = resolvePreviousSource?.(row.anchor.markId);
   const ranges = (source?.ranges ?? []).flatMap(range => {
     let pieces = [range];
@@ -280,7 +289,17 @@ function sourceLoss(text, row, before, resolvePreviousSource) {
     }
     return pieces;
   });
-  const pieces = ranges.map(range => before.slice(range.start, range.end).trim()).filter(Boolean);
+  const clean = typeof before === 'string' ? (context.cleanBefore ??= stripKnowraMarksMapped(before)) : null;
+  // 嵌套标记会把连续原文拆成多个源码区间；去标记后必须重新合并相邻区间。
+  const cleanRanges = ranges
+    .map(range => ({ start: clean.toClean(range.start), end: clean.toClean(range.end) }))
+    .reduce((result, range) => {
+      const last = result.at(-1);
+      if (last && range.start <= last.end) last.end = Math.max(last.end, range.end);
+      else result.push(range);
+      return result;
+    }, []);
+  const pieces = cleanRanges.map(range => clean.markdown.slice(range.start, range.end).trim()).filter(Boolean);
   // 摘录可能是 Markdown 投影或多个不连续范围的拼接，不能直接在源码中查找 quoteText。
   // 按原始顺序查找保存前的各源码片段，允许取消重点的同时修改范围以外的内容。
   let offset = 0;
@@ -305,17 +324,20 @@ function sourceLoss(text, row, before, resolvePreviousSource) {
 export function inlineSourceChanges(note, existing, before = null) {
   const marks = inlineMarksOf(note?.rawMarkdown);
   const text = stripKnowraMarks(String(note?.rawMarkdown ?? ''));
-  const resolvePreviousSource = typeof before === 'string' ? createInlineAnnotationSourceResolver(before) : null;
+  const resolvePreviousSource =
+    typeof before === 'string' ? createInlineAnnotationSourceResolver(before, { keepWhitespace: true }) : null;
+  const sourceContext = {};
   const changed = [],
     removed = [];
   for (const row of existing ?? []) {
     if (!isInlineAnnotation(row) || row.lifecycleStatus !== 'active') continue;
     const mark = marks.get(row.anchor.markId);
     if (mark) {
-      if (mark.quoteText !== row.quoteText) changed.push(row.id);
+      if (mark.anchorStatus === 'missing') removed.push(row.id);
+      else if (mark.quoteText !== row.quoteText) changed.push(row.id);
       continue;
     }
-    const loss = sourceLoss(text, row, before, resolvePreviousSource);
+    const loss = sourceLoss(text, row, before, resolvePreviousSource, sourceContext);
     if (loss) (loss.anchorStatus === 'missing' ? removed : changed).push(row.id);
   }
   return { changed, removed };

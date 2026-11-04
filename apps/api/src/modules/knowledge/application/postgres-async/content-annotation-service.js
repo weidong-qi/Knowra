@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { createAppError } from '../../../../errors/app-error.js';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../../domain/content-annotation.js';
 import { buildUpdateContentAnnotationDto } from '../dto/content-annotation-dto.js';
-import { legacyAnnotationRemoved } from '../content-annotation-service.js';
+import { legacyAnnotationRemoved, legacyAnnotationSourceChange } from '../content-annotation-service.js';
 
 const fail = (code, message, statusCode = 400) => createAppError(code, message, statusCode);
 
@@ -99,9 +99,24 @@ export function createAsyncContentAnnotationService({
     async confirmAnnotationRange() {
       throw legacyAnnotationRemoved();
     },
-    // 保存时不再跟随旧重点（位置在正文标记里，由派生维护）；保留方法以维持依赖级联的冻结调用序列。
-    async reconcileForNote() {
-      return { annotations: [], contentChangedAnnotationIds: [] };
+    // 不恢复旧锚点跟随，只在旧来源无法确认时保守降级。
+    async reconcileForNote(noteId, _contentHash, context = null) {
+      const rows = (await repository.list({ noteId, includeDeleted: true })).filter(
+        row => row.schemaVersion !== INLINE_ANNOTATION_SCHEMA
+      );
+      const note = rows.length && typeof context?.before === 'string' ? await noteRepository.findById(noteId) : null;
+      if (!note || note.deleted) return { annotations: [], contentChangedAnnotationIds: [] };
+      const annotations = [];
+      for (const row of rows) {
+        const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown);
+        if (!change) continue;
+        const updated = await repository.save(
+          new ContentAnnotation({ ...row, ...change, revision: row.revision + 1, updatedAt: new Date().toISOString() })
+        );
+        await recordRevision(updated, 'anchorStatusChanged', row.anchor, change.anchorReason);
+        annotations.push(updated);
+      }
+      return { annotations, contentChangedAnnotationIds: annotations.map(annotation => annotation.id) };
     }
   };
 }

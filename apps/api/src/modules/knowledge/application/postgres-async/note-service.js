@@ -103,7 +103,13 @@ export function createAsyncNoteService({
       currentNoteId: currentNote.id
     });
     const annotationChange =
-      dto.rawMarkdown !== undefined ? prepareAnnotationChange(currentNote, dto.rawMarkdown) : null;
+      dto.rawMarkdown !== undefined
+        ? prepareAnnotationChange(
+            currentNote,
+            dto.rawMarkdown,
+            dto.expectedUpdatedAt ? null : updates.annotationMapping
+          )
+        : null;
     return persistNote(
       new Note({
         ...currentNote,

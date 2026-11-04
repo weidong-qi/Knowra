@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
+import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
 import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.js';
+import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.js';
 import { selectVersionsToPrune } from '../../api/src/modules/knowledge/domain/note-version-retention.js';
 import { nextEntityUpload } from '../src/entity-sync-state.mjs';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
@@ -74,6 +76,94 @@ async function fixture(t, postgres) {
     versions: noteId => context.modules.knowledge.noteVersionService.listVersions({ noteId })
   };
 }
+
+test(
+  '真实 PostgreSQL：重点来源降级及旧格式待同步请求保护',
+  {
+    skip: !process.env.KNOWRA_SYNC_TEST_DATABASE_URL,
+    timeout: 60000
+  },
+  async t => {
+    const f = await fixture(t, true);
+    const nested = await f.knowledge.noteService.createNote({
+      spaceId: f.space.id,
+      title: '嵌套重点',
+      rawMarkdown: '<mark data-k="outer">甲<mark data-k="inner">乙</mark>丙</mark>尾'
+    });
+    const empty = await f.knowledge.noteService.createNote({
+      spaceId: f.space.id,
+      title: '空重点',
+      rawMarkdown: markText('原文', 'empty')
+    });
+    const writer = f.device('review-writer');
+    const reader = f.device('review-reader');
+    await writer.connect();
+    const evidenceFor = async (note, markId) => {
+      const { evidence } = await f.knowledge.knowledgeItemService.createCandidate({
+        spaceId: f.space.id,
+        title: `来源${markId}`,
+        canonicalStatement: '来源证据',
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'annotation', annotationId: inlineId(note.id, markId) }]
+      });
+      return evidence[0];
+    };
+    // 证据由云端独立创建，离线设备的上传不包含这些来源记录。
+    const nestedEvidence = await evidenceFor(nested, 'outer');
+    const emptyEvidence = await evidenceFor(empty, 'empty');
+    writer.knowledge.noteService.updateNote(nested.id, { rawMarkdown: '甲新增<mark data-k="inner">乙</mark>丙尾' });
+    writer.knowledge.noteService.updateNote(empty.id, { rawMarkdown: markText('', 'empty') });
+    await writer.engine.sync();
+    assert.equal(writer.engine.status().error, null, JSON.stringify(writer.engine.status()));
+    await reader.connect();
+    assert.equal(reader.engine.status().error, null, JSON.stringify(reader.engine.status()));
+    for (const [evidence, status] of [
+      [nestedEvidence, 'stale'],
+      [emptyEvidence, 'insufficient']
+    ]) {
+      assert.equal((await f.knowledge.repositories.knowledgeEvidenceRepository.findById(evidence.id)).status, status);
+      assert.equal(reader.store.state.knowledgeEvidence.find(value => value.id === evidence.id).status, status);
+    }
+    const note = writer.knowledge.noteService.getNote(nested.id);
+    const version = writer.knowledge.noteVersionService
+      .listVersions({ noteId: note.id })
+      .find(item => item.contentHash === calculateContentHash(note.rawMarkdown));
+    const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), 0);
+    const legacy = new ContentAnnotation({
+      id: 'legacy-pg-offline',
+      spaceId: note.spaceId,
+      noteId: note.id,
+      noteVersionId: version.id,
+      schemaVersion: 2,
+      scopeType: 'blocks',
+      anchor: { ...anchor, noteVersionId: version.id },
+      originSnapshot: {
+        noteVersionId: version.id,
+        contentHash: version.contentHash,
+        scopeType: 'blocks',
+        segments: anchor.segments,
+        quoteText: anchor.quoteText,
+        headingPath: []
+      },
+      quoteText: anchor.quoteText,
+      fromPosition: anchor.sourceStart,
+      toPosition: anchor.sourceEnd,
+      anchorFingerprint: 'legacy-pg',
+      noteContentHash: version.contentHash,
+      idempotencyKey: 'legacy-pg'
+    });
+    writer.knowledge.repositories.contentAnnotationRepository.save(legacy);
+    const frozen = structuredClone(nextEntityUpload(writer.store));
+    await writer.engine.sync();
+    assert.equal(writer.engine.status().error?.code, 'SYNC_CLIENT_UPGRADE_REQUIRED');
+    assert.deepEqual(nextEntityUpload(writer.store), frozen);
+    assert.equal(writer.knowledge.contentAnnotationService.getAnnotation(legacy.id).id, legacy.id);
+    assert.equal(await f.knowledge.repositories.contentAnnotationRepository.findById(legacy.id), null);
+    await writer.restart();
+    assert.deepEqual(nextEntityUpload(writer.store), frozen);
+    assert.equal(writer.knowledge.contentAnnotationService.getAnnotation(legacy.id).id, legacy.id);
+  }
+);
 
 for (const postgres of [false, true])
   test(

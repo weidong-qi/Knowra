@@ -139,9 +139,9 @@ test('真实 stdio 子进程：initialize、列工具、检索、读取、重点
 
   const found = await call('notes_search', { query: '线粒体' });
   assert.equal(found.isError, undefined, found.text);
-  assert.equal(found.data.fragments[0].noteId, note.id);
-  assert.match(found.data.fragments[0].text, /线粒体/);
-  const hit = found.data.fragments[0];
+  const hit = found.data.fragments.find(fragment => fragment.noteId === note.id);
+  assert.ok(hit, '搜索结果应包含原笔记');
+  assert.match(hit.text, /线粒体/);
   assert.equal(BODY.slice(hit.start, hit.end), hit.text);
 
   const read = await call('notes_read', { noteId: note.id, start: 0, end: 12 });

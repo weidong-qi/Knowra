@@ -4,11 +4,13 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { once } from 'node:events';
 import { test } from 'node:test';
+import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.js';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';
+import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.js';
 import { temporaryDirectory, openWorkspace, markText, inlineId } from './helpers.mjs';
 
 async function fixture(t, options = {}) {
@@ -765,6 +767,172 @@ test('离线正文改写使设备未知的云端重点证据降级并同步到�
         );
       }
     });
+  }
+});
+
+test('旧客户端上传重点变更时，云端按原文判断嵌套改写与空标记', async t => {
+  for (const [name, before, after, markId, expected, anchorStatus] of [
+    [
+      '嵌套标记间插入',
+      '<mark data-k="outer">甲<mark data-k="inner">乙</mark>丙</mark>尾',
+      '甲新增<mark data-k="inner">乙</mark>丙尾',
+      'outer',
+      'stale',
+      'needsReview'
+    ],
+    ['只剩空标记', markText('原始重点', 'source'), markText('', 'source'), 'source', 'insufficient', 'missing']
+  ]) {
+    await t.test(name, async t => {
+      const cloud = await fixture(t);
+      const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: before });
+      const id = inlineId(note.id, markId);
+      const a = cloud.device('old-writer');
+      await a.connect();
+      clean(a);
+      const { item, evidence } = cloud.knowledge.knowledgeItemService.createCandidate({
+        title: '云端来源',
+        canonicalStatement: '以原文为依据',
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'annotation', annotationId: id }]
+      });
+      cloud.knowledge.knowledgeItemService.confirmItem(item.id);
+      const question = cloud.knowledge.questionService.createQuestion({
+        stem: '解释来源',
+        referenceAnswer: '依据正文',
+        sources: [{ sourceType: 'knowledgeEvidence', sourceId: evidence[0].id }]
+      });
+      a.knowledge.noteService.updateNote(note.id, { rawMarkdown: after });
+      const { nextEntityUpload } = await import('../src/entity-sync-state.mjs');
+      const operation = structuredClone(nextEntityUpload(a.store));
+      const uploaded = operation.changes.find(entry => entry.collection === 'contentAnnotations' && entry.id === id);
+      assert.ok(uploaded);
+      // I4a 客户端尚不会派生来源健康状态。
+      uploaded.value.anchorStatus = 'resolved';
+      uploaded.value.anchorReason = null;
+      uploaded.value.status = uploaded.value.lifecycleStatus === 'deleted' ? 'archived' : 'active';
+      assert.equal((await cloud.context.http.sync.pushBatch(operation)).status, 'accepted');
+      const b = cloud.device('reader');
+      await b.connect();
+      clean(b);
+      for (const state of [cloud.dataStore.state, b.store.state]) {
+        assert.equal(state.contentAnnotations.find(value => value.id === id).anchorStatus, anchorStatus);
+        assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, expected);
+        assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'needsRevision');
+        assert.equal(state.questionSources.find(value => value.questionId === question.id).status, 'stale');
+      }
+    });
+  }
+});
+
+test('旧格式重点新建被同步门禁阻止，冻结请求和本地数据保留', async t => {
+  const cloud = await fixture(t);
+  const a = cloud.device('legacy-writer');
+  await a.connect();
+  const note = a.knowledge.noteService.getNote(cloud.note.id);
+  const version = a.knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
+  const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), 0);
+  const row = new ContentAnnotation({
+    id: 'offline-legacy',
+    spaceId: note.spaceId,
+    noteId: note.id,
+    noteVersionId: version.id,
+    schemaVersion: 2,
+    scopeType: 'blocks',
+    anchor: { ...anchor, noteVersionId: version.id },
+    originSnapshot: {
+      noteVersionId: version.id,
+      contentHash: version.contentHash,
+      scopeType: 'blocks',
+      segments: anchor.segments,
+      quoteText: anchor.quoteText,
+      headingPath: []
+    },
+    quoteText: anchor.quoteText,
+    fromPosition: anchor.sourceStart,
+    toPosition: anchor.sourceEnd,
+    anchorFingerprint: 'legacy',
+    noteContentHash: calculateContentHash(note.rawMarkdown),
+    idempotencyKey: 'legacy'
+  });
+  a.knowledge.repositories.contentAnnotationRepository.save(row);
+  const { nextEntityUpload } = await import('../src/entity-sync-state.mjs');
+  const frozen = structuredClone(nextEntityUpload(a.store));
+  await a.engine.sync();
+  assert.equal(a.engine.status().error?.code, 'SYNC_CLIENT_UPGRADE_REQUIRED');
+  assert.ok(a.engine.status().pendingEntities > 0);
+  assert.deepEqual(nextEntityUpload(a.store), frozen);
+  assert.equal(a.knowledge.contentAnnotationService.getAnnotation(row.id).quoteText, row.quoteText);
+  assert.equal(
+    cloud.dataStore.state.contentAnnotations.find(value => value.id === row.id),
+    undefined
+  );
+});
+
+test('已有旧重点备注仍可同步，正文改写时云端独有证据降级', async t => {
+  const cloud = await fixture(t);
+  const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '原文 其他' });
+  const version = cloud.knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
+  const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), 0);
+  const row = new ContentAnnotation({
+    id: 'cloud-legacy',
+    spaceId: note.spaceId,
+    noteId: note.id,
+    noteVersionId: version.id,
+    schemaVersion: 2,
+    scopeType: 'blocks',
+    anchor: { ...anchor, noteVersionId: version.id },
+    originSnapshot: {
+      noteVersionId: version.id,
+      contentHash: version.contentHash,
+      scopeType: 'blocks',
+      segments: anchor.segments,
+      quoteText: anchor.quoteText,
+      headingPath: []
+    },
+    quoteText: anchor.quoteText,
+    fromPosition: anchor.sourceStart,
+    toPosition: anchor.sourceEnd,
+    anchorFingerprint: 'legacy-existing',
+    noteContentHash: version.contentHash,
+    idempotencyKey: 'legacy-existing'
+  });
+  cloud.knowledge.repositories.contentAnnotationRepository.save(row);
+  const a = cloud.device('legacy-editor');
+  await a.connect();
+  a.knowledge.contentAnnotationService.updateAnnotation(row.id, {
+    comment: '历史备注',
+    expectedRevision: row.revision
+  });
+  await a.engine.sync();
+  clean(a);
+  assert.equal(cloud.dataStore.state.contentAnnotations.find(value => value.id === row.id).comment, '历史备注');
+  const { item, evidence } = cloud.knowledge.knowledgeItemService.createCandidate({
+    title: '旧重点来源',
+    canonicalStatement: '历史来源',
+    sourceMode: 'annotation',
+    evidence: [{ sourceType: 'annotation', annotationId: row.id }]
+  });
+  cloud.knowledge.knowledgeItemService.confirmItem(item.id);
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: '完全改写' });
+  await a.engine.sync();
+  clean(a);
+  const b = cloud.device('legacy-reader');
+  await b.connect();
+  clean(b);
+  for (const state of [cloud.dataStore.state, b.store.state]) {
+    assert.equal(state.contentAnnotations.find(value => value.id === row.id).anchorStatus, 'needsReview');
+    assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'stale');
+    assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'needsRevision');
+  }
+  const current = a.knowledge.contentAnnotationService.getAnnotation(row.id);
+  a.knowledge.contentAnnotationService.deleteAnnotation(row.id, { expectedRevision: current.revision });
+  await a.engine.sync();
+  clean(a);
+  await b.engine.sync();
+  clean(b);
+  for (const state of [cloud.dataStore.state, b.store.state]) {
+    assert.equal(state.contentAnnotations.find(value => value.id === row.id).lifecycleStatus, 'deleted');
+    assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'stale');
   }
 });
 

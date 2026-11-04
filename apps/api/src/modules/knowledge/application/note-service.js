@@ -156,7 +156,13 @@ export function createNoteService({
         currentNoteId: currentNote.id
       });
       const annotationChange =
-        dto.rawMarkdown !== undefined ? prepareAnnotationChange(currentNote, dto.rawMarkdown) : null;
+        dto.rawMarkdown !== undefined
+          ? prepareAnnotationChange(
+              currentNote,
+              dto.rawMarkdown,
+              dto.expectedUpdatedAt ? null : updates.annotationMapping
+            )
+          : null;
       const updatedNote = new Note({
         ...currentNote,
         annotationStructure: annotationChange?.structure ?? currentNote.annotationStructure,
@@ -184,13 +190,11 @@ export function createNoteService({
       if (currentNote.deleted) return currentNote;
       const deletedAt = new Date().toISOString();
       const annotationStates =
-        annotationRepository
-          ?.list({ noteId, includeDeleted: true })
-          .map(annotation => ({
-            id: annotation.id,
-            lifecycleStatus: annotation.lifecycleStatus ?? 'active',
-            revision: annotation.revision ?? 1
-          })) ?? [];
+        annotationRepository?.list({ noteId, includeDeleted: true }).map(annotation => ({
+          id: annotation.id,
+          lifecycleStatus: annotation.lifecycleStatus ?? 'active',
+          revision: annotation.revision ?? 1
+        })) ?? [];
       const deletedNote = new Note({
         ...currentNote,
         deleted: true,

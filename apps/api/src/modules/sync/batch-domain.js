@@ -31,6 +31,7 @@ import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contr
 import { syncError } from './journal.js';
 import { validateKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.js';
 import { addedNoteLinkTargets } from '../knowledge/application/note-link-relations.js';
+import { legacyAnnotationSourceChange } from '../knowledge/application/content-annotation-service.js';
 import {
   applyInlineAnnotationChanges,
   INLINE_KEY_PREFIX,
@@ -40,6 +41,26 @@ import {
 } from '../knowledge/application/inline-annotations.js';
 
 const sha = text => createHash('sha256').update(text).digest('hex');
+const legacySourceFields = [
+  'schemaVersion',
+  'scopeType',
+  'sourceMode',
+  'anchor',
+  'quoteText',
+  'noteVersionId',
+  'noteContentHash',
+  'fromPosition',
+  'toPosition',
+  'prefixText',
+  'suffixText',
+  'anchorFingerprint',
+  'resolvedContentHash',
+  'boundaryFingerprint',
+  'idempotencyKey'
+];
+const legacySource = row => Object.fromEntries(legacySourceFields.map(field => [field, row?.[field] ?? null]));
+const legacySyncUnavailable = () =>
+  syncError('SYNC_CLIENT_UPGRADE_REQUIRED', '旧格式重点的待同步数据暂无法处理，已保留本机数据和待同步队列。', 422);
 const builders = {
   notes: buildCreateNoteDto,
   folders: buildCreateFolderDto,
@@ -73,6 +94,33 @@ export function prepareBatchState(before, changes, ownerId, preparedAttachments 
   for (const change of changes) {
     const { collection, id } = change;
     const old = before[collection].find(item => item.id === id);
+    if (collection === 'contentAnnotations' && change.value && change.value.schemaVersion !== 3) {
+      const oldLifecycle = old?.lifecycleStatus ?? (old?.status === 'archived' ? 'archived' : 'active');
+      const nextLifecycle =
+        change.value.lifecycleStatus ?? (change.value.status === 'archived' ? 'archived' : 'active');
+      const oldNote = before.notes.find(note => note.id === old?.noteId);
+      const incomingNote = changes.find(item => item.collection === 'notes' && item.id === old?.noteId)?.value;
+      const loss =
+        old && oldNote && incomingNote
+          ? legacyAnnotationSourceChange(old, oldNote.rawMarkdown, incomingNote.rawMarkdown)
+          : null;
+      const healthChanged =
+        (old?.anchorStatus ?? 'resolved') !== (change.value.anchorStatus ?? 'resolved') ||
+        (old?.anchorReason ?? null) !== (change.value.anchorReason ?? null);
+      if (
+        !old ||
+        (oldLifecycle !== 'active' && nextLifecycle === 'active') ||
+        !sameEntity('contentAnnotations', legacySource(old), legacySource(change.value)) ||
+        (healthChanged &&
+          (!loss || loss.anchorStatus !== change.value.anchorStatus || loss.anchorReason !== change.value.anchorReason))
+      )
+        throw legacySyncUnavailable();
+    }
+    if (collection === 'annotationExclusions' && change.value) {
+      const parent = before.contentAnnotations.find(item => item.id === change.value.parentAnnotationId);
+      if (parent && parent.schemaVersion !== 3 && (!old || !sameEntity('annotationExclusions', old, change.value)))
+        throw legacySyncUnavailable();
+    }
     validateKnowledgeLifecycleChange(change, old);
     if (collection === 'analysisScopeSnapshots' && old) {
       const action =
@@ -340,6 +388,46 @@ export function prepareBatchState(before, changes, ownerId, preparedAttachments 
       throw syncError('DEPENDENCY_MISSING', '正文对应的不可变版本尚未提交。');
     // 内联重点：旧客户端或外部改写没有带来派生行时，按正文补齐；与客户端派生一致时没有变化。
     const version = state.noteVersions.find(item => item.noteId === note.id && item.contentHash === note.contentHash);
+    const previousNote = before.notes.find(item => item.id === note.id);
+    const previousRows = before.contentAnnotations.filter(item => item.noteId === note.id);
+    if (previousNote && !note.deleted) {
+      const currentById = new Map(state.contentAnnotations.map(item => [item.id, item]));
+      // 老客户端上传的删除行可能没有来源健康状态；按云端保存前的正文补齐，不重复创建修订。
+      const uploadedDeletions = previousRows.filter(
+        item =>
+          item.schemaVersion === 3 &&
+          item.lifecycleStatus === 'active' &&
+          currentById.get(item.id)?.lifecycleStatus === 'deleted'
+      );
+      for (const { annotation } of planInlineAnnotations(
+        note,
+        version,
+        uploadedDeletions,
+        now,
+        previousNote.rawMarkdown
+      )) {
+        const current = currentById.get(annotation.id);
+        if (current?.lifecycleStatus !== 'deleted' || annotation.lifecycleStatus !== 'deleted') continue;
+        if (!['needsReview', 'missing'].includes(annotation.anchorStatus) || current.anchorStatus === 'missing')
+          continue;
+        const updated = new ContentAnnotation({
+          ...current,
+          anchorStatus: annotation.anchorStatus,
+          anchorReason: annotation.anchorReason
+        });
+        replace(state, 'contentAnnotations', updated.id, updated);
+        currentById.set(updated.id, updated);
+      }
+      // 恢复旧备份等情况仍可能有旧重点；原文变化时只降级，不推算新位置。
+      for (const previous of previousRows) {
+        const loss = legacyAnnotationSourceChange(previous, previousNote.rawMarkdown, note.rawMarkdown);
+        const current = currentById.get(previous.id);
+        if (!loss || !current || current.anchorStatus === 'missing') continue;
+        const updated = new ContentAnnotation({ ...current, ...loss });
+        replace(state, 'contentAnnotations', updated.id, updated);
+        currentById.set(updated.id, updated);
+      }
+    }
     applyInlineAnnotationChanges(
       createInMemoryContentAnnotationRepository({ records: state.contentAnnotations }),
       createInMemoryAnnotationRevisionRepository({ records: state.annotationRevisions }),
@@ -348,7 +436,7 @@ export function prepareBatchState(before, changes, ownerId, preparedAttachments 
         version,
         state.contentAnnotations.filter(item => item.noteId === note.id),
         now,
-        before.notes.find(item => item.id === note.id)?.rawMarkdown
+        previousNote?.rawMarkdown
       )
     );
   }

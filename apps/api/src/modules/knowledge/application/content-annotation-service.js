@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
-import { calculateContentHash } from '@study-accelerator/content-anchor';
+import { calculateContentHash, resolveAnchor } from '@study-accelerator/content-anchor';
+import { sameKnowraText, stripKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import { createAppError } from '../../../errors/app-error.js';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.js';
 import { buildUpdateContentAnnotationDto } from './dto/content-annotation-dto.js';
@@ -10,8 +11,34 @@ const fail = (code, message, statusCode = 400) => createAppError(code, message, 
 /** 重点内联化 I4b：重点只能写在正文标记里，旧格式重点不再新建、改范围、确认范围、排除或恢复。 */
 export const legacyAnnotationRemoved = () => fail('ANNOTATION_LEGACY_REMOVED', '重点写在正文里，请在笔记中标记', 410);
 
+/** 旧重点不再跟随正文；无法确认原摘录时，保守降级其来源。 */
+export function legacyAnnotationSourceChange(annotation, before, after) {
+  if (
+    annotation?.schemaVersion === INLINE_ANNOTATION_SCHEMA ||
+    annotation?.lifecycleStatus !== 'active' ||
+    typeof before !== 'string' ||
+    typeof after !== 'string' ||
+    sameKnowraText(before, after)
+  )
+    return null;
+  if (!stripKnowraMarks(after).trim()) {
+    return annotation.anchorStatus === 'missing' ? null : { anchorStatus: 'missing', anchorReason: 'sourceDeleted' };
+  }
+  if (annotation.anchorStatus === 'missing' || annotation.anchorStatus === 'needsReview') return null;
+  if (annotation.schemaVersion === 2 && annotation.anchor) {
+    try {
+      const resolved = resolveAnchor(after, annotation.anchor);
+      if (resolved.status === 'resolved' && resolved.quoteText === annotation.quoteText) return null;
+    } catch {
+      // 损坏的旧锚点不应阻止正文保存，需要用户核对。
+    }
+  }
+  return { anchorStatus: 'needsReview', anchorReason: 'sourceChanged' };
+}
+
 export function createContentAnnotationService({
   repository = createInMemoryContentAnnotationRepository(),
+  noteRepository = null,
   revisionRepository = null,
   onSourceChanged = null
 } = {}) {
@@ -99,9 +126,31 @@ export function createContentAnnotationService({
     confirmAnnotationRange() {
       throw legacyAnnotationRemoved();
     },
-    // 保存时不再跟随旧重点（位置在正文标记里，由派生维护）；保留方法以维持依赖级联的冻结调用序列。
-    reconcileForNote() {
-      return { annotations: [], contentChangedAnnotationIds: [] };
+    // 不恢复旧锚点跟随，只在旧来源无法确认时保守降级。
+    reconcileForNote(noteId, _contentHash, context = null) {
+      const rows = repository
+        .list({ noteId, includeDeleted: true })
+        .filter(row => row.schemaVersion !== INLINE_ANNOTATION_SCHEMA);
+      const note = rows.length && typeof context?.before === 'string' ? noteRepository?.findById(noteId) : null;
+      if (!note || note.deleted) return { annotations: [], contentChangedAnnotationIds: [] };
+      const annotations = [];
+      for (const row of rows) {
+        const change = legacyAnnotationSourceChange(row, context.before, note.rawMarkdown);
+        if (!change) continue;
+        // 旧记录由领域构造器校验；revision 可能来自历史存储中的数字字符串。
+        const input = /** @type {import('../domain/content-annotation.ts').ContentAnnotationConstructorInput} */ (
+          /** @type {unknown} */ ({
+            ...row,
+            ...change,
+            revision: Number(row.revision) + 1,
+            updatedAt: new Date().toISOString()
+          })
+        );
+        const updated = repository.save(new ContentAnnotation(input));
+        recordRevision(updated, 'anchorStatusChanged', row.anchor, change.anchorReason);
+        annotations.push(updated);
+      }
+      return { annotations, contentChangedAnnotationIds: annotations.map(annotation => annotation.id) };
     }
   };
 }
