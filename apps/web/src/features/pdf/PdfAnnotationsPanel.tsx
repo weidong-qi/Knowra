@@ -1,6 +1,6 @@
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { Button, PressableButton, Select, TextAreaField } from '../../components/ui';
-import { KIND_OPTIONS, IMPORTANCE_OPTIONS } from '../editor/inspector/annotationOptions';
+import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import { sortPdfAnnotations } from './pdfGeometry';
 import styles from './PdfReader.module.css';
 
@@ -22,7 +22,7 @@ export function PdfAnnotationsList({
   return (
     <>
       {!items.length ? (
-        <p className={styles.panelEmpty}>选中文字后点击“高亮选区”，或使用区域框选标记图片、公式和扫描页。</p>
+        <p className={styles.panelEmpty}>选中文字后点一下颜色即可标注；用区域框选标记图片、公式和扫描页。</p>
       ) : null}
       {sortPdfAnnotations(items).map(item => (
         <section
@@ -50,13 +50,6 @@ export function PdfAnnotationsList({
                 selectedKey={item.kind}
                 isDisabled={!canWrite}
                 onSelectionChange={key => onChange(item.id, { kind: String(key) })}
-              />
-              <Select
-                label="重要程度"
-                options={IMPORTANCE_OPTIONS}
-                selectedKey={item.importance}
-                isDisabled={!canWrite}
-                onSelectionChange={key => onChange(item.id, { importance: String(key) })}
               />
               <TextAreaField
                 label="评论"

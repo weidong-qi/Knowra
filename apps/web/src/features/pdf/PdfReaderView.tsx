@@ -18,6 +18,7 @@ import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
 import { exportPdfExcerpt, rectToPdf, type PdfSelection } from './pdfGeometry';
 import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
+import { PdfSelectionBar, type PdfBarAnchor } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
 import { PdfSidePanel, type PdfPanelTab } from './PdfSidePanel';
@@ -43,7 +44,7 @@ export function PdfReaderView({
   const [loaded, setLoaded] = useState(false),
     [error, setError] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
-  const [selection, setSelection] = useState<PdfSelection | null>(null);
+  const [pending, setPending] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [tool, setTool] = useState('text'),
     [panel, setPanel] = useState(true);
   const [ghost, setGhost] = useState<PdfSegment | null>(null);
@@ -176,7 +177,8 @@ export function PdfReaderView({
   async function reviewConflict() {
     try {
       const latest = await listPdfAnnotations(note.id);
-      const draft = session.drafts.values().next().value;
+      const conflictId = session.conflictId();
+      const draft = (conflictId && session.drafts.get(conflictId)) || session.drafts.values().next().value;
       if (draft) setReview({ draft, remote: latest.find(item => item.id === draft.id) ?? null });
     } catch (reason) {
       setError(String(reason));
@@ -190,23 +192,35 @@ export function PdfReaderView({
       void flush();
     }, 450);
   }
-  function createMark(value: PdfSelection) {
+  function createMark(value: PdfSelection, kind: string) {
     if (!editable) return;
     if (value.segments.length > 2000 || value.quoteText.length > 100000) {
       setError('本次选区过长，请分成几条标注保存。');
       return;
     }
     const id = randomId();
-    change(id, { ...value, kind: 'important', importance: 'normal', comment: '' });
+    change(id, { ...value, kind, comment: '' });
     setSelected(id);
     setPanel(true);
     setPanelTab('marks');
-    setSelection(null);
+    setPending(null);
+    setGhost(null);
     window.getSelection()?.removeAllRanges();
+  }
+  function textAnchor(): PdfBarAnchor | null {
+    const selection = window.getSelection();
+    if (!selection?.rangeCount) return null;
+    const rects = selection.getRangeAt(0).getClientRects();
+    const last = rects[rects.length - 1],
+      first = rects[0];
+    if (!first || !last) return null;
+    return { x: (first.left + first.right) / 2, top: first.top, bottom: last.bottom };
   }
 
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
     if (tool !== 'region' || !editable || event.button !== 0) return;
+    setPending(null);
+    setGhost(null);
     const element = (event.target as Element).closest<HTMLElement>('.page');
     if (!element) return;
     drag.current = { index: Number(element.dataset.pageNumber) - 1, x: event.clientX, y: event.clientY };
@@ -358,7 +372,6 @@ export function PdfReaderView({
             panel={panel && panelTab === 'marks'}
             outlineOpen={panel && panelTab === 'outline'}
             tool={tool}
-            selection={Boolean(selection)}
             onBack={() => navigate('/materials')}
             onFavorite={async () => {
               try {
@@ -378,9 +391,6 @@ export function PdfReaderView({
               setPanelTab('marks');
             }}
             onTool={setTool}
-            onHighlight={() => {
-              if (selection) createMark(selection);
-            }}
           />
           <div
             ref={viewer.containerRef}
@@ -400,18 +410,45 @@ export function PdfReaderView({
               if (drag.current) {
                 const segment = dragSegment(event);
                 drag.current = null;
-                setGhost(null);
-                if (segment) createMark({ type: 'region', segments: [segment], quoteText: '' });
+                setGhost(segment);
+                if (segment)
+                  setPending({
+                    value: { type: 'region', segments: [segment], quoteText: '' },
+                    anchor: { x: event.clientX, top: event.clientY, bottom: event.clientY }
+                  });
               }
             }}
             onMouseUp={() => {
-              if (tool === 'text' && viewer.viewerRef.current)
-                setSelection(readPdfSelection(viewer.viewerRef.current, viewer.containerRef.current!));
+              if (tool !== 'text' || !viewer.viewerRef.current) return;
+              const value = readPdfSelection(viewer.viewerRef.current, viewer.containerRef.current!);
+              const anchor = value && textAnchor();
+              setPending(value && anchor ? { value, anchor } : null);
+            }}
+            onScroll={() => {
+              // 文字选区随滚动重新定位；框选的位置无法回算，滚动即收起。
+              setPending(current => {
+                if (!current) return current;
+                if (current.value.type === 'region') {
+                  setGhost(null);
+                  return null;
+                }
+                const anchor = textAnchor();
+                return anchor ? { ...current, anchor } : null;
+              });
+            }}
+            onKeyDown={event => {
+              if (event.key === 'Escape' && pending) {
+                setPending(null);
+                setGhost(null);
+              }
             }}
           >
             <div className="pdfViewer" />
           </div>
           <PdfPageBar viewer={viewer} />
+          {pending && editable ? (
+            <PdfSelectionBar anchor={pending.anchor} onPick={kind => createMark(pending.value, kind)} />
+          ) : null}
         </div>
         {panel ? (
           <PdfSidePanel

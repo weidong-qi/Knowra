@@ -19,7 +19,6 @@ const base = {
   segments: [{ pageIndex: 0, rect: [1, 2, 3, 4] as [number, number, number, number] }],
   quoteText: '',
   kind: 'important',
-  importance: 'normal',
   comment: '',
   revision: 1,
   operationId: 'op',
@@ -256,4 +255,18 @@ it('恢复完成前离开不会清除已有的持久化草稿', async () => {
   expect(session.drafts.size).toBe(1);
   await session.persist();
   expect(localStorage.getItem('guard-key')).not.toBeNull();
+});
+it('队首标注冲突时跳过它继续保存其余标注，并指向冲突标注供核对', async () => {
+  const conflict = Object.assign(new Error('标注已变化'), { code: 'PDF_ANNOTATION_CONFLICT' });
+  request.mockImplementation(async (url: string) => {
+    if (url.endsWith('/stale')) throw conflict;
+    return { ...base, id: 'fresh', revision: 1 };
+  });
+  const session = new PdfSession('note', base.sha256, 'test-key', () => {});
+  await session.stage('stale', { ...base, id: 'stale' });
+  await session.stage('fresh', { ...base, id: 'fresh' });
+  await expect(session.flush()).rejects.toBe(conflict);
+  expect([...session.drafts.keys()]).toEqual(['stale']);
+  expect(session.conflictId()).toBe('stale');
+  expect(session.errorCode).toBe('PDF_ANNOTATION_CONFLICT');
 });

@@ -71,7 +71,7 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
       selection.addRange(range);
       element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     });
-  await page.getByRole('button', { name: '高亮选区', exact: true }).click();
+  await page.getByRole('button', { name: '标注为重点', exact: true }).click();
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: '评论', exact: true }).fill('PDF 评论持久保存');
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
@@ -91,6 +91,7 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
   await page.mouse.down();
   await page.mouse.move(box.x + 180, box.y + 240, { steps: 8 });
   await page.mouse.up();
+  await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   marks = (await (await context.request.get(`${runtime.origin}/api/pdf/${note.id}/annotations`)).json()).data;
   assert.equal(marks.length, 2);
@@ -141,7 +142,7 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
     selection.addRange(range);
     container.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
   });
-  await page.getByRole('button', { name: '高亮选区', exact: true }).click();
+  await page.getByRole('button', { name: '标注为重点', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   const multiple = (await (await context.request.get(`${runtime.origin}/api/pdf/${note.id}/annotations`)).json()).data;
   assert(multiple.some(mark => new Set(mark.segments.map(segment => segment.pageIndex)).size === 2));

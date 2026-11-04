@@ -1,6 +1,5 @@
 export const MAX_PDF_BYTES = 50 * 1024 * 1024;
 export const PDF_KINDS = ['important', 'question', 'supplement', 'pitfall', 'temporary'];
-export const PDF_IMPORTANCE = ['normal', 'important', 'core'];
 
 export function validatePdfAnnotation(value) {
   const validText = (text, limit) => typeof text === 'string' && text.length <= limit;
@@ -12,7 +11,6 @@ export function validatePdfAnnotation(value) {
     !/^[a-f0-9]{64}$/.test(value.sha256 ?? '') ||
     !['highlight', 'region'].includes(value.type) ||
     !PDF_KINDS.includes(value.kind) ||
-    !PDF_IMPORTANCE.includes(value.importance) ||
     !Number.isSafeInteger(value.revision) ||
     value.revision < 1 ||
     !validText(value.quoteText, 100000) ||

@@ -3,7 +3,6 @@ import type { Note } from '@study-accelerator/web-core';
 import {
   ChevronLeftIcon,
   FocusIcon,
-  HighlightIcon,
   ListIcon,
   MoreHorizontalIcon,
   PanelIcon,
@@ -23,7 +22,6 @@ interface PdfReaderToolbarProps {
   panel: boolean;
   outlineOpen: boolean;
   tool: string;
-  selection: boolean;
   onBack(): void;
   onFavorite(): Promise<void>;
   onOutline(): void;
@@ -31,7 +29,6 @@ interface PdfReaderToolbarProps {
   onExport(): Promise<void>;
   onPanel(): void;
   onTool(tool: string): void;
-  onHighlight(): void;
 }
 export function PdfReaderToolbar({
   note,
@@ -42,15 +39,13 @@ export function PdfReaderToolbar({
   panel,
   outlineOpen,
   tool,
-  selection,
   onBack,
   onFavorite,
   onOutline,
   onDownload,
   onExport,
   onPanel,
-  onTool,
-  onHighlight
+  onTool
 }: PdfReaderToolbarProps) {
   const [query, setQuery] = useState(''),
     [searchOpen, setSearchOpen] = useState(false);
@@ -104,15 +99,6 @@ export function PdfReaderToolbar({
           区域
         </SegmentedButton>
       </SegmentedControl>
-      <IconButton
-        size={28}
-        aria-label="高亮选区"
-        title="高亮选区"
-        isDisabled={!editable || !selection}
-        onPress={() => onHighlight()}
-      >
-        <HighlightIcon size={16} />
-      </IconButton>
       <span className={styles.toolbarSpacer} />
       {searchOpen ? (
         <div className={styles.search}>

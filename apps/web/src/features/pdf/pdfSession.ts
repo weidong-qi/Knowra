@@ -16,6 +16,8 @@ export class PdfSession {
   error = '';
   errorCode = '';
   busy = false;
+  /** 本轮保存中因修订冲突被跳过的草稿；冲突不会因重试自行消失，需用户核对。 */
+  conflicts = new Set<string>();
   private running: Promise<void> | null = null;
   private readonly headers = pdfHeaders();
   private persistence: Promise<void> = Promise.resolve();
@@ -142,6 +144,10 @@ export class PdfSession {
     this.changed();
     return nextId;
   }
+  /** 仍有草稿处于冲突状态的第一条标注，供“核对最新标注”使用。 */
+  conflictId(): string | undefined {
+    return [...this.conflicts].find(id => this.drafts.has(id));
+  }
   flush(): Promise<void> {
     if (this.running) return this.running;
     this.running = this.drain().finally(() => {
@@ -155,10 +161,15 @@ export class PdfSession {
     this.busy = true;
     this.error = '';
     this.errorCode = '';
+    this.conflicts.clear();
     this.changed();
+    let conflict: unknown = null;
     try {
-      while (this.drafts.size) {
-        const [id, draft] = this.drafts.entries().next().value!;
+      // 冲突草稿跳过后继续保存其余标注，避免队首冲突阻塞整个队列。
+      while (true) {
+        const next = [...this.drafts.entries()].find(([key]) => !this.conflicts.has(key));
+        if (!next) break;
+        const [id, draft] = next;
         draft.task ??= {
           ...draft.fields,
           operationId: randomId(),
@@ -169,11 +180,19 @@ export class PdfSession {
         const taskRemove = draft.taskRemove;
         await this.persist();
         if (!this.canWrite()) throw new Error('当前资料只读，PDF 标注草稿已保留。');
-        const saved = await pdfRequest<PdfAnnotation>(annotationUrl(this.noteId, id), {
-          method: taskRemove ? 'DELETE' : 'PUT',
-          headers: { ...this.headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify(task)
-        });
+        let saved: PdfAnnotation;
+        try {
+          saved = await pdfRequest<PdfAnnotation>(annotationUrl(this.noteId, id), {
+            method: taskRemove ? 'DELETE' : 'PUT',
+            headers: { ...this.headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify(task)
+          });
+        } catch (error) {
+          if ((error as { code?: string })?.code !== 'PDF_ANNOTATION_CONFLICT') throw error;
+          this.conflicts.add(id);
+          conflict ??= error;
+          continue;
+        }
         this.items.set(id, saved);
         const current = this.drafts.get(id)!;
         const latestTask = {
@@ -194,6 +213,7 @@ export class PdfSession {
         await this.persist();
         this.changed();
       }
+      if (conflict) throw conflict;
     } catch (error) {
       this.errorCode = (error as { code?: string })?.code ?? '';
       this.error = error instanceof Error ? error.message : 'PDF 标注保存失败';

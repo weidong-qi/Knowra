@@ -1,6 +1,5 @@
 export const MAX_PDF_BYTES: number;
 export const PDF_KINDS: readonly string[];
-export const PDF_IMPORTANCE: readonly string[];
 export interface PdfSource {
   attachmentId: string;
   sha256: string;
@@ -20,7 +19,6 @@ export interface PdfAnnotation {
   segments: PdfSegment[];
   quoteText: string;
   kind: string;
-  importance: string;
   comment: string;
   revision: number;
   operationId: string;

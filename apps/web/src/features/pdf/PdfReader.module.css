@@ -315,3 +315,41 @@
     display: none;
   }
 }
+.selectionBar {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  box-shadow:
+    var(--shadow-control),
+    0 6px 18px -6px rgb(24 30 48 / 22%);
+  transform: translate(-50%, -100%);
+}
+.selectionBar[data-below] {
+  transform: translate(-50%, 0);
+}
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--pdf-mark-important);
+  box-shadow: inset 0 0 0 1px rgb(24 30 48 / 12%);
+}
+.swatch[data-kind='question'] {
+  background: var(--pdf-mark-question);
+}
+.swatch[data-kind='supplement'] {
+  background: var(--pdf-mark-supplement);
+}
+.swatch[data-kind='pitfall'] {
+  background: var(--pdf-mark-pitfall);
+}
+.swatch[data-kind='temporary'] {
+  background: var(--pdf-mark-temporary);
+}
+.swatch:hover {
+  transform: scale(1.15);
+}
