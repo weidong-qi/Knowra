@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Checkbox, Dialog, DialogBody, DialogFooter, FileDropField } from '../../components/ui';
 import { flushBeforeWorkspaceRestore } from '../../app/desktopLifecycle';
 import { useAppStore } from '../../store/AppStoreProvider';
@@ -6,6 +6,9 @@ import { pdfRequest } from './pdfApi';
 import styles from '../settings/SettingsView.module.css';
 
 type Preview = { token: string; notes: number; pdfs: number; annotations: number; attachments: number };
+async function discardPreview(preview: Preview | null) {
+  if (preview) await pdfRequest(`/api/storage/archive/${preview.token}`, { method: 'DELETE' });
+}
 export function ArchiveSettings() {
   const canWrite = useAppStore(state => state.canWriteWorkspace());
   const [open, setOpen] = useState(false),
@@ -14,6 +17,26 @@ export function ArchiveSettings() {
   const [error, setError] = useState(''),
     [preview, setPreview] = useState<Preview | null>(null);
   const abort = useRef<AbortController | null>(null);
+  const previewRef = useRef<Preview | null>(null);
+  const restoring = useRef(false);
+  useEffect(
+    () => () => {
+      abort.current?.abort();
+      abort.current = null;
+      // 已确认的恢复仍在使用预检文件，等待恢复结果后再清理。
+      if (restoring.current) return;
+      const current = previewRef.current;
+      previewRef.current = null;
+      void discardPreview(current).catch(() => undefined);
+    },
+    []
+  );
+  async function releasePreview() {
+    const current = previewRef.current;
+    await discardPreview(current);
+    // 释放失败时仍持有 token，关闭或再次选择文件时可以重试。
+    if (previewRef.current === current) previewRef.current = null;
+  }
   async function inspect(file: File) {
     setBusy(true);
     setError('');
@@ -22,24 +45,35 @@ export function ArchiveSettings() {
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
+    const isCurrent = () => abort.current === controller && !controller.signal.aborted;
     try {
+      await releasePreview();
+      if (!isCurrent()) return;
       await flushBeforeWorkspaceRestore();
+      if (!isCurrent()) return;
       const value = await pdfRequest<Preview>('/api/storage/archive/inspect', {
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': file.name.toLowerCase().endsWith('.json') ? 'application/json' : 'application/zip' },
         body: file
       });
-      if (!controller.signal.aborted) setPreview(value);
+      if (!isCurrent()) {
+        await discardPreview(value);
+        return;
+      }
+      previewRef.current = value;
+      setPreview(value);
     } catch (reason) {
-      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : '备份检查失败');
+      if (isCurrent()) setError(reason instanceof Error ? reason.message : '备份检查失败');
     } finally {
-      setBusy(false);
+      if (isCurrent()) setBusy(false);
     }
   }
   function close() {
     abort.current?.abort();
-    if (preview) void pdfRequest(`/api/storage/archive/${preview.token}`, { method: 'DELETE' }).catch(() => undefined);
+    abort.current = null;
+    void releasePreview().catch(() => undefined);
+    setBusy(false);
     setOpen(false);
     setPreview(null);
     setError('');
@@ -112,6 +146,7 @@ export function ArchiveSettings() {
               isDisabled={!preview || !confirmed || busy || !canWrite}
               onPress={() => {
                 if (!preview) return;
+                restoring.current = true;
                 setBusy(true);
                 setError('');
                 void flushBeforeWorkspaceRestore()
@@ -122,10 +157,22 @@ export function ArchiveSettings() {
                       body: JSON.stringify({ token: preview.token, confirmToken: preview.token })
                     })
                   )
-                  .then(() => window.location.reload())
+                  .then(() => {
+                    previewRef.current = null;
+                    window.location.reload();
+                  })
                   .catch(reason => {
-                    setError(String(reason));
-                    setBusy(false);
+                    if (abort.current) {
+                      setError(String(reason));
+                      setBusy(false);
+                    } else {
+                      const current = previewRef.current;
+                      previewRef.current = null;
+                      void discardPreview(current).catch(() => undefined);
+                    }
+                  })
+                  .finally(() => {
+                    restoring.current = false;
                   });
               }}
             >
