@@ -1,4 +1,5 @@
 .reader {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -12,7 +13,7 @@
 }
 .toolbar {
   position: absolute;
-  top: 12px;
+  top: var(--shell-gap, 8px);
   left: 50%;
   z-index: 12;
   transform: translateX(-50%);
@@ -102,6 +103,15 @@
   padding: 4px 12px;
   color: var(--text-secondary);
   font-size: 12px;
+}
+/* 没有错误时状态文字不占行，浮在左下角，让顶部工具栏和侧栏贴近窗口顶边。 */
+.feedbackQuiet {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  z-index: 5;
+  padding: 0;
+  pointer-events: none;
 }
 .feedback [role='alert'] {
   color: var(--text-primary);

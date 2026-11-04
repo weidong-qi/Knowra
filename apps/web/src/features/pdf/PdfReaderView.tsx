@@ -2,14 +2,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent, type React
 import { createPortal } from 'react-dom';
 import type { Note } from '@study-accelerator/web-core';
 import type { PdfAnnotation, PdfSegment } from '@study-accelerator/shared/pdf';
-import {
-  Button,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  FileDropField,
-  TextField
-} from '../../components/ui';
+import { Button, Dialog, DialogBody, DialogFooter, FileDropField, TextField } from '../../components/ui';
 import { useAppStore } from '../../store/AppStoreProvider';
 import { useDesktopTitlebar } from '../../shell/DesktopTitlebarContext';
 import { readRuntimeConfig } from '../../app/runtimeConfig';
@@ -278,7 +271,10 @@ export function PdfReaderView({
     <section className={styles.reader} data-knowra-pdf aria-label="PDF 阅读与标注">
       <style>{pdfViewerCss}</style>
       {titlebar.host ? createPortal(tabs, titlebar.host) : tabs}
-      <div className={styles.feedback} role="status">
+      <div
+        className={`${styles.feedback} ${session.error || error || viewer.error ? '' : styles.feedbackQuiet}`}
+        role="status"
+      >
         {session.busy
           ? '正在保存标注…'
           : session.drafts.size
