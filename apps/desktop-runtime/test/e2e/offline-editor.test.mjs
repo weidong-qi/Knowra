@@ -63,7 +63,7 @@ async function offlineEditor(t) {
   await page.goto(runtime.origin);
   await page.reload();
   await page
-    .getByRole('article', { name: '继续上次编辑', exact: true })
+    .getByRole('list', { name: '最近编辑', exact: true })
     .getByRole('button', { name: '继续编辑 离线页面验收', exact: true })
     .click();
   await expect(page.getByRole('heading', { name: '离线页面验收', exact: true })).toBeVisible();

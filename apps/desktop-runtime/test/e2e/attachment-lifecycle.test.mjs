@@ -43,7 +43,7 @@ test('真实 V4 附件缺失核验、原文件恢复、删除预检与本机保�
   ).data;
   await page.reload();
   await page
-    .getByRole('article', { name: '继续上次编辑', exact: true })
+    .getByRole('list', { name: '最近编辑', exact: true })
     .getByRole('button', { name: '继续编辑 附件页面验收', exact: true })
     .click();
   await expect(page.locator('.ProseMirror')).toContainText('正文无附件引用');
