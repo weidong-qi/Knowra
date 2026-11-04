@@ -179,6 +179,7 @@ export function NotesContextSidebar({
         <SidebarSection
           id="folders"
           title="文件夹"
+          collapsible
           action={(
             <IconButton
               size={24}

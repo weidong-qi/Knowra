@@ -88,6 +88,19 @@ describe('NotesContextSidebar', () => {
     }
   });
 
+  it('「文件夹」区块可折叠，行为与「标签」区块一致', async () => {
+    renderSidebar();
+
+    const toggle = screen.getByRole('button', { name: '文件夹' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('tree', { name: '笔记文件夹' })).toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('tree', { name: '笔记文件夹' })).not.toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(screen.getByRole('tree', { name: '笔记文件夹' })).toBeInTheDocument();
+  });
+
   it('selects folders and tags, expands note children, and delegates text search to the backend', async () => {
     const { api, store } = renderSidebar();
 

@@ -239,7 +239,8 @@
 }
 .folderRow small { transition: opacity var(--motion-fast) var(--motion-ease); }
 .entryDragArea:hover .folderRow small,
-.entryDragArea:focus-within .folderRow small { opacity: 0; }
+.entryDragArea:focus-within .folderRow small,
+.entryDragArea:has([aria-expanded='true']) .folderRow small { opacity: 0; }
 .rowActions button { color: var(--ni-ink-3, var(--text-muted)); }
 .rowActions button:hover:not(:disabled) { color: var(--text-primary); }
 @media (hover: none) {
