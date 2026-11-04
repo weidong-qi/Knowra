@@ -1,6 +1,6 @@
 import { useId, type CSSProperties } from 'react';
 import type { Tag } from '@study-accelerator/web-core';
-import { FolderIcon, PdfFileIcon } from '../../components/icons/knowra';
+import { FolderIcon } from '../../components/icons/knowra';
 import type { IndexItem } from './notesIndexPresentation';
 import { notePreview } from './NotesIndexItemMeta';
 import styles from './NotesIndexArt.module.css';
@@ -21,6 +21,7 @@ export function NotesIndexArt({
 }) {
   const gradientId = `ni-folder-${useId()}`;
   const folder = item.kind === 'folder';
+  const pdf = item.kind === 'note' && item.note.contentKind === 'pdf';
   const text = folder ? '' : notePreview(item.note);
   const color = folder ? 'folder' : tags[0]?.color || 'neutral';
   const lengths = text
@@ -29,12 +30,6 @@ export function NotesIndexArt({
         ?.slice(0, 5)
         .map(line => 12 + line.length) || []
     : [34, 28, 38, 25];
-  if (item.kind === 'note' && item.note.contentKind === 'pdf')
-    return (
-      <span className={styles.art} aria-hidden="true">
-        <PdfFileIcon size={54} />
-      </span>
-    );
   if (folder && folderStyle === 'badge')
     return (
       <span className={styles.folderBadge} data-art-kind="folder" data-folder-style="badge" aria-hidden="true">
@@ -44,9 +39,9 @@ export function NotesIndexArt({
   const paperCount = !noteCount ? 0 : noteCount < 3 ? 1 : noteCount < 8 ? 2 : 3;
   return (
     <span
-      className={`${styles.art} ${cover ? styles.cover : ''}`}
+      className={`${styles.art} ${cover && !pdf ? styles.cover : ''}`}
       data-color={color}
-      data-art-kind={folder ? 'folder' : 'document'}
+      data-art-kind={folder ? 'folder' : pdf ? 'pdf' : 'document'}
       data-folder-style={folder ? 'illustrated' : undefined}
       aria-hidden="true"
     >
@@ -92,21 +87,45 @@ export function NotesIndexArt({
         <svg className={styles.document} width="54" height="76" viewBox="0 0 58 80" fill="none">
           <path className={styles.paper} d="M5 1h30l18 18v57a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3Z" />
           <path className={styles.fold} d="M35 1v14a4 4 0 0 0 4 4h14Z" />
-          <rect className={styles.paperTitle} x="10" y="27" width="24" height="4" rx="2" />
-          {lengths.map((length, index) => (
-            <rect
-              key={index}
-              className={styles.paperLine}
-              x="10"
-              y={37 + index * 7}
-              width={Math.min(35, length)}
-              height="3"
-              rx="1.5"
-            />
-          ))}
+          {pdf ? (
+            <>
+              <rect className={styles.pdfBadge} x="8" y="25" width="39" height="13" rx="3" />
+              <text className={styles.pdfLabel} x="13" y="35">
+                PDF
+              </text>
+              {[35, 30, 33].map((length, index) => (
+                <rect
+                  key={index}
+                  className={styles.paperLine}
+                  x="10"
+                  y={46 + index * 7}
+                  width={length}
+                  height="3"
+                  rx="1.5"
+                />
+              ))}
+            </>
+          ) : (
+            <>
+              <path className={styles.noteAccent} d="M38 1h9v19l-4.5-3-4.5 3Z" />
+              <rect className={styles.paperTitle} x="10" y="27" width="24" height="4" rx="2" />
+              {lengths.map((length, index) => (
+                <rect
+                  key={index}
+                  className={styles.paperLine}
+                  x="10"
+                  y={37 + index * 7}
+                  width={Math.min(index === 4 ? 26 : 35, length)}
+                  height="3"
+                  rx="1.5"
+                />
+              ))}
+              <circle className={styles.noteAccent} cx="42" cy="66" r="3.5" />
+            </>
+          )}
         </svg>
       )}
-      {cover && !folder ? (
+      {cover && !folder && !pdf ? (
         <span className={styles.sheet}>
           <span className={styles.sheetTitle} />
           {lengths.map((length, index) => (
