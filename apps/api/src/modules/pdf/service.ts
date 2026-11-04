@@ -8,7 +8,7 @@ import type {
 import { createPdfArchive } from './archive.ts';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
-import { PDF_KINDS, PDF_IMPORTANCE, validatePdfAnnotation } from '@study-accelerator/shared/pdf';
+import { PDF_KINDS, validatePdfAnnotation } from '@study-accelerator/shared/pdf';
 import { createLocalAttachmentFileManager } from '../../infrastructure/local-attachment-file-manager.ts';
 import { sanitizeFileName } from '../../infrastructure/local-attachment-store-utils.ts';
 import { createPdfRepository } from './repository.ts';
@@ -210,8 +210,9 @@ export function createPdfService({
             quoteText: input.quoteText ?? '',
             createdAt: now
           }),
+          // 便签可以拖动换位置；其余标注的原文几何保存后不可变。
+          ...(previous?.type === 'note' && input.segments ? { segments: input.segments } : {}),
           kind: input.kind ?? previous?.kind ?? PDF_KINDS[0],
-          importance: input.importance ?? previous?.importance ?? PDF_IMPORTANCE[0],
           comment: input.comment ?? previous?.comment ?? '',
           revision: (previous?.revision ?? 0) + 1,
           operationId: input.operationId,
@@ -219,6 +220,8 @@ export function createPdfService({
           updatedAt: now,
           deletedAt: remove ? now : null
         };
+        // 旧标注带有已取消的“重要程度”，写入时一并丢弃。
+        delete (next as { importance?: unknown }).importance;
         try {
           validatePdfAnnotation(next);
         } catch {

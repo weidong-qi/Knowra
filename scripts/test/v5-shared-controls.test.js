@@ -178,7 +178,7 @@ describe('V5 shared control styles', () => {
       )
     );
     assert.ok(declarations(css.navigation, ".item[aria-current='page'] .icon").includes('color: var(--accent)'));
-    assert.ok(declarations(css.navigation, '.compact').includes('min-height: 30px'));
+    assert.ok(declarations(css.navigation, '.compact').includes('min-height: 34px'));
     const [regular, phone] = css.ghost.split('@media (max-width: 767px) {');
     assert.ok(phone, '44px ghost targets must use the phone-width media condition only');
     assert.match(declarations(regular, '.size30'), /(?:^|;)\s*width:\s*30px(?:;|$)/);

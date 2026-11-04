@@ -72,6 +72,7 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await page.mouse.down();
   await page.mouse.move(bounds.x + 140, bounds.y + 120);
   await page.mouse.up();
+  await page.getByRole('button', { name: '标注为重点', exact: true }).click();
   const comment = page.getByRole('textbox', { name: '评论', exact: true });
   await comment.fill('退出前的本机评论');
   // 在 450ms 防抖结束前退出，必须由现有退出握手提交。

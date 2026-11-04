@@ -99,5 +99,5 @@ export interface PdfImportInput {
   title?: string | null;
 }
 export type PdfMutationInput = Partial<
-  Pick<PdfAnnotation, 'operationId' | 'type' | 'segments' | 'quoteText' | 'kind' | 'importance' | 'comment'>
+  Pick<PdfAnnotation, 'operationId' | 'type' | 'segments' | 'quoteText' | 'kind' | 'comment'>
 > & { expectedRevision?: number };

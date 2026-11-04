@@ -1,4 +1,4 @@
-import { rectToPdf, rectToViewport, exportPdfExcerpt } from './pdfGeometry';
+import { rectToPdf, rectToViewport, exportPdfExcerpt, noteRectAt, moveRect, PDF_NOTE_SIZE } from './pdfGeometry';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 it('旋转后视口矩形回到同一 PDF 坐标，CSS 缩放和页面偏移不改变锚点', () => {
   const rotations = [
@@ -61,4 +61,30 @@ it('摘录按页码排序，区域不伪造正文并保留可回跳的标注身�
   expect(result).toContain('> 真实选区');
   expect(result).toContain('区域标注');
   expect(result).toContain('pdfAnnotation=second');
+});
+
+describe('便签几何', () => {
+  const viewport = {
+    width: 200,
+    height: 300,
+    scale: 1,
+    convertToPdfPoint: (x: number, y: number) => [x, 300 - y],
+    convertToViewportPoint: (x: number, y: number) => [x, 300 - y]
+  };
+  const bounds = { left: 100, top: 50, width: 200, height: 300 };
+  it('以点击位置为中心放置固定大小的图标', () => {
+    const rect = noteRectAt(viewport, bounds, 200, 200);
+    expect(rect[2] - rect[0]).toBeCloseTo(PDF_NOTE_SIZE);
+    expect(rect[3] - rect[1]).toBeCloseTo(PDF_NOTE_SIZE);
+    expect((rect[0] + rect[2]) / 2).toBeCloseTo(100);
+  });
+  it('按屏幕位移平移并限制在页面内', () => {
+    const rect = noteRectAt(viewport, bounds, 200, 200);
+    const moved = moveRect(viewport, bounds, rect, 30, -20);
+    expect(moved[0] - rect[0]).toBeCloseTo(30);
+    expect(moved[1] - rect[1]).toBeCloseTo(20);
+    const clamped = moveRect(viewport, bounds, rect, -9999, -9999);
+    expect(clamped[0]).toBeCloseTo(0);
+    expect(clamped[3]).toBeCloseTo(300);
+  });
 });
