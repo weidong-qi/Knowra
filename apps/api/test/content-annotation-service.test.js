@@ -85,6 +85,37 @@ export const contentAnnotationServiceTests = [
     }
   },
   {
+    name: '旧来源版本含行尾块级标记时，章节、列表和跨段选区的旧锚点仍可解析',
+    run() {
+      const cases = [
+        ['# 标题 <!--k already s=section-->\n\n正文\n', m => anchorForSection(projectMarkdown(m), 0)],
+        [
+          '- 条目 <!--k already s=list-->\n- 其他\n',
+          m => {
+            const projection = projectMarkdown(m);
+            return anchorForListItem(projection, projection.listItems[0].path, false);
+          }
+        ],
+        [
+          '甲段 <!--k already s=block-->\n\n乙段\n',
+          m => anchorForSourceRange(projectMarkdown(m), 0, m.indexOf('乙') + 1, { scopeType: 'selection' })
+        ]
+      ];
+      for (const [source, build] of cases) {
+        const anchor = build(source);
+        assert.equal(resolveLegacyAnnotationAnchor(`${source}\n追加`, anchor, source).status, 'resolved');
+        assert.equal(
+          resolveLegacyAnnotationAnchor(
+            source.replace('甲', '丙').replace('条目', '改动').replace('标题', '改题'),
+            anchor,
+            source.replace('甲', '丙').replace('条目', '改动').replace('标题', '改题')
+          ).status,
+          'needsReview'
+        );
+      }
+    }
+  },
+  {
     name: '旧重点之前新增正文标记与后续无关编辑不改变来源预览、分析范围和证据',
     run() {
       const module = createKnowledgeModule();
