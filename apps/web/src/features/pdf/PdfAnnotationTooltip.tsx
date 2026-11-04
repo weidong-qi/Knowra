@@ -35,7 +35,7 @@ export function PdfAnnotationTooltip({
         clear();
         return;
       }
-      setHover(current => (current?.id === id ? current : { id, left: event.clientX, top: event.clientY - 8 }));
+      setHover({ id, left: event.clientX, top: event.clientY });
     };
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') clear();
@@ -66,10 +66,20 @@ export function PdfAnnotationTooltip({
         className={styles.commentAnchor}
         style={{ left: hover?.left ?? 0, top: hover?.top ?? 0 }}
       />
-      <Tooltip triggerRef={anchorRef} placement="top" className={styles.commentTooltip}>
+      <Tooltip
+        triggerRef={anchorRef}
+        placement="bottom start"
+        offset={12}
+        containerPadding={12}
+        className={`${styles.annotationTone} ${styles.commentTooltip}`}
+        data-kind={item?.kind}
+      >
         {item ? (
           <>
-            <strong>{KIND_OPTIONS.find(option => option.id === item.kind)?.label} · 批注</strong>
+            <strong>
+              <span className={styles.commentDot} aria-hidden="true" />
+              {KIND_OPTIONS.find(option => option.id === item.kind)?.label} · 批注
+            </strong>
             <p>{item.comment}</p>
           </>
         ) : null}

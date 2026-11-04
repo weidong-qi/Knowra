@@ -251,8 +251,15 @@
   pointer-events: none;
 }
 .commentTooltip[role='tooltip'] {
-  max-width: min(320px, calc(100vw - 24px));
+  width: min(300px, calc(100vw - 24px));
+  max-width: min(300px, calc(100vw - 24px));
   max-height: min(360px, 60vh);
+  padding: 12px 14px;
+  border-radius: var(--radius-popover);
+  border: 1px solid color-mix(in srgb, var(--pdf-annotation-color) 65%, var(--border-subtle));
+  background: color-mix(in srgb, var(--pdf-annotation-color) 8%, var(--surface-raised));
+  color: var(--text-primary);
+  box-shadow: var(--shadow-panel);
   overflow-y: auto;
   font-size: var(--font-size-meta);
   line-height: 1.6;
@@ -260,7 +267,34 @@
   overflow-wrap: anywhere;
 }
 .commentTooltip strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
   font-weight: 550;
+}
+.annotationTone {
+  --pdf-annotation-color: var(--pdf-mark-important);
+}
+.annotationTone[data-kind='question'] {
+  --pdf-annotation-color: var(--pdf-mark-question);
+}
+.annotationTone[data-kind='supplement'] {
+  --pdf-annotation-color: var(--pdf-mark-supplement);
+}
+.annotationTone[data-kind='pitfall'] {
+  --pdf-annotation-color: var(--pdf-mark-pitfall);
+}
+.annotationTone[data-kind='temporary'] {
+  --pdf-annotation-color: var(--pdf-mark-temporary);
+}
+.commentDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--pdf-annotation-color);
 }
 .commentTooltip p {
   margin: 4px 0 0;
@@ -510,6 +544,29 @@
 }
 .swatch:hover {
   transform: scale(1.15);
+}
+.swatch[aria-pressed='true'] {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 3px;
+}
+.annotationActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px;
+  outline: none;
+}
+.annotationCommands {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.annotationKinds {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 6px 6px;
 }
 .reader :global([data-knowra-pdf-overlay] [data-note-id]) {
   --note-color: var(--pdf-mark-important);

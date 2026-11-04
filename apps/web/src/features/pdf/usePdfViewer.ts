@@ -3,6 +3,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { pdfjs, PDFViewer, EventBus, PDFLinkService, PDFFindController, pdfResourceOptions } from './pdfRuntime';
 import { pdfFileUrl, pdfHeaders } from './pdfApi';
 import { readRuntimeConfig } from '../../app/runtimeConfig';
+import { attachPdfPinchZoom } from './pdfPinchZoom';
 
 export function usePdfViewer(attachmentId: string, noteId: string, sha256: string) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,6 +44,7 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
       removePageBorders: true
     });
     viewerRef.current = viewer;
+    const detachPinchZoom = attachPdfPinchZoom(container, viewer);
     eventRef.current = bus;
     linkRef.current = links;
     links.setViewer(viewer);
@@ -126,6 +128,7 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
       });
     return () => {
       active = false;
+      detachPinchZoom();
       clearTimeout(timer);
       resize.disconnect();
       try {

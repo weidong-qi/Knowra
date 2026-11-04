@@ -47,6 +47,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     fs.rmSync(root, { recursive: true, force: true });
   });
   const context = await browser.newContext({ viewport: { width: 1440, height: 800 } });
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -156,6 +157,95 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     await page.mouse.move(5, 5);
     await expect(page.getByRole('tooltip')).toHaveCount(0);
   }
+  // 通过浏览器输入管线模拟触控板捏合：PDF 缩放、外壳尺寸不变，并能反向缩小。
+  const pdfCanvas = page.locator('.canvasWrapper').first();
+  await page.getByRole('button', { name: '适合宽度', exact: true }).click();
+  const initial = await pdfCanvas.boundingBox();
+  const shellWidth = await inspector.evaluate(el => el.getBoundingClientRect().width);
+  const cdp = await context.newCDPSession(page);
+  const pinch = scaleFactor =>
+    cdp.send('Input.synthesizePinchGesture', {
+      x: initial.x + initial.width / 2,
+      y: initial.y + 160,
+      scaleFactor,
+      gestureSourceType: 'mouse'
+    });
+  await pinch(1.25);
+  await expect.poll(async () => (await pdfCanvas.boundingBox()).width).toBeGreaterThan(initial.width * 1.1);
+  const enlarged = await pdfCanvas.boundingBox();
+  await pinch(0.8);
+  await expect.poll(async () => (await pdfCanvas.boundingBox()).width).toBeLessThan(enlarged.width * 0.9);
+  assert.equal(await inspector.evaluate(el => el.getBoundingClientRect().width), shellWidth);
+  assert.equal(await page.evaluate(() => window.visualViewport.scale), 1);
+  await cdp.detach();
+  await page.getByRole('button', { name: '适合宽度', exact: true }).click();
+  await legacyMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
+  const clickMark = async locator => {
+    const rect = await locator.boundingBox();
+    await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toBeVisible();
+  };
+  await clickMark(legacyMark);
+  await page.getByRole('button', { name: '复制', exact: true }).click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), marks[0].quoteText);
+  await clickMark(legacyMark);
+  await page.getByRole('button', { name: '改为易错', exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (await (await context.request.get(`${runtime.origin}/api/pdf/${note.id}/annotations`)).json()).data[0].kind
+    )
+    .toBe('pitfall');
+  await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  const pinkMark = await legacyMark.boundingBox();
+  await page.mouse.move(pinkMark.x + pinkMark.width / 2, pinkMark.y + pinkMark.height / 2);
+  await expect(page.getByRole('tooltip')).toHaveAttribute('data-kind', 'pitfall');
+  const pinkBorder = await page.getByRole('tooltip').evaluate(el => getComputedStyle(el).borderTopColor);
+  if (process.env.KNOWRA_E2E_OUTPUT)
+    await page.getByRole('tooltip').screenshot({
+      path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-pink-comment-card.png'),
+      animations: 'disabled'
+    });
+  await page.getByRole('button', { name: '切换深色模式', exact: true }).click();
+  await page.mouse.move(pinkMark.x + pinkMark.width / 2, pinkMark.y + pinkMark.height / 2);
+  await expect(page.getByRole('tooltip')).toHaveAttribute('data-kind', 'pitfall');
+  if (process.env.KNOWRA_E2E_OUTPUT)
+    await page.getByRole('tooltip').screenshot({
+      path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-dark-comment-card.png'),
+      animations: 'disabled'
+    });
+  await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
+  // 下划线可点整段文字，不必瞄准细线；批注卡片跟随该分类的蓝色。
+  await page.locator('.textLayer').evaluate(layer => {
+    const span = [...layer.querySelectorAll('span')].find(el => el.textContent === 'Second selected line');
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    layer.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+  });
+  await page.getByRole('button', { name: '标注样式：下划线', exact: true }).click();
+  await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
+  await inspector.getByRole('textbox', { name: '评论', exact: true }).fill('蓝色下划线批注');
+  await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  const underlineHit = page.locator('[data-pdf-hit-area]');
+  const lineBox = await underlineHit.boundingBox();
+  await page.mouse.move(lineBox.x + lineBox.width / 2, lineBox.y + lineBox.height / 2);
+  await expect(page.getByRole('tooltip')).toHaveAttribute('data-kind', 'question');
+  assert.notEqual(await page.getByRole('tooltip').evaluate(el => getComputedStyle(el).borderTopColor), pinkBorder);
+  await clickMark(underlineHit);
+  if (process.env.KNOWRA_E2E_OUTPUT)
+    await page.getByRole('dialog', { name: 'PDF 标注操作' }).screenshot({
+      path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-annotation-actions.png'),
+      animations: 'disabled'
+    });
+  await page.getByRole('button', { name: '删除', exact: true }).click();
+  await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  await expect(underlineHit).toHaveCount(0);
+  marks = (await (await context.request.get(`${runtime.origin}/api/pdf/${note.id}/annotations`)).json()).data;
+  assert.equal(marks.length, 1);
+  assert.equal(marks[0].kind, 'pitfall');
   // 多条标注也必须使用检查器自身的滚动区。
   const seed = marks[0];
   for (let i = 0; i < 15; i++) {

@@ -116,6 +116,65 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await page.getByRole('menuitem', { name: '下载原文件', exact: true }).click();
   await expect.poll(() => fs.existsSync(destination)).toBe(true);
   assert.deepEqual(fs.readFileSync(destination), bytes);
+  const pdfCanvas = page.locator('.canvasWrapper').first();
+  const originalSize = await pdfCanvas.boundingBox();
+  assert(originalSize);
+  const cdp = await page.context().newCDPSession(page);
+  const pinch = scaleFactor =>
+    cdp.send('Input.synthesizePinchGesture', {
+      x: originalSize.x + originalSize.width / 2,
+      y: originalSize.y + 140,
+      scaleFactor,
+      gestureSourceType: 'mouse'
+    });
+  await pinch(1.25);
+  await expect.poll(async () => (await pdfCanvas.boundingBox()).width).toBeGreaterThan(originalSize.width * 1.1);
+  const zoomedSize = await pdfCanvas.boundingBox();
+  await pinch(0.8);
+  await expect.poll(async () => (await pdfCanvas.boundingBox()).width).toBeLessThan(zoomedSize.width * 0.9);
+  assert.equal(
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getZoomFactor()),
+    1
+  );
+  await cdp.detach();
+  await page.getByRole('button', { name: '适合宽度', exact: true }).click();
+  await page
+    .locator('.textLayer')
+    .first()
+    .evaluate(layer => {
+      const span = layer.querySelector('span');
+      const range = document.createRange();
+      range.selectNodeContents(span);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      layer.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    });
+  await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
+  await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  const textMark = await page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').boundingBox();
+  assert(textMark);
+  await page.mouse.click(textMark.x + textMark.width / 2, textMark.y + textMark.height / 2);
+  await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
+  const previousClipboard = await app.evaluate(({ clipboard }) => ({
+    text: clipboard.readText(),
+    html: clipboard.readHTML(),
+    rtf: clipboard.readRTF(),
+    image: [...clipboard.readImage().toPNG()]
+  }));
+  try {
+    await page.getByRole('button', { name: '复制', exact: true }).click();
+    assert.equal(await app.evaluate(({ clipboard }) => clipboard.readText()), '知境阅读与标注');
+  } finally {
+    await app.evaluate(({ clipboard, nativeImage }, previous) => {
+      clipboard.write({
+        text: previous.text,
+        html: previous.html,
+        rtf: previous.rtf,
+        ...(previous.image.length ? { image: nativeImage.createFromBuffer(Buffer.from(previous.image)) } : {})
+      });
+    }, previousClipboard);
+  }
   assert.deepEqual(foreign, []);
   if (process.env.KNOWRA_E2E_OUTPUT) {
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });

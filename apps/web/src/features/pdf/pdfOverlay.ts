@@ -56,6 +56,13 @@ export function paintPdfAnnotations(
         const thickness = Math.min(2.5, box.height / 4);
         rect.setAttribute('y', String(box.y + box.height - thickness));
         rect.setAttribute('height', String(thickness));
+        // 点击命中整段文字，而非只能点中底部两像素的细线。
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        for (const [key, value] of Object.entries(box)) hit.setAttribute(key, String(value));
+        hit.setAttribute('data-pdf-annotation-id', item.id);
+        hit.setAttribute('data-pdf-hit-area', '');
+        hit.style.visibility = 'hidden';
+        overlay.append(hit);
       }
       rect.setAttribute('data-kind', item.kind);
       rect.setAttribute('data-pdf-annotation-id', item.id);

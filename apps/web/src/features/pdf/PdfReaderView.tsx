@@ -17,10 +17,11 @@ import { usePdfViewer } from './usePdfViewer';
 import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
 import { exportPdfExcerpt, moveRect, noteRectAt, rectToPdf, rectToViewport, type PdfSelection } from './pdfGeometry';
-import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
+import { paintPdfAnnotations, pdfAnnotationAtPoint, readPdfSelection } from './pdfOverlay';
 import { buildPdfExtractNote } from './pdfExtract';
 import { PdfNoteCard } from './PdfNoteCard';
 import { PdfAnnotationTooltip } from './PdfAnnotationTooltip';
+import { PdfAnnotationActions } from './PdfAnnotationActions';
 import { PdfSelectionBar, type PdfBarAnchor, type PdfTextMode } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
@@ -50,6 +51,9 @@ export function PdfReaderView({
   const [loaded, setLoaded] = useState(false),
     [error, setError] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [annotationAction, setAnnotationAction] = useState<{ id: string; x: number; y: number } | null>(null);
+  const annotationPress = useRef<{ id: string; x: number; y: number } | null>(null);
+  const skipTextMouseUp = useRef(false);
   const [pending, setPending] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [tool, setTool] = useState('text'),
     [panel, setPanel] = useState(true);
@@ -96,6 +100,10 @@ export function PdfReaderView({
   const cardItem = cardOpen ? items.find(item => item.id === selected && item.type === 'note') : undefined;
   const cardAnchor = cardItem ? noteCardAnchor(cardItem) : null;
   const isTextSelection = pending?.value.type === 'highlight' || pending?.value.type === 'underline';
+  const actionItem = annotationAction ? items.find(item => item.id === annotationAction.id) : undefined;
+  useEffect(() => {
+    setAnnotationAction(null);
+  }, [viewer.revision]);
   useEffect(() => {
     alive.current = true;
     void listPdfAnnotations(note.id)
@@ -271,6 +279,14 @@ export function PdfReaderView({
   }
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
+    setAnnotationAction(null);
+    annotationPress.current = null;
+    skipTextMouseUp.current = false;
+    if (tool === 'text' && event.target instanceof Element) {
+      const id = pdfAnnotationAtPoint(event.target, event.clientX, event.clientY);
+      if (items.some(item => item.id === id && (item.type === 'highlight' || item.type === 'underline')))
+        annotationPress.current = { id: id!, x: event.clientX, y: event.clientY };
+    }
     const icon = (event.target as Element).closest<SVGElement>('[data-note-id]');
     const iconItem = icon && items.find(item => item.id === icon.dataset.noteId);
     if (iconItem) {
@@ -524,12 +540,28 @@ export function PdfReaderView({
               if (drag.current) setGhost(dragSegment(event));
             }}
             onPointerCancel={() => {
+              annotationPress.current = null;
               noteDrag.current = null;
               setNoteMove(null);
               drag.current = null;
               setGhost(null);
             }}
             onPointerUp={event => {
+              const press = annotationPress.current;
+              annotationPress.current = null;
+              if (
+                press &&
+                Math.hypot(event.clientX - press.x, event.clientY - press.y) < 4 &&
+                event.target instanceof Element &&
+                pdfAnnotationAtPoint(event.target, event.clientX, event.clientY) === press.id &&
+                window.getSelection()?.isCollapsed !== false
+              ) {
+                skipTextMouseUp.current = true;
+                setSelected(press.id);
+                setPending(null);
+                setAnnotationAction({ id: press.id, x: event.clientX, y: event.clientY + 12 });
+                return;
+              }
               const move = noteDrag.current;
               if (move) {
                 noteDrag.current = null;
@@ -549,6 +581,10 @@ export function PdfReaderView({
               }
             }}
             onMouseUp={() => {
+              if (skipTextMouseUp.current) {
+                skipTextMouseUp.current = false;
+                return;
+              }
               if (tool !== 'text' || !viewer.viewerRef.current) return;
               const value = readPdfSelection(viewer.viewerRef.current, viewer.containerRef.current!);
               const anchor = value && textAnchor();
@@ -556,6 +592,7 @@ export function PdfReaderView({
               if (!value) setGhost(null);
             }}
             onScroll={() => {
+              setAnnotationAction(null);
               if (cardOpen) render(value => value + 1);
               // 文字选区随滚动重新定位；框选的位置无法回算，滚动即收起。
               setPending(current => {
@@ -570,6 +607,7 @@ export function PdfReaderView({
             }}
             onKeyDown={event => {
               if (event.key !== 'Escape') return;
+              setAnnotationAction(null);
               setCardOpen(false);
               if (pending) {
                 setPending(null);
@@ -583,9 +621,32 @@ export function PdfReaderView({
           <PdfAnnotationTooltip
             containerRef={viewer.containerRef}
             items={items}
-            enabled={tool === 'text' && !pending && !cardOpen}
+            enabled={tool === 'text' && !pending && !cardOpen && !annotationAction}
             revision={viewer.revision}
           />
+          {actionItem && annotationAction ? (
+            <PdfAnnotationActions
+              item={actionItem}
+              point={annotationAction}
+              canWrite={editable}
+              onClose={() => setAnnotationAction(null)}
+              onCopy={() => {
+                void navigator.clipboard
+                  .writeText(actionItem.quoteText)
+                  .then(() => setAnnotationAction(null))
+                  .catch(() => setError('复制失败，请重试或从标注面板选择原文复制。'));
+              }}
+              onKind={kind => {
+                change(actionItem.id, { kind });
+                setAnnotationAction(null);
+              }}
+              onDelete={() => {
+                change(actionItem.id, {}, true);
+                setSelected(null);
+                setAnnotationAction(null);
+              }}
+            />
+          ) : null}
           {cardItem && cardAnchor && !noteMove ? (
             <PdfNoteCard
               left={cardAnchor.left}
