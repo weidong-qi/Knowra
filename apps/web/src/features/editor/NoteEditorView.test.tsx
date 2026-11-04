@@ -58,9 +58,7 @@ describe('NoteEditorView skeleton', () => {
         onDeleteAttachment={vi.fn()}
         onGetLinkedNotes={vi.fn().mockResolvedValue([])}
         onListAnnotations={vi.fn().mockResolvedValue([])}
-        onCreateAnnotation={vi.fn()}
         onDeleteAnnotation={vi.fn()}
-        onUpdateAnnotationAnchor={vi.fn()}
         onFileStatus={vi.fn()}
         onViewAction={vi.fn()}
         onToggleFavorite={onToggleFavorite}
@@ -118,9 +116,7 @@ describe('NoteEditorView skeleton', () => {
         onDeleteAttachment={vi.fn()}
         onGetLinkedNotes={vi.fn().mockResolvedValue([])}
         onListAnnotations={vi.fn().mockResolvedValue([])}
-        onCreateAnnotation={vi.fn()}
         onDeleteAnnotation={vi.fn()}
-        onUpdateAnnotationAnchor={vi.fn()}
         onFileStatus={vi.fn()}
         onViewAction={vi.fn()}
         onToggleFavorite={vi.fn()}
@@ -143,26 +139,68 @@ describe('NoteEditorView skeleton', () => {
 
   it('does not append an old upload response to the newly selected note', async () => {
     const secondNote = { ...note, id: 'note-2', title: '第二篇笔记' };
-    const oldAttachment = { id: 'old-attachment', noteId: note.id, fileName: '旧请求.txt', mimeType: 'text/plain', size: 1, status: 'ready' };
+    const oldAttachment = {
+      id: 'old-attachment',
+      noteId: note.id,
+      fileName: '旧请求.txt',
+      mimeType: 'text/plain',
+      size: 1,
+      status: 'ready'
+    };
     const newAttachment = { ...oldAttachment, id: 'new-attachment', noteId: secondNote.id, fileName: '新笔记.txt' };
     let finishUpload!: (value: typeof oldAttachment) => void;
-    const onUploadAttachment = vi.fn().mockReturnValue(new Promise(resolve => { finishUpload = resolve; }));
+    const onUploadAttachment = vi.fn().mockReturnValue(
+      new Promise(resolve => {
+        finishUpload = resolve;
+      })
+    );
     const props = {
-      folder, foldersById, notes: [note, secondNote], tags, openNotes: [note, secondNote], inspectorOpen: true,
-      view: { ...editorView, showRightSidebar: true }, canWrite: true,
-      onOpenNote: vi.fn(), onCloseNote: vi.fn(), onCloseOtherNotes: vi.fn(), onReorderNotes: vi.fn(), onCopyTabPath: vi.fn(),
-      onCreateNote: vi.fn(), onCreateFolder: vi.fn(), onImportMarkdown: vi.fn(), onRenameNote: vi.fn(), onSaveMarkdown: vi.fn(),
-      onSaveAs: vi.fn(), onDeleteNote: vi.fn(), onSetTags: vi.fn(), onListVersions: vi.fn().mockResolvedValue([]), onGetVersion: vi.fn(), onOrganizeNote: vi.fn(),
-      onListAttachments: vi.fn(async (id: string) => id === secondNote.id ? [newAttachment] : []), onUploadAttachment, onRenameAttachment: vi.fn(), onDeleteAttachment: vi.fn(),
-      onGetLinkedNotes: vi.fn().mockResolvedValue([]), onListAnnotations: vi.fn().mockResolvedValue([]), onCreateAnnotation: vi.fn(), onDeleteAnnotation: vi.fn(),
-      onUpdateAnnotationAnchor: vi.fn(), onFileStatus: vi.fn(), onViewAction: vi.fn(), onToggleFavorite: vi.fn(), onToggleInspector: vi.fn()
+      folder,
+      foldersById,
+      notes: [note, secondNote],
+      tags,
+      openNotes: [note, secondNote],
+      inspectorOpen: true,
+      view: { ...editorView, showRightSidebar: true },
+      canWrite: true,
+      onOpenNote: vi.fn(),
+      onCloseNote: vi.fn(),
+      onCloseOtherNotes: vi.fn(),
+      onReorderNotes: vi.fn(),
+      onCopyTabPath: vi.fn(),
+      onCreateNote: vi.fn(),
+      onCreateFolder: vi.fn(),
+      onImportMarkdown: vi.fn(),
+      onRenameNote: vi.fn(),
+      onSaveMarkdown: vi.fn(),
+      onSaveAs: vi.fn(),
+      onDeleteNote: vi.fn(),
+      onSetTags: vi.fn(),
+      onListVersions: vi.fn().mockResolvedValue([]),
+      onGetVersion: vi.fn(),
+      onOrganizeNote: vi.fn(),
+      onListAttachments: vi.fn(async (id: string) => (id === secondNote.id ? [newAttachment] : [])),
+      onUploadAttachment,
+      onRenameAttachment: vi.fn(),
+      onDeleteAttachment: vi.fn(),
+      onGetLinkedNotes: vi.fn().mockResolvedValue([]),
+      onListAnnotations: vi.fn().mockResolvedValue([]),
+      onDeleteAnnotation: vi.fn(),
+      onFileStatus: vi.fn(),
+      onViewAction: vi.fn(),
+      onToggleFavorite: vi.fn(),
+      onToggleInspector: vi.fn()
     };
     const result = render(<NoteEditorView {...props} note={note} />);
-    fireEvent.change(screen.getByLabelText('选择要上传的附件'), { target: { files: [new File(['x'], '旧请求.txt', { type: 'text/plain' })] } });
+    fireEvent.change(screen.getByLabelText('选择要上传的附件'), {
+      target: { files: [new File(['x'], '旧请求.txt', { type: 'text/plain' })] }
+    });
     await waitFor(() => expect(onUploadAttachment).toHaveBeenCalledOnce());
     result.rerender(<NoteEditorView {...props} note={secondNote} />);
     await screen.findByRole('button', { name: '打开附件 新笔记.txt' });
-    await act(async () => { finishUpload(oldAttachment); });
+    await act(async () => {
+      finishUpload(oldAttachment);
+    });
     expect(screen.queryByRole('button', { name: '打开附件 旧请求.txt' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '打开附件 新笔记.txt' })).toBeInTheDocument();
   });
@@ -201,9 +239,7 @@ describe('NoteEditorView skeleton', () => {
         onDeleteAttachment={vi.fn()}
         onGetLinkedNotes={vi.fn().mockResolvedValue([])}
         onListAnnotations={vi.fn().mockResolvedValue([])}
-        onCreateAnnotation={vi.fn()}
         onDeleteAnnotation={vi.fn()}
-        onUpdateAnnotationAnchor={vi.fn()}
         onFileStatus={vi.fn()}
         onViewAction={vi.fn()}
         onToggleFavorite={vi.fn()}

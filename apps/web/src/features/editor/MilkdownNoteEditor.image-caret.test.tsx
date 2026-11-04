@@ -45,7 +45,7 @@ it('End 同步收起整段选区，随后立即离焦插图仍保留正文', asy
     selection.setBaseAndExtent(text, 0, text, markdown.length);
     fireEvent(document, new Event('selectionchange'));
   });
-  expect(ref.current!.getAnnotationSelection()?.quoteText).toBe(markdown);
+  expect(ref.current!.getSelectedText()).toBe(markdown);
 
   act(() => {
     // 模拟原生右方向键已收起 DOM 选区，但 selectionchange 尚未交给编辑器。
@@ -101,7 +101,7 @@ it.each(['selected', 'Home', 'End'] as const)('全选标记后插图保留明确
     expect(fireEvent.keyDown(editor, { key: 'a', code: 'KeyA', keyCode: 65, ctrlKey: true })).toBe(false);
     ref.current!.inlineAnnotations!.create('selection', 'normal');
   });
-  expect(ref.current!.getAnnotationSelection('selection', { restoreSelection: false })?.quoteText).toBe(markdown);
+  expect(ref.current!.getSelectedText({ restoreSelection: false })).toBe(markdown);
 
   act(() => {
     // 不发送原生 selectionchange：Home/End 必须由真实按键处理同步更新模型。
@@ -111,9 +111,7 @@ it.each(['selected', 'Home', 'End'] as const)('全选标记后插图保留明确
       );
     }
     rendered.getByRole('button', { name: '插入图片' }).focus();
-    expect(ref.current!.getAnnotationSelection('selection', { restoreSelection: false })?.quoteText).toBe(
-      scenario === 'selected' ? markdown : undefined
-    );
+    expect(ref.current!.getSelectedText({ restoreSelection: false })).toBe(scenario === 'selected' ? markdown : null);
     expect(ref.current!.insertImage('/api/storage/attachments/caret/content', '离线图片.png')).toBe(true);
   });
   const output = ref.current!.getMarkdown();

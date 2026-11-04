@@ -14,7 +14,6 @@ interface Options {
   canEditContent: boolean;
   editorRef: RefObject<EditorCommandTarget | null>;
   autosave: { saveNow(markdown?: string): Promise<void> };
-  annotations: Annotation[];
   annotationsLoading: boolean;
   annotationsReady: boolean;
   onListAnnotations(noteId: string): Promise<Annotation[]>;
@@ -27,11 +26,11 @@ interface Options {
 const isActive = (annotation: Annotation) => (annotation.lifecycleStatus ?? 'active') === 'active';
 
 /**
- * 重点内联化 I3b：没有活跃旧重点的笔记，重点的新建、取消、改类型和重要程度、重新选择、排除都只改正文标记，
- * 立即保存后由服务端派生 v3 行，再刷新列表并聚焦。还有旧重点的笔记仍走旧链路，等迁移后切换，避免两套重点混用。
+ * 重点的新建、取消、改类型和重要程度、重新选择、排除都只改正文标记，
+ * 立即保存后由服务端派生 v3 行，再刷新列表并聚焦。
  */
 export function useInlineAnnotationWrites(options: Options) {
-  const { note, canEditContent, editorRef, annotations, annotationsLoading } = options;
+  const { note, canEditContent, editorRef, annotationsLoading } = options;
   const snapshots = useRef(new Map<string, InlineAnnotationSnapshot>());
   const contextRef = useRef({ noteId: note?.id, editable: canEditContent });
   if (contextRef.current.noteId !== note?.id || contextRef.current.editable !== canEditContent) {
@@ -59,8 +58,7 @@ export function useInlineAnnotationWrites(options: Options) {
     if (!mounted.current || contextRef.current !== context || !context.editable)
       throw new Error('笔记或编辑状态已变化，请重新操作');
   };
-  const legacyActive = annotations.some(annotation => !isInlineAnnotation(annotation) && isActive(annotation));
-  const enabled = Boolean(note) && canEditContent && options.annotationsReady && !annotationsLoading && !legacyActive;
+  const enabled = Boolean(note) && canEditContent && options.annotationsReady && !annotationsLoading;
 
   const editorOps = () => {
     assertCurrent();
@@ -97,7 +95,6 @@ export function useInlineAnnotationWrites(options: Options) {
   return {
     enabled,
     ready: options.annotationsReady,
-    legacyActive,
     owns: (annotation: Annotation | undefined): annotation is Annotation =>
       Boolean(annotation && isInlineAnnotation(annotation)),
     async create(scope: InlineAnnotationScope, importance: InlineAnnotationImportance = 'normal') {
@@ -105,8 +102,7 @@ export function useInlineAnnotationWrites(options: Options) {
       if (!options.annotationsReady || annotationsLoading) throw new Error('重点列表尚未成功加载，请稍后重试');
       let pending = pendingCreate.current;
       if (pending?.context === context && pending.inFlight) return;
-      const selection = () =>
-        JSON.stringify(editorRef.current?.getAnnotationSelection?.(scope, { restoreSelection: false }));
+      const selection = () => editorRef.current?.getSelectedText?.({ restoreSelection: false }) ?? undefined;
       if (
         !pending ||
         pending.context !== context ||
