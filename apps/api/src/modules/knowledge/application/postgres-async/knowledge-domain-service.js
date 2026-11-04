@@ -3,7 +3,8 @@ import { matchesKnowledgeCandidateRequest } from '../knowledge-candidate-retry.j
 import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from '../knowledge-item-concurrency.js';
 import { KnowledgeItem } from '../../domain/knowledge-item.ts';
 import { KnowledgeEvidence } from '../../domain/knowledge-evidence.ts';
-import { isEvidenceUsable } from '../../domain/evidence-applicability.ts';
+import { isEvidenceUsable, legacyEvidenceApplicability } from '../../domain/evidence-applicability.ts';
+import { deriveEvidenceHealth } from '../../domain/evidence-health.ts';
 import {
   buildCreateKnowledgeEvidenceDto,
   buildCreateKnowledgeItemDto,
@@ -407,6 +408,42 @@ export function createAsyncKnowledgeItemService({
     },
     markEvidenceByAnnotationId(annotationId, status = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByAnnotationId(annotationId, status));
+    },
+    async reconcileEvidenceByAnnotationIds(annotationIds) {
+      const versions = new Map();
+      const affected = [];
+      await markEvidenceAndReconcile(async () => {
+        const changed = [];
+        for (const annotationId of new Set(annotationIds)) {
+          const annotation = await annotationRepository?.findById(annotationId);
+          if (!annotation) throw notFoundError('ANNOTATION_NOT_FOUND', 'Annotation not found');
+          const note = await noteRepository?.findById(annotation.noteId);
+          if (!note) throw notFoundError('NOTE_NOT_FOUND', 'Note not found');
+          for (const evidence of await evidenceRepository.list({ annotationId })) {
+            if (evidence.noteVersionId && !versions.has(evidence.noteVersionId)) {
+              const version = await noteVersionRepository?.findById(evidence.noteVersionId);
+              if (!version) throw notFoundError('NOTE_VERSION_NOT_FOUND', 'NoteVersion not found');
+              versions.set(evidence.noteVersionId, version);
+            }
+            const version = evidence.noteVersionId ? versions.get(evidence.noteVersionId) : null;
+            const status = deriveEvidenceHealth(evidence, { annotation, note, version });
+            if (status === evidence.status) {
+              affected.push(evidence);
+              continue;
+            }
+            const saved = await evidenceRepository.save({
+              ...evidence,
+              status,
+              applicabilityStatus: legacyEvidenceApplicability(evidence),
+              updatedAt: now()
+            });
+            affected.push(saved);
+            changed.push(saved);
+          }
+        }
+        return changed;
+      });
+      return affected;
     },
     markEvidenceByNoteVersionId(noteVersionId, status = 'stale', sourceType = null) {
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteVersionId(noteVersionId, status, sourceType));

@@ -1,11 +1,17 @@
 import {
   createDuplicateTitle,
   buildMarkdownImportItems,
-  normalizeFolderTree, flattenFolderTree, normalizeNotes,
+  normalizeFolderTree,
+  flattenFolderTree,
+  normalizeNotes,
   type Note
 } from '@study-accelerator/web-core';
 import type { WorkspaceDependencies, WorkspaceSlice } from '../types';
-import { workspaceCapabilities, LOCAL_PERMANENT_DELETE_REASON, LOCAL_ANALYSIS_SCOPE_REASON } from '../workspaceCapabilities';
+import {
+  workspaceCapabilities,
+  LOCAL_PERMANENT_DELETE_REASON,
+  LOCAL_ANALYSIS_SCOPE_REASON
+} from '../workspaceCapabilities';
 import { createWorkspaceLoadController } from '../workspaceLoadController';
 import { createCommandNoteLoader } from '../commandNoteOpening';
 import {
@@ -14,7 +20,6 @@ import {
   type GetStore,
   type SetStore
 } from '../workspaceSnapshotState';
-
 
 export function createWorkspaceSlice(
   set: SetStore,
@@ -38,22 +43,51 @@ export function createWorkspaceSlice(
     retryWorkspace: () => runLoad(true),
     async refreshLocalWorkspace() {
       const before = get();
-      if (before.persistenceMode !== 'desktop-local' || before.editorHasLocalChanges || before.saveState === 'saving' || loading.isLoading()) return false;
+      if (
+        before.persistenceMode !== 'desktop-local' ||
+        before.editorHasLocalChanges ||
+        before.saveState === 'saving' ||
+        loading.isLoading()
+      )
+        return false;
       const generation = loading.generation();
       const spaces = await dependencies.api.listKnowledgeSpaces();
-      const currentSpaceId = spaces.find(space => space.id === before.serverData.currentSpaceId)?.id
-        ?? spaces.find(space => space.defaultFlag)?.id ?? spaces[0]?.id;
+      const currentSpaceId =
+        spaces.find(space => space.id === before.serverData.currentSpaceId)?.id ??
+        spaces.find(space => space.defaultFlag)?.id ??
+        spaces[0]?.id;
       if (!currentSpaceId) return false;
       const resources = await dependencies.api.loadWorkspaceResources(currentSpaceId);
       const notes = normalizeNotes(resources.notes);
       for (let index = 0; index < notes.length; index++) {
-        if (!notes[index].deleted && before.serverData.notes.some(note => note.id === notes[index].id && note.contentLoaded)) {
-          notes[index] = { ...notes[index], ...await dependencies.api.getNote(notes[index].id), contentLoaded: true };
+        if (
+          !notes[index].deleted &&
+          before.serverData.notes.some(note => note.id === notes[index].id && note.contentLoaded)
+        ) {
+          notes[index] = { ...notes[index], ...(await dependencies.api.getNote(notes[index].id)), contentLoaded: true };
         }
       }
-      if (loading.generation() !== generation || loading.isLoading() || get().editorHasLocalChanges || get().saveState === 'saving' || get().serverData !== before.serverData) return false;
+      if (
+        loading.generation() !== generation ||
+        loading.isLoading() ||
+        get().editorHasLocalChanges ||
+        get().saveState === 'saving' ||
+        get().serverData !== before.serverData
+      )
+        return false;
       const folderTree = normalizeFolderTree(resources.folderTree);
-      set({ knowledgeGeneration: get().knowledgeGeneration + 1, serverData: { spaces, currentSpaceId, folderTree, foldersById: flattenFolderTree(folderTree), notes, tags: resources.tags, tagGroups: resources.tagGroups ?? [] } });
+      set({
+        knowledgeGeneration: get().knowledgeGeneration + 1,
+        serverData: {
+          spaces,
+          currentSpaceId,
+          folderTree,
+          foldersById: flattenFolderTree(folderTree),
+          notes,
+          tags: resources.tags,
+          tagGroups: resources.tagGroups ?? []
+        }
+      });
       return true;
     },
     canWriteWorkspace: () => get().dataMode === 'api',
@@ -85,7 +119,7 @@ export function createWorkspaceSlice(
       await runLoad(true);
     },
     async createNote(folderId, title) {
-      return executeWorkspaceMutation(set, get, '正在新建笔记…', async (spaceId) => {
+      return executeWorkspaceMutation(set, get, '正在新建笔记…', async spaceId => {
         const created = await dependencies.api.createNote({
           title,
           rawMarkdown: '',
@@ -100,15 +134,15 @@ export function createWorkspaceSlice(
       });
     },
     async importMarkdownNotes(folderId, sources) {
-      return executeWorkspaceMutation(set, get, '正在导入 Markdown…', async (spaceId) => {
+      return executeWorkspaceMutation(set, get, '正在导入 Markdown…', async spaceId => {
         const state = get();
-        const folderNames = (folderId
-          ? state.serverData.foldersById[folderId]?.children ?? []
-          : state.serverData.folderTree).map((folder) => folder.name);
+        const folderNames = (
+          folderId ? (state.serverData.foldersById[folderId]?.children ?? []) : state.serverData.folderTree
+        ).map(folder => folder.name);
         const noteNames = state.serverData.notes
-          .filter((note) => !note.deleted && note.folderId === folderId)
-          .map((note) => note.title);
-        const items = buildMarkdownImportItems(sources, [...folderNames, ...noteNames]).map((item) => ({
+          .filter(note => !note.deleted && note.folderId === folderId)
+          .map(note => note.title);
+        const items = buildMarkdownImportItems(sources, [...folderNames, ...noteNames]).map(item => ({
           ...item,
           folderId,
           spaceId,
@@ -121,27 +155,28 @@ export function createWorkspaceSlice(
         get().selectNote(firstNote.id);
         return {
           result: { firstNoteId: firstNote.id, count: imported.length },
-          message: imported.length === 1
-            ? `已导入 Markdown：${firstNote.title}`
-            : `已导入 ${imported.length} 个 Markdown 文件`
+          message:
+            imported.length === 1 ? `已导入 Markdown：${firstNote.title}` : `已导入 ${imported.length} 个 Markdown 文件`
         };
       });
     },
     async duplicateNote(noteId) {
-      return executeWorkspaceMutation(set, get, '正在另存笔记…', async (spaceId) => {
-        let source = get().serverData.notes.find((note) => note.id === noteId && !note.deleted);
+      return executeWorkspaceMutation(set, get, '正在另存笔记…', async spaceId => {
+        let source = get().serverData.notes.find(note => note.id === noteId && !note.deleted);
         if (!source) throw new Error('笔记不存在或已被删除');
         if (!source.contentLoaded) {
           const loaded = await dependencies.api.getNote(noteId);
           updateWorkspaceNoteInStore(set, get, dependencies, loaded, { ...source, contentLoaded: true });
-          source = get().serverData.notes.find((note) => note.id === noteId && !note.deleted) ?? source;
+          source = get().serverData.notes.find(note => note.id === noteId && !note.deleted) ?? source;
         }
-        const folderNames = (source.folderId
-          ? get().serverData.foldersById[source.folderId]?.children ?? []
-          : get().serverData.folderTree).map((folder) => folder.name);
-        const noteNames = get().serverData.notes
-          .filter((note) => !note.deleted && note.folderId === source.folderId)
-          .map((note) => note.title);
+        const folderNames = (
+          source.folderId
+            ? (get().serverData.foldersById[source.folderId]?.children ?? [])
+            : get().serverData.folderTree
+        ).map(folder => folder.name);
+        const noteNames = get()
+          .serverData.notes.filter(note => !note.deleted && note.folderId === source.folderId)
+          .map(note => note.title);
         const nextTitle = createDuplicateTitle([...folderNames, ...noteNames], source.title);
         const created = await dependencies.api.createNote({
           title: nextTitle,
@@ -158,7 +193,7 @@ export function createWorkspaceSlice(
       });
     },
     async createFolder(parentId, name) {
-      return executeWorkspaceMutation(set, get, '正在新建文件夹…', async (spaceId) => {
+      return executeWorkspaceMutation(set, get, '正在新建文件夹…', async spaceId => {
         const created = await dependencies.api.createFolder({ spaceId, parentId, name });
         await runLoad(true);
         get().selectNotesFolder(created.id);
@@ -174,7 +209,7 @@ export function createWorkspaceSlice(
       });
     },
     async loadNoteContent(noteId) {
-      const current = get().serverData.notes.find((note) => note.id === noteId);
+      const current = get().serverData.notes.find(note => note.id === noteId);
       if (!current || current.contentLoaded) return;
       try {
         const loaded = await dependencies.api.getNote(noteId);
@@ -188,36 +223,43 @@ export function createWorkspaceSlice(
         throw error;
       }
     },
-    async saveNoteContent(noteId, rawMarkdown, expectedUpdatedAt, baseMarkdown, annotationMapping) {
+    async saveNoteContent(noteId, rawMarkdown, expectedUpdatedAt, baseMarkdown) {
       const previousSave = noteSaveQueues.get(noteId) ?? Promise.resolve(undefined);
       const currentSave = previousSave
         .catch(() => undefined)
         .then(async () => {
-          const current = get().serverData.notes.find((note) => note.id === noteId);
+          const current = get().serverData.notes.find(note => note.id === noteId);
           if (!current) throw new Error('笔记不存在或已被删除');
-          if (baseMarkdown === undefined && current.rawMarkdown === rawMarkdown && (!expectedUpdatedAt || expectedUpdatedAt === current.updatedAt)) return current;
+          if (
+            baseMarkdown === undefined &&
+            current.rawMarkdown === rawMarkdown &&
+            (!expectedUpdatedAt || expectedUpdatedAt === current.updatedAt)
+          )
+            return current;
           return executeWorkspaceMutation(set, get, '正在保存正文…', async () => {
             const concurrencyToken = expectedUpdatedAt ?? current.updatedAt;
             let updated;
             try {
               updated = await dependencies.api.updateNote(noteId, {
-                rawMarkdown, annotationMapping,
+                rawMarkdown,
                 ...(concurrencyToken ? { expectedUpdatedAt: concurrencyToken } : {})
               });
             } catch (error) {
               // 只对已知基线的正文冲突重新读取；标题、同步等元数据变化不应锁死正文保存。
-              if (!error || typeof error !== 'object' || !('code' in error)
-                || error.code !== 'NOTE_UPDATE_CONFLICT') throw error;
+              if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'NOTE_UPDATE_CONFLICT')
+                throw error;
               const latest = await dependencies.api.getNote(noteId);
               if (latest.deleted || typeof latest.rawMarkdown !== 'string' || !latest.updatedAt) throw error;
-              const baseline = baseMarkdown ?? (concurrencyToken === current.updatedAt ? current.rawMarkdown : undefined);
+              const baseline =
+                baseMarkdown ?? (concurrencyToken === current.updatedAt ? current.rawMarkdown : undefined);
               if (latest.rawMarkdown === rawMarkdown) updated = latest;
               else {
                 if (baseline === undefined || latest.rawMarkdown !== baseline) throw error;
-              // 仍携带刚读取的版本；读取后再次变化时由服务端拒绝，不无限重试。
-              updated = await dependencies.api.updateNote(noteId, {
-                rawMarkdown, annotationMapping, expectedUpdatedAt: latest.updatedAt
-              });
+                // 仍携带刚读取的版本；读取后再次变化时由服务端拒绝，不无限重试。
+                updated = await dependencies.api.updateNote(noteId, {
+                  rawMarkdown,
+                  expectedUpdatedAt: latest.updatedAt
+                });
               }
             }
             updateWorkspaceNoteInStore(set, get, dependencies, updated, {
@@ -225,7 +267,7 @@ export function createWorkspaceSlice(
               rawMarkdown,
               contentLoaded: true
             });
-            const saved = get().serverData.notes.find((note) => note.id === noteId) ?? current;
+            const saved = get().serverData.notes.find(note => note.id === noteId) ?? current;
             return { result: saved, message: '正文已保存' };
           });
         });
@@ -277,7 +319,7 @@ export function createWorkspaceSlice(
       });
     },
     async createTag(input) {
-      return executeWorkspaceMutation(set, get, '正在新建标签…', async (spaceId) => {
+      return executeWorkspaceMutation(set, get, '正在新建标签…', async spaceId => {
         const tag = await dependencies.api.createTag({ ...input, spaceId });
         await runLoad(true);
         return { result: tag, message: `已新建标签：${tag.name ?? input.name}` };
@@ -312,7 +354,7 @@ export function createWorkspaceSlice(
       });
     },
     async createTagGroup(input) {
-      return executeWorkspaceMutation(set, get, '正在新建标签分组…', async (spaceId) => {
+      return executeWorkspaceMutation(set, get, '正在新建标签分组…', async spaceId => {
         const group = await dependencies.api.createTagGroup({ ...input, spaceId });
         await runLoad(true);
         return { result: group, message: `已新建分组：${group.name}` };
@@ -402,7 +444,8 @@ export function createWorkspaceSlice(
     },
     async confirmAnnotationRange(annotationId, input) {
       return executeWorkspaceMutation(set, get, '正在确认重点范围…', async () => ({
-        result: await dependencies.api.confirmAnnotationRange!(annotationId, input), message: '重点范围已确认'
+        result: await dependencies.api.confirmAnnotationRange!(annotationId, input),
+        message: '重点范围已确认'
       }));
     },
     async previewAnnotation(annotationId) {
@@ -425,10 +468,16 @@ export function createWorkspaceSlice(
       return dependencies.api.listAnalysisScopes!(spaceId);
     },
     async trashAnalysisScope(id, input) {
-      return executeWorkspaceMutation(set, get, '正在移入分析范围回收站…', async () => ({ result: await dependencies.api.trashAnalysisScope!(id, input), message: '分析范围已移入回收站' }));
+      return executeWorkspaceMutation(set, get, '正在移入分析范围回收站…', async () => ({
+        result: await dependencies.api.trashAnalysisScope!(id, input),
+        message: '分析范围已移入回收站'
+      }));
     },
     async restoreAnalysisScope(id, input) {
-      return executeWorkspaceMutation(set, get, '正在恢复分析范围…', async () => ({ result: await dependencies.api.restoreAnalysisScope!(id, input), message: '分析范围已恢复' }));
+      return executeWorkspaceMutation(set, get, '正在恢复分析范围…', async () => ({
+        result: await dependencies.api.restoreAnalysisScope!(id, input),
+        message: '分析范围已恢复'
+      }));
     },
     async createAnnotationExclusion(annotationId, input) {
       return executeWorkspaceMutation(set, get, '正在保存局部排除…', async () => ({
@@ -454,17 +503,34 @@ export function createWorkspaceSlice(
       return dependencies.api.previewNoteVersionPrune(noteId);
     },
     async saveNoteVersionAs(noteId, versionId) {
-      return executeWorkspaceMutation(set, get, '正在另存历史版本…', async (spaceId) => {
+      return executeWorkspaceMutation(set, get, '正在另存历史版本…', async spaceId => {
         const source = get().serverData.notes.find(note => note.id === noteId && !note.deleted);
         if (!source) throw new Error('原笔记不存在或已被删除');
         const version = await dependencies.api.getNoteVersion(noteId, versionId);
-        if (version.noteId !== noteId || typeof version.content !== 'string') throw new Error('历史版本不属于当前笔记或正文无效');
-        const names = get().serverData.notes.filter(note => !note.deleted && note.folderId === source.folderId).map(note => note.title);
-        const folderNames = (source.folderId ? get().serverData.foldersById[source.folderId]?.children ?? [] : get().serverData.folderTree).map(folder => folder.name);
+        if (version.noteId !== noteId || typeof version.content !== 'string')
+          throw new Error('历史版本不属于当前笔记或正文无效');
+        const names = get()
+          .serverData.notes.filter(note => !note.deleted && note.folderId === source.folderId)
+          .map(note => note.title);
+        const folderNames = (
+          source.folderId
+            ? (get().serverData.foldersById[source.folderId]?.children ?? [])
+            : get().serverData.folderTree
+        ).map(folder => folder.name);
         const baseTitle = `${source.title || '未命名笔记'} · 历史副本`;
-        const title = [...names, ...folderNames].includes(baseTitle) ? createDuplicateTitle([...names, ...folderNames], baseTitle) : baseTitle;
-        const created = await dependencies.api.createNote({ title, rawMarkdown: version.content, folderId: source.folderId, spaceId,
-          sourceType: source.sourceType ?? 'manual', status: 'draft', tagIds: source.tagIds, aiVisibility: source.aiVisibility ?? 'normal' });
+        const title = [...names, ...folderNames].includes(baseTitle)
+          ? createDuplicateTitle([...names, ...folderNames], baseTitle)
+          : baseTitle;
+        const created = await dependencies.api.createNote({
+          title,
+          rawMarkdown: version.content,
+          folderId: source.folderId,
+          spaceId,
+          sourceType: source.sourceType ?? 'manual',
+          status: 'draft',
+          tagIds: source.tagIds,
+          aiVisibility: source.aiVisibility ?? 'normal'
+        });
         await runLoad(true);
         get().selectNote(created.id);
         return { result: created.id, message: `历史版本已另存为：${title}` };
@@ -477,7 +543,10 @@ export function createWorkspaceSlice(
       return executeWorkspaceMutation(set, get, '正在更新笔记隐私…', async () => {
         await dependencies.api.updateNote(noteId, input);
         await runLoad(true);
-        return { result: undefined, message: input.aiVisibility === 'private' ? '笔记已设为私密，AI 不再读取' : '笔记已设为普通，可供 AI 读取' };
+        return {
+          result: undefined,
+          message: input.aiVisibility === 'private' ? '笔记已设为私密，AI 不再读取' : '笔记已设为普通，可供 AI 读取'
+        };
       });
     },
     async organizeNote(noteId, input) {
@@ -502,21 +571,35 @@ export function createWorkspaceSlice(
         message: '附件已重命名'
       }));
     },
-    inspectAttachmentDeletion: (id) => dependencies.api.inspectAttachmentDeletion(id),
+    inspectAttachmentDeletion: id => dependencies.api.inspectAttachmentDeletion(id),
     listAttachmentCleanup: () => dependencies.api.listAttachmentCleanup(),
     async verifyNoteAttachment(id) {
-      return executeWorkspaceMutation(set, get, '正在核验附件…', async () => ({ result: await dependencies.api.verifyNoteAttachment(id), message: '附件核验完成' }));
+      return executeWorkspaceMutation(set, get, '正在核验附件…', async () => ({
+        result: await dependencies.api.verifyNoteAttachment(id),
+        message: '附件核验完成'
+      }));
     },
     async restoreNoteAttachment(id, contentBase64) {
-      return executeWorkspaceMutation(set, get, '正在恢复原文件…', async () => ({ result: await dependencies.api.restoreNoteAttachment(id, contentBase64), message: '原附件已恢复' }));
+      return executeWorkspaceMutation(set, get, '正在恢复原文件…', async () => ({
+        result: await dependencies.api.restoreNoteAttachment(id, contentBase64),
+        message: '原附件已恢复'
+      }));
     },
     async retryAttachmentCleanup() {
-      return executeWorkspaceMutation(set, get, '正在重试文件清理…', async () => ({ result: await dependencies.api.retryAttachmentCleanup(), message: '文件清理重试完成' }));
+      return executeWorkspaceMutation(set, get, '正在重试文件清理…', async () => ({
+        result: await dependencies.api.retryAttachmentCleanup(),
+        message: '文件清理重试完成'
+      }));
     },
     async deleteNoteAttachment(attachmentId) {
       return executeWorkspaceMutation(set, get, '正在删除附件…', async () => {
         const result = await dependencies.api.deleteNoteAttachment(attachmentId);
-        const message = result.cleanup === 'complete' ? '附件已删除，文件已清理' : result.cleanup === 'retained-local' ? '附件记录已删除，本机副本按同步与恢复规则保留' : '附件已删除，文件清理待重试';
+        const message =
+          result.cleanup === 'complete'
+            ? '附件已删除，文件已清理'
+            : result.cleanup === 'retained-local'
+              ? '附件记录已删除，本机副本按同步与恢复规则保留'
+              : '附件已删除，文件清理待重试';
         return { result, message };
       });
     },
@@ -543,7 +626,10 @@ export function createWorkspaceSlice(
         await dependencies.api.deleteFolder(folderId, input);
         await runLoad(true);
         get().selectNotesFolder(parentId);
-        return { result: undefined, message: input.mode === 'keep' ? '文件夹已移入回收站，笔记已移至指定位置' : '文件夹和其中的笔记已移入回收站' };
+        return {
+          result: undefined,
+          message: input.mode === 'keep' ? '文件夹已移入回收站，笔记已移至指定位置' : '文件夹和其中的笔记已移入回收站'
+        };
       });
     },
     async restoreFolder(folderId) {
@@ -558,7 +644,7 @@ export function createWorkspaceSlice(
     },
     async emptyRecycleBin() {
       if (!workspaceCapabilities(get().persistenceMode).permanentDelete) throw new Error(LOCAL_PERMANENT_DELETE_REASON);
-      return executeWorkspaceMutation(set, get, '正在清空回收站…', async (spaceId) => {
+      return executeWorkspaceMutation(set, get, '正在清空回收站…', async spaceId => {
         const result = await dependencies.api.emptyRecycleBin(spaceId);
         await runLoad(true);
         get().selectNotesScope('trash');
@@ -584,8 +670,12 @@ async function executeWorkspaceMutation<T>(
   set({ saveState: 'saving', saveError: null, statusMessage: pendingMessage });
   try {
     const completed = await operation(spaceId);
-    set({ saveState: 'saved', saveError: null, statusMessage: get().persistenceMode === 'desktop-local'
-      ? `${completed.message} · 已保存到本机` : completed.message });
+    set({
+      saveState: 'saved',
+      saveError: null,
+      statusMessage:
+        get().persistenceMode === 'desktop-local' ? `${completed.message} · 已保存到本机` : completed.message
+    });
     return completed.result;
   } catch (error) {
     const message = error instanceof Error ? error.message : '笔记库操作失败';

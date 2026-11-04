@@ -7,12 +7,12 @@ import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.ts';
-import { anchorForBlock, projectMarkdown, calculateContentHash } from '../../../packages/content-anchor/src/index.js';
 import { SYNC_CLIENT_BATCH_BODY_LIMIT_BYTES } from '@study-accelerator/shared/http-limits';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { nextEntityUpload, getEntitySyncState, acknowledgeEntityUpload } from '../src/entity-sync-state.mjs';
 import { writeMeta } from '../src/sync-state.mjs';
-import { temporaryDirectory, openWorkspace } from './helpers.mjs';
+import { temporaryDirectory, openWorkspace, markText, inlineId } from './helpers.mjs';
+import { calculateContentHash } from '../../../packages/content-anchor/src/index.js';
 
 async function fixture(t) {
   const root = temporaryDirectory(t);
@@ -54,23 +54,15 @@ async function fixture(t) {
 }
 
 function annotatedNote(device, spaceId) {
-  const note = device.knowledge.noteService.createNote({ title: '长时间编辑', rawMarkdown: '重点正文', spaceId });
-  const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), 0);
-  const annotation = device.knowledge.contentAnnotationService.createAnnotation({
-    spaceId,
-    noteId: note.id,
-    schemaVersion: 2,
-    scopeType: 'blocks',
-    anchor,
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    anchorFingerprint: 'long-edit',
-    noteContentHash: calculateContentHash(note.rawMarkdown),
-    idempotencyKey: 'long-edit'
+  const note = device.knowledge.noteService.createNote({
+    title: '长时间编辑',
+    rawMarkdown: markText('重点正文', 'long-edit'),
+    spaceId
   });
-  device.knowledge.noteService.updateNote(note.id, { rawMarkdown: '重点正文\n\n最终新增内容' });
-  return { noteId: note.id, annotationId: annotation.id };
+  device.knowledge.noteService.updateNote(note.id, {
+    rawMarkdown: `${markText('重点正文', 'long-edit')}\n\n最终新增内容`
+  });
+  return { noteId: note.id, annotationId: inlineId(note.id, 'long-edit') };
 }
 
 for (const existing of [false, true])

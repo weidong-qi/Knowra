@@ -1,9 +1,9 @@
 name: Code style report
 
 # 只报告 ESLint / Prettier 结果，不阻塞合并；存量问题清理完成后再接入 CI 失败门。
+# 报告只汇总存量，不随 PR 变化，因此不在每个 PR 上占一个检查位；改完文件仍按 AGENTS.md 本地检查。
 on:
   workflow_dispatch:
-  pull_request:
   push:
     branches:
       - main

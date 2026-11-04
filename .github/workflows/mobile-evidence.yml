@@ -5,6 +5,11 @@ on:
       - 'apps/web/**'
       - 'packages/web-core/**'
       - '.github/workflows/mobile-evidence.yml'
+      # 只改单元测试文件不影响页面截图证据；端到端规格（*.spec.ts）仍会触发。
+      - '!apps/web/**/*.test.ts'
+      - '!apps/web/**/*.test.tsx'
+      - '!apps/web/**/*.test.mjs'
+      - '!packages/web-core/**/*.test.ts'
   workflow_dispatch:
 permissions:
   contents: read

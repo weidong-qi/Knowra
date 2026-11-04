@@ -3,7 +3,7 @@ import { aiAssistantCrashgapTests } from './ai-assistant-crashgap.test.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { anchorForBlock, projectMarkdown, calculateContentHash } from '@study-accelerator/content-anchor';
+import { markParagraphs } from './fixtures/inline-annotation-seed.js';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
 import { createAssistantWebSearch } from '../src/modules/ai/assistant-tools.ts';
@@ -314,24 +314,7 @@ export const aiAssistantAutonomyTests = [
     name: '自主助手：问“哪篇重点最多”时预取按重点数排序的笔记列表，第一轮即可作答',
     run: () =>
       fixture(async ({ app, runtime, space, policy, submit, respond, requests }) => {
-        const { noteService, contentAnnotationService } = app.modules.knowledge;
-        const annotate = (note, blockIndex, importance, key) => {
-          const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), blockIndex);
-          return contentAnnotationService.createAnnotation({
-            noteId: note.id,
-            spaceId: note.spaceId,
-            schemaVersion: 2,
-            scopeType: 'blocks',
-            anchor,
-            quoteText: anchor.quoteText,
-            fromPosition: anchor.sourceStart,
-            toPosition: anchor.sourceEnd,
-            noteContentHash: calculateContentHash(note.rawMarkdown),
-            anchorFingerprint: key,
-            idempotencyKey: key,
-            importance
-          });
-        };
+        const { noteService } = app.modules.knowledge;
         const few = noteService.createNote({ spaceId: space.id, title: '重点少', rawMarkdown: '段一\n\n段二' });
         const many = noteService.createNote({
           spaceId: space.id,
@@ -339,10 +322,12 @@ export const aiAssistantAutonomyTests = [
           rawMarkdown: '段一\n\n段二\n\n段三'
         });
         noteService.createNote({ spaceId: space.id, title: '没重点', rawMarkdown: '无' });
-        annotate(few, 0, 'important', 'few-0');
-        annotate(many, 0, 'normal', 'many-0');
-        annotate(many, 1, 'core', 'many-1');
-        annotate(many, 2, 'important', 'many-2');
+        markParagraphs(app.modules.knowledge, few, [[0, 'important']]);
+        markParagraphs(app.modules.knowledge, many, [
+          [0, 'normal'],
+          [1, 'core'],
+          [2, 'important']
+        ]);
         const p = await policy();
         respond(request => {
           const [entry] = JSON.parse(request.messages.at(-1).content).catalog;

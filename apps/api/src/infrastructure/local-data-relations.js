@@ -13,6 +13,7 @@ import {
 import { buildDefaultTagGroups } from '../modules/knowledge/domain/default-tag-groups.ts';
 import { validateKnowledgeArtifactProvenanceRelations } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import { resolveAnalysisScopeNoteVersion } from '../modules/knowledge/domain/analysis-scope-version-alias.ts';
+import { deriveEvidenceHealth } from '../modules/knowledge/domain/evidence-health.ts';
 
 export function validateLocalDataRelations(state) {
   normalizeTagSystem(state);
@@ -346,7 +347,6 @@ function validateKnowledgeEvidence(items, knowledgeItems, notes, noteVersions, a
     let note = null;
     let version = null;
     let annotation = null;
-    let derivedStatus = 'valid';
     assertReference(
       knowledgeItems.has(evidence.knowledgeItemId),
       `KnowledgeEvidence ${evidence.id} references unknown KnowledgeItem: ${evidence.knowledgeItemId}`
@@ -400,27 +400,7 @@ function validateKnowledgeEvidence(items, knowledgeItems, notes, noteVersions, a
       assertReference(Boolean(evidence.annotationId), `KnowledgeEvidence ${evidence.id} requires annotationId`);
     }
     evidence.applicabilityStatus ??= evidence.status === 'invalid' ? 'needsReview' : 'active';
-    if (annotation?.anchorStatus === 'missing') derivedStatus = 'insufficient';
-    else if (
-      annotation?.anchorStatus === 'needsReview' ||
-      annotation?.status === 'stale' ||
-      (annotation && String(evidence.quoteText ?? '').trim() !== String(annotation.quoteText ?? '').trim())
-    )
-      derivedStatus = 'stale';
-    // Deleting the source note suspends normal evidence use even while its version is retained.
-    if (note?.deleted) derivedStatus = 'invalid';
-    // A deleted highlight alone can remain independently verifiable through its saved version.
-    else if (annotation?.lifecycleStatus === 'deleted' && !version) derivedStatus = 'invalid';
-    else if (
-      evidence.sourceType === 'noteVersion' &&
-      version &&
-      note &&
-      !sameKnowraText(version.content, note.rawMarkdown) &&
-      derivedStatus !== 'invalid'
-    ) {
-      derivedStatus = 'stale';
-    }
-    evidence.status = derivedStatus;
+    evidence.status = deriveEvidenceHealth(evidence, { annotation, note, version });
   }
 }
 

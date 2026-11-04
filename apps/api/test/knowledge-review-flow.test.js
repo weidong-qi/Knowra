@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,8 +13,8 @@ import { createServer } from '../src/server.js';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
+import { annotationOf, markText } from './fixtures/inline-annotation-seed.js';
 
-const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const manual = { title: '人工候选', canonicalStatement: '确认前需要核对来源与知识内容', sourceMode: 'manual' };
 const code = expected => error => error.code === expected;
 const asAsync = repository =>
@@ -112,21 +111,9 @@ export const knowledgeReviewFlowTests = [
         id: 'review-source-note',
         spaceId: 'space-demo',
         title: '来源',
-        rawMarkdown: '真实来源'
+        rawMarkdown: `# 来源\n\n${markText('真实来源', 'src')}`
       });
-      const annotation = knowledge.contentAnnotationService.createAnnotation({
-        spaceId: note.spaceId,
-        noteId: note.id,
-        quoteText: '真实来源',
-        fromPosition: 0,
-        toPosition: 4,
-        headingPath: ['来源'],
-        prefixText: '',
-        suffixText: '',
-        anchorFingerprint: 'review-flow',
-        noteContentHash: hash(note.rawMarkdown),
-        idempotencyKey: 'review-flow'
-      });
+      const annotation = annotationOf(knowledge, note.id, 'src');
       const item = knowledge.knowledgeItemService.createCandidate({
         ...manual,
         sourceMode: 'annotation',

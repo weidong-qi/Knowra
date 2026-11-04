@@ -1,6 +1,9 @@
 import { createNoteDependencyLifecycle } from './application/note-dependency-lifecycle.js';
-import { withIdentityBindingRefresh } from './application/annotation-identity-binding.js';
-import { marksOnlyDependencies, withInlineAnnotations } from './application/inline-annotations.js';
+import {
+  degradeInlineSourceEvidence,
+  marksOnlyDependencies,
+  withInlineAnnotations
+} from './application/inline-annotations.js';
 import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.js';
 import { createInMemoryPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createNavigationReferencePolicy } from './application/navigation-reference-policy.js';
@@ -17,7 +20,6 @@ import { createTagGroupService } from './application/tag-group-service.js';
 import { createKnowledgeSpaceService } from './application/knowledge-space-service.js';
 import { createSearchService } from './application/search-service.js';
 import { createContentAnnotationService } from './application/content-annotation-service.js';
-import { createAnnotationIdentityShadow } from './application/annotation-identity-shadow.js';
 import { createInMemoryNoteRepository } from './infrastructure/note-repository.js';
 import { createInMemoryFolderRepository } from './infrastructure/folder-repository.js';
 import { createInMemoryTagRepository } from './infrastructure/tag-repository.js';
@@ -270,7 +272,6 @@ export function createKnowledgeModule(options = {}) {
     }
   });
   const annotationScopeService = createAnnotationScopeService({
-    annotationService: contentAnnotationService,
     annotationRepository: contentAnnotationRepository,
     exclusionRepository: annotationExclusionRepository,
     analysisScopeRepository,
@@ -320,13 +321,8 @@ export function createKnowledgeModule(options = {}) {
       return;
     noteVersionRepository.deleteById(previous.id);
   }
-  const annotationIdentityShadow = createAnnotationIdentityShadow({
-    // 影子比对只针对旧链路重点；v3（内联重点）的位置在正文标记里。
-    listAnnotations: noteId =>
-      contentAnnotationRepository.list({ noteId, includeDeleted: true }).filter(item => item.schemaVersion !== 3),
-    sink: options.annotationShadowSink ?? null,
-    afterCommit: options.afterCommit
-  });
+  // 影子比对已随旧链路删除（I4b）；保留空实现以维持依赖级联的冻结调用序列。
+  const annotationIdentityShadow = { observe: () => null };
   const noteDependencies = {
     contentAnnotationService,
     contentAnnotationRepository,
@@ -348,17 +344,12 @@ export function createKnowledgeModule(options = {}) {
     noteVersionService,
     runTransaction,
     // 重点内联化：只改标记的保存不让旧版本证据过期；级联完成后从正文派生内联重点行。
-    ...withInlineAnnotations(
-      withIdentityBindingRefresh(createNoteDependencyLifecycle(noteDependencies), contentAnnotationRepository),
-      {
-        repository: contentAnnotationRepository,
-        revisionRepository: annotationRevisionRepository,
-        marksOnlyLifecycle: withIdentityBindingRefresh(
-          createNoteDependencyLifecycle(marksOnlyDependencies(noteDependencies)),
-          contentAnnotationRepository
-        )
-      }
-    ),
+    ...withInlineAnnotations(createNoteDependencyLifecycle(noteDependencies), {
+      repository: contentAnnotationRepository,
+      revisionRepository: annotationRevisionRepository,
+      marksOnlyLifecycle: createNoteDependencyLifecycle(marksOnlyDependencies(noteDependencies)),
+      onSourceChanged: degradeInlineSourceEvidence(noteDependencies)
+    }),
     validateSiblingNameConflict: ({ spaceId, folderId, title, currentNoteId }) => {
       assertSiblingNameAvailable({
         spaceId,

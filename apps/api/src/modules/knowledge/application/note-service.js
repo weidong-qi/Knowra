@@ -16,7 +16,6 @@ export function createNoteService({
   annotationRepository = null,
   runTransaction = operation => operation(),
   onNoteContentChanged = null,
-  onNoteIdentityChanged = null,
   onNoteDeleted = null,
   onBeforePermanentDelete = null
 } = {}) {
@@ -26,8 +25,6 @@ export function createNoteService({
       if (createVersion && noteVersionService && note.contentKind !== 'pdf') {
         const version = noteVersionService.ensureForNote(saved);
         onNoteContentChanged?.(saved, version, annotationChange);
-      } else if (annotationChange) {
-        onNoteIdentityChanged?.(saved, annotationChange);
       }
       return saved;
     });
@@ -162,7 +159,11 @@ export function createNoteService({
       });
       const annotationChange =
         dto.rawMarkdown !== undefined
-          ? prepareAnnotationChange(currentNote, dto.rawMarkdown, updates.annotationMapping)
+          ? prepareAnnotationChange(
+              currentNote,
+              dto.rawMarkdown,
+              dto.expectedUpdatedAt ? null : updates.annotationMapping
+            )
           : null;
       const updatedNote = new Note({
         ...currentNote,
@@ -183,9 +184,7 @@ export function createNoteService({
 
       return persistNote(updatedNote, {
         annotationChange,
-        createVersion:
-          dto.rawMarkdown !== undefined &&
-          (dto.rawMarkdown !== currentNote.rawMarkdown || annotationChange?.edits?.length > 0)
+        createVersion: dto.rawMarkdown !== undefined && dto.rawMarkdown !== currentNote.rawMarkdown
       });
     },
     deleteNote(noteId) {

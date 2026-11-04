@@ -225,10 +225,8 @@ function NoteEditorStage({
   const getNoteLinkRelations = useAppStore(state => state.getNoteLinkRelations);
   const searchLinkNotes = useAppStore(state => state.searchCommandNotes);
   const listAnnotations = useAppStore(state => state.listAnnotations);
-  const createAnnotation = useAppStore(state => state.createAnnotation);
   const deleteAnnotation = useAppStore(state => state.deleteAnnotation);
   const restoreAnnotation = useAppStore(state => state.restoreAnnotation);
-  const updateAnnotationAnchor = useAppStore(state => state.updateAnnotationAnchor);
   const updateAnnotation = useAppStore(state => state.updateAnnotation);
   const confirmAnnotationRange = useAppStore(state => state.confirmAnnotationRange);
   const previewAnnotation = useAppStore(state => state.previewAnnotation);
@@ -238,7 +236,6 @@ function NoteEditorStage({
   const listAnalysisScopes = useAppStore(state => state.listAnalysisScopes);
   const trashAnalysisScope = useAppStore(state => state.trashAnalysisScope);
   const restoreAnalysisScope = useAppStore(state => state.restoreAnalysisScope);
-  const createAnnotationExclusion = useAppStore(state => state.createAnnotationExclusion);
   const deleteAnnotationExclusion = useAppStore(state => state.deleteAnnotationExclusion);
   const setStatusMessage = useAppStore(state => state.setStatusMessage);
   const createKnowledgeCandidate = useAppStore(state => state.createKnowledgeCandidate);
@@ -332,8 +329,8 @@ function NoteEditorStage({
         onCreateFolder={() => setCreateMode('folder')}
         onImportMarkdown={() => setImportOpen(true)}
         onRenameNote={title => (note ? renameNote(note.id, title) : Promise.resolve())}
-        onSaveMarkdown={(targetNoteId, markdown, expectedUpdatedAt, baseMarkdown, annotationMapping) =>
-          saveNoteContent(targetNoteId, markdown, expectedUpdatedAt, baseMarkdown, annotationMapping)
+        onSaveMarkdown={(targetNoteId, markdown, expectedUpdatedAt, baseMarkdown) =>
+          saveNoteContent(targetNoteId, markdown, expectedUpdatedAt, baseMarkdown)
         }
         onSaveAs={async () => {
           if (!note) return;
@@ -371,10 +368,8 @@ function NoteEditorStage({
         onGetNoteLinkRelations={getNoteLinkRelations}
         onSearchLinkNotes={searchLinkNotes}
         onListAnnotations={listAnnotations}
-        onCreateAnnotation={createAnnotation}
         onDeleteAnnotation={deleteAnnotation}
         onRestoreAnnotation={restoreAnnotation}
-        onUpdateAnnotationAnchor={updateAnnotationAnchor}
         onUpdateAnnotation={updateAnnotation}
         onConfirmAnnotationRange={confirmAnnotationRange}
         onPreviewAnnotation={previewAnnotation}
@@ -400,7 +395,6 @@ function NoteEditorStage({
         onListAnalysisScopes={listAnalysisScopes}
         onTrashAnalysisScope={trashAnalysisScope}
         onRestoreAnalysisScope={restoreAnalysisScope}
-        onCreateAnnotationExclusion={createAnnotationExclusion}
         onDeleteAnnotationExclusion={deleteAnnotationExclusion}
         onFileStatus={setStatusMessage}
         onToggleFavorite={() => {

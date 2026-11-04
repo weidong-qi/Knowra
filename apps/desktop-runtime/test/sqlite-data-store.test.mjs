@@ -31,7 +31,10 @@ test('正文、不可变版本和 outbox 原子提交，重启恢复稳定 ID、
   let workspace = openWorkspace(root);
   const note = createNote(workspace);
   const beforeCount = workspace.store.readOutbox().length;
-  workspace.knowledge.noteService.updateNote(note.id, { rawMarkdown: '离线修改\n中文内容', expectedUpdatedAt: note.updatedAt });
+  workspace.knowledge.noteService.updateNote(note.id, {
+    rawMarkdown: '离线修改\n中文内容',
+    expectedUpdatedAt: note.updatedAt
+  });
   const operations = workspace.store.readOutbox();
   assert.equal(operations.length, beforeCount + 1);
   const last = operations.at(-1);
@@ -49,7 +52,11 @@ test('正文、不可变版本和 outbox 原子提交，重启恢复稳定 ID、
 test('提交故障同时回滚正文、版本及队列，原 repository 引用仍可继续保存', t => {
   const root = temporaryDirectory(t);
   let fail = false;
-  const workspace = openWorkspace(root, { beforeCommit: () => { if (fail) throw new Error('模拟磁盘写入失败'); } });
+  const workspace = openWorkspace(root, {
+    beforeCommit: () => {
+      if (fail) throw new Error('模拟磁盘写入失败');
+    }
+  });
   const note = createNote(workspace);
   const snapshot = workspace.store.exportSnapshot().data;
   const queue = workspace.store.readOutbox();
@@ -131,9 +138,11 @@ test('异步事务与断裂引用均拒绝提交', t => {
   const workspace = openWorkspace(temporaryDirectory(t));
   const original = workspace.store.exportSnapshot().data;
   assert.throws(() => workspace.store.runTransaction(() => Promise.resolve()), /同步业务/);
-  assert.throws(() => workspace.store.runTransaction(() => {
-    workspace.store.state.notes.push({ id: 'bad', title: '损坏', rawMarkdown: '', spaceId: 'missing', tagIds: [] });
-  }));
+  assert.throws(() =>
+    workspace.store.runTransaction(() => {
+      workspace.store.state.notes.push({ id: 'bad', title: '损坏', rawMarkdown: '', spaceId: 'missing', tagIds: [] });
+    })
+  );
   assert.deepEqual(workspace.store.exportSnapshot().data, original);
   workspace.store.close();
 });
@@ -142,7 +151,12 @@ test('离线目录与笔记的跨实体依赖持久保存', t => {
   const workspace = openWorkspace(temporaryDirectory(t));
   const folder = workspace.knowledge.folderService.createFolder({ spaceId: workspace.space.id, name: '离线目录' });
   const folderOperation = workspace.store.readOutbox().at(-1);
-  workspace.knowledge.noteService.createNote({ title: '目录中的笔记', rawMarkdown: '正文', spaceId: workspace.space.id, folderId: folder.id });
+  workspace.knowledge.noteService.createNote({
+    title: '目录中的笔记',
+    rawMarkdown: '正文',
+    spaceId: workspace.space.id,
+    folderId: folder.id
+  });
   assert(workspace.store.readOutbox().at(-1).dependencies.includes(folderOperation.operationId));
   workspace.store.close();
 });
@@ -153,46 +167,30 @@ test('历史深层对象在提交、失败回滚和导出之间保持隔离', t 
   const { store } = workspace;
   t.after(() => store.close());
   createNote(workspace);
-  store.runTransaction(() => { store.state.noteVersions[0].extra = { paths: [[1, 2]] }; });
+  store.runTransaction(() => {
+    store.state.noteVersions[0].extra = { paths: [[1, 2]] };
+  });
   const exported = store.exportSnapshot();
   exported.data.noteVersions[0].extra.paths[0][0] = 99;
   assert.equal(store.state.noteVersions[0].extra.paths[0][0], 1);
-  for (const run of [operation => store.runTransaction(operation), operation => store.syncTransaction((_db, state) => operation(state))]) {
-    assert.throws(() => run(() => {
-      store.state.noteVersions[0].extra.paths[0][0] = 42;
-      throw new Error('回滚历史修改');
-    }), /回滚历史修改/);
+  for (const run of [
+    operation => store.runTransaction(operation),
+    operation => store.syncTransaction((_db, state) => operation(state))
+  ]) {
+    assert.throws(
+      () =>
+        run(() => {
+          store.state.noteVersions[0].extra.paths[0][0] = 42;
+          throw new Error('回滚历史修改');
+        }),
+      /回滚历史修改/
+    );
     assert.deepEqual(store.state.noteVersions[0].extra.paths, [[1, 2]]);
   }
-  const persisted = store.readSync(db => JSON.parse(db.prepare("SELECT payload FROM entities WHERE collection = 'noteVersions' LIMIT 1").get().payload));
+  const persisted = store.readSync(db =>
+    JSON.parse(db.prepare("SELECT payload FROM entities WHERE collection = 'noteVersions' LIMIT 1").get().payload)
+  );
   assert.deepEqual(persisted.extra.paths, [[1, 2]]);
-});
-
-test('影子比对日志只在提交成功后写入：提交故障后再上传附件触发独立 flush，也不补写失败样本', async t => {
-  const { calculateContentHash, sourceEdit } = await import('@study-accelerator/content-anchor');
-  const { createAppContext } = await import('../../api/src/app.factory.js');
-  const root = temporaryDirectory(t);
-  let fail = false;
-  const store = createSqliteDataStore(path.join(root, 'local.sqlite'), { beforeCommit: () => { if (fail) throw new Error('模拟磁盘写入失败'); } });
-  const context = createAppContext({ dataStore: store, uploadsDir: path.join(root, 'uploads'), storageRootDir: root, ownerId: 'demo' });
-  const knowledge = context.modules.knowledge;
-  const space = knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
-  const note = knowledge.noteService.createNote({ title: '离线笔记', rawMarkdown: '甲', spaceId: space.id });
-  const log = path.join(root, 'storage', 'runtime', 'annotation-shadow.jsonl');
-  const save = (current, after) => knowledge.noteService.updateNote(current.id, { rawMarkdown: after,
-    annotationMapping: { formatVersion: 1, operationId: `op-${after}`, baseContentHash: calculateContentHash(current.rawMarkdown), targetContentHash: calculateContentHash(after),
-      edits: [sourceEdit(current.rawMarkdown, after)],
-      editorState: { formatVersion: 2, targetContentHash: calculateContentHash(after), blocks: [{ id: 'p', type: 'paragraph', empty: false }], annotations: [] } } });
-  fail = true;
-  assert.throws(() => save(note, '甲乙'), /模拟磁盘/);
-  assert.equal(fs.existsSync(log), false);
-  fail = false;
-  await context.http.storage.uploadAttachment({ noteId: note.id, fileName: 'a.txt', mimeType: 'text/plain', contentBase64: Buffer.from('附件').toString('base64') });
-  assert.equal(fs.existsSync(log), false);
-  save(knowledge.noteService.getNote(note.id), '甲丙');
-  const entries = fs.readFileSync(log, 'utf8').trim().split('\n').map(line => JSON.parse(line));
-  assert.deepEqual(entries.map(entry => [entry.noteId, entry.status]), [[note.id, 'compared']]);
-  store.close();
 });
 
 test('afterCommit：嵌套事务推迟到最外层提交，回滚丢弃，事务外立即执行', t => {
@@ -205,45 +203,17 @@ test('afterCommit：嵌套事务推迟到最外层提交，回滚丢弃，事务
     assert.deepEqual(calls, []);
   });
   assert.deepEqual(calls, ['inner', 'outer']);
-  assert.throws(() => store.runTransaction(() => { store.afterCommit(() => calls.push('rolled-back')); throw new Error('回滚'); }), /回滚/);
+  assert.throws(
+    () =>
+      store.runTransaction(() => {
+        store.afterCommit(() => calls.push('rolled-back'));
+        throw new Error('回滚');
+      }),
+    /回滚/
+  );
   // 回滚后的独立提交（flush）不能执行已丢弃的回调。
   store.flush();
   store.afterCommit(() => calls.push('immediate'));
   assert.deepEqual(calls, ['inner', 'outer', 'immediate']);
   store.close();
-});
-
-test('块身份表随正文保存进 SQLite，重新打开后仍可用', async t => {
-  const { calculateContentHash, sourceEdit, validIdentityTable } = await import('@study-accelerator/content-anchor');
-  const root = temporaryDirectory(t);
-  const workspace = openWorkspace(root);
-  const note = createNote(workspace, '## A\n\n正文');
-  const after = '## A\n\n正文补充';
-  workspace.knowledge.noteService.updateNote(note.id, { rawMarkdown: after,
-    annotationMapping: { formatVersion: 1, operationId: 'op-identity', baseContentHash: calculateContentHash(note.rawMarkdown), targetContentHash: calculateContentHash(after),
-      edits: [sourceEdit(note.rawMarkdown, after)],
-      editorState: { formatVersion: 2, targetContentHash: calculateContentHash(after), blocks: [{ id: 'h', type: 'heading', empty: false }, { id: 'p', type: 'paragraph', empty: false }], annotations: [] } } });
-  workspace.store.close();
-  const reopened = openWorkspace(root);
-  const saved = reopened.knowledge.noteService.getNote(note.id);
-  assert.deepEqual(saved.annotationStructure.identity.blocks, [{ id: 'h', type: 'heading' }, { id: 'p', type: 'paragraph' }]);
-  assert.equal(validIdentityTable(saved.rawMarkdown, saved.annotationStructure.identity), true);
-  // S2b-2：已有身份表时新建的重点带绑定，重新打开后仍在。
-  const { projectMarkdown, anchorForSection } = await import('@study-accelerator/content-anchor');
-  const section = anchorForSection(projectMarkdown(saved.rawMarkdown), 0);
-  const annotation = reopened.knowledge.contentAnnotationService.createAnnotation({ spaceId: saved.spaceId, noteId: saved.id, schemaVersion: 2, scopeType: 'section', anchor: section,
-    quoteText: section.quoteText, fromPosition: section.sourceStart, toPosition: section.sourceEnd, anchorFingerprint: 'fixture', noteContentHash: calculateContentHash(saved.rawMarkdown), idempotencyKey: 'binding' });
-  assert.equal(annotation.identityBinding.rootBlockId, 'h');
-  // 正文不变的 ID 重建也必须同事务刷新绑定，不增加重点修订。
-  reopened.knowledge.noteService.updateNote(saved.id, { rawMarkdown: saved.rawMarkdown, expectedUpdatedAt: saved.updatedAt,
-    annotationMapping: { formatVersion: 1, operationId: 'same-identity', baseContentHash: calculateContentHash(saved.rawMarkdown), targetContentHash: calculateContentHash(saved.rawMarkdown), edits: [],
-      editorState: { formatVersion: 2, targetContentHash: calculateContentHash(saved.rawMarkdown), blocks: [{ id: 'new-h', type: 'heading', empty: false }, { id: 'new-p', type: 'paragraph', empty: false }], annotations: [] } } });
-  const rebound = reopened.knowledge.contentAnnotationService.getAnnotation(annotation.id);
-  assert.equal(rebound.identityBinding.rootBlockId, 'new-h');
-  assert.equal(rebound.revision, annotation.revision);
-  assert.deepEqual(rebound.originSnapshot, annotation.originSnapshot);
-  reopened.store.close();
-  const again = openWorkspace(root);
-  assert.deepEqual(again.knowledge.contentAnnotationService.getAnnotation(annotation.id).identityBinding, rebound.identityBinding);
-  again.store.close();
 });

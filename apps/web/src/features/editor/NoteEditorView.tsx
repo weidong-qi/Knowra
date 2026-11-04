@@ -8,7 +8,6 @@ import {
   buildExportFileName,
   type Annotation,
   type Attachment,
-  type CreateAnnotationInput,
   type Folder,
   type Note,
   type NoteVersion,
@@ -18,7 +17,6 @@ import {
   type Tag,
   type TagColor,
   type TagGroup,
-  type UpdateAnnotationAnchorInput,
   type UpdateAnnotationInput,
   type AnnotationPreview,
   type AnnotationKnowledgeLinks,
@@ -53,7 +51,6 @@ import { noteDraftRecovery } from './noteDraftRecovery';
 import { getNoteDraftScope } from './noteDraftScope';
 import { useNoteAutosave } from './useNoteAutosave';
 import { useEditorInspectorData } from './useEditorInspectorData';
-import { useEditorAnnotationWrites } from './useEditorAnnotationWrites';
 import { useInlineAnnotationWrites } from './useInlineAnnotationWrites';
 import { INLINE_IMAGE_ACCEPT } from './attachmentFiles';
 import { useEditorAttachments } from './useEditorAttachments';
@@ -85,13 +82,7 @@ export interface NoteEditorViewProps {
   onCreateFolder(): void;
   onImportMarkdown(): void;
   onRenameNote(title: string): Promise<void>;
-  onSaveMarkdown(
-    noteId: string,
-    markdown: string,
-    expectedUpdatedAt?: string,
-    baseMarkdown?: string,
-    annotationMapping?: import('@study-accelerator/web-core').AnnotationMapping
-  ): Promise<Note>;
+  onSaveMarkdown(noteId: string, markdown: string, expectedUpdatedAt?: string, baseMarkdown?: string): Promise<Note>;
   onDraftStateChange?(hasLocalChanges: boolean, error?: string | null): void;
   extendedWritesEnabled?: boolean;
   onSaveAs(): Promise<void>;
@@ -118,10 +109,8 @@ export interface NoteEditorViewProps {
   onGetNoteLinkRelations?(noteId: string): Promise<import('@study-accelerator/web-core').NoteLinkRelations>;
   onSearchLinkNotes?: import('@study-accelerator/web-core').CommandNoteSearcher;
   onListAnnotations(noteId: string): Promise<Annotation[]>;
-  onCreateAnnotation(input: CreateAnnotationInput): Promise<Annotation>;
   onDeleteAnnotation(annotationId: string, expectedRevision?: number): Promise<Annotation>;
   onRestoreAnnotation?(annotationId: string, expectedRevision?: number): Promise<Annotation>;
-  onUpdateAnnotationAnchor(annotationId: string, input: UpdateAnnotationAnchorInput): Promise<Annotation>;
   onUpdateAnnotation?(annotationId: string, input: UpdateAnnotationInput): Promise<Annotation>;
   onConfirmAnnotationRange?(
     annotationId: string,
@@ -146,14 +135,6 @@ export interface NoteEditorViewProps {
     id: string,
     input: { spaceId: string; expectedUpdatedAt: string }
   ): Promise<import('@study-accelerator/web-core').AnalysisScopeSnapshot>;
-  onCreateAnnotationExclusion?(
-    annotationId: string,
-    input: {
-      expectedRevision: number;
-      noteContentHash: string;
-      anchor: import('@study-accelerator/web-core').ContentAnchor;
-    }
-  ): Promise<{ annotation: Annotation }>;
   onDeleteAnnotationExclusion?(
     annotationId: string,
     exclusionId: string,
@@ -214,10 +195,8 @@ export function NoteEditorView({
   onGetNoteLinkRelations,
   onSearchLinkNotes,
   onListAnnotations,
-  onCreateAnnotation,
   onDeleteAnnotation,
   onRestoreAnnotation,
-  onUpdateAnnotationAnchor,
   onUpdateAnnotation,
   onPreviewAnnotation,
   onConfirmAnnotationRange,
@@ -231,7 +210,6 @@ export function NoteEditorView({
   onListAnalysisScopes,
   onTrashAnalysisScope,
   onRestoreAnalysisScope,
-  onCreateAnnotationExclusion,
   onDeleteAnnotationExclusion,
   onFileStatus,
   onViewAction,
@@ -356,37 +334,12 @@ export function NoteEditorView({
     onFileStatus
   });
 
-  const {
-    createCurrentAnnotation: createLegacyAnnotation,
-    reanchorAnnotation: reanchorLegacyAnnotation,
-    excludeCurrentBlock: excludeLegacyBlock
-  } = useEditorAnnotationWrites({
-    note,
-    canEditContent,
-    editorRef,
-    autosave,
-    onListAnnotations,
-    onCreateAnnotation,
-    onUpdateAnnotationAnchor,
-    onCreateAnnotationExclusion,
-    onFileStatus,
-    onCreated: created => {
-      setAnnotations(current => [...current.filter(item => item.id !== created.id), created]);
-      setFocusedAnnotationId(created.id);
-    },
-    onUpdated: (updated, focus) => {
-      setAnnotations(current => current.map(item => (item.id === updated.id ? updated : item)));
-      if (focus) setFocusedAnnotationId(updated.id);
-    }
-  });
-
-  // 重点内联化：没有活跃旧重点的笔记改为直接修改正文标记；还有旧重点的笔记仍走旧链路，等迁移后切换。
+  // 重点写在正文标记里：新建、取消、改属性、重新选择、排除都只改正文，保存后由服务端派生重点行。
   const inlineWrites = useInlineAnnotationWrites({
     note,
     canEditContent,
     editorRef,
     autosave,
-    annotations,
     annotationsLoading,
     annotationsReady,
     onListAnnotations,
@@ -395,7 +348,7 @@ export function NoteEditorView({
     setFocusedAnnotationId,
     onFileStatus
   });
-  // 用最新一次渲染的分流结果：列表加载期间先等加载完成（最多 5 秒），再决定走正文标记还是旧链路。
+  // 用最新一次渲染的状态：列表加载期间先等加载完成（最多 5 秒），再新建。
   const inlineWritesRef = useRef(inlineWrites);
   inlineWritesRef.current = inlineWrites;
   const annotationsLoadingRef = useRef(annotationsLoading);
@@ -426,14 +379,15 @@ export function NoteEditorView({
     if (context !== annotationContextRef.current) throw new Error('笔记或编辑状态已变化，请重新选择重点');
     if (annotationsLoadingRef.current || !inlineWritesRef.current.ready)
       throw new Error('重点列表尚未成功加载，请稍后重试');
-    if (inlineWritesRef.current.enabled) return inlineWritesRef.current.create(scope, importance);
-    return createLegacyAnnotation(scope, importance);
+    if (!inlineWritesRef.current.enabled) throw new Error('当前无法新建重点，请稍后重试');
+    return inlineWritesRef.current.create(scope, importance);
   };
   const annotationById = (annotationId: string) => annotations.find(item => item.id === annotationId);
+  const legacyUnsupported = () => Promise.reject(new Error('这条重点没有正文标记，无法在正文中操作'));
   const reanchorAnnotation = (annotation: Annotation) =>
-    inlineWrites.owns(annotation) ? inlineWrites.reanchor(annotation) : reanchorLegacyAnnotation(annotation);
+    inlineWrites.owns(annotation) ? inlineWrites.reanchor(annotation) : legacyUnsupported();
   const excludeCurrentBlock = (annotation: Annotation) =>
-    inlineWrites.owns(annotation) ? inlineWrites.exclude(annotation) : excludeLegacyBlock(annotation);
+    inlineWrites.owns(annotation) ? inlineWrites.exclude(annotation) : legacyUnsupported();
 
   useEffect(() => {
     setEditPanelMode(null);
@@ -928,7 +882,6 @@ export function NoteEditorView({
           onCreateAnnotation: extendedWritesEnabled ? createCurrentAnnotation : undefined,
           annotations,
           focusedAnnotationId,
-          blockIdentity: note.annotationStructure?.identity ?? null,
           onChange: autosave.updateDraft,
           onSelectAnnotation: ids => {
             if (ids.length === 1) {
