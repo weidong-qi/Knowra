@@ -52,8 +52,8 @@
   outline-offset: 2px;
 }
 .railIcon {
-  width: 24px;
-  height: 24px;
+  width: 21px;
+  height: 21px;
   display: grid;
   place-items: center;
   color: inherit;
@@ -79,18 +79,4 @@
   .rail {
     display: none;
   }
-}
-/* 手绘涂鸦图标的错位色块：平时淡、选中时更实。 */
-.railIcon [data-blob] {
-  opacity: 0.42;
-  transition: opacity var(--motion-fast) var(--motion-ease);
-}
-.railItem:hover:not(:disabled) .railIcon [data-blob] {
-  opacity: 0.58;
-}
-.railItem[aria-current='page'] .railIcon [data-blob] {
-  opacity: 0.78;
-}
-.railItem:disabled .railIcon [data-blob] {
-  opacity: 0.15;
 }
