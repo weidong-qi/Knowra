@@ -1,53 +1,26 @@
-/* 首页首屏：铺满整页的插画背景，正中太阳，底部浮出彩色便签卡片。 */
+/* 首页首屏：暖纸底 + 手绘涂鸦，底部浮出墨线描边的彩色便签。 */
 .hero {
-  --hero-top: #fff1e2;
-  --hero-mid: #ffd3b3;
-  --hero-bottom: #ffb69c;
-  --art-dots: #ffffff;
-  --art-dots-b: #ffffff;
-  --art-wave-back: #ddd7ff;
-  --art-wave-mid: #ffae8a;
-  --art-wave-front: #4a4f9a;
-  --art-squiggle: #ffffff;
-  --art-squiggle-b: #ff7a2f;
-  --art-spark-a: #ffd23f;
-  --art-spark-b: #ff7aa8;
-  --art-spark-c: #ffffff;
-  --art-spark-d: #8f7bff;
-  --art-ring: #ffffff;
-  --art-ring-b: #2b2f7a;
-  --art-dot: #ffffff;
-  --art-dot-b: #2b2f7a;
-  --art-pencil: #ff6a1a;
-  --art-stamp: #6f5cff;
-  --sun-a: #ffb46b;
-  --sun-b: #ff6a1a;
+  --hero-paper: #fff6e8;
+  --doodle-ink: #2a2733;
+  --doodle-orange: #ff7a2f;
+  --doodle-yellow: #ffd23f;
+  --doodle-pink: #ff9db8;
+  --doodle-mint: #6fdcb2;
   position: relative;
   isolation: isolate;
   min-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(175deg, var(--hero-top) 0%, var(--hero-mid) 48%, var(--hero-bottom) 100%);
+  background: var(--hero-paper);
 }
 :global([data-ni-mode='dark']) .hero {
-  --hero-top: #17141f;
-  --hero-mid: #271a2a;
-  --hero-bottom: #3a2023;
-  --art-dots: #7d6cff;
-  --art-dots-b: #ff8a4c;
-  --art-wave-back: #3a3570;
-  --art-wave-mid: #c2562f;
-  --art-wave-front: #0e1030;
-  --art-squiggle: rgb(255 255 255 / 55%);
-  --art-squiggle-b: #ff8a4c;
-  --art-ring: rgb(255 255 255 / 55%);
-  --art-ring-b: #7d6cff;
-  --art-dot: rgb(255 255 255 / 70%);
-  --art-dot-b: #7d6cff;
-  --art-stamp: #8a78ff;
-  --sun-a: #ff9a5c;
-  --sun-b: #e8501c;
+  --hero-paper: #1d1a24;
+  --doodle-ink: #f1e9dc;
+  --doodle-orange: #e8631f;
+  --doodle-yellow: #d9ab22;
+  --doodle-pink: #c65b7e;
+  --doodle-mint: #2fa57c;
 }
 
 .srOnly {
@@ -75,56 +48,20 @@
   font: 500 var(--font-size-meta) / 1.5 var(--font-ui);
 }
 .kickerPill {
-  padding: 4px 12px;
+  padding: 3px 12px;
+  border: 2px solid var(--doodle-ink);
   border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 55%);
+  background: var(--hero-paper);
   color: var(--text-primary);
-  box-shadow: 0 0 0 1px rgb(24 30 48 / 8%);
-}
-:global([data-ni-mode='dark']) .kickerPill {
-  background: rgb(255 255 255 / 10%);
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 14%);
 }
 .version {
   color: var(--text-secondary);
 }
 
-/* 太阳：页面正中偏上，带两圈光晕，里面是像素小脸 */
-.sun {
-  position: relative;
-  z-index: 1;
-  align-self: center;
-  margin-top: clamp(48px, 11vh, 120px);
-  width: clamp(190px, 25vw, 300px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: radial-gradient(circle at 34% 28%, var(--sun-a), var(--sun-b) 72%);
-  box-shadow:
-    0 0 0 clamp(10px, 1.3vw, 18px) rgb(255 255 255 / 30%),
-    0 0 0 clamp(24px, 3vw, 42px) rgb(255 255 255 / 14%),
-    0 30px 60px -24px rgb(232 80 28 / 50%);
-}
-.sunFace {
-  --pf-color: #2a1a12;
-  transform: scale(2.4);
-}
-
-/* 底部：彩色便签卡片，部分被页面底边裁切，像从下方翻出来 */
+/* 底部：便签卡片，部分被页面底边裁切，像从下方翻出来 */
 .stage {
   position: relative;
   z-index: 2;
   margin-top: auto;
-  padding: clamp(32px, 6vh, 64px) clamp(16px, 4vw, 64px) 0;
-}
-
-@media (max-width: 860px) {
-  .sun {
-    width: 170px;
-    margin-top: 72px;
-  }
-  .sunFace {
-    transform: scale(2);
-  }
+  padding: clamp(160px, 38vh, 340px) clamp(16px, 4vw, 64px) 0;
 }

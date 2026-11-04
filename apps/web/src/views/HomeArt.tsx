@@ -1,78 +1,95 @@
-// 首页整页背景插画：日出渐变 + 撕纸感层叠波浪 + 半调点、星芒、波浪线，以及铅笔与印章。
-// 全部铺满父容器（slice 裁切、底部对齐）；颜色取自 HomeHero.module.css 里按明暗切换的变量。
-// 装饰刻意克制：主体靠波浪与两件物品，其余只留少量点缀。
+// 首页首屏插画：手绘涂鸦。暖纸底上的粗线条星星、螺旋、箭头、圈圈、波浪线，
+// 彩色填色故意错位于线稿（类似手工印刷），线条经轻微位移滤镜带出手抖感。
+// 颜色取自 HomeHero.module.css 里按明暗切换的变量。
 
 import styles from './HomeArt.module.css';
 
-const SPARKLE = 'M0 -30 L7 -9 L28 -9 L11 4 L17 26 L0 12 L-17 26 L-11 4 L-28 -9 L-7 -9 Z';
+function starPath(cx: number, cy: number, outer: number, inner: number): string {
+  const points: string[] = [];
+  for (let i = 0; i < 10; i += 1) {
+    const radius = i % 2 ? inner : outer;
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+    points.push(`${(cx + radius * Math.cos(angle)).toFixed(1)} ${(cy + radius * Math.sin(angle)).toFixed(1)}`);
+  }
+  return `M${points.join(' L')} Z`;
+}
+
+function spiralPath(cx: number, cy: number, turns: number, growth: number): string {
+  const points: string[] = [];
+  for (let t = 0; t <= turns * 2 * Math.PI; t += 0.22) {
+    const radius = (growth * t) / (2 * Math.PI);
+    points.push(`${(cx + radius * Math.cos(t)).toFixed(1)} ${(cy + radius * Math.sin(t)).toFixed(1)}`);
+  }
+  return `M${points.join(' L')}`;
+}
+
+function raysPath(cx: number, cy: number, from: number, to: number, count: number): string {
+  const parts: string[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const angle = (i * 2 * Math.PI) / count + Math.PI / count;
+    const x1 = cx + from * Math.cos(angle);
+    const y1 = cy + from * Math.sin(angle);
+    const x2 = cx + to * Math.cos(angle);
+    const y2 = cy + to * Math.sin(angle);
+    parts.push(`M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}`);
+  }
+  return parts.join(' ');
+}
+
+const STAR = starPath(800, 300, 128, 56);
+const STAR_FILL = starPath(800, 300, 128, 56);
+const SPIRAL = spiralPath(300, 210, 3.2, 9);
+const RAYS = raysPath(800, 300, 160, 192, 10);
 
 export function HomeArt() {
   return (
     <svg
       className={styles.art}
       viewBox="0 0 1600 900"
-      preserveAspectRatio="xMidYMax slice"
+      preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
       focusable="false"
     >
       <defs>
-        <pattern id="home-halftone" width="16" height="16" patternUnits="userSpaceOnUse">
-          <circle cx="4" cy="4" r="2.2" style={{ fill: 'var(--art-dots)' }} />
-        </pattern>
-        <filter id="home-torn" x="-2%" y="-5%" width="104%" height="110%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.018 0.05" numOctaves="3" seed="7" result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="12" xChannelSelector="R" yChannelSelector="G" />
+        <filter id="home-wobble" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G" />
         </filter>
         <filter id="home-grain" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" />
           <feColorMatrix type="saturate" values="0" />
         </filter>
       </defs>
 
-      <rect className={styles.dots} x="330" y="110" width="340" height="260" fill="url(#home-halftone)" />
-
-      <g filter="url(#home-torn)">
-        <path
-          className={styles.waveBack}
-          d="M-60 640 C 160 560, 360 700, 620 640 S 1040 560, 1260 650 S 1560 600, 1700 640 V 960 H -60 Z"
-        />
-        <path
-          className={styles.waveMid}
-          d="M-60 720 C 200 650, 420 790, 700 720 S 1100 650, 1320 740 S 1580 700, 1700 730 V 960 H -60 Z"
-        />
-        <path
-          className={styles.waveFront}
-          d="M-60 800 C 240 750, 460 860, 760 800 S 1160 740, 1400 820 S 1600 790, 1700 810 V 960 H -60 Z"
-        />
+      {/* 错位的彩色填色 */}
+      <g className={styles.floatStar}>
+        <path className={styles.fillOrange} d={STAR_FILL} transform="translate(14 14)" />
       </g>
+      <circle className={styles.fillYellow} cx="1262" cy="262" r="62" />
+      <path className={styles.fillPink} d="M1086 560 q40 -70 88 -6 q40 62 -20 78 q-70 10 -68 -72 z" />
+      <path className={styles.fillMint} d="M212 560 q60 -44 118 -4 q16 56 -48 70 q-72 0 -70 -66 z" />
+      <path className={styles.fillYellow} d="M1290 430 l56 -60 l-14 52 l38 4 l-70 70 l16 -56 z" />
 
-      <path className={styles.squiggle} d="M300 560 q26 -36 52 0 t52 0 t52 0 t52 0 t52 0" />
-
-      <g transform="translate(1210 150)">
-        <path className={styles.sparkA} d={SPARKLE} />
-      </g>
-      <g transform="translate(1250 480) scale(1.1)">
-        <path className={styles.sparkC} d={SPARKLE} />
-      </g>
-      <circle className={styles.ring} cx="1300" cy="330" r="46" />
-      <circle className={styles.dotSolid} cx="560" cy="170" r="7" />
-
-      <g transform="translate(420 650) rotate(-30)">
-        <g className={styles.floatB}>
-          <rect className={styles.pencilBody} x="0" y="0" width="230" height="30" rx="5" />
-          <rect className={styles.pencilBand} x="186" y="0" width="16" height="30" />
-          <polygon className={styles.pencilWood} points="230,0 280,15 230,30" />
-          <polygon className={styles.pencilTip} points="264,9.5 280,15 264,20.5" />
-          <rect className={styles.pencilCap} x="-16" y="0" width="22" height="30" rx="5" />
+      {/* 手绘线稿 */}
+      <g className={styles.ink} filter="url(#home-wobble)">
+        <g className={styles.floatStar}>
+          <path d={STAR} />
+          <path d={RAYS} />
+          <path className={styles.thin} d="M748 262 q52 -22 104 4 M742 292 q58 -20 116 4 M752 324 q48 -14 96 2" />
         </g>
-      </g>
-
-      <g transform="translate(1140 610)">
-        <g className={styles.floatA}>
-          <circle className={styles.stamp} r="50" />
-          <circle className={styles.stampRing} r="39" />
-          <path className={styles.check} d="M-20 2 l13 15 l27 -32" />
-        </g>
+        <path d={SPIRAL} />
+        <path d="M262 640 C 236 520, 360 440, 520 372" />
+        <path d="M472 366 L 524 370 L 502 418" />
+        <path d="M1204 262 a 64 62 0 1 0 4 -2 M1180 214 a 80 74 0 0 1 120 14" />
+        <path d="M1062 700 q 26 -34 52 0 t 52 0 t 52 0 t 52 0" />
+        <path d="M1086 560 q40 -70 88 -6 q40 62 -20 78 q-70 10 -68 -72 z" />
+        <path d="M212 560 q60 -44 118 -4 q16 56 -48 70 q-72 0 -70 -66 z" />
+        <path d="M1290 430 l56 -60 l-14 52 l38 4 l-70 70 l16 -56 z" />
+        <path d="M640 120 v36 M622 138 h36" />
+        <path d="M1010 100 v28 M996 114 h28" />
+        <path d="M470 110 q14 -22 30 0 q14 22 -4 40" />
+        <circle cx="560" cy="500" r="9" />
+        <circle cx="1220" cy="400" r="7" />
       </g>
 
       <rect className={styles.grain} x="0" y="0" width="1600" height="900" filter="url(#home-grain)" />
