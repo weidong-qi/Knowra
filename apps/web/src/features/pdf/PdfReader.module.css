@@ -160,16 +160,17 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: var(--shell-gap, 8px) var(--shell-gap, 8px) var(--shell-gap, 8px) 0;
+  /* 左侧留出一点空隙，不与阅读区滚动条贴成双线；圆角比外框小一档，转角处两条曲线更接近同心。 */
+  margin: var(--shell-gap, 8px) var(--shell-gap, 8px) var(--shell-gap, 8px) 4px;
   border: 0;
-  border-radius: var(--radius-panel);
+  border-radius: calc(var(--radius-panel) - 4px);
   background:
     var(--ni-ctx-glow, none),
     var(--surface-card-tint, color-mix(in srgb, var(--text-primary) 4.5%, var(--surface-page)));
   box-shadow:
     var(--sidebar-highlight, inset 0 1px 0 transparent),
     0 0 0 1px var(--ni-ctx-border, var(--border-subtle)),
-    0 14px 34px -16px color-mix(in srgb, #000 32%, transparent);
+    0 6px 16px -12px color-mix(in srgb, #000 28%, transparent);
 }
 .panelHeader {
   flex: 0 0 var(--tab-size, 44px);
@@ -208,7 +209,7 @@
   text-align: left;
 }
 .markCard {
-  border-radius: 10px;
+  border-radius: 6px;
   padding: 10px;
   margin-bottom: 4px;
   display: flex;
