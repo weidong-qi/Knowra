@@ -41,7 +41,7 @@ const errors = {
   groupSpace: error('TAG_GROUP_SPACE_MISMATCH', 'The referenced tag group belongs to another knowledge space'),
   single: error('TAG_GROUP_SINGLE_SELECTION', 'Only one tag may be selected from this group')
 };
-const repositoryNames = ['note', 'folder', 'tag', 'tagGroup', 'knowledgeSpace', 'contentAnnotation', 'annotationExclusion',
+const repositoryNames = ['note', 'folder', 'tag', 'tagGroup', 'knowledgeSpace', 'contentAnnotation', 'pdfAnnotation', 'annotationExclusion',
   'annotationRevision', 'analysisScope', 'noteVersion', 'knowledgeItem', 'knowledgeEvidence', 'knowledgeArtifactProvenance',
   'learningObjective', 'examProfile', 'examFocus', 'question', 'questionObjective', 'questionSource'];
 

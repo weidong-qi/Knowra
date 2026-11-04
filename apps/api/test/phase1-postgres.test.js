@@ -140,6 +140,7 @@ export const phase1PostgresTests = [
           note: model(),
           noteTag: model(),
           attachment: model(),
+          pdfAnnotation: model(),
           contentAnnotation: model(),
           noteVersion: model(),
           knowledgeItem: model(),

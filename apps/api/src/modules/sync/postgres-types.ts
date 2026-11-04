@@ -13,6 +13,7 @@ export interface SyncModelNames {
   notes: 'note';
   noteVersions: 'noteVersion';
   attachments: 'attachment';
+  pdfAnnotations: 'pdfAnnotation';
   contentAnnotations: 'contentAnnotation';
   annotationExclusions: 'annotationExclusion';
   annotationRevisions: 'annotationRevision';
@@ -35,6 +36,7 @@ interface ReadRows {
   notes: Models.Note & { noteTags: { tagId: string }[] };
   noteVersions: Models.NoteVersion;
   attachments: Models.Attachment;
+  pdfAnnotations: Models.PdfAnnotation;
   contentAnnotations: Models.ContentAnnotation;
   annotationExclusions: Models.AnnotationExclusion;
   annotationRevisions: Models.AnnotationRevision;
@@ -84,6 +86,7 @@ type MapperSuffix = {
   notes: 'Note';
   noteVersions: 'NoteVersion';
   attachments: 'Attachment';
+  pdfAnnotations: 'PdfAnnotation';
   contentAnnotations: 'Annotation';
   annotationExclusions: 'AnnotationExclusion';
   annotationRevisions: 'AnnotationRevision';

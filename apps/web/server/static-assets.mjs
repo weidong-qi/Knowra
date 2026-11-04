@@ -8,6 +8,8 @@ const CONTENT_TYPES = new Map([
   ['.jpeg', 'image/jpeg'],
   ['.jpg', 'image/jpeg'],
   ['.js', 'text/javascript; charset=utf-8'],
+  ['.mjs', 'text/javascript; charset=utf-8'],
+  ['.wasm', 'application/wasm'],
   ['.json', 'application/json; charset=utf-8'],
   ['.png', 'image/png'],
   ['.svg', 'image/svg+xml; charset=utf-8'],
@@ -27,7 +29,11 @@ export function serveV4Asset({ request, response, pathname, distRoot }) {
   const headers = {
     'Content-Type': CONTENT_TYPES.get(path.extname(assetPath).toLowerCase()) ?? 'application/octet-stream',
     'Content-Length': stats.size,
-    'Cache-Control': isEntry ? 'no-store' : isHashedAsset ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate',
+    'Cache-Control': isEntry
+      ? 'no-store'
+      : isHashedAsset
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=0, must-revalidate',
     ETag: etag,
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'same-origin'

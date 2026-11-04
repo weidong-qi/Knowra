@@ -61,7 +61,7 @@ export function SpaceManagerView() {
           <Button isDisabled={!canManage || pending || !sourceId || !targetId} onPress={() => void operate(async () => setMigration(await state.previewSpaceMigration(sourceId, targetId)))}>预览迁移</Button>
         </div>
         {migration ? <div className={styles.preview}>
-          <p>笔记 {migration.counts.notes ?? 0}、目录 {migration.counts.folders ?? 0}、标签 {migration.counts.tags ?? 0}、标注 {migration.counts.annotations ?? 0}、保存范围 {migration.counts.analysisScopes ?? 0}。</p>
+          <p>笔记 {migration.counts.notes ?? 0}、目录 {migration.counts.folders ?? 0}、标签 {migration.counts.tags ?? 0}、标注 {migration.counts.annotations ?? 0}、PDF 标注 {migration.counts.pdfAnnotations ?? 0}、保存范围 {migration.counts.analysisScopes ?? 0}。</p>
           {migration.blockers.length ? <p role="alert">暂不能迁移：{migration.blockers.join('、')}。请处理跨空间引用或清空目标空间后重新预览。</p> : <p>迁移后原空间外壳仍保留；旧设备待同步，备份按保留策略处理。</p>}
           <Button variant="danger" isDisabled={!canManage || pending || migration.decision !== 'can-migrate'} onPress={() => void operate(async () => { await state.migrateSpaceAssets(sourceId, targetId, migration.previewHash); setMigration(null); setNotice('空间内资产已迁移；请检查目标空间与离线设备的同步状态。'); })}>确认整包迁移</Button>
         </div> : null}

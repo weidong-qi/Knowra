@@ -19,13 +19,14 @@ export interface JsonMigrationInput {
   questionObjectives?: unknown[];
   questionSources?: unknown[];
   attachments?: unknown[];
+  pdfAnnotations?: unknown[];
   contentAnnotations?: unknown[];
   annotationExclusions?: unknown[];
   annotationRevisions?: unknown[];
   analysisScopeSnapshots?: unknown[];
 
   schemaVersion?: number;
-  data?: ReturnType<typeof import('../local-data-schema.js').createEmptyLocalState>;
+  data?: Record<string, object[]>;
   knowledgeExtractionCommits?: unknown;
   sync?: {
     tombstones?: Record<

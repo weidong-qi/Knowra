@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import type * as Models from '@prisma/client';
 import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
+import type { PdfSource } from '@study-accelerator/shared/pdf';
 
 export type NoteRow = Models.Note & { noteTags?: Pick<Models.NoteTag, 'tagId'>[] | null };
 export type MappedUser = Omit<Models.User, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string };
@@ -116,6 +117,9 @@ export function mapTagGroup(row: Models.TagGroup | null | undefined): SyncMapped
   };
 }
 
+export const mapPdfAnnotation = (row: { payload: unknown } | null | undefined) =>
+  row ? (structuredClone(row.payload) as SyncMappedEntityMap['pdfAnnotations']) : null;
+
 export function mapNote<Row extends NoteRow | null | undefined>(row: Row): Mapped<Row, SyncMappedEntityMap['notes']>;
 export function mapNote(row: NoteRow): SyncMappedEntityMap['notes'];
 export function mapNote(row: NoteRow | null | undefined): SyncMappedEntityMap['notes'] | null {
@@ -127,6 +131,8 @@ export function mapNote(row: NoteRow | null | undefined): SyncMappedEntityMap['n
     folderId: row.folderId ?? null,
     title: row.title,
     rawMarkdown: row.rawMarkdown,
+    contentKind: (row.contentKind ?? 'markdown') as 'markdown' | 'pdf',
+    pdfSource: (row.pdfSource ?? null) as unknown as PdfSource | null,
     annotationStructure: row.annotationStructure ?? null,
     plainText: row.plainText ?? '',
     internalLinks: [...internalLinks],
@@ -409,6 +415,8 @@ export interface NoteWriteInput {
   folderId?: unknown;
   title?: unknown;
   rawMarkdown?: unknown;
+  contentKind?: unknown;
+  pdfSource?: unknown;
   annotationStructure?: unknown;
   plainText?: unknown;
   internalLinks?: unknown;
@@ -430,6 +438,8 @@ export interface NoteWriteData<Input extends NoteWriteInput = NoteWriteInput> {
   folderId: NonNullable<WriteField<Input, 'folderId'>> | null;
   title: WriteField<Input, 'title'>;
   rawMarkdown: string;
+  contentKind: NonNullable<WriteField<Input, 'contentKind'>> | 'markdown';
+  pdfSource: NonNullable<WriteField<Input, 'pdfSource'>> | Prisma.NullTypes.DbNull;
   annotationStructure: NonNullable<WriteField<Input, 'annotationStructure'>> | Prisma.NullTypes.DbNull;
   plainText: string;
   internalLinks: WriteField<Input, 'internalLinks'> | [];
@@ -454,6 +464,8 @@ export function buildNoteData(note: NoteWriteInput): NoteWriteData {
     folderId: note.folderId ?? null,
     title: note.title,
     rawMarkdown,
+    contentKind: note.contentKind ?? 'markdown',
+    pdfSource: note.pdfSource ?? Prisma.DbNull,
     annotationStructure: note.annotationStructure ?? Prisma.DbNull,
     plainText: String(note.plainText ?? ''),
     internalLinks: Array.isArray(note.internalLinks) ? (note.internalLinks as unknown) : [],

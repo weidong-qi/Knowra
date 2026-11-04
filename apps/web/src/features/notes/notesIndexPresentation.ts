@@ -1,15 +1,37 @@
 import type { Folder, Note } from '@study-accelerator/web-core';
 import styles from './NotesIndexItems.module.css';
 export type ViewMode = 'list' | 'grid' | 'card';
-export type TypeFilter = 'all' | 'folder' | 'note';
+export type TypeFilter = 'all' | 'folder' | 'note' | 'pdf';
 export type SortMode = 'updated-desc' | 'updated-asc' | 'name-asc' | 'name-desc';
 export type IndexItem = { kind: 'folder'; folder: Folder } | { kind: 'note'; note: Note };
-export const SORT_LABELS: Record<SortMode, string> = { 'updated-desc': '最近更新', 'updated-asc': '最早更新', 'name-asc': '名称 A→Z', 'name-desc': '名称 Z→A' };
+export const SORT_LABELS: Record<SortMode, string> = {
+  'updated-desc': '最近更新',
+  'updated-asc': '最早更新',
+  'name-asc': '名称 A→Z',
+  'name-desc': '名称 Z→A'
+};
 
 export type GroupMode = 'none' | 'updated' | 'folder' | 'status';
-export const GROUP_LABELS: Record<GroupMode, string> = { none: '不分组', updated: '更新时间', folder: '文件夹', status: '状态' };
-export interface IndexDisplayProperties { summary: boolean; tags: boolean; status: boolean; location: boolean; updated: boolean }
-export const DEFAULT_DISPLAY_PROPERTIES: IndexDisplayProperties = { summary: true, tags: true, status: true, location: true, updated: true };
+export const GROUP_LABELS: Record<GroupMode, string> = {
+  none: '不分组',
+  updated: '更新时间',
+  folder: '文件夹',
+  status: '状态'
+};
+export interface IndexDisplayProperties {
+  summary: boolean;
+  tags: boolean;
+  status: boolean;
+  location: boolean;
+  updated: boolean;
+}
+export const DEFAULT_DISPLAY_PROPERTIES: IndexDisplayProperties = {
+  summary: true,
+  tags: true,
+  status: true,
+  location: true,
+  updated: true
+};
 
 export function statusClassName(status: string): string {
   if (status === '文件夹') return styles.statusFolder;

@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, 
 import type { Note } from '@study-accelerator/web-core';
 import { IconButton, PressableButton } from '../../components/ui/button';
 import { Menu, MenuItem, MenuPopover, MenuSeparator, MenuTrigger } from '../../components/ui/overlay';
-import { ChevronDownIcon, CloseIcon, PlusIcon, NoteIcon } from '../../components/icons/knowra';
+import { ChevronDownIcon, CloseIcon, PlusIcon, NoteIcon, PdfFileIcon } from '../../components/icons/knowra';
 import { cx } from '../../components/ui/classnames';
 import styles from './NoteEditorView.module.css';
 
@@ -31,7 +31,9 @@ export function EditorTabs(props: EditorTabsProps) {
     if (pending && !props.notes.some(note => note.id === pending.id)) {
       const tabs = tabsRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
       const next = tabs?.[Math.min(pending.index, (tabs?.length ?? 1) - 1)];
-      (next ?? tabsRef.current?.querySelector<HTMLButtonElement>('[aria-label="新建笔记"]'))?.focus({ preventScroll: true });
+      (next ?? tabsRef.current?.querySelector<HTMLButtonElement>('[aria-label="新建笔记"]'))?.focus({
+        preventScroll: true
+      });
       pendingClose.current = null;
     }
   }, [props.notes]);
@@ -47,7 +49,9 @@ export function EditorTabs(props: EditorTabsProps) {
     return () => observer.disconnect();
   }, [props.notes]);
   useLayoutEffect(() => {
-    tabsRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    tabsRef.current
+      ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }, [props.activeNoteId]);
 
   function closeNote(noteId: string) {
@@ -55,19 +59,25 @@ export function EditorTabs(props: EditorTabsProps) {
     props.onCloseNote(noteId);
   }
 
-
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Delete' && (event.target as HTMLElement).getAttribute('role') === 'tab') {
       const noteId = (event.target as HTMLElement).dataset.noteId;
-      if (noteId) { event.preventDefault(); closeNote(noteId); }
+      if (noteId) {
+        event.preventDefault();
+        closeNote(noteId);
+      }
       return;
     }
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
     if (tabs.length === 0) return;
     const current = Math.max(0, tabs.indexOf(document.activeElement as HTMLButtonElement));
-    const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
-      : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? tabs.length - 1
+          : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
     event.preventDefault();
     tabs[nextIndex].focus();
     tabs[nextIndex].click();
@@ -81,7 +91,13 @@ export function EditorTabs(props: EditorTabsProps) {
   }
 
   return (
-    <div ref={tabsRef} className={cx(styles.tabs, props.windowTitlebar ? styles.windowTabs : undefined)} role="tablist" aria-label="打开的笔记" onKeyDown={handleKeyDown}>
+    <div
+      ref={tabsRef}
+      className={cx(styles.tabs, props.windowTitlebar ? styles.windowTabs : undefined)}
+      role="tablist"
+      aria-label="打开的笔记"
+      onKeyDown={handleKeyDown}
+    >
       <div ref={scrollerRef} className={styles.tabScroller}>
         {props.notes.map((note, index) => {
           const selected = note.id === props.activeNoteId;
@@ -91,14 +107,14 @@ export function EditorTabs(props: EditorTabsProps) {
               className={styles.tabItem}
               data-selected={selected || undefined}
               draggable
-              onDragStart={(event) => {
+              onDragStart={event => {
                 setDraggedNoteId(note.id);
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/x-note-id', note.id);
               }}
               onDragEnd={() => setDraggedNoteId(null)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => handleDrop(event, note.id)}
+              onDragOver={event => event.preventDefault()}
+              onDrop={event => handleDrop(event, note.id)}
             >
               <TabContextMenu note={note} noteIndex={index} {...props} onCloseNote={closeNote}>
                 <PressableButton
@@ -112,35 +128,42 @@ export function EditorTabs(props: EditorTabsProps) {
                   title={`${String(index + 1).padStart(2, '0')} · ${note.title || '无标题笔记'}`}
                   onPress={() => props.onOpenNote(note.id)}
                 >
-                  <span className={styles.tabNumber}><NoteIcon size={14} /></span>
-                  <span className={styles.tabLabel}>{note.title ? <MathText text={note.title} inlineOnly /> : '无标题笔记'}</span>
+                  <span className={styles.tabNumber}>
+                    {note.contentKind === 'pdf' ? <PdfFileIcon size={14} /> : <NoteIcon size={14} />}
+                  </span>
+                  <span className={styles.tabLabel}>
+                    {note.title ? <MathText text={note.title} inlineOnly /> : '无标题笔记'}
+                  </span>
                 </PressableButton>
               </TabContextMenu>
-              <PressableButton type="button" className={styles.tabClose} aria-label={`关闭${note.title || '无标题笔记'}`} onPress={() => closeNote(note.id)}>
+              <PressableButton
+                type="button"
+                className={styles.tabClose}
+                aria-label={`关闭${note.title || '无标题笔记'}`}
+                onPress={() => closeNote(note.id)}
+              >
                 <CloseIcon size={12} />
               </PressableButton>
             </div>
           );
         })}
       </div>
-      {overflowing ? <MenuTrigger>
-        <IconButton
-          className={styles.tabAction}
-          aria-label="查看全部标签页"
-          title="查看全部标签页"
-        >
-          <ChevronDownIcon size={16} />
-        </IconButton>
-        <MenuPopover placement="bottom end">
-          <Menu ariaLabel="全部标签页">
-            {props.notes.map((note, index) => (
-              <MenuItem key={note.id} id={note.id} onAction={() => props.onOpenNote(note.id)}>
-                {String(index + 1).padStart(2, '0')} · {note.title || '无标题笔记'}
-              </MenuItem>
-            ))}
-          </Menu>
-        </MenuPopover>
-      </MenuTrigger> : null}
+      {overflowing ? (
+        <MenuTrigger>
+          <IconButton className={styles.tabAction} aria-label="查看全部标签页" title="查看全部标签页">
+            <ChevronDownIcon size={16} />
+          </IconButton>
+          <MenuPopover placement="bottom end">
+            <Menu ariaLabel="全部标签页">
+              {props.notes.map((note, index) => (
+                <MenuItem key={note.id} id={note.id} onAction={() => props.onOpenNote(note.id)}>
+                  {String(index + 1).padStart(2, '0')} · {note.title || '无标题笔记'}
+                </MenuItem>
+              ))}
+            </Menu>
+          </MenuPopover>
+        </MenuTrigger>
+      ) : null}
       <IconButton
         className={styles.tabAction}
         aria-label="新建笔记"
@@ -154,7 +177,16 @@ export function EditorTabs(props: EditorTabsProps) {
   );
 }
 
-function TabContextMenu({ note, noteIndex, notes, children, onCloseNote, onCloseOtherNotes, onCopyTabPath, onReorderNotes }: EditorTabsProps & {
+function TabContextMenu({
+  note,
+  noteIndex,
+  notes,
+  children,
+  onCloseNote,
+  onCloseOtherNotes,
+  onCopyTabPath,
+  onReorderNotes
+}: EditorTabsProps & {
   note: Note;
   noteIndex: number;
   children: ReactNode;
@@ -164,13 +196,31 @@ function TabContextMenu({ note, noteIndex, notes, children, onCloseNote, onClose
       {children}
       <MenuPopover>
         <Menu ariaLabel={`${note.title || '无标题笔记'}标签操作`}>
-          <MenuItem id="copy-path" onAction={() => onCopyTabPath(note)}>复制笔记路径</MenuItem>
+          <MenuItem id="copy-path" onAction={() => onCopyTabPath(note)}>
+            复制笔记路径
+          </MenuItem>
           <MenuSeparator />
-          <MenuItem id="move-left" isDisabled={noteIndex === 0} onAction={() => onReorderNotes(note.id, notes[noteIndex - 1]?.id ?? note.id)}>向左移动标签</MenuItem>
-          <MenuItem id="move-right" isDisabled={noteIndex === notes.length - 1} onAction={() => onReorderNotes(note.id, notes[noteIndex + 1]?.id ?? note.id)}>向右移动标签</MenuItem>
+          <MenuItem
+            id="move-left"
+            isDisabled={noteIndex === 0}
+            onAction={() => onReorderNotes(note.id, notes[noteIndex - 1]?.id ?? note.id)}
+          >
+            向左移动标签
+          </MenuItem>
+          <MenuItem
+            id="move-right"
+            isDisabled={noteIndex === notes.length - 1}
+            onAction={() => onReorderNotes(note.id, notes[noteIndex + 1]?.id ?? note.id)}
+          >
+            向右移动标签
+          </MenuItem>
           <MenuSeparator />
-          <MenuItem id="close" onAction={() => onCloseNote(note.id)}>关闭标签页</MenuItem>
-          <MenuItem id="close-others" isDisabled={notes.length < 2} onAction={() => onCloseOtherNotes(note.id)}>关闭其他标签页</MenuItem>
+          <MenuItem id="close" onAction={() => onCloseNote(note.id)}>
+            关闭标签页
+          </MenuItem>
+          <MenuItem id="close-others" isDisabled={notes.length < 2} onAction={() => onCloseOtherNotes(note.id)}>
+            关闭其他标签页
+          </MenuItem>
         </Menu>
       </MenuPopover>
     </MenuTrigger>

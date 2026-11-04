@@ -56,11 +56,11 @@ describe('V5 shared control styles', () => {
       header,
       /path\.filter\(\(segment, index\) => index < path\.length - 1 && !segment\.current && segment\.onNavigate\)/
     );
-    assert.match(header, /\{ancestors\.length \? <SubmenuTrigger>/);
+    assert.match(header, /\{ancestors\.length\s*\?\s*(?:\(\s*)?<SubmenuTrigger>/);
     assert.match(header, /<MenuItem id="path-navigation">路径导航<\/MenuItem>/);
-    assert.match(header, /<Menu ariaLabel="路径导航"/);
+    assert.match(header, /<Menu\s+ariaLabel="路径导航"/);
     assert.match(header, /ancestors\.find\(segment => segment\.id === key\)\?\.onNavigate\?\.\(\)/);
-    assert.match(header, /ancestors\.map\(segment => <MenuItem/);
+    assert.match(header, /ancestors\.map\(segment\s*=>\s*(?:\(\s*)?<MenuItem/);
   });
 
   it('reserves an independently reachable notes body in short viewports', () => {

@@ -64,7 +64,7 @@ function fixture() {
   };
 }
 
-test('schema8拒绝缺失/旧/未来/伪造协商，所有数据入口在修改日志前停止', async () => {
+test('schema9拒绝缺失/旧/未来/伪造协商，所有数据入口在修改日志前停止', async () => {
   const f = fixture();
   for (const input of [
     {},
@@ -82,7 +82,8 @@ test('schema8拒绝缺失/旧/未来/伪造协商，所有数据入口在修改�
       capabilities: syncContract().capabilities.filter(value => value !== 'knowledge-provenance-mcp-v1')
     },
     { ...syncContract(), capabilities: syncContract().capabilities.filter(value => value !== 'inline-annotations-v1') },
-    { ...syncContract(), entitySchemaVersion: 9 },
+    { ...syncContract(), capabilities: syncContract().capabilities.filter(value => value !== 'pdf-materials-v1') },
+    { ...syncContract(), entitySchemaVersion: 10 },
     { ...syncContract(), capabilities: [...syncContract().capabilities, 'unknown-v1'] }
   ]) {
     assert.throws(() => f.service.bootstrap(input), { code: 'SYNC_CLIENT_UPGRADE_REQUIRED' });
@@ -99,11 +100,11 @@ test('schema8拒绝缺失/旧/未来/伪造协商，所有数据入口在修改�
   assert.deepEqual(f.journal.receipts, {});
 });
 
-test('schema8快照绑定owner/epoch/schema/capabilities/cursor/count且不接受旧快照', () => {
+test('schema9快照绑定owner/epoch/schema/capabilities/cursor/count且不接受旧快照', () => {
   const f = fixture(),
     contract = syncContract();
   const start = f.service.bootstrap(contract);
-  assert.equal(start.entitySchemaVersion, 8);
+  assert.equal(start.entitySchemaVersion, 9);
   const page = f.service.snapshot({ ...contract, snapshotId: start.snapshotId });
   for (const key of [
     'snapshotId',
@@ -174,9 +175,9 @@ test('升级前冻结请求只读核回执，不能改requestHash或借查询重
   assert.equal(f.mutations(), 0);
   assert.equal(
     assertSyncContract(
-      { entitySchemaVersion: '8', capabilities: syncContract().capabilities.join(',') },
+      { entitySchemaVersion: '9', capabilities: syncContract().capabilities.join(',') },
       { query: true }
     ).entitySchemaVersion,
-    8
+    9
   );
 });

@@ -19,6 +19,7 @@ const tables = [
   ['noteVersions', 'noteVersion', 'dbNoteVersion'],
   ['attachments', 'attachment', 'dbAttachment'],
   ['analysisScopeSnapshots', 'analysisScopeSnapshot', 'dbAnalysisScopeSnapshot'],
+  ['pdfAnnotations', 'pdfAnnotation', 'dbPdfAnnotation'],
   ['contentAnnotations', 'contentAnnotation', 'dbAnnotation'],
   ['annotationExclusions', 'annotationExclusion', 'dbAnnotationExclusion'],
   ['annotationRevisions', 'annotationRevision', 'dbAnnotationRevision'],

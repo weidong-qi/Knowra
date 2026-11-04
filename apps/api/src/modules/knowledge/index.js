@@ -2,6 +2,7 @@ import { createNoteDependencyLifecycle } from './application/note-dependency-lif
 import { withIdentityBindingRefresh } from './application/annotation-identity-binding.js';
 import { marksOnlyDependencies, withInlineAnnotations } from './application/inline-annotations.js';
 import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.js';
+import { createInMemoryPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createNavigationReferencePolicy } from './application/navigation-reference-policy.js';
 import {
   taskCoverage,
@@ -61,6 +62,8 @@ export function createKnowledgeModule(options = {}) {
   const knowledgeSpaceRepository = options.knowledgeSpaceRepository ?? createInMemoryKnowledgeSpaceRepository();
   const contentAnnotationRepository =
     options.contentAnnotationRepository ?? createInMemoryContentAnnotationRepository();
+  const pdfAnnotationRepository =
+    options.pdfAnnotationRepository ?? createInMemoryPdfAnnotationRepository({ records: options.pdfAnnotations ?? [] });
   const annotationExclusionRepository =
     options.annotationExclusionRepository ??
     createInMemoryAnnotationExclusionRepository({ records: options.annotationExclusions ?? [] });
@@ -544,6 +547,7 @@ export function createKnowledgeModule(options = {}) {
       tagRepository,
       tagGroupRepository,
       contentAnnotationRepository,
+      pdfAnnotationRepository,
       analysisScopeRepository,
       noteVersionRepository,
       runTransaction
@@ -577,6 +581,7 @@ export function createKnowledgeModule(options = {}) {
       tagGroupRepository,
       knowledgeSpaceRepository,
       contentAnnotationRepository,
+      pdfAnnotationRepository,
       annotationExclusionRepository,
       annotationRevisionRepository,
       analysisScopeRepository,

@@ -1,3 +1,4 @@
+import { createPdfService } from './modules/pdf/service.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createTaskWorkspaceFiles } from './infrastructure/task-workspace-files.ts';
 import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-state.ts';
@@ -11,6 +12,7 @@ import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-
 import { createFileDataStore } from './infrastructure/file-data-store.js';
 import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.js';
 import { createInMemoryNoteRepository } from './modules/knowledge/infrastructure/note-repository.js';
+import { createInMemoryPdfAnnotationRepository } from './modules/pdf/repository.ts';
 import { createInMemoryFolderRepository } from './modules/knowledge/infrastructure/folder-repository.js';
 import { createInMemoryTagRepository } from './modules/knowledge/infrastructure/tag-repository.js';
 import { createInMemoryTagGroupRepository } from './modules/knowledge/infrastructure/tag-group-repository.js';
@@ -50,6 +52,7 @@ const workspaceRoot = path.resolve(__dirname, '..', '..', '..');
 export function createAppContext(options = {}) {
   const dataStore = options.dataStore;
   ensureDataCollections(dataStore, [
+    'pdfAnnotations',
     'noteVersions',
     'knowledgeItems',
     'knowledgeEvidence',
@@ -78,6 +81,11 @@ export function createAppContext(options = {}) {
       : null);
 
   const knowledge = createKnowledgeModule({
+    pdfAnnotationRepository:
+      options.pdfAnnotationRepository ??
+      (dataStore
+        ? createInMemoryPdfAnnotationRepository({ records: dataStore.state.pdfAnnotations, onChange: dataStore.flush })
+        : undefined),
     noteRepository:
       options.noteRepository ??
       (dataStore
@@ -243,6 +251,11 @@ export function createAppContext(options = {}) {
     annotationExclusionRepository: knowledge.repositories.annotationExclusionRepository,
     annotationRevisionRepository: knowledge.repositories.annotationRevisionRepository,
     attachmentStore,
+    removePdfAnnotations: ids => {
+      if (dataStore)
+        for (let i = dataStore.state.pdfAnnotations.length - 1; i >= 0; i--)
+          if (ids.includes(dataStore.state.pdfAnnotations[i].noteId)) dataStore.state.pdfAnnotations.splice(i, 1);
+    },
     runTransaction: dataStore?.runTransaction ? operation => dataStore.runTransaction(operation) : undefined
   });
 
@@ -307,6 +320,13 @@ export function createAppContext(options = {}) {
       knowledge
     },
     http: {
+      pdf: createPdfService({
+        dataStore,
+        knowledge,
+        uploadsDir: options.uploadsDir ?? resolveStoragePath('storage/uploads'),
+        storageRootDir: options.storageRootDir ?? workspaceRoot,
+        ownerId
+      }),
       sync: dataStore
         ? createLocalSyncService(
             dataStore,

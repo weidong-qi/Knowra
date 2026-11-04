@@ -225,8 +225,11 @@ test.describe('V4-05 公共 Shell 与主页', () => {
   });
 
   test('设置页在桌面与移动端可访问，偏好可持久保存', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: '设置' }).click();
+    await page.goto('/#/settings');
+    const importBackup = page.getByRole('button', { name: '导入资料库…', exact: true });
+    await expect(importBackup).toBeEnabled();
+    await page.reload();
+    await expect(importBackup).toBeEnabled();
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(page.getByRole('heading', { name: '设置', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: '设置分类' })).toBeVisible();
@@ -246,7 +249,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     });
     expect(selectionBackground.expected.image).toContain('linear-gradient');
     expect(selectionBackground.actual).toEqual(selectionBackground.expected);
-    await expect(page.getByText('显示 9 / 9 项设置')).toBeVisible();
+    await expect(page.getByText('显示 10 / 10 项设置')).toBeVisible();
     await expect(page.getByRole('heading', { name: '模型接入' })).toBeVisible();
     await expect(page.getByText('尚未配置')).toBeVisible();
     await page.getByLabel('API Key').fill('synthetic-no-save');

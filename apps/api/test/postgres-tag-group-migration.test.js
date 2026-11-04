@@ -40,6 +40,7 @@ const models = [
   'tag',
   'note',
   'noteTag',
+  'pdfAnnotation',
   'attachment',
   'contentAnnotation',
   'annotationExclusion',

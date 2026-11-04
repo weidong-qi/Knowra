@@ -3,6 +3,8 @@ export interface NoteRecord {
   id: string;
   title: string;
   rawMarkdown: string;
+  contentKind?: 'markdown' | 'pdf';
+  pdfSource?: { attachmentId: string; sha256: string; importRequestHash?: string } | null;
   spaceId?: string | null;
   folderId?: string | null;
   tagIds?: string[];
@@ -30,6 +32,7 @@ export interface NoteListOptions {
   tagMatch?: string | null;
   deletedOnly?: unknown;
   includeDeleted?: unknown;
+  contentKind?: 'markdown' | 'pdf';
   favoriteOnly?: unknown;
   sortBy?: string | null;
   order?: string | null;
@@ -151,7 +154,8 @@ export function createInMemoryNoteRepository(options: NoteRepositoryOptions = {}
             ? tagIds.some(tagId => note.tagIds!.includes(tagId))
             : tagIds.every(tagId => note.tagIds!.includes(tagId));
         })
-        .filter(note => (isTruthy(options.favoriteOnly) ? note.favorite : true));
+        .filter(note => (isTruthy(options.favoriteOnly) ? note.favorite : true))
+        .filter(note => !options.contentKind || (note.contentKind ?? 'markdown') === options.contentKind);
 
       const sortBy = options.sortBy ?? 'updatedAt';
       const order = options.order ?? 'desc';

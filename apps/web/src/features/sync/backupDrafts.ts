@@ -7,5 +7,9 @@ export function captureBrowserBackupDrafts() {
     if (!key?.startsWith('knowra:note-draft:v1:') && !key?.startsWith('knowra:knowledge-draft:v1:')) continue;
     drafts[key] = JSON.parse(sessionStorage.getItem(key) ?? 'null');
   }
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (key?.startsWith('knowra:pdf-draft:v1:')) drafts[key] = JSON.parse(localStorage.getItem(key) ?? 'null');
+  }
   return { version: 1, drafts };
 }
