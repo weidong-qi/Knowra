@@ -15,7 +15,7 @@ test('隔离打包 APP 的原生菜单提供检查更新入口（不发起网络
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
   // main.tsx 在渲染 React 前注册保存退出握手；不能在 firstWindow 的空白启动阶段退出。
-  await expect(page.getByRole('button', { name: '设置', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '账户与设置', exact: true })).toBeVisible();
   const item = await app.evaluate(({ Menu }) => {
     const find = menu => {
       for (const entry of menu?.items || []) {

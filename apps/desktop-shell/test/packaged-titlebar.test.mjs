@@ -170,7 +170,8 @@ test('Mac V5 顶栏跨模块保留笔记标签与原生窗口拖动区域', { ti
   await expect(tabs).toBeVisible();
   await expect(tabs.getByRole('tab')).toHaveCount(6);
   await expect(tabs.getByRole('tab', { selected: true })).toHaveCount(0);
-  await page.getByRole('button', { name: '设置', exact: true }).click();
+  await page.getByRole('button', { name: '账户与设置', exact: true }).click();
+  await page.getByRole('menuitem', { name: '设置', exact: true }).click();
   await assertNativeTitlebar();
   await expect(tabs).toBeVisible();
   await expect(tabs.getByRole('tab')).toHaveCount(6);
