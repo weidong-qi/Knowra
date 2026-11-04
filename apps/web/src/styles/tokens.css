@@ -105,9 +105,6 @@
   --radius-popover: 8px;
   --radius-panel: 8px;
   --radius-pill: 999px;
-  /* 常规按钮、图标按钮、分段控件、工具栏搜索框的圆角；胶囊保留给标签与状态点。 */
-  --radius-button: 6px;
-  --radius-button-pill: var(--radius-button);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;

@@ -32,7 +32,7 @@
 .clearIcon:active, .clearText:active { background: var(--surface-pressed); }
 .clearIcon:focus-visible, .clearText:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; box-shadow: var(--focus-ring); }
 /* 工作区工具栏：对照原型 28px 高。 */
-.shell[data-size='toolbar'] { flex: 1 1 auto; min-width: var(--index-size-120); height: 28px; gap: 6px; padding: 0 8px; border-radius: var(--radius-button); }
+.shell[data-size='toolbar'] { flex: 1 1 auto; min-width: var(--index-size-120); height: 28px; gap: 6px; padding: 0 8px; border-radius: var(--radius-pill); }
 /* 侧栏搜索：半透明白底 + 发丝线，不用灰色实底，避免压住磨砂侧栏的通透感 */
 .shell[data-size='sidebar'] { flex: 0 0 32px; height: 32px; margin: 8px 12px 10px; padding: 0 10px; background: color-mix(in srgb, var(--surface-raised) 62%, transparent); }
 .shell[data-size='command'] { gap: 10px; padding: 12px 14px; }
