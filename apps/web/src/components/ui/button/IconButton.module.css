@@ -7,7 +7,7 @@
   flex: 0 0 auto;
   padding: 0;
   border: 0;
-  border-radius: var(--icon-button-radius, var(--radius-pill));
+  border-radius: var(--icon-button-radius, var(--radius-button));
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -42,7 +42,7 @@
 /* floating 通透玻璃：保留背景透色，用薄亮边与内侧高光建立轮廓。 */
 .floating {
   border: 1px solid var(--border-action-crystal);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-button);
   background: var(--surface-action-crystal);
   color: var(--icon-action-crystal);
   box-shadow: var(--shadow-action-crystal);
@@ -65,7 +65,7 @@
 /* primary 柔橙缎面：顶边高光、短投影与内凹按压；独立于业务页面的光晕样式。 */
 .primary {
   border: 1px solid var(--border-action-satin);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-button);
   background: var(--surface-action-satin);
   color: var(--text-on-action-satin);
   box-shadow: var(--shadow-action-satin);

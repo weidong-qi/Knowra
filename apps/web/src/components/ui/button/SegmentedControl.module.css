@@ -4,7 +4,7 @@
   gap: 2px;
   padding: 3px;
   border: 0;
-  border-radius: var(--segmented-radius, var(--radius-pill));
+  border-radius: var(--segmented-radius, var(--radius-button));
   background: var(--surface-hover);
 }
 
@@ -15,7 +15,7 @@
   gap: var(--index-size-8);
   min-height: var(--index-size-28);
   border: 0;
-  border-radius: var(--segmented-radius, var(--radius-pill));
+  border-radius: var(--segmented-radius, var(--radius-button));
   background: transparent;
   color: var(--text-secondary);
   padding: 0 var(--index-size-9);

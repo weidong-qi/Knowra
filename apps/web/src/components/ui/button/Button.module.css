@@ -16,7 +16,7 @@
   color: var(--text-primary);
   background: var(--surface-page);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-button);
   box-shadow: var(--shadow-control);
   transition:
     box-shadow var(--motion-fast) var(--motion-ease),
@@ -62,7 +62,7 @@
 .btn.footer[data-disabled], .btn.footer[disabled] { background: transparent; border-color: transparent; box-shadow: none; opacity: .35; }
 .footer[aria-current='page'] { background: var(--surface-raised, var(--surface-page)); border-color: transparent; color: var(--text-primary); font-weight: 550; box-shadow: 0 0 0 1px var(--border-subtle), 0 1px 2px rgb(24 30 48 / 6%); }
 .square { border-radius: var(--radius-control); }
-.pill { border-radius: var(--radius-pill); }
+.pill { border-radius: var(--radius-button-pill, var(--radius-pill)); }
 .mini { --button-min-height: 27px; padding-inline: 6px; font-size: 11px; box-shadow: none; }
 
 .primary {
