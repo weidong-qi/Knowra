@@ -572,6 +572,8 @@ it.each(['取消', 'Escape'])('选择与授权共用焦点范围，授权步骤%
   await user.click(trigger);
   await user.click(await screen.findByRole('button', { name: '使用 Claude Code' }));
   const permission = await screen.findByRole('dialog', { name: '选择外部 AI 客户端权限' });
+  // 步骤切换会卸载当前按钮；等焦点范围把焦点移回弹窗后再发送键盘事件。
+  await waitFor(() => expect(permission.contains(document.activeElement)).toBe(true));
   if (dismiss === 'Escape') await user.keyboard('{Escape}');
   else await user.click(within(permission).getByRole('button', { name: '取消' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
