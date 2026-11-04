@@ -228,6 +228,42 @@ export const pdfMaterialsTests = [
       })
   },
   {
+    name: 'PDF 便签：可拖动换位置，其余类型的几何保存后不可变',
+    run: () =>
+      fixture(async ({ pdf, input }) => {
+        const note = await pdf.importPdf(input, Readable.from([syntheticPdf()]));
+        const at = rect => [{ pageIndex: 0, rect }];
+        const created = await pdf.mutate(note.id, 'sticky', {
+          operationId: 'sticky-1',
+          expectedRevision: 0,
+          type: 'note',
+          segments: at([10, 10, 28, 28]),
+          comment: '先写一句'
+        });
+        assert.equal(created.type, 'note');
+        const moved = await pdf.mutate(note.id, 'sticky', {
+          operationId: 'sticky-2',
+          expectedRevision: 1,
+          segments: at([100, 120, 118, 138])
+        });
+        assert.deepEqual(moved.segments, at([100, 120, 118, 138]));
+        assert.equal(moved.comment, '先写一句');
+        await pdf.mutate(note.id, 'region', {
+          operationId: 'region-1',
+          expectedRevision: 0,
+          type: 'region',
+          segments: at([10, 10, 40, 40])
+        });
+        const same = await pdf.mutate(note.id, 'region', {
+          operationId: 'region-2',
+          expectedRevision: 1,
+          segments: at([200, 200, 240, 240]),
+          comment: '位置不应变化'
+        });
+        assert.deepEqual(same.segments, at([10, 10, 40, 40]));
+      })
+  },
+  {
     name: 'PDF ZIP 备份恢复：哈希、路径、数据库预检、恢复前保护与旧 JSON',
     run: () =>
       fixture(async ({ pdf, input, store, context }) => {

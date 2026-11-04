@@ -2,6 +2,7 @@ import type { PdfAnnotation, PdfSegment } from '@study-accelerator/shared/pdf';
 import type { PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { rectToPdf, rectToViewport, type PdfSelection } from './pdfGeometry';
 
+const NOTE_BUBBLE = 'M4 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9l-3 3v-3H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z';
 export function paintPdfAnnotations(
   viewer: PDFViewer,
   items: PdfAnnotation[],
@@ -28,8 +29,23 @@ export function paintPdfAnnotations(
       item.segments.filter(segment => segment.pageIndex === index).map(segment => ({ segment, item }))
     );
     for (const { segment, item } of segments) {
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       const box = rectToViewport(page.viewport, segment.rect);
+      if (item.type === 'note') {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('data-note-id', item.id);
+        group.setAttribute('data-kind', item.kind);
+        if (selected === item.id) group.setAttribute('data-selected', '');
+        group.setAttribute('transform', `translate(${box.x} ${box.y}) scale(${box.width / 18} ${box.height / 18})`);
+        const body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        for (const [key, value] of Object.entries({ x: 0, y: 0, width: 18, height: 18, rx: 3 }))
+          body.setAttribute(key, String(value));
+        const bubble = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        bubble.setAttribute('d', NOTE_BUBBLE);
+        group.append(body, bubble);
+        overlay.append(group);
+        continue;
+      }
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       for (const [key, value] of Object.entries(box)) rect.setAttribute(key, String(value));
       rect.setAttribute('data-kind', item.kind);
       rect.setAttribute('data-type', item.type);

@@ -19,10 +19,12 @@ export function buildPdfExtractNote(title: string, noteId: string, items: PdfAnn
       const body =
         item.type === 'region'
           ? '区域标注'
-          : item.quoteText
-              .split('\n')
-              .map(line => '> ' + line)
-              .join('\n');
+          : item.type === 'note'
+            ? '便签'
+            : item.quoteText
+                .split('\n')
+                .map(line => '> ' + line)
+                .join('\n');
       const link = `[第 ${pages} 页](${sourceLink}?pdfAnnotation=${encodeURIComponent(item.id)})`;
       return [body, item.comment.trim(), link].filter(Boolean).join('\n\n');
     });

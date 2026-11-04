@@ -100,6 +100,14 @@ export function PdfReaderToolbar({
         >
           区域
         </SegmentedButton>
+        <SegmentedButton
+          aria-label="便签工具"
+          aria-pressed={tool === 'note'}
+          isDisabled={!editable}
+          onPress={() => onTool('note')}
+        >
+          便签
+        </SegmentedButton>
       </SegmentedControl>
       <span className={styles.toolbarSpacer} />
       {searchOpen ? (

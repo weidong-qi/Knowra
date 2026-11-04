@@ -16,9 +16,10 @@ import { listPdfAnnotations, pdfFileUrl, pdfRequest, randomId } from './pdfApi';
 import { usePdfViewer } from './usePdfViewer';
 import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
-import { exportPdfExcerpt, rectToPdf, type PdfSelection } from './pdfGeometry';
+import { exportPdfExcerpt, moveRect, noteRectAt, rectToPdf, rectToViewport, type PdfSelection } from './pdfGeometry';
 import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
 import { buildPdfExtractNote } from './pdfExtract';
+import { PdfNoteCard } from './PdfNoteCard';
 import { PdfSelectionBar, type PdfBarAnchor } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
@@ -55,6 +56,17 @@ export function PdfReaderView({
   const [saveDialog, setSaveDialog] = useState(false);
   const [review, setReview] = useState<PdfConflictReview | null>(null);
   const drag = useRef<{ index: number; x: number; y: number } | null>(null);
+  const noteDrag = useRef<{
+    id: string;
+    pageIndex: number;
+    x: number;
+    y: number;
+    rect: number[];
+    moved: boolean;
+    last?: PdfSegment;
+  } | null>(null);
+  const [cardOpen, setCardOpen] = useState(false);
+  const [noteMove, setNoteMove] = useState<{ id: string; segment: PdfSegment } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
   const permission = useRef(canWrite);
@@ -76,6 +88,8 @@ export function PdfReaderView({
   const session = sessionRef.current;
   const items = session.values();
   const editable = canWrite && loaded && Boolean(viewer.document);
+  const cardItem = cardOpen ? items.find(item => item.id === selected && item.type === 'note') : undefined;
+  const cardAnchor = cardItem ? noteCardAnchor(cardItem) : null;
   useEffect(() => {
     alive.current = true;
     void listPdfAnnotations(note.id)
@@ -129,7 +143,11 @@ export function PdfReaderView({
     };
   }, [viewer.document]);
   useEffect(() => {
-    if (viewer.viewerRef.current) paintPdfAnnotations(viewer.viewerRef.current, items, selected, ghost);
+    if (!viewer.viewerRef.current) return;
+    const painted = noteMove
+      ? items.map(item => (item.id === noteMove.id ? { ...item, segments: [noteMove.segment] } : item))
+      : items;
+    paintPdfAnnotations(viewer.viewerRef.current, painted, selected, ghost);
   });
   const pendingJump = useRef<string | null>(null);
   const jump = useCallback(
@@ -202,8 +220,11 @@ export function PdfReaderView({
     const id = randomId();
     change(id, { ...value, kind, comment: '' });
     setSelected(id);
-    setPanel(true);
-    setPanelTab('marks');
+    if (value.type === 'note') setCardOpen(true);
+    else {
+      setPanel(true);
+      setPanelTab('marks');
+    }
     setPending(null);
     setGhost(null);
     window.getSelection()?.removeAllRanges();
@@ -218,12 +239,69 @@ export function PdfReaderView({
     return { x: (first.left + first.right) / 2, top: first.top, bottom: last.bottom };
   }
 
+  function pageGeometry(index: number) {
+    const page = viewer.viewerRef.current?.getPageView(index);
+    const canvas = page && (page.div as HTMLElement).querySelector<HTMLElement>('.canvasWrapper');
+    if (!page?.viewport || !canvas) return null;
+    return { viewport: page.viewport, bounds: canvas.getBoundingClientRect() };
+  }
+  /** 便签卡片贴在图标右侧；放不下时翻到左侧，图标滚出可视区域则不显示。 */
+  function noteCardAnchor(item: PdfAnnotation) {
+    const segment = item.segments[0],
+      geo = pageGeometry(segment.pageIndex),
+      frame = viewer.containerRef.current?.getBoundingClientRect();
+    if (!geo || !frame) return null;
+    const box = rectToViewport(geo.viewport, segment.rect);
+    const kx = geo.bounds.width / geo.viewport.width,
+      ky = geo.bounds.height / geo.viewport.height;
+    const top = geo.bounds.top + box.y * ky;
+    if (top < frame.top - 20 || top > frame.bottom) return null;
+    const right = geo.bounds.left + (box.x + box.width) * kx + 8;
+    const left = right + 220 > window.innerWidth - 8 ? geo.bounds.left + box.x * kx - 228 : right;
+    return { left: Math.max(8, left), top };
+  }
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (tool !== 'region' || !editable || event.button !== 0) return;
+    if (event.button !== 0) return;
+    const icon = (event.target as Element).closest<SVGElement>('[data-note-id]');
+    const iconItem = icon && items.find(item => item.id === icon.dataset.noteId);
+    if (iconItem) {
+      setPending(null);
+      setGhost(null);
+      setSelected(iconItem.id);
+      setCardOpen(true);
+      if (!editable) return;
+      noteDrag.current = {
+        id: iconItem.id,
+        pageIndex: iconItem.segments[0].pageIndex,
+        x: event.clientX,
+        y: event.clientY,
+        rect: iconItem.segments[0].rect,
+        moved: false
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      event.preventDefault();
+      return;
+    }
+    // 点到页面任意空白处都先收起候选色条和预览框，再按当前工具决定是否开始新的标注。
+    setCardOpen(false);
     setPending(null);
     setGhost(null);
+    if (!editable || (tool !== 'region' && tool !== 'note')) return;
     const element = (event.target as Element).closest<HTMLElement>('.page');
     if (!element) return;
+    if (tool === 'note') {
+      const index = Number(element.dataset.pageNumber) - 1,
+        geo = pageGeometry(index);
+      if (!geo) return;
+      const segment = { pageIndex: index, rect: noteRectAt(geo.viewport, geo.bounds, event.clientX, event.clientY) };
+      setGhost(segment);
+      setPending({
+        value: { type: 'note', segments: [segment], quoteText: '' },
+        anchor: { x: event.clientX, top: event.clientY - 12, bottom: event.clientY + 12 }
+      });
+      event.preventDefault();
+      return;
+    }
     drag.current = { index: Number(element.dataset.pageNumber) - 1, x: event.clientX, y: event.clientY };
     event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
@@ -407,23 +485,49 @@ export function PdfReaderView({
               setPanel(panel && panelTab === 'marks' ? false : true);
               setPanelTab('marks');
             }}
-            onTool={setTool}
+            onTool={next => {
+              setTool(next);
+              setPending(null);
+              setGhost(null);
+            }}
           />
           <div
             ref={viewer.containerRef}
             className={styles.viewport}
             data-region-tool={tool === 'region' || undefined}
+            data-note-tool={tool === 'note' || undefined}
             aria-label="PDF 页面"
             tabIndex={0}
             onPointerDown={pointerDown}
             onPointerMove={event => {
+              const move = noteDrag.current;
+              if (move) {
+                const dx = event.clientX - move.x,
+                  dy = event.clientY - move.y;
+                if (!move.moved && Math.hypot(dx, dy) < 4) return;
+                const geo = pageGeometry(move.pageIndex);
+                if (!geo) return;
+                move.moved = true;
+                move.last = { pageIndex: move.pageIndex, rect: moveRect(geo.viewport, geo.bounds, move.rect, dx, dy) };
+                setNoteMove({ id: move.id, segment: move.last });
+                return;
+              }
               if (drag.current) setGhost(dragSegment(event));
             }}
             onPointerCancel={() => {
+              noteDrag.current = null;
+              setNoteMove(null);
               drag.current = null;
               setGhost(null);
             }}
             onPointerUp={event => {
+              const move = noteDrag.current;
+              if (move) {
+                noteDrag.current = null;
+                setNoteMove(null);
+                if (move.moved && move.last) change(move.id, { segments: [move.last] });
+                return;
+              }
               if (drag.current) {
                 const segment = dragSegment(event);
                 drag.current = null;
@@ -440,8 +544,10 @@ export function PdfReaderView({
               const value = readPdfSelection(viewer.viewerRef.current, viewer.containerRef.current!);
               const anchor = value && textAnchor();
               setPending(value && anchor ? { value, anchor } : null);
+              if (!value) setGhost(null);
             }}
             onScroll={() => {
+              if (cardOpen) render(value => value + 1);
               // 文字选区随滚动重新定位；框选的位置无法回算，滚动即收起。
               setPending(current => {
                 if (!current) return current;
@@ -454,7 +560,9 @@ export function PdfReaderView({
               });
             }}
             onKeyDown={event => {
-              if (event.key === 'Escape' && pending) {
+              if (event.key !== 'Escape') return;
+              setCardOpen(false);
+              if (pending) {
                 setPending(null);
                 setGhost(null);
               }
@@ -463,6 +571,20 @@ export function PdfReaderView({
             <div className="pdfViewer" />
           </div>
           <PdfPageBar viewer={viewer} />
+          {cardItem && cardAnchor ? (
+            <PdfNoteCard
+              left={cardAnchor.left}
+              top={cardAnchor.top}
+              value={cardItem.comment}
+              disabled={!editable}
+              onChange={comment => change(cardItem.id, { comment })}
+              onDelete={() => {
+                setCardOpen(false);
+                setSelected(null);
+                change(cardItem.id, {}, true);
+              }}
+            />
+          ) : null}
           {pending && editable ? (
             <PdfSelectionBar anchor={pending.anchor} onPick={kind => createMark(pending.value, kind)} />
           ) : null}

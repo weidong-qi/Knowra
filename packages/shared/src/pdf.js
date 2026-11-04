@@ -9,7 +9,7 @@ export function validatePdfAnnotation(value) {
       key => typeof value[key] === 'string' && value[key].length > 0 && value[key].length <= 200
     ) ||
     !/^[a-f0-9]{64}$/.test(value.sha256 ?? '') ||
-    !['highlight', 'region'].includes(value.type) ||
+    !['highlight', 'region', 'note'].includes(value.type) ||
     !PDF_KINDS.includes(value.kind) ||
     !Number.isSafeInteger(value.revision) ||
     value.revision < 1 ||
@@ -28,7 +28,7 @@ export function validatePdfAnnotation(value) {
         segment.rect[2] <= segment.rect[0] ||
         segment.rect[3] <= segment.rect[1]
     ) ||
-    (value.type === 'region' && value.segments.length !== 1) ||
+    (['region', 'note'].includes(value.type) && value.segments.length !== 1) ||
     (value.type === 'highlight' && !value.quoteText.trim()) ||
     !Number.isFinite(Date.parse(value.createdAt)) ||
     !Number.isFinite(Date.parse(value.updatedAt)) ||

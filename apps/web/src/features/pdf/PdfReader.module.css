@@ -353,3 +353,50 @@
 .swatch:hover {
   transform: scale(1.15);
 }
+.reader :global([data-knowra-pdf-overlay] [data-note-id]) {
+  --note-color: var(--pdf-mark-important);
+  pointer-events: all;
+  cursor: grab;
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='question']) {
+  --note-color: var(--pdf-mark-question);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='supplement']) {
+  --note-color: var(--pdf-mark-supplement);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='pitfall']) {
+  --note-color: var(--pdf-mark-pitfall);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='temporary']) {
+  --note-color: var(--pdf-mark-temporary);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id] rect) {
+  fill: var(--note-color);
+  fill-opacity: 1;
+  stroke: rgb(24 30 48 / 35%);
+  stroke-width: 1px;
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id] path) {
+  fill: #fff;
+  stroke: rgb(24 30 48 / 45%);
+  stroke-width: 0.8px;
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-selected] rect) {
+  stroke: var(--text-primary);
+  stroke-width: 1.5px;
+}
+.viewport[data-note-tool] {
+  cursor: copy;
+  touch-action: none;
+}
+.noteCard {
+  position: fixed;
+  z-index: 30;
+  width: 220px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow:
+    var(--shadow-control),
+    0 8px 22px -8px rgb(24 30 48 / 26%);
+}

@@ -50,13 +50,40 @@ export function exportPdfExcerpt(title: string, noteId: string, items: PdfAnnota
         return `## 第 ${pages} 页\n\n${
           item.type === 'region'
             ? '区域标注'
-            : item.quoteText
-                .split('\n')
-                .map(line => '> ' + line)
-                .join('\n')
+            : item.type === 'note'
+              ? '便签'
+              : item.quoteText
+                  .split('\n')
+                  .map(line => '> ' + line)
+                  .join('\n')
         }\n\n${item.comment}\n\n[${escape('回到知境原文')}](#/materials/notes/${encodeURIComponent(noteId)}?pdfAnnotation=${encodeURIComponent(item.id)})\n`;
       })
       .join('\n')
   );
 }
-export type PdfSelection = { type: 'highlight' | 'region'; segments: PdfSegment[]; quoteText: string };
+/** 便签图标的边长，单位为 PDF 页面坐标；随缩放等比变化。 */
+export const PDF_NOTE_SIZE = 18;
+type PageBounds = { left: number; top: number; width: number; height: number };
+type ScaledViewport = PdfViewport & { scale: number };
+/** 以点击位置为中心放置便签图标，返回其 PDF 坐标矩形。 */
+export function noteRectAt(viewport: ScaledViewport, bounds: PageBounds, x: number, y: number) {
+  const size = (PDF_NOTE_SIZE * viewport.scale * bounds.width) / viewport.width;
+  return rectToPdf(viewport, bounds, {
+    left: x - size / 2,
+    top: y - size / 2,
+    right: x + size / 2,
+    bottom: y + size / 2
+  });
+}
+/** 把便签按屏幕位移平移，并限制在页面内，返回新的 PDF 坐标矩形。 */
+export function moveRect(viewport: PdfViewport, bounds: PageBounds, rect: number[], dx: number, dy: number) {
+  const box = rectToViewport(viewport, rect);
+  const kx = bounds.width / viewport.width,
+    ky = bounds.height / viewport.height;
+  const width = box.width * kx,
+    height = box.height * ky;
+  const left = Math.max(bounds.left, Math.min(bounds.left + bounds.width - width, bounds.left + box.x * kx + dx));
+  const top = Math.max(bounds.top, Math.min(bounds.top + bounds.height - height, bounds.top + box.y * ky + dy));
+  return rectToPdf(viewport, bounds, { left, top, right: left + width, bottom: top + height });
+}
+export type PdfSelection = { type: 'highlight' | 'region' | 'note'; segments: PdfSegment[]; quoteText: string };

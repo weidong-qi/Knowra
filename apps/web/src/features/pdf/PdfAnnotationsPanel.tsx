@@ -22,7 +22,9 @@ export function PdfAnnotationsList({
   return (
     <>
       {!items.length ? (
-        <p className={styles.panelEmpty}>选中文字后点一下颜色即可标注；用区域框选标记图片、公式和扫描页。</p>
+        <p className={styles.panelEmpty}>
+          选中文字后点一下颜色即可标注；用区域框选标记图片、公式和扫描页；用便签在页面任意位置写想法。
+        </p>
       ) : null}
       {sortPdfAnnotations(items).map(item => (
         <section
@@ -40,7 +42,7 @@ export function PdfAnnotationsList({
               第 {[...new Set(item.segments.map(segment => segment.pageIndex + 1))].join('、')} 页 ·{' '}
               {KIND_OPTIONS.find(option => option.id === item.kind)?.label}
             </span>
-            <strong>{item.type === 'region' ? '区域标注' : item.quoteText}</strong>
+            <strong>{item.type === 'region' ? '区域标注' : item.type === 'note' ? '便签' : item.quoteText}</strong>
           </PressableButton>
           {selected === item.id ? (
             <>

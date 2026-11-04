@@ -15,7 +15,7 @@ export interface PdfAnnotation {
   spaceId: string;
   attachmentId: string;
   sha256: string;
-  type: 'highlight' | 'region';
+  type: 'highlight' | 'region' | 'note';
   segments: PdfSegment[];
   quoteText: string;
   kind: string;
