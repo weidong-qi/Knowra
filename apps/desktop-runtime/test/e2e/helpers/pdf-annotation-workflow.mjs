@@ -158,6 +158,28 @@ export async function exercisePdfAnnotationWorkflow(page) {
   await expect(page.getByText('显示 0 / 3 条标注')).toBeVisible();
   await page.getByRole('button', { name: '清除筛选', exact: true }).click();
   await expect(page.getByText('显示 3 / 3 条标注')).toBeVisible();
+  // 用真实逐键输入验证筛选命中变化：编辑器不得卸载，只保存首字符或丢失焦点。
+  await choose('批注状态', '无批注');
+  await page.getByRole('button', { name: /定位标注.*filter-two/ }).click();
+  const sidebarField = page
+    .getByRole('complementary', { name: 'PDF 检查器' })
+    .getByRole('textbox', { name: '评论', exact: true });
+  await sidebarField.click();
+  const originalField = await sidebarField.elementHandle();
+  assert(originalField);
+  await page.keyboard.type('h');
+  assert.equal(await originalField.evaluate(el => el.isConnected && document.activeElement === el), true);
+  await page.keyboard.type('ello');
+  await expect(sidebarField).toHaveValue('hello');
+  await expect(sidebarField).toBeFocused();
+  await expect.poll(async () => (await marks()).find(item => item.id === 'filter-two').comment).toBe('hello');
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
+  await expect(sidebarField).toHaveValue('');
+  assert.equal(await originalField.evaluate(el => el.isConnected && document.activeElement === el), true);
+  await expect.poll(async () => (await marks()).find(item => item.id === 'filter-two').comment).toBe('');
+  await originalField.dispose();
+  await page.getByRole('button', { name: '清除筛选', exact: true }).click();
   await search.fill('abc');
   await page.getByRole('tab', { name: '目录', exact: true }).click();
   await page.getByRole('tab', { name: '标注 3', exact: true }).click();

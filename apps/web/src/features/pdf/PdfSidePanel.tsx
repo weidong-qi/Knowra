@@ -41,7 +41,10 @@ export function PdfSidePanel({
 }) {
   const [filter, setFilter] = useState(EMPTY_PDF_FILTER);
   const visible = filterPdfAnnotations(items, filter);
-  const hiddenSelected = items.find(item => item.id === selected && !visible.some(mark => mark.id === item.id));
+  const visibleIds = new Set(visible.map(item => item.id));
+  // 始终放在同一份 keyed 列表中；筛选命中变化不能把选中编辑器移到另一个组件树。
+  const shown = items.filter(item => visibleIds.has(item.id) || item.id === selected);
+  const hiddenSelectedId = shown.find(item => !visibleIds.has(item.id))?.id;
   const tabs: TabsItem[] = [
     { id: 'marks', label: items.length ? `标注 ${items.length}` : '标注' },
     { id: 'outline', label: '目录' }
@@ -66,7 +69,8 @@ export function PdfSidePanel({
                 <p className={styles.panelEmpty}>没有匹配的标注，请调整或清除筛选。</p>
               ) : null}
               <PdfAnnotationsList
-                items={visible}
+                items={shown}
+                filteredOutId={hiddenSelectedId}
                 emptyHint={!items.length}
                 selected={selected}
                 canWrite={canWrite}
@@ -74,19 +78,6 @@ export function PdfSidePanel({
                 onChange={onChange}
                 onDelete={onDelete}
               />
-              {hiddenSelected ? (
-                <section aria-label="当前选中标注">
-                  <p className={styles.panelEmpty}>当前选中标注不符合筛选，仍可继续编辑。</p>
-                  <PdfAnnotationsList
-                    items={[hiddenSelected]}
-                    selected={selected}
-                    canWrite={canWrite}
-                    onSelect={onSelect}
-                    onChange={onChange}
-                    onDelete={onDelete}
-                  />
-                </section>
-              ) : null}
             </>
           ) : outline.length ? (
             outline.map((entry, index) => (

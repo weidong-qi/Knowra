@@ -20,6 +20,7 @@ export function PdfAnnotationsList({
   onSelect,
   onChange,
   onDelete,
+  filteredOutId,
   emptyHint = true
 }: {
   items: PdfAnnotation[];
@@ -29,6 +30,7 @@ export function PdfAnnotationsList({
   onChange(id: string, fields: Partial<PdfAnnotation>): void;
   onDelete(id: string): void;
   emptyHint?: boolean;
+  filteredOutId?: string;
 }) {
   return (
     <>
@@ -43,7 +45,11 @@ export function PdfAnnotationsList({
           className={styles.markCard}
           data-selected={selected === item.id || undefined}
           data-kind={item.kind}
+          aria-label={filteredOutId === item.id ? '当前选中标注' : undefined}
         >
+          {filteredOutId === item.id ? (
+            <p className={styles.panelEmpty}>当前选中标注不符合筛选，仍可继续编辑。</p>
+          ) : null}
           <div className={styles.markHead}>
             <PressableButton
               className={styles.markJump}
