@@ -21,9 +21,9 @@ it('只读时仍可复制，但不能修改分类或删除', () => {
     />
   );
   const dialog = within(screen.getByRole('dialog', { name: 'PDF 标注操作' }));
-  fireEvent.click(dialog.getByRole('button', { name: '复制', exact: true }));
+  fireEvent.click(dialog.getByRole('button', { name: '复制' }));
   expect(copy).toHaveBeenCalledOnce();
-  expect(dialog.getByRole('button', { name: '删除', exact: true })).toBeDisabled();
+  expect(dialog.getByRole('button', { name: '删除' })).toBeDisabled();
   const kind = dialog.getByRole('button', { name: '改为疑问' });
   expect(kind).toHaveAttribute('aria-pressed', 'true');
   expect(kind).toBeDisabled();
