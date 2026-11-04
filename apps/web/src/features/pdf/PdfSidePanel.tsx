@@ -37,7 +37,7 @@ export function PdfSidePanel({
   return (
     <aside className={styles.sidePanel} aria-label="PDF 侧栏">
       <div className={styles.panelHeader}>
-        <SegmentedControl density="compact" aria-label="侧栏内容">
+        <SegmentedControl variant="underline" className={styles.panelTabs} aria-label="侧栏内容">
           <SegmentedButton aria-pressed={tab === 'marks'} count={items.length} onPress={() => onTab('marks')}>
             标注
           </SegmentedButton>

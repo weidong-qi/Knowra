@@ -139,57 +139,37 @@
   pointer-events: none;
 }
 /* 目录与标注面板沿用笔记检查器的卡片语言：浅灰底、细环加柔影、四周留间距，顶部标题行加渐隐分隔线。 */
+/* 侧栏：贴边的平面板，沿用阅读区的页面底色与细边线；标题行与顶部悬浮工具栏下缘对齐。 */
 .sidePanel {
-  --panel-line: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--border-subtle) 75%, transparent) 16%,
-    color-mix(in srgb, var(--border-subtle) 75%, transparent) 84%,
-    transparent
-  );
-  flex: 0 0 290px;
-  width: 290px;
+  flex: 0 0 300px;
+  width: 300px;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: var(--shell-gap, 8px) var(--shell-gap, 8px) var(--shell-gap, 8px) 0;
-  border: 0;
-  border-radius: var(--radius-panel);
-  background:
-    var(--ni-ctx-glow, none),
-    var(--surface-card-tint, color-mix(in srgb, var(--text-primary) 4.5%, var(--surface-page)));
-  box-shadow:
-    var(--sidebar-highlight, inset 0 1px 0 transparent),
-    0 0 0 1px var(--ni-ctx-border, var(--border-subtle)),
-    0 14px 34px -16px color-mix(in srgb, #000 32%, transparent);
+  border-left: 1px solid var(--border-subtle);
+  background: var(--surface-page);
 }
 .panelHeader {
-  flex: 0 0 var(--tab-size, 44px);
+  flex: 0 0 48px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 0 16px;
-  background: var(--panel-line) bottom / 100% 1px no-repeat;
-  font-size: 14px;
-  line-height: 1.2;
+  align-items: stretch;
+  background: var(--surface-page);
 }
-.panelHeader small {
-  color: var(--text-secondary);
-  font: 500 12px/1 var(--font-ui);
-  font-variant-numeric: tabular-nums;
+.panelHeader .panelTabs {
+  flex: 1;
+  gap: 16px;
+  padding: 0 16px;
 }
 .panelBody {
   flex: 1;
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  padding: 8px;
 }
 .panelEmpty {
   margin: 0;
-  padding: 8px;
+  padding: 16px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.6;
@@ -197,17 +177,20 @@
 .outlineItem {
   display: block;
   width: 100%;
-  padding: 8px;
+  padding: 8px 16px;
   text-align: left;
+  font-size: 13px;
+}
+.outlineItem:hover {
+  background: var(--surface-hover);
 }
 .markCard {
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 4px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .markCard:hover {
   background: var(--surface-hover);
@@ -270,9 +253,6 @@
     inset: 56px 0 0 auto;
     z-index: 10;
     width: min(310px, 90%);
-    margin: 0;
-    border-radius: 0;
-    background: var(--surface-card-tint, var(--surface-page));
     box-shadow: var(--shadow-panel);
   }
 }
