@@ -66,6 +66,39 @@ async function fixture(t, options = {}) {
 }
 const clean = device => assert.equal(device.engine.status().error, null, JSON.stringify(device.engine.status()));
 
+test('自定义标签颜色经双端同步、JSON 重新加载与 SQLite 备份恢复保持原值', async t => {
+  const cloud = await fixture(t);
+  const a = cloud.device('custom-a');
+  const b = cloud.device('custom-b');
+  await a.connect();
+  await b.connect();
+  const tag = a.knowledge.tagService.createTag({ spaceId: cloud.space.id, name: '自定义颜色', color: '#3c68ff' });
+  a.knowledge.noteService.setNoteTags(cloud.note.id, [tag.id]);
+  await a.engine.sync();
+  clean(a);
+  await b.engine.sync();
+  clean(b);
+  assert.equal(b.store.state.tags.find(item => item.id === tag.id).color, '#3c68ff');
+  assert.deepEqual(b.knowledge.noteService.getNote(cloud.note.id).tagIds, [tag.id]);
+  b.knowledge.tagService.updateTag(tag.id, { color: '#ABCDEF' });
+  await b.engine.sync();
+  clean(b);
+  await a.engine.sync();
+  clean(a);
+  assert.equal(a.store.state.tags.find(item => item.id === tag.id).color, '#abcdef');
+  const reloadedCloud = createFileDataStore(path.join(cloud.root, 'cloud.json'));
+  assert.equal(reloadedCloud.state.tags.find(item => item.id === tag.id).color, '#abcdef');
+  const backupRoot = path.join(cloud.root, 'color-backup');
+  fs.mkdirSync(backupRoot);
+  a.store.backupTo(path.join(backupRoot, 'local.sqlite'));
+  const restored = openWorkspace(backupRoot);
+  try {
+    assert.equal(restored.store.state.tags.find(item => item.id === tag.id).color, '#abcdef');
+  } finally {
+    restored.store.close();
+  }
+});
+
 function addLegacyAnnotation(cloud, note, id, blockIndex = 0) {
   const version = cloud.knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
   const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), blockIndex);

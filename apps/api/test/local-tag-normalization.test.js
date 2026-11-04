@@ -36,6 +36,21 @@ function compareLegacy(input) {
 
 export const localTagNormalizationTests = [
   {
+    name: '本地快照归一化保留自定义颜色，重复读取不降级为预设',
+    run() {
+      const state = fixture();
+      state.tags[0].color = '#3c68ff';
+      state.tags[1].color = '#ABCDEF';
+      state.tags[2].color = '#000000';
+      validateLocalDataRelations(state);
+      validateLocalDataRelations(state);
+      assert.deepEqual(
+        state.tags.map(item => item.color),
+        ['#3c68ff', '#abcdef', '#000000']
+      );
+    }
+  },
+  {
     name: '本地标签归一化保留去重后单选后值、缺失引用清理及原地对象身份',
     run() {
       const state = fixture();

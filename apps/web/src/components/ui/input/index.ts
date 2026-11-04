@@ -1,4 +1,6 @@
 export { TextField } from './Input';
+export { ColorPicker } from './ColorPicker';
+export type { ColorPreset } from './ColorPicker';
 export type { TextFieldProps } from './Input';
 export { TextAreaField } from './TextAreaField';
 export type { TextAreaFieldProps } from './TextAreaField';
