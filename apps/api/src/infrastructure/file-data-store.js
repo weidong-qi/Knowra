@@ -447,6 +447,8 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
       historyBasis = historyRetentionBasis(nextState);
     } catch (error) {
       if (error?.code?.startsWith('TASK_WORKSPACE_')) throw error;
+      // 对外只给通用提示，真实原因写入服务日志，便于排查。
+      console.error('[storage] 本地数据写入失败：', error);
       throw createAppError('STORAGE_WRITE_FAILED', 'Failed to persist local data safely', 500, { cause: error });
     }
   }

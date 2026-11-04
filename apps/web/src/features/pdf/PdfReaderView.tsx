@@ -571,7 +571,7 @@ export function PdfReaderView({
             <div className="pdfViewer" />
           </div>
           <PdfPageBar viewer={viewer} />
-          {cardItem && cardAnchor ? (
+          {cardItem && cardAnchor && !noteMove ? (
             <PdfNoteCard
               left={cardAnchor.left}
               top={cardAnchor.top}
