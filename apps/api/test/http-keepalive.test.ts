@@ -117,7 +117,7 @@ export const httpKeepAliveTests = [
         assert.deepEqual(JSON.parse(replies[2].body), { data: { status: 'ok' } });
       } finally {
         agent.destroy();
-        if (child.exitCode === null && child.signalCode === null) {
+        if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) {
           const closed = once(child, 'exit');
           child.kill('SIGKILL');
           await closed;
