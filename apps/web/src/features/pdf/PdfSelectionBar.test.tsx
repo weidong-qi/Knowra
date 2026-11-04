@@ -21,3 +21,20 @@ it('贴近视口顶部时翻到选区下方', () => {
   render(<PdfSelectionBar anchor={{ x: 100, top: 20, bottom: 40 }} onPick={() => undefined} />);
   expect(screen.getByRole('toolbar', { name: '选择标注分类' })).toHaveAttribute('data-below', 'true');
 });
+
+it('文字选区可在高亮与下划线间切换，区域和便签不显示切换', () => {
+  const onMode = vi.fn();
+  const { rerender } = render(
+    <PdfSelectionBar
+      anchor={{ x: 1, top: 200, bottom: 220 }}
+      mode="highlight"
+      onMode={onMode}
+      onPick={() => undefined}
+    />
+  );
+  expect(screen.getByRole('button', { name: '标注样式：高亮' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: '标注样式：下划线' }));
+  expect(onMode).toHaveBeenCalledWith('underline');
+  rerender(<PdfSelectionBar anchor={{ x: 1, top: 200, bottom: 220 }} onPick={() => undefined} />);
+  expect(screen.queryByRole('button', { name: /标注样式/ })).toBeNull();
+});

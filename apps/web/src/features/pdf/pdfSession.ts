@@ -62,7 +62,7 @@ export class PdfSession {
         draft =>
           typeof draft.id === 'string' &&
           draft.fields &&
-          ['highlight', 'region', 'note'].includes(draft.fields.type ?? '') &&
+          ['highlight', 'underline', 'region', 'note'].includes(draft.fields.type ?? '') &&
           Array.isArray(draft.fields.segments) &&
           draft.fields.segments.length > 0 &&
           draft.fields.segments.every(

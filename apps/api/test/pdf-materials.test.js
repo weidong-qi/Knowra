@@ -248,6 +248,24 @@ export const pdfMaterialsTests = [
         });
         assert.deepEqual(moved.segments, at([100, 120, 118, 138]));
         assert.equal(moved.comment, '先写一句');
+        const underline = await pdf.mutate(note.id, 'under', {
+          operationId: 'under-1',
+          expectedRevision: 0,
+          type: 'underline',
+          segments: at([10, 50, 120, 62]),
+          quoteText: '被划线的原文'
+        });
+        assert.equal(underline.type, 'underline');
+        await assert.rejects(
+          pdf.mutate(note.id, 'under-empty', {
+            operationId: 'under-2',
+            expectedRevision: 0,
+            type: 'underline',
+            segments: at([10, 50, 120, 62]),
+            quoteText: '  '
+          }),
+          { code: 'PDF_ANNOTATION_INVALID' }
+        );
         await pdf.mutate(note.id, 'region', {
           operationId: 'region-1',
           expectedRevision: 0,

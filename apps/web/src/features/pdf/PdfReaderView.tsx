@@ -20,7 +20,7 @@ import { exportPdfExcerpt, moveRect, noteRectAt, rectToPdf, rectToViewport, type
 import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
 import { buildPdfExtractNote } from './pdfExtract';
 import { PdfNoteCard } from './PdfNoteCard';
-import { PdfSelectionBar, type PdfBarAnchor } from './PdfSelectionBar';
+import { PdfSelectionBar, type PdfBarAnchor, type PdfTextMode } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
 import { PdfSidePanel, type PdfPanelTab } from './PdfSidePanel';
@@ -66,6 +66,7 @@ export function PdfReaderView({
     last?: PdfSegment;
   } | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
+  const [textMode, setTextMode] = useState<PdfTextMode>('highlight');
   const [noteMove, setNoteMove] = useState<{ id: string; segment: PdfSegment } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
@@ -90,6 +91,7 @@ export function PdfReaderView({
   const editable = canWrite && loaded && Boolean(viewer.document);
   const cardItem = cardOpen ? items.find(item => item.id === selected && item.type === 'note') : undefined;
   const cardAnchor = cardItem ? noteCardAnchor(cardItem) : null;
+  const isTextSelection = pending?.value.type === 'highlight' || pending?.value.type === 'underline';
   useEffect(() => {
     alive.current = true;
     void listPdfAnnotations(note.id)
@@ -586,7 +588,12 @@ export function PdfReaderView({
             />
           ) : null}
           {pending && editable ? (
-            <PdfSelectionBar anchor={pending.anchor} onPick={kind => createMark(pending.value, kind)} />
+            <PdfSelectionBar
+              anchor={pending.anchor}
+              mode={isTextSelection ? textMode : undefined}
+              onMode={isTextSelection ? setTextMode : undefined}
+              onPick={kind => createMark(isTextSelection ? { ...pending.value, type: textMode } : pending.value, kind)}
+            />
           ) : null}
         </div>
         {panel ? (

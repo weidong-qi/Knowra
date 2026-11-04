@@ -86,4 +86,8 @@ export function moveRect(viewport: PdfViewport, bounds: PageBounds, rect: number
   const top = Math.max(bounds.top, Math.min(bounds.top + bounds.height - height, bounds.top + box.y * ky + dy));
   return rectToPdf(viewport, bounds, { left, top, right: left + width, bottom: top + height });
 }
-export type PdfSelection = { type: 'highlight' | 'region' | 'note'; segments: PdfSegment[]; quoteText: string };
+export type PdfSelection = {
+  type: 'highlight' | 'underline' | 'region' | 'note';
+  segments: PdfSegment[];
+  quoteText: string;
+};

@@ -400,3 +400,23 @@
     var(--shadow-control),
     0 8px 22px -8px rgb(24 30 48 / 26%);
 }
+.reader :global([data-knowra-pdf-overlay] [data-type='underline']) {
+  fill-opacity: 0.95;
+}
+.modeButton {
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+.modeButton[aria-pressed='true'] {
+  background: var(--surface-selected);
+  color: var(--text-primary);
+}
+.barDivider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 0;
+  background: var(--border-subtle);
+}

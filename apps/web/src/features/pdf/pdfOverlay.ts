@@ -47,6 +47,12 @@ export function paintPdfAnnotations(
       }
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       for (const [key, value] of Object.entries(box)) rect.setAttribute(key, String(value));
+      if (item.type === 'underline') {
+        // 下划线只画选区底部的一条细线，沿用同一套分类色。
+        const thickness = Math.min(2.5, box.height / 4);
+        rect.setAttribute('y', String(box.y + box.height - thickness));
+        rect.setAttribute('height', String(thickness));
+      }
       rect.setAttribute('data-kind', item.kind);
       rect.setAttribute('data-type', item.type);
       if (selected === item.id) rect.setAttribute('data-selected', '');
