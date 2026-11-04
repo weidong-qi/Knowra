@@ -1,3 +1,4 @@
+import { pdfMaterialsTests } from './pdf-materials.test.js';
 import { taskWorkspaceCommitGuardTests } from './task-workspace-commit-guard.test.js';
 import { taskWorkspaceDiskIdentityTests } from './task-workspace-disk-identity.test.js';
 import { taskWorkspaceBoundaryTests } from './task-workspace-boundaries.test.js';
@@ -14,7 +15,6 @@ import { objectiveQueryProjectionTests } from './objective-query-projection.test
 import { trainingQueryIndexesTests } from './training-query-indexes.test.js';
 import { aiConversationRecordsTests } from './ai-conversation-records.test.js';
 import { aiAgentRequestContextTests } from './ai-agent-request-context.test.js';
-import { annotationWhitespaceTests } from './annotation-whitespace.test.js';
 import { noteLinkTests, noteLinkPostgresTests } from './note-links.test.js';
 import { aiAssistantAutonomyTests } from './ai-assistant-autonomy.test.js';
 import { aiAnnotationsListTests } from './ai-annotations-list.test.js';
@@ -37,13 +37,6 @@ import { aiNoteActionAgentTests } from './ai-note-action-agent.test.js';
 import { aiNoteActionPostgresTests } from './ai-note-actions-postgres.test.js';
 import { aiNoteActionTests } from './ai-note-actions.test.js';
 import { attachmentRecoveryTests } from './attachment-recovery.test.js';
-import { annotationDynamicPostgresTests } from './annotation-dynamic-postgres.test.js';
-import { annotationDynamicTests } from './annotation-dynamic.test.js';
-import { annotationIdentityShadowTests } from './annotation-identity-shadow.test.js';
-import {
-  annotationIdentityBindingTests,
-  annotationIdentityBindingPostgresTests
-} from './annotation-identity-binding.test.js';
 import { inlineAnnotationStorageRegressionTests } from './inline-annotation-storage-regression.test.js';
 import { inlineAnnotationTests, inlineAnnotationPostgresTests } from './inline-annotations.test.js';
 import { knowledgeReviewFlowTests } from './knowledge-review-flow.test.js';
@@ -134,10 +127,8 @@ import { coreOperationStoreTests } from './core-operation-store.test.js';
 import { coreOperationPostgresTests } from './core-operation-postgres.test.js';
 import { aiConversationPostgresTests } from './ai-conversation-postgres.test.js';
 
-import { annotationListPostgresTests } from './annotation-list-postgres.test.js';
-import { annotationListTests } from './annotation-list.test.js';
-
 const tests = [
+  ...pdfMaterialsTests,
   ...taskWorkspaceServiceTests,
   ...taskWorkspaceHttpTests,
   ...taskWorkspacePersistenceTests,
@@ -157,7 +148,6 @@ const tests = [
   ...aiConversationAttachmentHttpTests,
   ...aiConversationAttachmentTests,
   ...aiConversationAttachmentPostgresTests,
-  ...annotationWhitespaceTests,
   ...noteLinkTests,
   ...noteLinkPostgresTests,
   ...aiAssistantAutonomyTests,
@@ -178,8 +168,6 @@ const tests = [
   ...coreOperationPostgresTests,
   ...aiNotePlanTests,
   ...attachmentRecoveryTests,
-  ...annotationListTests,
-  ...annotationListPostgresTests,
   ...knowledgeExtractionContractTests,
   ...aiKnowledgeExtractionGatewayTests,
   ...aiKnowledgeExtractionCommitTests,
@@ -230,14 +218,9 @@ const tests = [
   ...httpResponseTests,
   ...contentAnnotationServiceTests,
   ...annotationScopeServiceTests,
-  ...annotationDynamicTests,
-  ...annotationIdentityShadowTests,
-  ...annotationIdentityBindingTests,
-  ...annotationIdentityBindingPostgresTests,
   ...inlineAnnotationStorageRegressionTests,
   ...inlineAnnotationTests,
   ...inlineAnnotationPostgresTests,
-  ...annotationDynamicPostgresTests,
   ...serverHttpTests,
   ...knowledgeBaseSnapshotServiceTests,
   ...noteDeletionCoordinatorTests,

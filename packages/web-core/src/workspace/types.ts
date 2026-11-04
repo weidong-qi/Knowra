@@ -21,12 +21,20 @@ export interface Folder extends EntityBase {
   pathCache?: string;
   children: Folder[];
   deletedAt?: string | null;
-  deletionPackage?: { id: string; mode: 'keep' | 'with-content'; folderIds: string[]; noteIds: string[]; destinationId: string | null } | null;
+  deletionPackage?: {
+    id: string;
+    mode: 'keep' | 'with-content';
+    folderIds: string[];
+    noteIds: string[];
+    destinationId: string | null;
+  } | null;
 }
 
 export type NoteAiVisibility = 'normal' | 'private';
 
 export interface Note extends EntityBase {
+  contentKind?: 'markdown' | 'pdf';
+  pdfSource?: { attachmentId: string; sha256: string; importRequestHash?: string } | null;
   aiVisibility?: NoteAiVisibility;
   title: string;
   spaceId?: string;
@@ -82,10 +90,18 @@ export interface NoteVersionPageOptions {
 
 export type AttachmentStatus = 'pending' | 'ready' | 'missing' | 'corrupt' | 'failed';
 export type AttachmentCleanup = 'complete' | 'pending-retry' | 'retained-local';
-export interface AttachmentDeleteResult extends Attachment { cleanup: AttachmentCleanup; }
+export interface AttachmentDeleteResult extends Attachment {
+  cleanup: AttachmentCleanup;
+}
 export interface AttachmentDeletionReference {
-  category: string; collection: string; id: string; title?: string; noteId?: string; knowledgeItemId?: string;
-  retention?: 'recycle-bin'; reasonCode: string;
+  category: string;
+  collection: string;
+  id: string;
+  title?: string;
+  noteId?: string;
+  knowledgeItemId?: string;
+  retention?: 'recycle-bin';
+  reasonCode: string;
 }
 export interface AttachmentDeletionPreflight {
   asset: { type: 'attachment'; id: string };
@@ -96,10 +112,17 @@ export interface AttachmentDeletionPreflight {
   coverage: { persistedCurrentAndHistory: boolean; offlineDevices: string; backups: string; runningTasks: string };
 }
 export interface AttachmentCleanupTask {
-  attachmentId: string | null; fileName: string; noteId?: string | null;
-  createdAt?: string; cleanup: 'pending-retry'; reasonCode: string;
+  attachmentId: string | null;
+  fileName: string;
+  noteId?: string | null;
+  createdAt?: string;
+  cleanup: 'pending-retry';
+  reasonCode: string;
 }
-export interface AttachmentCleanupStatus { items: AttachmentCleanupTask[]; pending: number; }
+export interface AttachmentCleanupStatus {
+  items: AttachmentCleanupTask[];
+  pending: number;
+}
 
 export interface Attachment extends EntityBase {
   noteId: string;
@@ -164,7 +187,13 @@ export interface Annotation extends EntityBase {
 }
 
 export interface ContentAnchor {
-  tracking?: { formatVersion?: number; empty?: boolean; emptyPosition?: number; emptyType?: string; [key: string]: unknown };
+  tracking?: {
+    formatVersion?: number;
+    empty?: boolean;
+    emptyPosition?: number;
+    emptyType?: string;
+    [key: string]: unknown;
+  };
   pending?: { anchor: ContentAnchor; contentHash: string; reason: string } | null;
   projectionVersion: number;
   scopeType: 'selection' | 'blocks' | 'section' | 'list';
@@ -177,7 +206,14 @@ export interface ContentAnchor {
   sourceEnd: number;
   projectedStart: number;
   projectedEnd: number;
-  list?: { itemPath: string; parentItemPath: string | null; depth: number; ordered: boolean; childCount: number; memberFingerprint: string };
+  list?: {
+    itemPath: string;
+    parentItemPath: string | null;
+    depth: number;
+    ordered: boolean;
+    childCount: number;
+    memberFingerprint: string;
+  };
   section?: Record<string, unknown>;
 }
 
@@ -190,7 +226,7 @@ export interface AnnotationOriginSnapshot {
   headingPath: string[];
 }
 
-export type { KnowledgeItem } from './knowledge-types.js';
+export type { KnowledgeItem } from './knowledge-types.ts';
 
 export interface LearningObjective extends EntityBase {
   knowledgeItemId: string;
@@ -259,7 +295,16 @@ export interface AnnotationMapping {
   baseContentHash: string;
   targetContentHash: string;
   baseStructureRevision?: number;
-  edits: Array<{ from: number; to: number; text: string; history?: boolean; moveId?: string; moveKind?: 'cut' | 'paste'; preserveEmptyBlock?: boolean; deletedEmptyAnnotationIds?: string[] }>;
+  edits: Array<{
+    from: number;
+    to: number;
+    text: string;
+    history?: boolean;
+    moveId?: string;
+    moveKind?: 'cut' | 'paste';
+    preserveEmptyBlock?: boolean;
+    deletedEmptyAnnotationIds?: string[];
+  }>;
   /** 稳定身份迁移影子阶段：编辑器身份视角快照，服务端只用于比对诊断。 */
   editorState?: AnnotationIdentityEditorState;
 }
@@ -267,8 +312,21 @@ export interface AnnotationIdentityEditorState {
   formatVersion: 2;
   targetContentHash: string;
   blocks: Array<{ id: string; type: string; empty: boolean }>;
-  annotations: Array<{ id: string; scopeType: 'selection' | 'blocks' | 'section' | 'list'; present: boolean; rootBlockId?: string; startBlockId?: string; endBlockId?: string; quoteHash?: string;
+  annotations: Array<{
+    id: string;
+    scopeType: 'selection' | 'blocks' | 'section' | 'list';
+    present: boolean;
+    rootBlockId?: string;
+    startBlockId?: string;
+    endBlockId?: string;
+    quoteHash?: string;
     /** 选区起止的块内位置（S2b-2）；表格内附带单元格 [行, 列]。 */
-    start?: { blockId: string; offset: number; cell?: [number, number] }; end?: { blockId: string; offset: number; cell?: [number, number] } }>;
+    start?: { blockId: string; offset: number; cell?: [number, number] };
+    end?: { blockId: string; offset: number; cell?: [number, number] };
+  }>;
 }
-export interface ConfirmAnnotationRangeInput { expectedRevision: number; noteContentHash: string; candidateHash: string }
+export interface ConfirmAnnotationRangeInput {
+  expectedRevision: number;
+  noteContentHash: string;
+  candidateHash: string;
+}

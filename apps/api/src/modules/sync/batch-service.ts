@@ -6,6 +6,7 @@ import type {
   SyncBatchProvider,
   SyncBatchResult,
   SyncBlobInput,
+  SyncBlobStreamInput,
   SyncCollection,
   SyncStoredState,
   SyncStoredEntity,
@@ -17,6 +18,7 @@ import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertSyncContract } from './protocol-contract.ts';
 import { assertSyncDeviceEnabled } from './rollout-policy.ts';
 import { WRITABLE_COLLECTIONS, changeReferencesFor, sameEntity } from './entity-contract.ts';
+import type { SyncReferenceChange } from './entity-contract.ts';
 import { prepareBatchState } from './batch-domain.ts';
 import { pruneTouchedNoteVersions } from './version-retention.ts';
 import { syncError, syncKey, requestHash, thenResult, rememberBatchReceipt } from './journal.ts';
@@ -64,6 +66,12 @@ export function createBatchSyncService<Backend extends SyncBackend = 'local'>(
     }
   }
   return {
+    uploadBlobStream: (body: SyncBlobStreamInput) => {
+      assertSyncContract(body);
+      assertSyncDeviceEnabled(body?.deviceId);
+      if (!transfer?.putStream) throw syncError('SYNC_UNAVAILABLE', '此服务未配置 PDF 传输。', 503);
+      return transfer.putStream(body);
+    },
     uploadBlob: (body: SyncBlobInput) => {
       assertSyncContract(body);
       assertSyncDeviceEnabled(body?.deviceId);
@@ -152,7 +160,13 @@ export function createBatchSyncService<Backend extends SyncBackend = 'local'>(
           throw syncError('SYNC_ENTITY_INVALID', '同步实体字段无效，请导出恢复记录并核对资料。', 422);
         }
         return thenResult(provider.historyReferences ? provider.historyReferences() : [], references => {
-          next = pruneTouchedNoteVersions(next, op.changes, Date.now(), aliases, references);
+          next = pruneTouchedNoteVersions(
+            next,
+            op.changes as unknown as SyncReferenceChange[],
+            Date.now(),
+            aliases,
+            references
+          );
           return thenResult(provider.applyState(next), () =>
             thenResult(provider.preview(), ({ state: applied, journal: preview }) => {
               const entries = op.changes.map(entry => {

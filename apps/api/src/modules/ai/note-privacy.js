@@ -2,7 +2,12 @@ import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 
 /** 笔记固有隐私是 AI 读取的上限，授权策略不能覆盖它。旧资料缺省为普通。 */
 export function isAiReadableNote(note) {
-  return !!note && !note.deleted && (note.aiVisibility === undefined || note.aiVisibility === 'normal');
+  return (
+    !!note &&
+    !note.deleted &&
+    note.contentKind !== 'pdf' &&
+    (note.aiVisibility === undefined || note.aiVisibility === 'normal')
+  );
 }
 
 export function assertAiReadableNote(note) {

@@ -1,5 +1,6 @@
 import type { ContentAnchor, AnnotationStructure } from '@study-accelerator/content-anchor';
 import type { Prisma } from '@prisma/client';
+import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import type { KnowledgeSpace } from '../knowledge/domain/knowledge-space.ts';
 import type { Folder } from '../knowledge/domain/folder.ts';
 import type { Tag } from '../knowledge/domain/tag.ts';
@@ -73,6 +74,7 @@ export interface SyncEntityMap {
   notes: Omit<Note, 'plainText' | 'internalLinks'> & Partial<Pick<Note, 'plainText' | 'internalLinks'>>;
   noteVersions: NoteVersion;
   attachments: SyncAttachment;
+  pdfAnnotations: PdfAnnotation;
   contentAnnotations: ContentAnnotation;
   annotationExclusions: SyncAnnotationExclusion;
   annotationRevisions: SyncAnnotationRevision;
@@ -225,6 +227,12 @@ export interface SyncTransferRecord {
   fileName?: unknown;
   sha256?: unknown;
   size?: unknown;
+  mimeType?: unknown;
+}
+export interface SyncBlobStreamInput {
+  deviceId?: unknown;
+  attachment: SyncTransferRecord;
+  stream: AsyncIterable<Uint8Array | string>;
 }
 export interface SyncBlobInput {
   deviceId?: unknown;
@@ -234,6 +242,7 @@ export interface SyncBlobInput {
 export interface SyncAttachmentTransfer {
   verify(record: SyncTransferRecord | null | undefined): PreparedSyncAttachment;
   put(input: SyncBlobInput): PreparedSyncAttachment;
+  putStream?(input: SyncBlobStreamInput): Promise<PreparedSyncAttachment>;
 }
 export type SyncAwaitable<Value> = Value | PromiseLike<Value>;
 export interface SyncPreview<Backend extends SyncBackend = 'local'> {

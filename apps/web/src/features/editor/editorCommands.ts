@@ -28,15 +28,7 @@ export type EditorCommand =
   | 'redo';
 
 export type EditorEditAction =
-  | 'undo'
-  | 'redo'
-  | 'cut'
-  | 'copy'
-  | 'paste'
-  | 'find'
-  | 'replace'
-  | 'repair-document'
-  | 'select-all';
+  'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'find' | 'replace' | 'repair-document' | 'select-all';
 
 export type EditorClipboardAction = Extract<EditorEditAction, 'cut' | 'copy' | 'paste' | 'select-all'>;
 export type EditorFindMode = Extract<EditorEditAction, 'find' | 'replace'>;
@@ -56,7 +48,11 @@ export interface EditorFindResult {
 
 export interface EditorCommandTarget {
   captureNoteLinkEdit?(): import('./editorNoteLinks').NoteLinkEditSession | null;
-  applyNoteLinkEdit?(session: import('./editorNoteLinks').NoteLinkEditSession, targetId: string | null, label: string): boolean;
+  applyNoteLinkEdit?(
+    session: import('./editorNoteLinks').NoteLinkEditSession,
+    targetId: string | null,
+    label: string
+  ): boolean;
   selectNoteLinkOccurrence?(locator: import('@study-accelerator/content-anchor').NoteLinkLocator): boolean;
   matchesMarkdownDocument?(markdown: string): boolean;
   run(command: EditorCommand): boolean;
@@ -68,15 +64,22 @@ export interface EditorCommandTarget {
   replaceAll(query: string, replacement: string): EditorFindResult;
   clearFind(): void;
   navigateToHeading(index: number, behavior?: ScrollBehavior): boolean;
-  getAnnotationSelection(scopeType?: 'selection' | 'blocks' | 'section' | 'list', options?: { restoreSelection?: boolean }): import('./annotationPayloads').AnnotationSelection | null;
+  /** 当前选区的可见文字；没有选中文字时为 null。 */
+  getSelectedText(options?: { restoreSelection?: boolean }): string | null;
   setAnnotations(annotations: import('@study-accelerator/web-core').Annotation[], focusedId?: string | null): void;
   selectAnnotation(annotationId: string): boolean;
   /** 内联重点（正文标记）操作；只改正文，保存后由服务端派生重点行。 */
   inlineAnnotations?: {
-    create(scope: import('./editorInlineAnnotations').InlineAnnotationScope, importance?: import('./editorInlineAnnotations').InlineAnnotationImportance): string;
+    create(
+      scope: import('./editorInlineAnnotations').InlineAnnotationScope,
+      importance?: import('./editorInlineAnnotations').InlineAnnotationImportance
+    ): string;
     remove(markId: string): import('./editorInlineAnnotations').InlineAnnotationSnapshot;
     restore(snapshot: import('./editorInlineAnnotations').InlineAnnotationSnapshot): void;
-    update(markId: string, patch: { kind?: string; importance?: import('./editorInlineAnnotations').InlineAnnotationImportance | null }): void;
+    update(
+      markId: string,
+      patch: { kind?: string; importance?: import('./editorInlineAnnotations').InlineAnnotationImportance | null }
+    ): void;
     reanchor(markId: string, scope: import('./editorInlineAnnotations').InlineAnnotationScope): void;
     exclude(markId: string): void;
   };

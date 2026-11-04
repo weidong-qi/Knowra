@@ -1,3 +1,4 @@
+import { createPdfService } from './modules/pdf/service.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createTaskWorkspaceFiles } from './infrastructure/task-workspace-files.ts';
 import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-state.ts';
@@ -11,6 +12,7 @@ import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-
 import { createFileDataStore } from './infrastructure/file-data-store.js';
 import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.js';
 import { createInMemoryNoteRepository } from './modules/knowledge/infrastructure/note-repository.js';
+import { createInMemoryPdfAnnotationRepository } from './modules/pdf/repository.ts';
 import { createInMemoryFolderRepository } from './modules/knowledge/infrastructure/folder-repository.js';
 import { createInMemoryTagRepository } from './modules/knowledge/infrastructure/tag-repository.js';
 import { createInMemoryTagGroupRepository } from './modules/knowledge/infrastructure/tag-group-repository.js';
@@ -39,7 +41,6 @@ import { createModelSettingsService } from './modules/ai/model-settings.ts';
 import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
 import { createOptionalAiRuntime } from './modules/ai/runtime.js';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
-import { createJsonlShadowSink } from './infrastructure/annotation-shadow-log.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.ts';
 
@@ -50,6 +51,7 @@ const workspaceRoot = path.resolve(__dirname, '..', '..', '..');
 export function createAppContext(options = {}) {
   const dataStore = options.dataStore;
   ensureDataCollections(dataStore, [
+    'pdfAnnotations',
     'noteVersions',
     'knowledgeItems',
     'knowledgeEvidence',
@@ -78,6 +80,11 @@ export function createAppContext(options = {}) {
       : null);
 
   const knowledge = createKnowledgeModule({
+    pdfAnnotationRepository:
+      options.pdfAnnotationRepository ??
+      (dataStore
+        ? createInMemoryPdfAnnotationRepository({ records: dataStore.state.pdfAnnotations, onChange: dataStore.flush })
+        : undefined),
     noteRepository:
       options.noteRepository ??
       (dataStore
@@ -224,16 +231,7 @@ export function createAppContext(options = {}) {
     readPurgeTaskState: createLocalPurgeTaskReader(dataStore),
     getPurgeDatasetEpoch: dataStore?.getSyncJournal ? () => dataStore.getSyncJournal().epoch : undefined,
     enforceReferences: options.enforceReferences ?? true,
-    noteVersionCoalescing: options.noteVersionCoalescing,
-    // 稳定身份迁移 S2a：本地持久化时记录影子比对结论（只含 ID 与结论）。
-    afterCommit: dataStore?.afterCommit,
-    annotationShadowSink:
-      options.annotationShadowSink ??
-      (dataStore
-        ? createJsonlShadowSink(
-            resolveStoragePath('storage/runtime/annotation-shadow.jsonl', options.storageRootDir ?? workspaceRoot)
-          )
-        : null)
+    noteVersionCoalescing: options.noteVersionCoalescing
   });
   const noteDeletionCoordinator = createNoteDeletionCoordinator({
     noteService: knowledge.noteService,
@@ -243,6 +241,11 @@ export function createAppContext(options = {}) {
     annotationExclusionRepository: knowledge.repositories.annotationExclusionRepository,
     annotationRevisionRepository: knowledge.repositories.annotationRevisionRepository,
     attachmentStore,
+    removePdfAnnotations: ids => {
+      if (dataStore)
+        for (let i = dataStore.state.pdfAnnotations.length - 1; i >= 0; i--)
+          if (ids.includes(dataStore.state.pdfAnnotations[i].noteId)) dataStore.state.pdfAnnotations.splice(i, 1);
+    },
     runTransaction: dataStore?.runTransaction ? operation => dataStore.runTransaction(operation) : undefined
   });
 
@@ -307,6 +310,13 @@ export function createAppContext(options = {}) {
       knowledge
     },
     http: {
+      pdf: createPdfService({
+        dataStore,
+        knowledge,
+        uploadsDir: options.uploadsDir ?? resolveStoragePath('storage/uploads'),
+        storageRootDir: options.storageRootDir ?? workspaceRoot,
+        ownerId
+      }),
       sync: dataStore
         ? createLocalSyncService(
             dataStore,

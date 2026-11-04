@@ -10,6 +10,7 @@ export function createAsyncSpaceAssetLifecycle({
   tagRepository,
   tagGroupRepository,
   contentAnnotationRepository,
+  pdfAnnotationRepository,
   analysisScopeRepository,
   noteVersionRepository,
   runTransaction
@@ -21,6 +22,7 @@ export function createAsyncSpaceAssetLifecycle({
     tagRepository,
     tagGroupRepository,
     contentAnnotationRepository,
+    pdfAnnotationRepository,
     analysisScopeRepository,
     noteVersionRepository
   };
@@ -56,15 +58,16 @@ export function createAsyncSpaceAssetLifecycle({
   }
 
   async function loadSpaceAssets(id, source = repositories) {
-    const [folders, notes, tags, tagGroups, annotations, analysisScopes] = await Promise.all([
+    const [folders, notes, tags, tagGroups, annotations, pdfAnnotations, analysisScopes] = await Promise.all([
       source.folderRepository.list({ spaceId: id, includeDeleted: true }),
       source.noteRepository.list({ spaceId: id, includeDeleted: true }),
       source.tagRepository.list({ spaceId: id }),
       source.tagGroupRepository.list({ spaceId: id }),
       source.contentAnnotationRepository.list({ spaceId: id, includeDeleted: true }),
+      source.pdfAnnotationRepository.list({ spaceId: id, includeDeleted: true }),
       source.analysisScopeRepository.list({ spaceId: id, includeDeleted: true })
     ]);
-    return { folders, notes, tags, tagGroups, annotations, analysisScopes };
+    return { folders, notes, tags, tagGroups, annotations, pdfAnnotations, analysisScopes };
   }
 
   async function previewSpaceMigration(sourceId, targetId, ownerId = null, source = repositories) {
@@ -111,6 +114,13 @@ export function createAsyncSpaceAssetLifecycle({
       for (const note of source.notes) await transaction.noteRepository.save({ ...note, spaceId: targetSpaceId });
       for (const annotation of source.annotations)
         await transaction.contentAnnotationRepository.save({ ...annotation, spaceId: targetSpaceId });
+      for (const annotation of source.pdfAnnotations)
+        // 推进 CAS 基线，阻止迁移前读出的标注在迁移后覆盖新归属。
+        await transaction.pdfAnnotationRepository.save({
+          ...annotation,
+          spaceId: targetSpaceId,
+          revision: annotation.revision + 1
+        });
       for (const scope of source.analysisScopes)
         await transaction.analysisScopeRepository.moveToSpace(scope.id, targetSpaceId);
       return {

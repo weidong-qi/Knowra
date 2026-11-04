@@ -125,6 +125,9 @@ model Note {
   title          String
   annotationStructure Json?
   rawMarkdown    String              @db.Text
+  contentKind    String              @default("markdown")
+  pdfSource      Json?
+  pdfAnnotations PdfAnnotation[]
   plainText      String              @db.Text
   internalLinks  Json                @default("[]")
   contentHash    String?
@@ -741,4 +744,13 @@ model ai_usage_records {
   ai_jobs             ai_jobs         @relation(fields: [job_id], references: [job_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([beijing_day, job_id], map: "ai_usage_day")
+}
+
+model PdfAnnotation {
+  id String @id
+  noteId String
+  revision Int
+  payload Json
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  @@index([noteId])
 }

@@ -1,19 +1,46 @@
 import { it, expect } from 'vitest';
-import { Editor, rootCtx, defaultValueCtx, editorViewCtx, editorViewOptionsCtx, serializerCtx } from '@milkdown/kit/core';
+import {
+  Editor,
+  rootCtx,
+  defaultValueCtx,
+  editorViewCtx,
+  editorViewOptionsCtx,
+  serializerCtx
+} from '@milkdown/kit/core';
 import { commonmark } from '@milkdown/kit/preset/commonmark';
 import { gfm } from '@milkdown/kit/preset/gfm';
 import { history, undoCommand, redoCommand } from '@milkdown/kit/plugin/history';
 import { callCommand } from '@milkdown/kit/utils';
 import { TextSelection } from '@milkdown/kit/prose/state';
 import { createNoteLinkUrl, extractNoteLinks } from '@study-accelerator/content-anchor';
-import { noteLinkSchema, captureNoteLinkEdit, applyNoteLinkEdit, selectNoteLinkOccurrence, noteLinkRanges } from './editorNoteLinks';
-import { createAnnotationHighlightBehavior, getAnnotationSelection } from './editorAnnotations';
+import {
+  noteLinkSchema,
+  captureNoteLinkEdit,
+  applyNoteLinkEdit,
+  selectNoteLinkOccurrence,
+  noteLinkRanges
+} from './editorNoteLinks';
 
 async function withEditor(markdown: string, operation: (editor: Editor) => void) {
-  const root = document.createElement('div'); document.body.append(root);
-  const editor = await Editor.make().config(ctx => { ctx.set(rootCtx, root); ctx.set(defaultValueCtx, markdown); ctx.set(editorViewOptionsCtx, { handleScrollToSelection: () => true }); })
-    .use(commonmark).use(noteLinkSchema).use(gfm).use(history).use(createAnnotationHighlightBehavior(() => undefined)).create();
-  try { operation(editor); } finally { await editor.destroy(); root.remove(); }
+  const root = document.createElement('div');
+  document.body.append(root);
+  const editor = await Editor.make()
+    .config(ctx => {
+      ctx.set(rootCtx, root);
+      ctx.set(defaultValueCtx, markdown);
+      ctx.set(editorViewOptionsCtx, { handleScrollToSelection: () => true });
+    })
+    .use(commonmark)
+    .use(noteLinkSchema)
+    .use(gfm)
+    .use(history)
+    .create();
+  try {
+    operation(editor);
+  } finally {
+    await editor.destroy();
+    root.remove();
+  }
 }
 it('选区保留格式、绑定目标，编辑目标保留引用身份，撤销重做并重开', async () => {
   let saved = '';
@@ -33,7 +60,9 @@ it('选区保留格式、绑定目标，编辑目标保留引用身份，撤销�
     saved = editor.ctx.get(serializerCtx)(view.state.doc);
     expect(extractNoteLinks(saved).occurrences[0].occurrenceId).toBe(first.occurrenceId);
     editor.action(callCommand(undoCommand.key));
-    expect(extractNoteLinks(editor.ctx.get(serializerCtx)(view.state.doc)).occurrences[0].targetNoteId).toBe('note-target');
+    expect(extractNoteLinks(editor.ctx.get(serializerCtx)(view.state.doc)).occurrences[0].targetNoteId).toBe(
+      'note-target'
+    );
     editor.action(callCommand(redoCommand.key));
     expect(editor.ctx.get(serializerCtx)(view.state.doc)).toBe(saved);
     const removal = captureNoteLinkEdit(view)!;
@@ -61,7 +90,9 @@ it('跨硬换行或图片选区不创建重复引用身份，单行仍可创建�
     await withEditor(markdown, editor => {
       const view = editor.ctx.get(editorViewCtx);
       const before = editor.ctx.get(serializerCtx)(view.state.doc);
-      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, view.state.doc.content.size - 1)));
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, view.state.doc.content.size - 1))
+      );
       expect(captureNoteLinkEdit(view)).toBeNull();
       expect(editor.ctx.get(serializerCtx)(view.state.doc)).toBe(before);
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 6)));
@@ -90,16 +121,26 @@ it('同源同文字逐处定位、前文移动与格式拆分，重复位置失�
     const view = editor.ctx.get(editorViewCtx);
     expect(noteLinkRanges(view)).toHaveLength(2);
     const markdown = () => editor.ctx.get(serializerCtx)(view.state.doc);
-    expect(selectNoteLinkOccurrence(view, markdown(), { targetNoteId: 'note-target', occurrenceId: 'occ-second' })).toBe(true);
+    expect(
+      selectNoteLinkOccurrence(view, markdown(), { targetNoteId: 'note-target', occurrenceId: 'occ-second' })
+    ).toBe(true);
     const position = view.state.selection.from;
     view.dispatch(view.state.tr.insertText('新增前文', 1));
-    expect(selectNoteLinkOccurrence(view, markdown(), { targetNoteId: 'note-target', occurrenceId: 'occ-second' })).toBe(true);
+    expect(
+      selectNoteLinkOccurrence(view, markdown(), { targetNoteId: 'note-target', occurrenceId: 'occ-second' })
+    ).toBe(true);
     expect(view.state.selection.from).toBe(position + 4);
-    expect(getAnnotationSelection(editor, markdown())).not.toBeNull();
+    expect(view.state.selection.empty).toBe(false);
   });
   await withEditor(`[同名](${first})\n\n[同名](${first})`, editor => {
-    const view = editor.ctx.get(editorViewCtx), selection = view.state.selection;
-    expect(selectNoteLinkOccurrence(view, editor.ctx.get(serializerCtx)(view.state.doc), { targetNoteId: 'note-target', occurrenceId: 'occ-first' })).toBe(false);
+    const view = editor.ctx.get(editorViewCtx),
+      selection = view.state.selection;
+    expect(
+      selectNoteLinkOccurrence(view, editor.ctx.get(serializerCtx)(view.state.doc), {
+        targetNoteId: 'note-target',
+        occurrenceId: 'occ-first'
+      })
+    ).toBe(false);
     expect(view.state.selection).toBe(selection);
   });
 });

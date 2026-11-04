@@ -39,6 +39,7 @@ export function buildNoteWhere(options: NoteQueryOptions = {}): NoteWhereProject
   }
   if (options.spaceId) where.spaceId = options.spaceId;
   if (options.folderId) where.folderId = options.folderId;
+  if (['markdown', 'pdf'].includes(options.contentKind as string)) where.contentKind = options.contentKind;
   if (booleanOption(options.favoriteOnly)) where.favorite = true;
   const tagIds = Array.isArray(options.tagIds)
     ? (options.tagIds as DynamicTagFilter).filter(Boolean)

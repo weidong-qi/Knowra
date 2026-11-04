@@ -10,17 +10,14 @@ import type {
   SyncWorkingConstructors,
   SyncBatchValidator,
   SyncRawNoteReferences,
-  SyncAnnotationNoteFactory,
   SyncStoredState,
   SyncWorkingRecord,
   SyncBackend,
   SyncProviderState,
   SyncRawObject,
   SyncRawStructureUpdate,
-  SyncRawAnchorResolution,
-  SyncAnnotationReconcileFactory
+  SyncRawAnchorResolution
 } from './domain-types.ts';
-import { applyIdentityBindings } from '../knowledge/application/annotation-identity-binding.js';
 import {
   calculateContentHash as trackingHash,
   updateStructure,
@@ -43,16 +40,17 @@ import { Folder } from '../knowledge/domain/folder.ts';
 import { Tag } from '../knowledge/domain/tag.ts';
 import { TagGroup } from '../knowledge/domain/tag-group.ts';
 import { ContentAnnotation } from '../knowledge/domain/content-annotation.ts';
-import { createContentAnnotationService } from '../knowledge/application/content-annotation-service.js';
 import { createInMemoryContentAnnotationRepository } from '../knowledge/infrastructure/content-annotation-repository.js';
-import { createInMemoryNoteRepository } from '../knowledge/infrastructure/note-repository.js';
-import { createInMemoryNoteVersionRepository } from '../knowledge/infrastructure/note-version-repository.js';
 import { createInMemoryAnnotationRevisionRepository } from '../knowledge/infrastructure/annotation-support-repositories.js';
 import { validateSyncBatchState, LOCAL_DATA_SCHEMA_VERSION } from '../../infrastructure/local-data-schema.js';
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertNoInsecureImageUrls } from '../knowledge/application/note-content-policy.js';
 import { inspectAttachmentDeletion } from '../../infrastructure/attachment-deletion-preflight.ts';
-import { calculateContentHash, resolveAnchor } from '@study-accelerator/content-anchor';
+import { resolveAnchor } from '@study-accelerator/content-anchor';
+import {
+  legacyAnnotationHealth,
+  legacyAnnotationSourceChange
+} from '../knowledge/application/content-annotation-service.js';
 import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contract.ts';
 import { syncError } from './journal.ts';
 import { validateKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
@@ -66,6 +64,39 @@ import {
 } from '../knowledge/application/inline-annotations.js';
 
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
+const legacySourceFields = [
+  'schemaVersion',
+  'scopeType',
+  'sourceMode',
+  'anchor',
+  'quoteText',
+  'noteVersionId',
+  'noteContentHash',
+  'fromPosition',
+  'toPosition',
+  'prefixText',
+  'suffixText',
+  'anchorFingerprint',
+  'resolvedContentHash',
+  'boundaryFingerprint',
+  'idempotencyKey'
+] as const;
+const legacySource = (row: SyncWorkingRecord<'contentAnnotations'> | null | undefined) =>
+  Object.fromEntries(legacySourceFields.map(field => [field, row?.[field] ?? null]));
+const legacySyncUnavailable = () =>
+  syncError('SYNC_CLIENT_UPGRADE_REQUIRED', '旧格式重点的待同步数据暂无法处理，已保留本机数据和待同步队列。', 422);
+// 合并离线编辑时正文可能已撤销，但客户端产生的保守降级仍需交付。
+// 只允许健康状态变差，不能通过同步把旧来源重新标为有效。
+function isLegacyHealthDowngrade(
+  previous: SyncWorkingRecord<'contentAnnotations'>,
+  next: SyncWorkingRecord<'contentAnnotations'>
+) {
+  const rank: Record<string, number> = { resolved: 0, needsReview: 1, missing: 2 };
+  const before = legacyAnnotationHealth(previous).anchorStatus;
+  const after = legacyAnnotationHealth(next).anchorStatus;
+  const reason = after === 'needsReview' ? 'sourceChanged' : after === 'missing' ? 'sourceDeleted' : null;
+  return Boolean(reason && next.anchorReason === reason && rank[before] !== undefined && rank[after] >= rank[before]);
+}
 const builders: SyncWorkingBuilders = {
   notes: buildCreateNoteDto,
   folders: buildCreateFolderDto,
@@ -115,6 +146,43 @@ export function prepareBatchState(
   for (const change of changes) {
     const { collection, id } = change;
     const old = before[collection].find(item => item.id === id);
+    if (collection === 'contentAnnotations' && change.value && change.value.schemaVersion !== 3) {
+      const oldAnnotation = before.contentAnnotations.find(item => item.id === id);
+      const oldHealth = legacyAnnotationHealth(oldAnnotation);
+      const nextHealth = legacyAnnotationHealth(change.value);
+      const oldNote = before.notes.find(note => note.id === oldAnnotation?.noteId);
+      const incomingNote = changes.find(
+        (item): item is SyncChange<'notes'> => item.collection === 'notes' && item.id === oldAnnotation?.noteId
+      )?.value;
+      const sourceVersion =
+        oldAnnotation?.schemaVersion === 2 && oldAnnotation.noteVersionId
+          ? before.noteVersions.find(version => version.id === oldAnnotation.noteVersionId)
+          : null;
+      const loss =
+        oldAnnotation && oldNote && incomingNote
+          ? legacyAnnotationSourceChange(oldAnnotation, oldNote.rawMarkdown, incomingNote.rawMarkdown, sourceVersion)
+          : null;
+      const healthChanged =
+        oldHealth.anchorStatus !== nextHealth.anchorStatus ||
+        (oldAnnotation?.anchorReason ?? null) !== (change.value.anchorReason ?? null);
+      if (
+        !oldAnnotation ||
+        (oldHealth.lifecycleStatus !== 'active' && nextHealth.lifecycleStatus === 'active') ||
+        !sameEntity('contentAnnotations', legacySource(oldAnnotation), legacySource(change.value)) ||
+        (healthChanged &&
+          (!loss ||
+            loss.anchorStatus !== change.value.anchorStatus ||
+            loss.anchorReason !== change.value.anchorReason) &&
+          !isLegacyHealthDowngrade(oldAnnotation, change.value))
+      )
+        throw legacySyncUnavailable();
+    }
+    if (collection === 'annotationExclusions' && change.value) {
+      const parentId = change.value.parentAnnotationId;
+      const parent = before.contentAnnotations.find(item => item.id === parentId);
+      if (parent && parent.schemaVersion !== 3 && (!old || !sameEntity('annotationExclusions', old, change.value)))
+        throw legacySyncUnavailable();
+    }
     validateKnowledgeLifecycleChange(change, old);
     if (collection === 'analysisScopeSnapshots' && old) {
       const action =
@@ -185,6 +253,29 @@ export function prepareBatchState(
       ) {
         throw syncError('SYNC_IMMUTABLE', '已保存的生成来源事实不可覆盖或降级。', 422);
       }
+    }
+    if (
+      collection === 'notes' &&
+      old &&
+      ((old.contentKind ?? 'markdown') !== (value?.contentKind ?? 'markdown') ||
+        (['attachmentId', 'sha256', 'importRequestHash'] as const).some(
+          key => old.pdfSource?.[key] !== value?.pdfSource?.[key]
+        )) &&
+      value
+    )
+      throw syncError('PDF_SOURCE_IMMUTABLE', '不能改换资料类型或 PDF 主文件。', 422);
+    if (collection === 'pdfAnnotations' && old && value) {
+      const fixed = (item: object) =>
+        Object.fromEntries(
+          ['noteId', 'spaceId', 'attachmentId', 'sha256', 'type', 'segments', 'quoteText'].map(key => [
+            key,
+            (item as Record<string, unknown>)[key]
+          ])
+        );
+      if (!sameEntity(collection, fixed(old), fixed(value)))
+        throw syncError('PDF_SOURCE_IMMUTABLE', 'PDF 标注的原文与位置不能改换。', 422);
+      if ((value.revision ?? 0) < (old.revision ?? 0))
+        throw syncError('PDF_ANNOTATION_CONFLICT', 'PDF 标注修订不能倒退。', 409);
     }
     if (value && value.id !== id) throw syncError('SYNC_ENTITY_INVALID', '实体 ID 与操作不一致。', 422);
     if (
@@ -399,36 +490,67 @@ export function prepareBatchState(
     )
       throw syncError('ANNOTATION_EXCLUSION_CONFLICT', '排除范围与所属重点的来源不一致。', 422);
   }
-  // 本次正文变化后，云端已有但本机未知的标注同样参与领域重定位。
-  const annotations = (
-    createContentAnnotationService as typeof createContentAnnotationService & SyncAnnotationReconcileFactory
-  )({
-    repository: createInMemoryContentAnnotationRepository({ records: state.contentAnnotations }),
-    noteRepository: (createInMemoryNoteRepository as typeof createInMemoryNoteRepository & SyncAnnotationNoteFactory)({
-      records: state.notes
-    }),
-    noteVersionRepository: createInMemoryNoteVersionRepository({ records: state.noteVersions }),
-    revisionRepository: createInMemoryAnnotationRevisionRepository({ records: state.annotationRevisions })
-  });
   for (const change of changes.filter(item => item.collection === 'notes' && item.value)) {
     const note = state.notes.find(item => item.id === change.id)!;
+    if (note.contentKind === 'pdf') continue;
     if (!state.noteVersions.some(version => version.noteId === note.id && version.contentHash === note.contentHash))
       throw syncError('DEPENDENCY_MISSING', '正文对应的不可变版本尚未提交。');
-    annotations.reconcileForNote(note.id, calculateContentHash(note.rawMarkdown));
-    applyIdentityBindings(
-      createInMemoryContentAnnotationRepository({ records: state.contentAnnotations }),
-      note,
-      state.contentAnnotations.filter(item => item.noteId === note.id)
-    );
     // 内联重点：旧客户端或外部改写没有带来派生行时，按正文补齐；与客户端派生一致时没有变化。
     const version = state.noteVersions.find(item => item.noteId === note.id && item.contentHash === note.contentHash);
+    const previousNote = before.notes.find(item => item.id === note.id);
+    const previousRows = before.contentAnnotations.filter(item => item.noteId === note.id);
+    if (previousNote && !note.deleted) {
+      const currentById = new Map(state.contentAnnotations.map(item => [item.id, item]));
+      // 老客户端上传的删除行可能没有来源健康状态；按云端保存前的正文补齐，不重复创建修订。
+      const uploadedDeletions = previousRows.filter(
+        item =>
+          item.schemaVersion === 3 &&
+          item.lifecycleStatus === 'active' &&
+          currentById.get(item.id)?.lifecycleStatus === 'deleted'
+      );
+      for (const { annotation } of planInlineAnnotations(
+        note,
+        version,
+        uploadedDeletions,
+        now,
+        previousNote.rawMarkdown
+      )) {
+        const current = currentById.get(annotation.id);
+        if (current?.lifecycleStatus !== 'deleted' || annotation.lifecycleStatus !== 'deleted') continue;
+        if (!['needsReview', 'missing'].includes(annotation.anchorStatus) || current.anchorStatus === 'missing')
+          continue;
+        const updated = new ContentAnnotation({
+          ...(current as SyncWorkingEntity<'contentAnnotations'>),
+          anchorStatus: annotation.anchorStatus,
+          anchorReason: annotation.anchorReason
+        });
+        replace(state, 'contentAnnotations', updated.id, updated);
+        currentById.set(updated.id, updated);
+      }
+      // 恢复旧备份等情况仍可能有旧重点；原文变化时只降级，不推算新位置。
+      for (const previous of previousRows) {
+        if (previous.schemaVersion === 3) continue;
+        const sourceVersion =
+          previous.schemaVersion === 2 && previous.noteVersionId
+            ? before.noteVersions.find(item => item.id === previous.noteVersionId)
+            : null;
+        const loss = legacyAnnotationSourceChange(previous, previousNote.rawMarkdown, note.rawMarkdown, sourceVersion);
+        const current = currentById.get(previous.id);
+        if (!loss || !current || current.anchorStatus === 'missing') continue;
+        const updated = new ContentAnnotation({ ...(current as SyncWorkingEntity<'contentAnnotations'>), ...loss });
+        replace(state, 'contentAnnotations', updated.id, updated);
+        currentById.set(updated.id, updated);
+      }
+    }
     applyInlineAnnotationChanges(
       createInMemoryContentAnnotationRepository({ records: state.contentAnnotations }),
       createInMemoryAnnotationRevisionRepository({ records: state.annotationRevisions }),
       planInlineAnnotations(
         note,
         version,
-        state.contentAnnotations.filter(item => item.noteId === note.id)
+        state.contentAnnotations.filter(item => item.noteId === note.id),
+        now,
+        previousNote?.rawMarkdown
       )
     );
   }

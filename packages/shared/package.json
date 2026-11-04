@@ -17,6 +17,10 @@
     "./incremental-review": {
       "types": "./src/incremental-review.d.ts",
       "default": "./src/incremental-review.js"
+    },
+    "./pdf": {
+      "types": "./src/pdf.d.ts",
+      "default": "./src/pdf.js"
     }
   },
   "scripts": {

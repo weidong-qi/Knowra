@@ -29,13 +29,8 @@ import { mathInlineGuardRemark, mathRemark } from './editorMathMarkdown';
 import { highlightRemark, highlightSchema } from './editorHighlight';
 import { internalLinkRemark, internalLinkSchema } from './editorInternalLink';
 import { configureImageSize } from './editorImageBehavior';
-import {
-  annotationMarkSchema,
-  annotationSerializerGuard,
-  configureBlockIdentitySchema,
-  createBlockIdentityBehavior
-} from './editorBlockIdentity';
-import { annotationPluginKey, createAnnotationHighlightBehavior } from './editorAnnotations';
+import { configureBlockIdentitySchema, createBlockIdentityBehavior } from './editorBlockIdentity';
+import { createDocumentEventsBehavior } from './editorDocumentEvents';
 import { createEditorPasteBehavior } from './editorPasteBehavior';
 import { runEditorClipboardAction } from './editorClipboard';
 import {
@@ -118,19 +113,18 @@ async function createEditor(markdown: string, problems: KnowraMarkProblem[] = []
     .use(highlightSchema)
     .use(internalLinkRemark)
     .use(internalLinkSchema)
-    .use(annotationMarkSchema)
-    .use(annotationSerializerGuard)
     .use(knowraMarkSchema)
     .use(createKnowraMarksCodec(problem => problems.push(problem)))
     .use(createEditorPasteBehavior(() => {}))
     .use(clipboard)
-    .use(createAnnotationHighlightBehavior(() => {}))
     .use(
-      createBlockIdentityBehavior(
-        () => null,
-        state => annotationPluginKey.getState(state)?.editIntent.moveKind === 'paste'
+      createDocumentEventsBehavior(
+        () => {},
+        () => {},
+        () => {}
       )
     )
+    .use(createBlockIdentityBehavior())
     .use(history)
     .config(configureBlockIdentitySchema)
     .create();

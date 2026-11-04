@@ -16,18 +16,15 @@ export function createNoteService({
   annotationRepository = null,
   runTransaction = operation => operation(),
   onNoteContentChanged = null,
-  onNoteIdentityChanged = null,
   onNoteDeleted = null,
   onBeforePermanentDelete = null
 } = {}) {
   function persistNote(note, { createVersion = false, annotationChange = null } = {}) {
     return runTransaction(() => {
       const saved = repository.save(note);
-      if (createVersion && noteVersionService) {
+      if (createVersion && noteVersionService && note.contentKind !== 'pdf') {
         const version = noteVersionService.ensureForNote(saved);
         onNoteContentChanged?.(saved, version, annotationChange);
-      } else if (annotationChange) {
-        onNoteIdentityChanged?.(saved, annotationChange);
       }
       return saved;
     });
@@ -132,6 +129,8 @@ export function createNoteService({
     },
     updateNote(noteId, updates) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
+      if (currentNote.contentKind === 'pdf' && updates.rawMarkdown !== undefined)
+        throw validationError('PDF_IMMUTABLE', 'PDF 原文件不能作为 Markdown 正文修改。');
       const dto = buildUpdateNoteDto(updates);
       if (dto.rawMarkdown !== undefined)
         addedNoteLinkTargets(dto.rawMarkdown, currentNote.rawMarkdown).forEach(id =>
@@ -160,7 +159,11 @@ export function createNoteService({
       });
       const annotationChange =
         dto.rawMarkdown !== undefined
-          ? prepareAnnotationChange(currentNote, dto.rawMarkdown, updates.annotationMapping)
+          ? prepareAnnotationChange(
+              currentNote,
+              dto.rawMarkdown,
+              dto.expectedUpdatedAt ? null : updates.annotationMapping
+            )
           : null;
       const updatedNote = new Note({
         ...currentNote,
@@ -181,9 +184,7 @@ export function createNoteService({
 
       return persistNote(updatedNote, {
         annotationChange,
-        createVersion:
-          dto.rawMarkdown !== undefined &&
-          (dto.rawMarkdown !== currentNote.rawMarkdown || annotationChange?.edits?.length > 0)
+        createVersion: dto.rawMarkdown !== undefined && dto.rawMarkdown !== currentNote.rawMarkdown
       });
     },
     deleteNote(noteId) {

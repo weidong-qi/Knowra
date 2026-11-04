@@ -10,6 +10,7 @@ export function createSpaceAssetLifecycle({
   tagRepository,
   tagGroupRepository,
   contentAnnotationRepository,
+  pdfAnnotationRepository,
   analysisScopeRepository,
   noteVersionRepository,
   runTransaction
@@ -52,6 +53,7 @@ export function createSpaceAssetLifecycle({
       tags: tagRepository.list({ spaceId: id }),
       tagGroups: tagGroupRepository.list({ spaceId: id }),
       annotations: contentAnnotationRepository.list({ spaceId: id, includeDeleted: true }),
+      pdfAnnotations: pdfAnnotationRepository.list({ spaceId: id, includeDeleted: true }),
       analysisScopes: analysisScopeRepository.list({ spaceId: id, includeDeleted: true })
     };
   }
@@ -99,6 +101,9 @@ export function createSpaceAssetLifecycle({
       for (const note of source.notes) noteRepository.save({ ...note, spaceId: targetSpaceId });
       for (const annotation of source.annotations)
         contentAnnotationRepository.save({ ...annotation, spaceId: targetSpaceId });
+      for (const annotation of source.pdfAnnotations)
+        // 推进 CAS 基线，阻止迁移前读出的标注在迁移后覆盖新归属。
+        pdfAnnotationRepository.save({ ...annotation, spaceId: targetSpaceId, revision: annotation.revision + 1 });
       for (const scope of source.analysisScopes) analysisScopeRepository.save({ ...scope, spaceId: targetSpaceId });
       return {
         status: 'scoped-assets-migrated',

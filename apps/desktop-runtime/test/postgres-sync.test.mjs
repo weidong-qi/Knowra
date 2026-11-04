@@ -5,10 +5,9 @@ import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { anchorFromProjectedRange, projectMarkdown, calculateContentHash } from '@study-accelerator/content-anchor';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
 import { noteContent } from '../../api/src/modules/sync/journal.ts';
-import { temporaryDirectory } from './helpers.mjs';
+import { temporaryDirectory, markText, inlineId } from './helpers.mjs';
 
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 
@@ -41,28 +40,10 @@ test(
     const space = await a.modules.knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
     const note = await a.modules.knowledge.noteService.createNote({
       title: `Postgres ${randomUUID()}`,
-      rawMarkdown: '数据库共同基线',
+      rawMarkdown: markText('数据库共同基线', 'pg-base'),
       spaceId: space.id
     });
-    const anchor = anchorFromProjectedRange(projectMarkdown(note.rawMarkdown), 0, note.rawMarkdown.length);
-    const annotation = await a.modules.knowledge.contentAnnotationService.createAnnotation({
-      spaceId: space.id,
-      noteId: note.id,
-      schemaVersion: 2,
-      scopeType: 'selection',
-      kind: 'important',
-      sourceMode: 'manual',
-      quoteText: anchor.quoteText,
-      fromPosition: anchor.sourceStart,
-      toPosition: anchor.sourceEnd,
-      prefixText: anchor.prefixText,
-      suffixText: anchor.suffixText,
-      headingPath: [],
-      anchor,
-      anchorFingerprint: 'test',
-      noteContentHash: calculateContentHash(note.rawMarkdown),
-      idempotencyKey: randomUUID()
-    });
+    const annotation = await a.modules.knowledge.contentAnnotationService.getAnnotation(inlineId(note.id, 'pg-base'));
     const source = await a.modules.knowledge.knowledgeItemService.createCandidate({
       title: 'PG 来源',
       canonicalStatement: '保留原文证据',

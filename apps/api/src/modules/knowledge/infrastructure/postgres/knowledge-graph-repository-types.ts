@@ -155,6 +155,7 @@ export interface NoteQueryOptions {
   includeDeleted?: unknown;
   spaceId?: unknown;
   folderId?: unknown;
+  contentKind?: unknown;
   favoriteOnly?: unknown;
   tagIds?: unknown;
   match?: unknown;
@@ -167,6 +168,7 @@ export interface NoteWhereProjection {
   deletedAt?: null | { not: null };
   spaceId?: unknown;
   folderId?: unknown;
+  contentKind?: unknown;
   favorite?: true;
   noteTags?: { some: { tagId: unknown } };
   AND?: unknown;

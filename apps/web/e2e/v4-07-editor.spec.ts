@@ -4,6 +4,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { mockEditorWorkspace, createNote } from './fixtures/editorWorkspace';
 import { mockInlineAnnotations } from './fixtures/inlineAnnotations';
 import { parseKnowraMarks } from '@study-accelerator/shared/knowra-marks';
+import { inlineAnnotationId } from '../../api/src/modules/knowledge/application/inline-annotations.js';
 
 for (const key of ['Backspace', 'Delete']) {
   test(`V4-07 ${key} 删除文首空行时保留后续标题`, async ({ page }) => {
@@ -384,7 +385,12 @@ test('V4-07 段落菜单复用编辑器命令并通过现有保存链路持久�
     range.collapse(true);
     selection?.removeAllRanges();
     selection?.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
   });
+  // 等待编辑器读取 DOM 选区后再触发 Tab，避免沿用点击时的旧光标。
+  await page.evaluate(
+    () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  );
   await page.keyboard.press('Tab');
   await page.keyboard.type('缩进验收');
   await expect(editor).toBeFocused();
@@ -1776,50 +1782,57 @@ test('V4-07 重点标记内的粗体保持醒目', async ({ page }) => {
 });
 
 test('V4-07 重点重要等级在正文和检查器中有对应颜色', async ({ page }) => {
-  await mockEditorWorkspace(page, [], [], '# 等级颜色\n\n普通段落\n\n重要段落\n\n核心段落\n\n未评级段落');
-  const annotations = [
-    ['normal', '普通段落', 'normal'],
-    ['important', '重要段落', 'important'],
-    ['core', '核心段落', 'core'],
-    ['unrated', '未评级段落', null]
-  ].map(([id, quoteText, importance], index) => ({
-    id,
-    spaceId: 'space-1',
-    noteId: 'note-1',
-    noteVersionId: null,
-    kind: 'important',
-    importance,
-    sourceMode: 'manual',
-    scopeType: 'selection',
-    quoteText,
-    headingPath: ['等级颜色'],
-    fromPosition: index * 20,
-    toPosition: index * 20 + String(quoteText).length,
-    prefixText: '',
-    suffixText: '',
-    anchorFingerprint: id,
-    noteContentHash: 'same-version',
-    idempotencyKey: id,
-    status: 'active',
-    lifecycleStatus: 'active',
-    anchorStatus: 'resolved'
-  }));
-  await page.route('**/api/knowledge/annotations**', route => route.fulfill({ json: { data: annotations } }));
+  const markdown = [
+    '# 等级颜色',
+    '<mark data-k="normal" data-t="key">普通段落</mark>',
+    '<mark data-k="important" data-t="key" data-l="important">重要段落</mark>',
+    '<mark data-k="core" data-t="key" data-l="core">核心段落</mark>',
+    '未评级段落'
+  ].join('\n\n');
+  const savedMarkdown = [markdown];
+  await mockEditorWorkspace(page, savedMarkdown, [], markdown);
+  const rows: Array<Record<string, unknown>> = [
+    {
+      id: 'unrated',
+      spaceId: 'space-1',
+      noteId: 'note-1',
+      noteVersionId: null,
+      kind: 'important',
+      importance: null,
+      sourceMode: 'manual',
+      scopeType: 'selection',
+      schemaVersion: 1,
+      quoteText: '未评级段落',
+      headingPath: ['等级颜色'],
+      fromPosition: 0,
+      toPosition: 5,
+      prefixText: '',
+      suffixText: '',
+      anchorFingerprint: 'unrated',
+      noteContentHash: 'same-version',
+      idempotencyKey: 'unrated',
+      status: 'active',
+      lifecycleStatus: 'active',
+      anchorStatus: 'resolved'
+    }
+  ];
+  const inline = await mockInlineAnnotations(page, savedMarkdown, rows);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/#/materials/notes/note-1');
   await page.getByRole('button', { name: '切换文档检查器' }).click();
   const inspector = page.getByRole('complementary', { name: '文档检查器' });
   await inspector.getByRole('tab', { name: '标注' }).click();
   const editor = page.locator('.ProseMirror');
-  for (const [id, label, textToken, badgeToken] of [
+  for (const [markId, label, textToken, badgeToken] of [
     ['normal', '普通', '--accent-text', '--accent-on-tint'],
     ['important', '重点', '--ink-importance-important', '--ink-importance-important'],
     ['core', '核心', '--ink-violet', '--ink-violet']
   ]) {
+    const id = inlineAnnotationId('note-1', markId);
     // 彩色底上的徽章用高对比令牌；纸面正文使用对应等级的文字令牌。
     const color = await tokenColor(editor.locator(`[data-annotation-id="${id}"]`), textToken);
     const card = inspector.locator(`article[data-annotation-card-id="${id}"]`);
-    await expect(card).toHaveAttribute('data-importance', id);
+    await expect(card).toHaveAttribute('data-importance', markId);
     await expect(card.getByText(label, { exact: true })).toHaveCSS('color', await tokenColor(card, badgeToken));
     // 新版无边框列表以色点和徽章传达重要级，不能丢失等级颜色。
     await expect(card).toHaveCSS('border-left-width', '0px');
@@ -1835,15 +1848,15 @@ test('V4-07 重点重要等级在正文和检查器中有对应颜色', async ({
     await expect(card).toHaveCSS('border-radius', '10px');
     expect(await card.evaluate(element => getComputedStyle(element).boxShadow)).not.toContain('inset');
     const mark = editor.locator(`[data-annotation-id="${id}"]`);
-    await expect(mark).toHaveAttribute('data-importance', id);
+    await expect(mark).toHaveAttribute('data-importance', markId);
     await expect(mark).toHaveCSS('color', color);
   }
-  await expect(inspector.locator('article[data-annotation-card-id="unrated"]')).not.toHaveAttribute('data-importance');
+  const legacyCard = inspector.locator('article[data-annotation-card-id="unrated"]');
+  await expect(legacyCard).toBeVisible();
+  await expect(legacyCard).not.toHaveAttribute('data-importance');
   await expect(inspector.getByText('待评级')).toHaveCount(0);
-  await expect(editor.locator('[data-annotation-id="unrated"]')).toHaveCSS(
-    'color',
-    await tokenColor(editor, '--accent-text')
-  );
+  await expect(editor.locator('[data-annotation-id="unrated"]')).toHaveCount(0);
+  expect(inline.legacyWrites).toEqual([]);
   await inspector.screenshot({ path: '/tmp/knowra-importance-colors.png' });
 });
 

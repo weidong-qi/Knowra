@@ -1,0 +1,570 @@
+.reader {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  align-self: stretch;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  color: var(--text-primary);
+  background: var(--surface-page);
+}
+.toolbar {
+  position: absolute;
+  top: var(--shell-gap, 8px);
+  left: 50%;
+  z-index: 12;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+  max-width: calc(100% - 24px);
+  padding: var(--space-1);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  border-radius: var(--radius-popover);
+  /* 与笔记页工具栏同一套玻璃质感：半透明渐变加背景模糊。 */
+  background: var(--surface-action-glass-hover, var(--surface-page));
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow-action-glass, var(--shadow-control));
+}
+.toolbar::-webkit-scrollbar {
+  display: none;
+}
+.toolbar > * {
+  flex: 0 0 auto;
+}
+.separator {
+  width: 1px;
+  height: 16px;
+  margin: 0 5px;
+  background: var(--border-strong);
+}
+.toolbarSpacer {
+  width: 8px;
+}
+.glyph {
+  font: 500 16px/1 var(--font-ui);
+}
+.pageCount {
+  min-width: 24px;
+  padding-right: 2px;
+  color: var(--text-muted);
+  font: 400 var(--font-size-meta) / 1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.title {
+  max-width: 160px;
+  padding: 0 4px;
+  font: 500 var(--font-size-meta) / 1 var(--font-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pageBar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-action-glass-hover, var(--surface-page));
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow-action-glass, var(--shadow-control));
+}
+.pageField {
+  width: 36px;
+}
+.pageField label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.search {
+  width: 220px;
+}
+.feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+/* 没有错误时状态文字不占行，浮在左下角，让顶部工具栏和侧栏贴近窗口顶边。 */
+.feedbackQuiet {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  z-index: 5;
+  padding: 0;
+  pointer-events: none;
+}
+.feedback [role='alert'] {
+  color: var(--text-primary);
+}
+.workspace {
+  display: flex;
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.stage {
+  container-type: inline-size;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.viewport {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  /* 与笔记页一致：阅读区与外层共用同一块页面底色，侧栏卡片才能浮在其上而不割裂。 */
+  background: var(--surface-page);
+}
+/* 页面本身像笔记的纸面：细环加柔影，在共用底色上自成一页。 */
+.viewport :global(.pdfViewer .page) {
+  box-shadow:
+    0 0 0 1px var(--border-subtle),
+    0 10px 28px -16px color-mix(in srgb, #000 35%, transparent);
+}
+/* 悬浮工具栏盖在顶部，给第一页留出位置。 */
+.viewport :global(.pdfViewer) {
+  margin-top: 56px;
+}
+.viewport[data-region-tool] {
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.viewport[data-region-tool] :global(.textLayer) {
+  pointer-events: none;
+}
+/* 目录与标注面板沿用笔记检查器的卡片语言：浅灰底、细环加柔影、四周留间距，顶部标题行加渐隐分隔线。 */
+.sidePanel {
+  position: relative;
+  --panel-line: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--border-subtle) 75%, transparent) 16%,
+    color-mix(in srgb, var(--border-subtle) 75%, transparent) 84%,
+    transparent
+  );
+  flex: 0 0 290px;
+  width: 290px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 左侧留出一点空隙，不与阅读区滚动条贴成双线；圆角比外框小一档，转角处两条曲线更接近同心。 */
+  margin: var(--shell-gap, 8px) var(--shell-gap, 8px) var(--shell-gap, 8px) 4px;
+  border: 0;
+  border-radius: calc(var(--radius-panel) - 4px);
+  background:
+    var(--ni-ctx-glow, none),
+    var(--surface-card-tint, color-mix(in srgb, var(--text-primary) 4.5%, var(--surface-page)));
+  box-shadow:
+    var(--sidebar-highlight, inset 0 1px 0 transparent),
+    0 0 0 1px var(--ni-ctx-border, var(--border-subtle)),
+    0 6px 16px -12px color-mix(in srgb, #000 28%, transparent);
+}
+/* 关闭按钮固定在标签栏右侧；标签页沿用文档检查器的矩形样式。 */
+.panelClose {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  z-index: 1;
+}
+.panelTabs {
+  min-height: 0;
+  flex: 1;
+}
+.panelTabs > [role='tablist'] {
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 6px 44px 10px 10px;
+  background: var(--panel-line) bottom / 100% 1px no-repeat;
+}
+.panelTabs [role='tab'] {
+  min-width: 0;
+  height: 30px;
+  flex: 1 1 0;
+  justify-content: center;
+  padding-inline: 6px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12.5px;
+}
+.panelTabs [role='tab'][data-selected] {
+  background: var(--surface-raised, var(--surface-hover));
+  color: var(--text-primary);
+  box-shadow: var(--shadow-control);
+  font-weight: 550;
+}
+.panelTabs > [role='tabpanel'] {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+}
+.panelHeader small {
+  color: var(--text-secondary);
+  font: 500 12px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.panelEmpty {
+  margin: 0;
+  padding: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.outlineItem {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  text-align: left;
+}
+.markCard {
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.markCard:hover {
+  background: var(--surface-hover);
+}
+/* 选中态用白底细边框代替灰底，避免与内部输入框形成灰白嵌套。 */
+.markCard[data-selected] {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+.markHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+.markJump {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.markDelete:hover:not(:disabled) {
+  color: var(--ink-danger);
+  background: var(--surface-hover);
+}
+/* 标题右侧的单个分类色点，点击后弹出分类选择框。 */
+.markTrail {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  /* 与标题行第一行文字的中线对齐；选中与未选中时色点位置保持一致。 */
+  margin-top: -3px;
+}
+.markDeleteSlot {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+}
+.markTrail > .swatch {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.markTrail > .swatch:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.kindMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 112px;
+  padding: 4px;
+  outline: 0;
+}
+.kindOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.kindOption:hover {
+  background: var(--surface-hover);
+}
+.kindOption[aria-pressed='true'] {
+  background: var(--surface-selected, var(--surface-hover));
+}
+.kindOption .swatch {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+}
+.kindOption .swatch:hover {
+  transform: none;
+}
+.commentField {
+  display: flex;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: border-color var(--motion-fast) var(--motion-ease);
+}
+.commentField:focus-within {
+  border-color: var(--accent-solid);
+}
+.commentField textarea[data-input-control] {
+  min-height: 36px;
+  max-height: 200px;
+  padding: 4px 6px 6px;
+  font-size: 13px;
+}
+.markJump span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.markJump strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+/* 未选中时收起为三行摘要，选中后展开完整原文，减少列表的视觉噪声。 */
+.markCard:not([data-selected]) .markJump strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.markCard:not([data-selected]) > p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--text-secondary);
+}
+.markCard p {
+  white-space: pre-wrap;
+  margin: 0;
+  font-size: 13px;
+}
+.reader :global([data-knowra-pdf-overlay] rect) {
+  fill: var(--pdf-mark-important);
+  fill-opacity: 0.28;
+  stroke: none;
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='question']) {
+  fill: var(--pdf-mark-question);
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='supplement']) {
+  fill: var(--pdf-mark-supplement);
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='pitfall']) {
+  fill: var(--pdf-mark-pitfall);
+}
+.reader :global([data-knowra-pdf-overlay] [data-kind='temporary']) {
+  fill: var(--pdf-mark-temporary);
+}
+.reader :global([data-knowra-pdf-overlay] [data-type='region']) {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5px;
+  fill-opacity: 0.1;
+}
+.reader :global([data-knowra-pdf-overlay] [data-selected]) {
+  stroke: var(--text-primary);
+  stroke-width: 1.5px;
+}
+@media (max-width: 760px) {
+  .sidePanel {
+    position: absolute;
+    /* 窄屏面板盖在阅读区上，让出顶部工具栏，保证能用工具栏关闭它。 */
+    inset: 56px 0 0 auto;
+    z-index: 10;
+    width: min(310px, 90%);
+    margin: 0;
+    border-radius: 0;
+    background: var(--surface-card-tint, var(--surface-page));
+    box-shadow: var(--shadow-panel);
+  }
+}
+@media (pointer: coarse) {
+  .toolbar button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .pageBar button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .pageField {
+    width: 44px;
+  }
+}
+
+/* 阅读区较窄时（面板展开或手机）先让出标题，保证翻页与工具按钮完整可见。 */
+@container (max-width: 640px) {
+  .title,
+  .toolbar > .separator:first-of-type {
+    display: none;
+  }
+}
+.selectionBar {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  box-shadow:
+    var(--shadow-control),
+    0 6px 18px -6px rgb(24 30 48 / 22%);
+  transform: translate(-50%, -100%);
+}
+.selectionBar[data-below] {
+  transform: translate(-50%, 0);
+}
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--pdf-mark-important);
+  box-shadow: inset 0 0 0 1px rgb(24 30 48 / 12%);
+}
+.swatch[data-kind='question'] {
+  background: var(--pdf-mark-question);
+}
+.swatch[data-kind='supplement'] {
+  background: var(--pdf-mark-supplement);
+}
+.swatch[data-kind='pitfall'] {
+  background: var(--pdf-mark-pitfall);
+}
+.swatch[data-kind='temporary'] {
+  background: var(--pdf-mark-temporary);
+}
+.swatch:hover {
+  transform: scale(1.15);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id]) {
+  --note-color: var(--pdf-mark-important);
+  pointer-events: all;
+  cursor: grab;
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='question']) {
+  --note-color: var(--pdf-mark-question);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='supplement']) {
+  --note-color: var(--pdf-mark-supplement);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='pitfall']) {
+  --note-color: var(--pdf-mark-pitfall);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='temporary']) {
+  --note-color: var(--pdf-mark-temporary);
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id] rect) {
+  fill: var(--note-color);
+  fill-opacity: 1;
+  stroke: rgb(24 30 48 / 35%);
+  stroke-width: 1px;
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id] path) {
+  fill: #fff;
+  stroke: rgb(24 30 48 / 45%);
+  stroke-width: 0.8px;
+}
+.reader :global([data-knowra-pdf-overlay] [data-note-id][data-selected] rect) {
+  stroke: var(--text-primary);
+  stroke-width: 1.5px;
+}
+.viewport[data-note-tool] {
+  cursor: copy;
+  touch-action: none;
+}
+.noteCard {
+  position: fixed;
+  z-index: 30;
+  width: 220px;
+  padding: 4px 6px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: 0 6px 18px -10px rgb(24 30 48 / 28%);
+  transition: border-color var(--motion-fast) var(--motion-ease);
+}
+.noteCard:focus-within {
+  border-color: var(--accent-solid);
+}
+/* 文本域沿用 composer 形态（无边框、自适应高度），这里只收紧卡片内的间距与高度范围。 */
+.noteCard textarea[data-input-control] {
+  min-height: 52px;
+  max-height: 200px;
+  padding: 4px 6px 6px;
+  font-size: 13px;
+}
+.noteHead {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 24px;
+}
+.noteHead .noteDelete:hover:not(:disabled) {
+  color: var(--ink-danger);
+  background: var(--surface-hover);
+}
+.reader :global([data-knowra-pdf-overlay] [data-type='underline']) {
+  fill-opacity: 0.95;
+}
+.modeButton {
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+.modeButton[aria-pressed='true'] {
+  background: var(--surface-selected);
+  color: var(--text-primary);
+}
+.barDivider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 0;
+  background: var(--border-subtle);
+}

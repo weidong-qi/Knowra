@@ -63,6 +63,8 @@ export function dbNote(note) {
     title: note.title,
     annotationStructure: note.annotationStructure ?? undefined,
     rawMarkdown: note.rawMarkdown,
+    contentKind: note.contentKind ?? 'markdown',
+    pdfSource: note.pdfSource ?? undefined,
     plainText: note.plainText,
     internalLinks: note.internalLinks,
     contentHash: note.contentHash,
@@ -329,3 +331,10 @@ export function dbKnowledgeArtifactProvenance(input) {
     payload: structuredClone(record)
   };
 }
+
+export const dbPdfAnnotation = value => ({
+  id: value.id,
+  noteId: value.noteId,
+  revision: value.revision,
+  payload: value
+});

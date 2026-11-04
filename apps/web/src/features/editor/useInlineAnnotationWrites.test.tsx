@@ -19,7 +19,6 @@ it('切换笔记后旧保存回执不覆盖新笔记的重点状态', async () =
   const options = {
     note: { id: 'A' } as Note,
     canEditContent: true,
-    annotations: [],
     annotationsLoading: false,
     annotationsReady: true,
     editorRef: {
@@ -70,7 +69,6 @@ it('保存未派生重点时不得提示创建成功', async () => {
   const options = {
     note: { id: 'A' } as Note,
     canEditContent: true,
-    annotations: [],
     annotationsLoading: false,
     annotationsReady: true,
     editorRef: {
@@ -102,7 +100,6 @@ it('读取重点失败时不误用内联写入，保存响应丢失重试复用�
   const options = {
     note: { id: 'A' } as Note,
     canEditContent: true,
-    annotations: [],
     annotationsLoading: false,
     annotationsReady: false,
     editorRef: {
@@ -137,13 +134,12 @@ it('失败后撤销或改选内容时不重试已失效的旧请求', async () =
   const options = {
     note: { id: 'A' } as Note,
     canEditContent: true,
-    annotations: [],
     annotationsLoading: false,
     annotationsReady: true,
     editorRef: {
       current: {
         getMarkdown: () => markdown,
-        getAnnotationSelection: () => selection,
+        getSelectedText: () => selection,
         inlineAnnotations: { create }
       } as unknown as EditorCommandTarget
     },

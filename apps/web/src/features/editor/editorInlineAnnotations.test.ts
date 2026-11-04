@@ -17,8 +17,7 @@ import {
   updateInlineAnnotation
 } from './editorInlineAnnotations';
 import { createBlockIdentityBehavior } from './editorBlockIdentity';
-import { createHeadlessNoteCodec } from './headlessNoteCodec';
-import { createKnowraTestEditor } from './annotationInlineMigration.testing';
+import { createHeadlessNoteCodec, createKnowraTestEditor } from './headlessNoteCodec';
 
 const destroyers: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -157,10 +156,7 @@ it('不支持行内标记的公式选区和空段落明确拒绝，不写入部�
 });
 
 it('整段代码选区的末尾新增继承内联重点及属性，重新解析后仍覆盖', async () => {
-  const editor = await createHeadlessNoteCodec(
-    '```\n甲\n乙\n```',
-    [createBlockIdentityBehavior(() => new Set())].flat()
-  );
+  const editor = await createHeadlessNoteCodec('```\n甲\n乙\n```', [createBlockIdentityBehavior()].flat());
   destroyers.push(editor.destroy);
   select(editor.view, '甲\n乙');
   const id = createInlineAnnotation(editor.view, 'selection', 'core');
@@ -187,10 +183,7 @@ it('引用后的光标不错误选择已结束的引用内章节', async () => {
 });
 
 it('部分代码选区不因代码末尾新增而扩大', async () => {
-  const editor = await createHeadlessNoteCodec(
-    '```\n甲\n乙\n```',
-    [createBlockIdentityBehavior(() => new Set())].flat()
-  );
+  const editor = await createHeadlessNoteCodec('```\n甲\n乙\n```', [createBlockIdentityBehavior()].flat());
   destroyers.push(editor.destroy);
   select(editor.view, '甲');
   const id = createInlineAnnotation(editor.view, 'selection');
@@ -202,7 +195,7 @@ it('部分代码选区不因代码末尾新增而扩大', async () => {
 it('整段代码重点可改重要级、取消及撤销重做，不被边界继承复活', async () => {
   const editor = await createHeadlessNoteCodec(
     '```\nabc\n```',
-    [createBlockIdentityBehavior(() => new Set()), $prose(() => history())].flat()
+    [createBlockIdentityBehavior(), $prose(() => history())].flat()
   );
   destroyers.push(editor.destroy);
   select(editor.view, 'abc');

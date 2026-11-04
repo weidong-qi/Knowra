@@ -12,6 +12,7 @@ const names = [
   'tagGroup',
   'knowledgeSpace',
   'contentAnnotation',
+  'pdfAnnotation',
   'annotationExclusion',
   'annotationRevision',
   'analysisScope',
@@ -40,6 +41,10 @@ function fixture(asyncMode, { populated = true, module = false, failWrite = null
     state.folder = [{ id: 'folder', spaceId: 'source', deletedAt: stamp }];
     state.note = [{ id: 'note', spaceId: 'source', deleted: true, internalLinks: [] }];
     state.contentAnnotation = [{ id: 'annotation', spaceId: 'source' }];
+    state.pdfAnnotation = [
+      { id: 'pdf-live', noteId: 'note', spaceId: 'source', revision: 1, deletedAt: null },
+      { id: 'pdf-deleted', noteId: 'note', spaceId: 'source', revision: 2, deletedAt: stamp }
+    ];
     state.analysisScope = [{ id: 'scope', spaceId: 'source', noteId: 'note', deletedAt: stamp }];
   }
   const calls = [];
@@ -175,7 +180,7 @@ export const spaceAssetLifecycleTests = [
           assert.deepEqual(operations(direct.calls), operations(wired.calls));
           if (populated) {
             const after = direct.state();
-            for (const name of ['note', 'folder', 'tag', 'contentAnnotation', 'analysisScope'])
+            for (const name of ['note', 'folder', 'tag', 'contentAnnotation', 'pdfAnnotation', 'analysisScope'])
               assert(after[name].every(row => row.spaceId === 'target'));
             assert.equal(after.tag[0].groupId, 'tag-group-target-ordinary');
             assert.equal(after.tag[1].groupId, 'custom');
@@ -195,6 +200,8 @@ export const spaceAssetLifecycleTests = [
                 'folder.save',
                 'note.save',
                 'contentAnnotation.save',
+                'pdfAnnotation.save',
+                'pdfAnnotation.save',
                 `analysisScope.${asyncMode ? 'moveToSpace' : 'save'}`
               ]
             );
@@ -209,6 +216,26 @@ export const spaceAssetLifecycleTests = [
             );
           }
         }
+      }
+    },
+    {
+      name: `空间生命周期 ${asyncMode ? '异步' : '同步'}：PDF 标注及墓碑进入预览哈希与迁移范围`,
+      async run() {
+        const f = fixture(asyncMode);
+        const first = await f.service.previewSpaceMigration('source', 'target', 'owner');
+        assert.equal(first.counts.pdfAnnotations, 2);
+        assert(first.coverage.spaceScopedAssets.includes('pdfAnnotations'));
+        const result = await f.service.migrateSpaceAssets(
+          'source',
+          { targetSpaceId: 'target', expectedPreviewHash: first.previewHash },
+          'owner'
+        );
+        assert.equal(result.counts.pdfAnnotations, 2);
+        assert(f.state().pdfAnnotation.every(item => item.spaceId === 'target'));
+        assert.equal(f.state().pdfAnnotation.find(item => item.id === 'pdf-live').revision, 2);
+        assert.equal(f.state().pdfAnnotation.find(item => item.id === 'pdf-deleted').deletedAt, stamp);
+        const reads = f.calls.filter(row => row[1] === 'pdfAnnotation' && row[2] === 'list');
+        assert(reads.every(row => row[3][0].includeDeleted === true));
       }
     },
     {

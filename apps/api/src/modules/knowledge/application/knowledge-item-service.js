@@ -3,7 +3,8 @@ import { matchesKnowledgeCandidateRequest } from './knowledge-candidate-retry.js
 import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from './knowledge-item-concurrency.js';
 import { KnowledgeItem } from '../domain/knowledge-item.ts';
 import { KnowledgeEvidence } from '../domain/knowledge-evidence.ts';
-import { isEvidenceUsable } from '../domain/evidence-applicability.ts';
+import { isEvidenceUsable, legacyEvidenceApplicability } from '../domain/evidence-applicability.ts';
+import { deriveEvidenceHealth } from '../domain/evidence-health.ts';
 import {
   buildCreateKnowledgeEvidenceDto,
   buildCreateKnowledgeItemDto,
@@ -387,6 +388,49 @@ export function createKnowledgeItemService({
     /** @param {string} annotationId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status */
     markEvidenceByAnnotationId(annotationId, status = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByAnnotationId(annotationId, status));
+    },
+    /** @param {string[]} annotationIds */
+    reconcileEvidenceByAnnotationIds(annotationIds) {
+      return runTransaction(() => {
+        const versions = new Map();
+        const affected = [];
+        markEvidenceAndReconcile(() => {
+          const changed = [];
+          for (const annotationId of new Set(annotationIds)) {
+            const annotation = annotationRepository?.findById(annotationId);
+            if (!annotation) throw notFoundError('ANNOTATION_NOT_FOUND', 'Annotation not found');
+            if (typeof annotation.noteId !== 'string') throw notFoundError('NOTE_NOT_FOUND', 'Note not found');
+            const note = noteRepository?.findById(annotation.noteId);
+            if (!note) throw notFoundError('NOTE_NOT_FOUND', 'Note not found');
+            for (const evidence of evidenceRepository.list({ annotationId })) {
+              if (evidence.noteVersionId && !versions.has(evidence.noteVersionId)) {
+                const version = noteVersionRepository?.findById(evidence.noteVersionId);
+                if (!version) throw notFoundError('NOTE_VERSION_NOT_FOUND', 'NoteVersion not found');
+                versions.set(evidence.noteVersionId, version);
+              }
+              const version = evidence.noteVersionId ? versions.get(evidence.noteVersionId) : null;
+              const status = deriveEvidenceHealth(evidence, { annotation, note, version });
+              if (status === evidence.status) {
+                affected.push(evidence);
+                continue;
+              }
+              const saved = evidenceRepository.save({
+                ...evidence,
+                status,
+                applicabilityStatus:
+                  /** @type {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['applicabilityStatus']} */ (
+                    legacyEvidenceApplicability(evidence)
+                  ),
+                updatedAt: now()
+              });
+              affected.push(saved);
+              changed.push(saved);
+            }
+          }
+          return changed;
+        });
+        return affected;
+      });
     },
     /** @param {string} noteVersionId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['sourceType']} [sourceType] */
     markEvidenceByNoteVersionId(noteVersionId, status = 'stale', sourceType = null) {

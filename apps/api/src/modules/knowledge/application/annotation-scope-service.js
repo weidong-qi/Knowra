@@ -1,5 +1,6 @@
 import { inlineAnnotationSourceRanges } from './inline-annotation-ranges.js';
-import { pendingRange } from './annotation-range-preview.js';
+import { legacyAnnotationRemoved } from './content-annotation-service.js';
+import { resolveLegacyAnnotationAnchor } from './legacy-annotation-anchor.ts';
 import crypto from 'node:crypto';
 import { calculateContentHash, projectMarkdown, resolveAnchor } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../../errors/app-error.js';
@@ -8,7 +9,6 @@ const fail = (code, message, statusCode = 400) => createAppError(code, message, 
 const newId = prefix => `${prefix}-${crypto.randomUUID()}`;
 
 export function createAnnotationScopeService({
-  annotationService,
   annotationRepository,
   exclusionRepository,
   analysisScopeRepository,
@@ -25,6 +25,8 @@ export function createAnnotationScopeService({
   function requireNote(id) {
     const note = noteRepository.findById(id);
     if (!note || note.deleted) throw fail('ANNOTATION_NOTE_NOT_FOUND', '笔记不存在', 404);
+    if (note.contentKind === 'pdf')
+      throw fail('PDF_ANALYSIS_UNSUPPORTED', '首版 PDF 尚不支持 AI 提炼或 Markdown 分析范围。', 422);
     return note;
   }
   function requireVersion(note) {
@@ -32,6 +34,15 @@ export function createAnnotationScopeService({
     const version = noteVersionRepository.findByNoteIdAndContentHash(note.id, hash);
     if (!version) throw fail('ANNOTATION_VERSION_NOT_FOUND', '当前笔记版本尚未保存', 409);
     return version;
+  }
+
+  function resolveLegacy(note, anchor, versionId) {
+    const version = versionId ? noteVersionRepository.findById(versionId) : null;
+    return resolveLegacyAnnotationAnchor(
+      note.rawMarkdown,
+      anchor,
+      version?.noteId === note.id ? version.content : null
+    );
   }
 
   function previewAnnotation(id) {
@@ -42,80 +53,24 @@ export function createAnnotationScopeService({
       annotation.schemaVersion === 3
         ? { status: annotation.anchorStatus ?? 'resolved', reason: annotation.anchorReason ?? null }
         : annotation.anchorStatus === 'resolved' && annotation.schemaVersion === 2 && annotation.anchor
-          ? resolveAnchor(note.rawMarkdown, annotation.anchor)
+          ? resolveLegacy(note, annotation.anchor, annotation.noteVersionId)
           : { status: annotation.anchorStatus ?? 'needsReview', reason: annotation.anchorReason ?? 'legacyUnverified' };
     return {
       annotation,
-      pendingRange: pendingRange(annotation, note),
+      pendingRange: null,
       currentContentHash: calculateContentHash(note.rawMarkdown),
       resolution: summarizeResolution(resolution),
       exclusions: exclusionRepository.list({ parentAnnotationId: id, includeDeleted: true })
     };
   }
 
-  function createExclusion(annotationId, input = {}) {
-    const annotation = requireAnnotation(annotationId);
-    // v3（内联重点）的排除写在正文标记里（`<!--k- id-->`），由编辑器维护。
-    if (annotation.schemaVersion === 3)
-      throw fail('ANNOTATION_INLINE_TEXT_OWNED', '这个重点写在正文里，请在笔记中修改', 409);
-    if (!['section', 'list'].includes(annotation.scopeType))
-      throw fail('ANNOTATION_EXCLUSION_CONFLICT', '只有章节或列表项重点可以保存局部排除', 409);
-    if (annotation.lifecycleStatus !== 'active')
-      throw fail('ANNOTATION_EXCLUSION_CONFLICT', '已取消的重点不能新增排除', 409);
-    if (annotation.anchorStatus !== 'resolved') throw fail('ANNOTATION_ANCHOR_UNRESOLVED', '请先确认所属重点范围', 409);
-    const note = requireNote(annotation.noteId);
-    if (calculateContentHash(note.rawMarkdown) !== input.noteContentHash)
-      throw fail('ANNOTATION_CONTENT_CONFLICT', '笔记内容已变化，请刷新范围', 409);
-    const resolved = resolveAnchor(note.rawMarkdown, input.anchor);
-    if (resolved.status !== 'resolved') throw fail('ANNOTATION_ANCHOR_UNRESOLVED', '无法确认排除范围', 409);
-    const parentStart = annotation.anchor?.sourceStart;
-    const parentEnd = annotation.anchor?.sourceEnd;
-    if (
-      !Number.isInteger(parentStart) ||
-      !Number.isInteger(parentEnd) ||
-      input.anchor.sourceStart < parentStart ||
-      input.anchor.sourceEnd > parentEnd
-    ) {
-      throw fail('ANNOTATION_EXCLUSION_CONFLICT', '排除范围必须位于所属重点内', 409);
-    }
-    const version = requireVersion(note);
-    const existing = exclusionRepository
-      .list({ parentAnnotationId: annotation.id })
-      .find(item => item.noteVersionId === version.id && sameAnchorRange(item.anchor, input.anchor));
-    if (existing) return { annotation, exclusion: existing };
-    const exclusion = exclusionRepository.save({
-      id: newId('annotation-exclusion'),
-      parentAnnotationId: annotation.id,
-      noteVersionId: version.id,
-      anchor: { ...structuredClone(input.anchor), noteVersionId: version.id },
-      status: 'active',
-      revision: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    const updatedAnnotation = annotationService.advanceRevision(annotation.id, {
-      expectedRevision: input.expectedRevision,
-      operation: 'exclusionAdded'
-    });
-    return { annotation: updatedAnnotation, exclusion };
+  // 排除写在正文标记里（`<!--k- id-->`）；旧格式重点的排除不再新增或移除。
+  function createExclusion() {
+    throw legacyAnnotationRemoved();
   }
 
-  function deleteExclusion(annotationId, exclusionId, input = {}) {
-    const annotation = requireAnnotation(annotationId);
-    const exclusion = exclusionRepository.findById(exclusionId);
-    if (!exclusion || exclusion.parentAnnotationId !== annotation.id)
-      throw fail('ANNOTATION_EXCLUSION_NOT_FOUND', '排除项不存在', 404);
-    const archived = exclusionRepository.save({
-      ...exclusion,
-      status: 'archived',
-      revision: Number(exclusion.revision ?? 1) + 1,
-      updatedAt: new Date().toISOString()
-    });
-    const updatedAnnotation = annotationService.advanceRevision(annotation.id, {
-      expectedRevision: input.expectedRevision,
-      operation: 'exclusionRemoved'
-    });
-    return { annotation: updatedAnnotation, exclusion: archived };
+  function deleteExclusion() {
+    throw legacyAnnotationRemoved();
   }
 
   function getKnowledgeLinks(annotationId) {
@@ -180,13 +135,13 @@ export function createAnnotationScopeService({
         const note = noteById.get(annotation.noteId);
         const resolution =
           annotation.anchorStatus && annotation.anchorStatus !== 'resolved'
-            ? { status: annotation.anchorStatus, reason: annotation.anchorReason }
-            : resolveAnchor(note.rawMarkdown, annotation.anchor);
+            ? { status: annotation.anchorStatus, reason: annotation.anchorReason, segments: [] }
+            : resolveLegacy(note, annotation.anchor, annotation.noteVersionId);
         if (resolution.status !== 'resolved') {
           omittedItems.push({ annotationId: annotation.id, reason: resolution.reason });
           continue;
         }
-        for (const segment of annotation.anchor.segments)
+        for (const segment of resolution.segments ?? [])
           contributions.push({ noteId: note.id, start: segment.start, end: segment.end, annotationId: annotation.id });
       }
     }
@@ -209,16 +164,24 @@ export function createAnnotationScopeService({
         if (exclusion.anchor?.unresolved)
           throw fail('ANNOTATION_EXCLUSION_CONFLICT', '局部排除位置待确认，请先修复排除范围', 409);
         const note = noteById.get(annotation.noteId);
+        const sourceVersionId = exclusion.noteVersionId ?? annotation.noteVersionId;
+        const parent = note && resolveLegacy(note, annotation.anchor, annotation.noteVersionId);
+        const excluded = note && resolveLegacy(note, exclusion.anchor, sourceVersionId);
+        const parentStart = parent?.segments?.[0]?.start;
+        const parentEnd = parent?.segments?.at(-1)?.end;
         if (
           !note ||
-          resolveAnchor(note.rawMarkdown, exclusion.anchor).status !== 'resolved' ||
-          exclusion.anchor.sourceStart < annotation.anchor.sourceStart ||
-          exclusion.anchor.sourceEnd > annotation.anchor.sourceEnd
+          parent?.status !== 'resolved' ||
+          excluded?.status !== 'resolved' ||
+          parentStart === undefined ||
+          parentEnd === undefined ||
+          !excluded.segments?.length ||
+          excluded.segments.some(segment => segment.start < parentStart || segment.end > parentEnd)
         ) {
           throw fail('ANNOTATION_EXCLUSION_CONFLICT', '局部排除不在当前重点范围内，请先修复排除范围', 409);
         }
         persistentExclusions.push(
-          ...exclusion.anchor.segments.map(segment => ({
+          ...(excluded.segments ?? []).map(segment => ({
             noteId: annotation.noteId,
             start: segment.start,
             end: segment.end,
@@ -456,17 +419,6 @@ function uniqueStrings(value) {
 }
 function arraysEqual(left, right) {
   return left.length === right.length && left.every((item, index) => item === right[index]);
-}
-function sameAnchorRange(left, right) {
-  if (!left || !right || left.sourceStart !== right.sourceStart || left.sourceEnd !== right.sourceEnd) return false;
-  const leftSegments = Array.isArray(left.segments) ? left.segments : [];
-  const rightSegments = Array.isArray(right.segments) ? right.segments : [];
-  return (
-    leftSegments.length === rightSegments.length &&
-    leftSegments.every(
-      (segment, index) => segment.start === rightSegments[index]?.start && segment.end === rightSegments[index]?.end
-    )
-  );
 }
 export function stableStringify(value) {
   return JSON.stringify(sortObject(value));

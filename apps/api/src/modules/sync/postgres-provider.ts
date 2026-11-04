@@ -55,6 +55,7 @@ const collections: {
   notes: ['note', 'mapNote'],
   noteVersions: ['noteVersion', 'mapNoteVersion'],
   attachments: ['attachment', 'mapAttachment'],
+  pdfAnnotations: ['pdfAnnotation', 'mapPdfAnnotation'],
   contentAnnotations: ['contentAnnotation', 'mapAnnotation'],
   knowledgeItems: ['knowledgeItem', 'mapKnowledgeItem'],
   knowledgeEvidence: ['knowledgeEvidence', 'mapKnowledgeEvidence'],
@@ -96,6 +97,8 @@ async function snapshot(db: SyncPostgresTransaction): Promise<SyncStoredState> {
     result[collection] = await readCollection(db, collection);
   return result as SyncStoredState;
 }
+
+export { snapshot as readPostgresPdfSnapshot };
 
 // 批量写入只触及已知 ID：未触及的集合与行沿用事务开头的状态，仅按 ID 重读被写入的行。
 async function scopedSnapshot(

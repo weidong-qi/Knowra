@@ -55,6 +55,7 @@ const repositoryNames = [
   'tagGroup',
   'knowledgeSpace',
   'contentAnnotation',
+  'pdfAnnotation',
   'annotationExclusion',
   'annotationRevision',
   'analysisScope',

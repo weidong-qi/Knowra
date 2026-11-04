@@ -13,11 +13,7 @@ import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
 import { createV4WebServer } from '../../../web/server/app.mjs';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
-import {
-  projectMarkdown,
-  anchorForSection,
-  calculateContentHash
-} from '../../../../packages/content-anchor/src/index.js';
+import { inlineId } from '../helpers.mjs';
 
 test('真实页面：标注来源审核与过期保护；桌面离线新建、确认和重载回读', { timeout: 60000 }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-knowledge-ui-'));
@@ -26,22 +22,10 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   const cloud = createAppContext({ dataStore, storageRootDir: root, uploadsDir: path.join(root, 'uploads') });
   const k = cloud.modules.knowledge;
   const space = k.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
-  const raw = '# 注意力机制\n根据相关程度对信息加权。';
+  // 章节重点写在正文标记里，服务端派生重点行。
+  const raw = '# 注意力机制 <!--k attention s=section-->\n根据相关程度对信息加权。';
   const note = k.noteService.createNote({ title: '知识流程验收', rawMarkdown: raw, spaceId: space.id });
-  const anchor = anchorForSection(projectMarkdown(raw), 0);
-  const annotation = k.contentAnnotationService.createAnnotation({
-    spaceId: space.id,
-    noteId: note.id,
-    schemaVersion: 2,
-    scopeType: 'section',
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    anchor,
-    anchorFingerprint: 'knowledge-e2e',
-    noteContentHash: calculateContentHash(raw),
-    idempotencyKey: 'knowledge-e2e'
-  });
+  const annotation = k.contentAnnotationService.getAnnotation(inlineId(note.id, 'attention'));
   const server = createServer({ appContext: cloud });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');

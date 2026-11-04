@@ -14,6 +14,8 @@ interface SyncScopeSegment {
 /** 引用闭包只读取这些身份字段；实体正文仍由各自领域校验。 */
 export interface SyncReferenceEntity {
   id: string;
+  pdfSource?: { attachmentId: string; sha256: string } | null;
+  attachmentId?: string;
   spaceId?: string | null;
   folderId?: string | null;
   groupId?: string | null;
@@ -75,6 +77,7 @@ export const WRITABLE_COLLECTIONS = Object.freeze([
   'notes',
   'noteVersions',
   'attachments',
+  'pdfAnnotations',
   'contentAnnotations',
   'annotationExclusions',
   'annotationRevisions',
@@ -124,6 +127,10 @@ export function referencesFor(collection: string, value: SyncReferenceEntity | n
   if (collection === 'folders' && value.deletionPackage)
     for (const id of value.deletionPackage.noteIds ?? []) refs.push({ collection: 'notes', id });
   for (const id of value.tagIds ?? []) refs.push({ collection: 'tags', id });
+  if (collection === 'notes' && value.pdfSource?.attachmentId)
+    refs.push({ collection: 'attachments', id: value.pdfSource.attachmentId });
+  if (collection === 'pdfAnnotations' && value.attachmentId)
+    refs.push({ collection: 'attachments', id: value.attachmentId });
   if (collection === 'notes')
     for (const id of attachmentIdsInText(value.rawMarkdown)) refs.push({ collection: 'attachments', id });
   if (collection === 'questionSources' && value.sourceId) {

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { createAppError } from '../../../errors/app-error.js';
 import { buildDefaultTagGroups } from '../domain/default-tag-groups.ts';
 
-const kinds = ['folders', 'notes', 'tags', 'tagGroups', 'annotations', 'analysisScopes'];
+const kinds = ['folders', 'notes', 'tags', 'tagGroups', 'annotations', 'pdfAnnotations', 'analysisScopes'];
 
 function collectNoteIds(value, found = new Set(), seen = new Set()) {
   if (!value || typeof value !== 'object' || seen.has(value)) return found;

@@ -61,7 +61,10 @@ export interface WorkspaceSlice {
   createKnowledgeSpace(name: string): Promise<import('@study-accelerator/web-core').KnowledgeSpace>;
   inspectEmptySpaceDeletion(id: string): Promise<import('@study-accelerator/web-core').SpaceDeletionPreview>;
   deleteEmptySpace(id: string, expectedUpdatedAt: string): Promise<void>;
-  previewSpaceMigration(sourceId: string, targetId: string): Promise<import('@study-accelerator/web-core').SpaceMigrationPreview>;
+  previewSpaceMigration(
+    sourceId: string,
+    targetId: string
+  ): Promise<import('@study-accelerator/web-core').SpaceMigrationPreview>;
   migrateSpaceAssets(sourceId: string, targetId: string, expectedPreviewHash: string): Promise<void>;
   createNote(folderId: string | null, title: string): Promise<string>;
   importMarkdownNotes(
@@ -72,19 +75,30 @@ export interface WorkspaceSlice {
   createFolder(parentId: string | null, name: string): Promise<string>;
   renameNote(noteId: string, title: string): Promise<void>;
   loadNoteContent(noteId: string): Promise<void>;
-  saveNoteContent(noteId: string, rawMarkdown: string, expectedUpdatedAt?: string, baseMarkdown?: string, annotationMapping?: import('@study-accelerator/web-core').AnnotationMapping): Promise<Note>;
+  saveNoteContent(
+    noteId: string,
+    rawMarkdown: string,
+    expectedUpdatedAt?: string,
+    baseMarkdown?: string
+  ): Promise<Note>;
   deleteNote(noteId: string): Promise<void>;
   restoreNote(noteId: string): Promise<void>;
   permanentlyDeleteNote(noteId: string): Promise<void>;
   setNoteFavorite(noteId: string, favorite: boolean): Promise<void>;
   setNoteTags(noteId: string, tagIds: string[]): Promise<void>;
   createTag(input: { name: string; color: TagColor; groupId: string }): Promise<Tag>;
-  updateTag(tagId: string, input: { name?: string; color?: TagColor; groupId?: string; sortOrder?: number }): Promise<Tag>;
+  updateTag(
+    tagId: string,
+    input: { name?: string; color?: TagColor; groupId?: string; sortOrder?: number }
+  ): Promise<Tag>;
   deleteTag(tagId: string): Promise<void>;
   mergeTags(sourceTagId: string, targetTagId: string): Promise<void>;
   reorderTags(tagIds: string[]): Promise<void>;
   createTagGroup(input: { name: string; selectionMode: 'single' | 'multiple' }): Promise<TagGroup>;
-  updateTagGroup(groupId: string, input: { name?: string; selectionMode?: 'single' | 'multiple'; sortOrder?: number }): Promise<TagGroup>;
+  updateTagGroup(
+    groupId: string,
+    input: { name?: string; selectionMode?: 'single' | 'multiple'; sortOrder?: number }
+  ): Promise<TagGroup>;
   deleteTagGroup(groupId: string): Promise<void>;
   deleteNotes(noteIds: string[]): Promise<void>;
   assignTagToNotes(noteIds: string[], tagId: string): Promise<void>;
@@ -98,23 +112,45 @@ export interface WorkspaceSlice {
   restoreAnnotation(annotationId: string, expectedRevision?: number): Promise<Annotation>;
   updateAnnotationAnchor(annotationId: string, input: UpdateAnnotationAnchorInput): Promise<Annotation>;
   updateAnnotation(annotationId: string, input: UpdateAnnotationInput): Promise<Annotation>;
-  confirmAnnotationRange(annotationId: string, input: import('@study-accelerator/web-core').ConfirmAnnotationRangeInput): Promise<Annotation>;
+  confirmAnnotationRange(
+    annotationId: string,
+    input: import('@study-accelerator/web-core').ConfirmAnnotationRangeInput
+  ): Promise<Annotation>;
   previewAnnotation(annotationId: string): Promise<AnnotationPreview>;
   getAnnotationKnowledgeLinks(annotationId: string): Promise<AnnotationKnowledgeLinks>;
   previewAnalysisScope(input: AnalysisScopeInput): Promise<AnalysisScopePreview>;
-  createAnalysisScope(input: AnalysisScopeInput & { previewHash: string; idempotencyKey: string }): Promise<{ id: string }>;
+  createAnalysisScope(
+    input: AnalysisScopeInput & { previewHash: string; idempotencyKey: string }
+  ): Promise<{ id: string }>;
   listAnalysisScopes(spaceId: string): Promise<AnalysisScopeSnapshot[]>;
   trashAnalysisScope(id: string, input: { spaceId: string; expectedUpdatedAt: string }): Promise<AnalysisScopeSnapshot>;
-  restoreAnalysisScope(id: string, input: { spaceId: string; expectedUpdatedAt: string }): Promise<AnalysisScopeSnapshot>;
-  createAnnotationExclusion(annotationId: string, input: { expectedRevision: number; noteContentHash: string; anchor: import('@study-accelerator/web-core').ContentAnchor }): Promise<AnnotationExclusionResult>;
-  deleteAnnotationExclusion(annotationId: string, exclusionId: string, expectedRevision: number): Promise<AnnotationExclusionResult>;
+  restoreAnalysisScope(
+    id: string,
+    input: { spaceId: string; expectedUpdatedAt: string }
+  ): Promise<AnalysisScopeSnapshot>;
+  createAnnotationExclusion(
+    annotationId: string,
+    input: {
+      expectedRevision: number;
+      noteContentHash: string;
+      anchor: import('@study-accelerator/web-core').ContentAnchor;
+    }
+  ): Promise<AnnotationExclusionResult>;
+  deleteAnnotationExclusion(
+    annotationId: string,
+    exclusionId: string,
+    expectedRevision: number
+  ): Promise<AnnotationExclusionResult>;
   listNoteVersions(noteId: string): Promise<NoteVersion[]>;
   listNoteVersionPage(noteId: string, options?: { limit?: number; cursor?: string }): Promise<NoteVersionPage>;
   previewNoteVersionPrune(noteId: string): Promise<import('@study-accelerator/web-core').NoteVersionPrunePreview>;
   saveNoteVersionAs(noteId: string, versionId: string): Promise<string>;
   getNoteVersion(noteId: string, versionId: string): Promise<NoteVersion>;
   organizeNote(noteId: string, input: { folderId: string | null; status: string }): Promise<void>;
-  setNoteAiVisibility(noteId: string, input: { aiVisibility: 'normal' | 'private'; expectedUpdatedAt: string }): Promise<void>;
+  setNoteAiVisibility(
+    noteId: string,
+    input: { aiVisibility: 'normal' | 'private'; expectedUpdatedAt: string }
+  ): Promise<void>;
   listNoteAttachments(noteId: string): Promise<Attachment[]>;
   uploadNoteAttachment(input: UploadAttachmentInput): Promise<Attachment>;
   renameNoteAttachment(attachmentId: string, fileName: string): Promise<Attachment>;
@@ -126,7 +162,10 @@ export interface WorkspaceSlice {
   retryAttachmentCleanup(): Promise<{ completed: number; pending: number }>;
   moveEntry(kind: 'note' | 'folder', id: string, parentId: string | null): Promise<void>;
   renameFolder(folderId: string, name: string): Promise<void>;
-  deleteFolder(folderId: string, input: { mode: 'keep' | 'with-content'; destinationId?: string | null }): Promise<void>;
+  deleteFolder(
+    folderId: string,
+    input: { mode: 'keep' | 'with-content'; destinationId?: string | null }
+  ): Promise<void>;
   restoreFolder(folderId: string): Promise<void>;
   listDeletedFolders(spaceId: string): Promise<Folder[]>;
   emptyRecycleBin(): Promise<number>;
@@ -195,4 +234,9 @@ export interface StatusSlice {
   failSave(error: unknown): void;
 }
 
-export type AppStore = WorkspaceSlice & NavigationSlice & NotesIndexSlice & StatusSlice & KnowledgeSlice & TrainingSlice;
+export type AppStore = WorkspaceSlice &
+  NavigationSlice &
+  NotesIndexSlice &
+  StatusSlice &
+  KnowledgeSlice &
+  TrainingSlice;

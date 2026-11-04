@@ -2,8 +2,15 @@
  * 亮橙用于装饰；小字与实色按钮使用深橙以满足对比度。
  * --ink-* 是逐步迁移期间的兼容别名，不引入另一套主题。 */
 :root {
+  --pdf-mark-important: #f5c542;
+  --pdf-mark-question: #60a5fa;
+  --pdf-mark-supplement: #4ade80;
+  --pdf-mark-pitfall: #fb7185;
+  --pdf-mark-temporary: #9ca3af;
   --surface-chrome: #eceef1;
-  --surface-chrome-glow: radial-gradient(460px 320px at 6% 4%, rgb(255 255 255 / 32%), transparent 70%), radial-gradient(640px 560px at -4% 104%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 66%);
+  --surface-chrome-glow:
+    radial-gradient(460px 320px at 6% 4%, rgb(255 255 255 / 32%), transparent 70%),
+    radial-gradient(640px 560px at -4% 104%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 66%);
   --surface-page: #fefefe;
   --surface-sidebar-solid: #fafafb;
   --surface-sidebar: #fafafb;
@@ -11,20 +18,38 @@
   --surface-sunken: #eaedf0;
   --surface-hover: rgb(24 30 48 / 5.5%);
   --surface-pressed: rgb(24 30 48 / 8.5%);
-  --surface-nav-selected: linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 70%, transparent), color-mix(in srgb, var(--surface-raised) 40%, transparent));
-  --surface-rail-selected: linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 98%, transparent), color-mix(in srgb, var(--surface-raised) 86%, transparent));
-  --surface-action-glass: linear-gradient(145deg, color-mix(in srgb, var(--surface-raised) 78%, transparent), color-mix(in srgb, var(--surface-raised) 24%, transparent));
-  --surface-action-glass-hover: linear-gradient(145deg, color-mix(in srgb, var(--surface-raised) 94%, transparent), color-mix(in srgb, var(--surface-raised) 48%, transparent));
+  --surface-nav-selected: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-raised) 70%, transparent),
+    color-mix(in srgb, var(--surface-raised) 40%, transparent)
+  );
+  --surface-rail-selected: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-raised) 98%, transparent),
+    color-mix(in srgb, var(--surface-raised) 86%, transparent)
+  );
+  --surface-action-glass: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-raised) 78%, transparent),
+    color-mix(in srgb, var(--surface-raised) 24%, transparent)
+  );
+  --surface-action-glass-hover: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface-raised) 94%, transparent),
+    color-mix(in srgb, var(--surface-raised) 48%, transparent)
+  );
   --surface-action-crystal: linear-gradient(145deg, rgb(255 255 255 / 65%), rgb(255 255 255 / 40%));
   --border-action-crystal: rgb(255 255 255 / 93%);
   --icon-action-crystal: var(--accent);
-  --shadow-action-crystal: inset 0 1px 1px #fff, inset 0 -1px 0 #858f9f12, 0 0 0 1px #858f9f20, 0 4px 10px -4px rgb(24 30 48 / 14%);
+  --shadow-action-crystal:
+    inset 0 1px 1px #fff, inset 0 -1px 0 #858f9f12, 0 0 0 1px #858f9f20, 0 4px 10px -4px rgb(24 30 48 / 14%);
   --shadow-action-crystal-hover: inset 0 1px 1px #fff, 0 0 0 1px #858f9f35, 0 6px 15px -5px rgb(24 30 48 / 14%);
   --shadow-action-crystal-pressed: inset 0 2px 4px rgb(24 30 48 / 14%), 0 0 0 1px #858f9f20;
   --surface-action-satin: linear-gradient(145deg, #f5a064, #ec7a32 48%, #d86222);
   --text-on-action-satin: #fff9f4;
   --border-action-satin: #c45e25;
-  --shadow-action-satin: inset 0 1px 0 #ffd7bbaa, inset 0 -1px 1px #ab4c2030, 0 2px 3px #7e3b2520, 0 6px 12px -5px #ca632b30;
+  --shadow-action-satin:
+    inset 0 1px 0 #ffd7bbaa, inset 0 -1px 1px #ab4c2030, 0 2px 3px #7e3b2520, 0 6px 12px -5px #ca632b30;
   --shadow-action-satin-hover: inset 0 1px 0 #ffe2c9, 0 3px 7px #7e3b2520, 0 7px 18px -5px #ca632b48;
   --shadow-action-satin-pressed: inset 0 2px 4px #9b3a2a50, 0 1px 0 #ffe1c92a;
   --highlight-nav-selected: inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 85%, transparent);
@@ -52,16 +77,26 @@
   --sidebar-highlight: inset 1px 1px 0 #ffffffc7;
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
   /* 文本框/搜索框/下拉的聚焦：淡橙细环，不用描边加粗。 */
-  --focus-soft: 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+  --focus-soft:
+    0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
   --focus-ring-danger: 0 0 0 3px color-mix(in srgb, var(--ink-danger) 28%, transparent);
   --shadow-control: 0 0 0 1px var(--border-subtle), 0 1px 2px rgb(24 30 48 / 5%);
-  --shadow-rail-selected: 0 0 0 1px rgb(24 30 48 / 8%), 0 1px 2px rgb(24 30 48 / 6%), 0 6px 12px -6px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 1px 0 var(--surface-raised);
-  --shadow-action-glass: inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 94%, transparent), 0 1px 3px rgb(24 30 48 / 6%);
-  --shadow-action-glass-hover: inset 0 1px 0 var(--surface-raised), 0 4px 12px -6px color-mix(in srgb, var(--accent) 25%, transparent);
+  --shadow-rail-selected:
+    0 0 0 1px rgb(24 30 48 / 8%), 0 1px 2px rgb(24 30 48 / 6%),
+    0 6px 12px -6px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 1px 0 var(--surface-raised);
+  --shadow-action-glass:
+    inset 0 1px 0 color-mix(in srgb, var(--surface-raised) 94%, transparent), 0 1px 3px rgb(24 30 48 / 6%);
+  --shadow-action-glass-hover:
+    inset 0 1px 0 var(--surface-raised), 0 4px 12px -6px color-mix(in srgb, var(--accent) 25%, transparent);
   /* 面板交界的短投影：加强贴近边缘的层次，避免扩大悬浮光晕。 */
   --shadow-panel-contact: 0 2px 6px -2px rgb(24 30 48 / 15%);
-  --shadow-sidebar: var(--sidebar-highlight), 0 0 0 1px rgb(54 60 74 / 13%), var(--shadow-panel-contact), 0 12px 28px -16px rgb(24 30 48 / 16%);
-  --shadow-page: 0 0 0 1px rgb(24 30 48 / 7%), var(--shadow-panel-contact), 0 6px 18px -6px rgb(24 30 48 / 10%), 0 22px 48px -18px rgb(24 30 48 / 14%);
+  --shadow-sidebar:
+    var(--sidebar-highlight), 0 0 0 1px rgb(54 60 74 / 13%), var(--shadow-panel-contact),
+    0 12px 28px -16px rgb(24 30 48 / 16%);
+  --shadow-page:
+    0 0 0 1px rgb(24 30 48 / 7%), var(--shadow-panel-contact), 0 6px 18px -6px rgb(24 30 48 / 10%),
+    0 22px 48px -18px rgb(24 30 48 / 14%);
   --shadow-popover: 0 0 0 1px rgb(24 30 48 / 8%), 0 4px 10px rgb(24 30 48 / 6%), 0 24px 64px -12px rgb(24 30 48 / 28%);
   /* 两类形状共存：内容/表单/导航使用小圆角，轻量操作/标签使用胶囊。
    * 主题不得用胶囊覆盖通用圆角；按钮形状由基础组件显式选择。 */
@@ -92,9 +127,11 @@
   --mobile-tabs-size: calc(54px + env(safe-area-inset-bottom));
   --control-size: 32px;
   --touch-target: 44px;
-  --font-ui: "Inter", "PingFang SC", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", "WenQuanYi Zen Hei", system-ui, sans-serif;
+  --font-ui:
+    'Inter', 'PingFang SC', 'Noto Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'WenQuanYi Zen Hei', system-ui,
+    sans-serif;
   --font-note: var(--font-ui);
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --font-size-ui: 13px;
   --font-size-meta: 12px;
   --font-size-note: 15px;
@@ -110,7 +147,7 @@
   --motion-fast: 130ms;
   --motion-rail: 120ms;
   --motion-mid: 200ms;
-  --motion-ease: cubic-bezier(.4, 0, .2, 1);
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   --ink-bg: var(--surface-page);
   --ink-surface: var(--surface-raised);
@@ -243,36 +280,36 @@
 [data-overlay-material='glass'] {
   --surface-overlay: linear-gradient(145deg, #ffffffc7, #f7faff9c);
   --border-overlay: #fffffff0;
-  --shadow-overlay: inset 0 1px 0 #fff, inset 0 -1px 0 #b0b8c91a,
-    0 0 0 1px #7e899e25, 0 2px 4px #202b3a0a,
-    0 10px 18px -10px #202b3a40, 0 28px 48px -22px #202b3a40;
+  --shadow-overlay:
+    inset 0 1px 0 #fff, inset 0 -1px 0 #b0b8c91a, 0 0 0 1px #7e899e25, 0 2px 4px #202b3a0a, 0 10px 18px -10px #202b3a40,
+    0 28px 48px -22px #202b3a40;
   --overlay-backdrop: blur(14px) saturate(145%);
 }
 
 [data-overlay-material='acrylic'] {
   --surface-overlay: linear-gradient(145deg, #fbfcffe8, #f4f6fae0);
   --border-overlay: #ffffffcf;
-  --shadow-overlay: inset 0 1px 1px #fff, 0 0 0 1px #7e899e1a,
-    0 4px 8px -5px #202b3a20, 0 24px 46px -19px #202b3a50;
+  --shadow-overlay: inset 0 1px 1px #fff, 0 0 0 1px #7e899e1a, 0 4px 8px -5px #202b3a20, 0 24px 46px -19px #202b3a50;
   --overlay-backdrop: blur(28px) saturate(165%);
 }
 
 [data-ni-mode='dark'][data-overlay-material='glass'] {
   --surface-overlay: linear-gradient(145deg, #2b303cb8, #1e232c9e);
   --border-overlay: #ffffff2b;
-  --shadow-overlay: inset 0 1px 0 #ffffff20, inset 0 -1px 0 #ffffff05,
-    0 0 0 1px #0003, 0 2px 4px #0004,
-    0 10px 18px -10px #0009, 0 28px 48px -22px #000c;
+  --shadow-overlay:
+    inset 0 1px 0 #ffffff20, inset 0 -1px 0 #ffffff05, 0 0 0 1px #0003, 0 2px 4px #0004, 0 10px 18px -10px #0009,
+    0 28px 48px -22px #000c;
 }
 
 [data-ni-mode='dark'][data-overlay-material='acrylic'] {
   --surface-overlay: linear-gradient(145deg, #303642ed, #252b34e8);
   --border-overlay: #ffffff23;
-  --shadow-overlay: inset 0 1px 1px #ffffff1b, 0 0 0 1px #0003,
-    0 4px 8px -5px #0007, 0 24px 46px -19px #000c;
+  --shadow-overlay: inset 0 1px 1px #ffffff1b, 0 0 0 1px #0003, 0 4px 8px -5px #0007, 0 24px 46px -19px #000c;
 }
 
 /* 手机顶栏容纳 44px 按钮；平板与桌面（含触屏）使用更紧凑的尺寸。 */
 @media (max-width: 767px) {
-  :root { --topbar-size: 44px; }
+  :root {
+    --topbar-size: 44px;
+  }
 }

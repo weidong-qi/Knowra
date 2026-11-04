@@ -10,15 +10,27 @@ export function createV4WebServer({ distRoot, getApiOrigin, allowedOrigins = [],
         await proxyApiRequest({ request, response, url, apiOrigin: getApiOrigin(), allowedOrigins, trustProxy });
         return;
       }
-      if (['GET', 'HEAD'].includes(request.method) && serveV4Asset({ request, response, pathname: url.pathname, distRoot })) {
+      if (
+        ['GET', 'HEAD'].includes(request.method) &&
+        serveV4Asset({ request, response, pathname: url.pathname, distRoot })
+      ) {
         return;
       }
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
       response.end('Not Found');
     } catch (error) {
-      if (error?.statusCode === 413 && error?.code === 'PAYLOAD_TOO_LARGE'
-        || error?.statusCode === 403 && error?.code === 'REQUEST_ORIGIN_FORBIDDEN') {
-        response.writeHead(error.statusCode, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      if (response.headersSent || response.destroyed) {
+        response.destroy(error);
+        return;
+      }
+      if (
+        (error?.statusCode === 413 && error?.code === 'PAYLOAD_TOO_LARGE') ||
+        (error?.statusCode === 403 && error?.code === 'REQUEST_ORIGIN_FORBIDDEN')
+      ) {
+        response.writeHead(error.statusCode, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-store'
+        });
         response.end(JSON.stringify({ error: { code: error.code, message: error.message } }));
         return;
       }

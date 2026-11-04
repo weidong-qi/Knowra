@@ -335,7 +335,7 @@ noteDependencyLifecycleTests.push(
 );
 
 function postgresModuleFixture() {
-  const repositoryNames = ['note', 'folder', 'tag', 'tagGroup', 'knowledgeSpace', 'contentAnnotation', 'annotationExclusion',
+  const repositoryNames = ['note', 'folder', 'tag', 'tagGroup', 'knowledgeSpace', 'contentAnnotation', 'pdfAnnotation', 'annotationExclusion',
     'annotationRevision', 'analysisScope', 'noteVersion', 'knowledgeItem', 'knowledgeEvidence', 'knowledgeArtifactProvenance',
     'learningObjective', 'examProfile', 'examFocus', 'question', 'questionObjective', 'questionSource'];
   const calls = [], transactions = [], scopeRows = [];

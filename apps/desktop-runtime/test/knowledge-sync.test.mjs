@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { anchorFromProjectedRange, projectMarkdown, calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
@@ -12,7 +11,7 @@ import { nextEntityUpload } from '../src/entity-sync-state.mjs';
 import { readKnowledgeLifecycleBoundaries } from '../src/knowledge-lifecycle-boundaries.mjs';
 import { readMeta, writeMeta } from '../src/sync-state.mjs';
 import { requestHash } from '../../api/src/modules/sync/journal.ts';
-import { temporaryDirectory, openWorkspace } from './helpers.mjs';
+import { temporaryDirectory, openWorkspace, markText, inlineId } from './helpers.mjs';
 
 async function fixture(t) {
   const root = temporaryDirectory(t);
@@ -60,21 +59,14 @@ async function fixture(t) {
   }
   return { store, context, knowledge, note, space, device };
 }
+// 重点写在正文标记里：给正文前 7 个字加标记并保存，返回服务端派生的重点行。
 function annotation(knowledge, note) {
-  const anchor = anchorFromProjectedRange(projectMarkdown(note.rawMarkdown), 0, 7);
-  return knowledge.contentAnnotationService.createAnnotation({
-    spaceId: note.spaceId,
-    noteId: note.id,
-    schemaVersion: 2,
-    scopeType: 'selection',
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    anchorFingerprint: 'knowledge-sync',
-    anchor,
-    noteContentHash: calculateContentHash(note.rawMarkdown),
-    idempotencyKey: `source-${note.id}`
+  const current = knowledge.noteService.getNote(note.id);
+  const markId = `source-${note.id.slice(-6)}`;
+  knowledge.noteService.updateNote(note.id, {
+    rawMarkdown: `${markText(current.rawMarkdown.slice(0, 7), markId)}${current.rawMarkdown.slice(7)}`
   });
+  return knowledge.contentAnnotationService.getAnnotation(inlineId(note.id, markId));
 }
 function candidate(knowledge, source) {
   return knowledge.knowledgeItemService.createCandidate({
@@ -793,35 +785,6 @@ test('同步拒绝伪造有效状态和改写证据快照，业务与回执均�
   });
   await assert.rejects(cloud.context.http.sync.pushBatch(altered), error => error.code === 'SYNC_IMMUTABLE');
   assert.equal(JSON.stringify(cloud.store.exportSnapshot().data), before);
-});
-
-test('重新选择标注文字使旧证据待核对，同事务降级知识而不阻止保存', async t => {
-  const cloud = await fixture(t);
-  const source = annotation(cloud.knowledge, cloud.note);
-  const { item, evidence } = candidate(cloud.knowledge, source);
-  cloud.knowledge.knowledgeItemService.confirmItem(item.id);
-  const a = cloud.device('a');
-  const b = cloud.device('b');
-  await a.connect();
-  await b.connect();
-  const anchor = anchorFromProjectedRange(projectMarkdown(cloud.note.rawMarkdown), 2, 9);
-  a.knowledge.contentAnnotationService.updateAnnotationAnchor(source.id, {
-    anchor,
-    quoteText: anchor.quoteText,
-    fromPosition: anchor.sourceStart,
-    toPosition: anchor.sourceEnd,
-    noteContentHash: calculateContentHash(cloud.note.rawMarkdown),
-    anchorFingerprint: 'reselected',
-    expectedRevision: source.revision
-  });
-  assert.equal(a.knowledge.knowledgeItemService.getItem(item.id).reviewStatus, 'needsRevision');
-  assert.equal(a.knowledge.knowledgeItemService.listEvidence(item.id)[0].status, 'stale');
-  await a.engine.sync();
-  clean(a);
-  await b.engine.sync();
-  clean(b);
-  assert.equal(b.knowledge.knowledgeItemService.listEvidence(item.id)[0].quoteText, evidence[0].quoteText);
-  assert.equal(b.knowledge.knowledgeItemService.listEvidence(item.id)[0].status, 'stale');
 });
 
 test('来源被永久删除时保留待传知识与完整恢复副本，不能静默丢弃或还原失效来源', async t => {

@@ -16,8 +16,9 @@ interface AttachmentReferenceRecord {
   deletedAt?: string | Date | null;
 }
 type ReferenceCollection = keyof typeof POSTGRES_MODELS;
+type PayloadCollection = 'knowledgeArtifactProvenance' | 'pdfAnnotations';
 export type AttachmentReferenceState = Partial<{
-  [K in ReferenceCollection]: K extends 'knowledgeArtifactProvenance' ? unknown[] : AttachmentReferenceRecord[];
+  [K in ReferenceCollection]: K extends PayloadCollection ? unknown[] : AttachmentReferenceRecord[];
 }> & { attachments?: AttachmentFileMetadata[] };
 interface AttachmentReferenceModel {
   findMany(): Promise<AttachmentReferenceRecord[]>;
@@ -26,7 +27,7 @@ interface ProvenanceReferenceModel {
   findMany(): Promise<{ payload: unknown }[]>;
 }
 export type AttachmentReferenceDatabase = Partial<{
-  [M in (typeof POSTGRES_MODELS)[ReferenceCollection]]: M extends 'knowledgeArtifactProvenance'
+  [M in (typeof POSTGRES_MODELS)[ReferenceCollection]]: M extends 'knowledgeArtifactProvenance' | 'pdfAnnotation'
     ? ProvenanceReferenceModel
     : AttachmentReferenceModel;
 }>;
@@ -53,6 +54,7 @@ const POSTGRES_MODELS = Object.freeze({
   questions: 'question',
   questionObjectives: 'questionObjective',
   questionSources: 'questionSource',
+  pdfAnnotations: 'pdfAnnotation',
   contentAnnotations: 'contentAnnotation',
   annotationExclusions: 'annotationExclusion',
   annotationRevisions: 'annotationRevision',
@@ -138,7 +140,9 @@ export async function loadPostgresAttachmentReferenceState(
       const rows = await db[model]!.findMany();
       return [
         collection,
-        collection === 'knowledgeArtifactProvenance' ? (rows as { payload: unknown }[]).map(row => row.payload) : rows
+        ['knowledgeArtifactProvenance', 'pdfAnnotations'].includes(collection)
+          ? (rows as { payload: unknown }[]).map(row => row.payload)
+          : rows
       ];
     })
   );

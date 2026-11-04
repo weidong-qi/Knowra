@@ -246,12 +246,11 @@ test('保留两篇失败回滚：缺失、损坏、写文件失败、创建笔�
       rejectCommit = failure === 'commit';
       rejectNote = failure === 'note';
       if (failure === 'write') {
-        const link = fs.linkSync;
+        const copy = fs.copyFileSync;
         let copies = 0;
-        t.mock.method(fs, 'linkSync', (source, destination) => {
-          if (path.basename(source).startsWith('.sync-') && ++copies === 2)
-            throw Object.assign(new Error('模拟附件磁盘写入失败'), { code: 'ENOSPC' });
-          return link(source, destination);
+        t.mock.method(fs, 'copyFileSync', (source, destination, flags) => {
+          if (++copies === 2) throw Object.assign(new Error('模拟附件磁盘写入失败'), { code: 'ENOSPC' });
+          return copy(source, destination, flags);
         });
       }
       const expected = {

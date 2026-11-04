@@ -210,7 +210,9 @@ export function validateBackupDrafts(record, { maxBytes = 8 * 1024 * 1024 } = {}
     throw new Error('恢复草稿格式无效。');
   if (Buffer.byteLength(JSON.stringify(record)) > maxBytes) throw new Error('恢复草稿过大，请先分批导出正文。');
   for (const [key, value] of Object.entries(record.drafts)) {
-    const prefix = ['knowra:note-draft:v1:', 'knowra:knowledge-draft:v1:'].find(prefix => key.startsWith(prefix));
+    const prefix = ['knowra:note-draft:v1:', 'knowra:knowledge-draft:v1:', 'knowra:pdf-draft:v1:'].find(prefix =>
+      key.startsWith(prefix)
+    );
     if (!prefix || key.length > 2000) throw new Error('恢复草稿标识无效。');
     let parts;
     try {
@@ -220,6 +222,11 @@ export function validateBackupDrafts(record, { maxBytes = 8 * 1024 * 1024 } = {}
     }
     if (!Array.isArray(parts) || parts.length !== 2 || parts.some(part => typeof part !== 'string' || !part))
       throw new Error('恢复草稿标识无效。');
+    if (prefix === 'knowra:pdf-draft:v1:') {
+      if (!value || value.version !== 1 || !/^[a-f0-9]{64}$/.test(value.sha256 ?? '') || !Array.isArray(value.drafts))
+        throw new Error('PDF 恢复草稿格式无效。');
+      continue;
+    }
     if (prefix === 'knowra:knowledge-draft:v1:') {
       const form = value =>
         value &&

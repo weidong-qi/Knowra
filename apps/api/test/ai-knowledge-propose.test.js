@@ -8,7 +8,7 @@ import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
 import { buildKnowledgeProposalPlan, proposeKnowledge } from '../src/modules/ai/knowledge-propose-tool.js';
 import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.ts';
 import { proposalProgress } from '../src/modules/ai/agent-worker.js';
-import { anchorForBlock, projectMarkdown } from '@study-accelerator/content-anchor';
+import { markParagraphs } from './fixtures/inline-annotation-seed.js';
 import { createAgentKnowledgeCommitService } from '../src/modules/ai/agent-knowledge-commit.js';
 import {
   createCoreOperationReceipt,
@@ -955,23 +955,11 @@ export const aiKnowledgePropose = [
           title: '十三要点',
           rawMarkdown: sentences.join('\n\n')
         });
-        for (let index = 0; index < 13; index++) {
-          const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), index);
-          app.modules.knowledge.contentAnnotationService.createAnnotation({
-            noteId: note.id,
-            spaceId: note.spaceId,
-            schemaVersion: 2,
-            scopeType: 'blocks',
-            anchor,
-            quoteText: anchor.quoteText,
-            fromPosition: anchor.sourceStart,
-            toPosition: anchor.sourceEnd,
-            noteContentHash: calculateContentHash(note.rawMarkdown),
-            anchorFingerprint: `b${index}`,
-            idempotencyKey: `b${index}`,
-            importance: 'important'
-          });
-        }
+        markParagraphs(
+          app.modules.knowledge,
+          note,
+          Array.from({ length: 13 }, (_, index) => [index, 'important'])
+        );
         const p = await policy(),
           proposed = new Set();
         // 模拟“遵循指引”的模型：只看最近一条“已完成”说明和当前 sources 决定下一步。
@@ -1033,23 +1021,11 @@ export const aiKnowledgePropose = [
           title: '长重点',
           rawMarkdown: sentences.join('\n\n')
         });
-        for (let index = 0; index < count; index++) {
-          const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), index);
-          app.modules.knowledge.contentAnnotationService.createAnnotation({
-            noteId: note.id,
-            spaceId: note.spaceId,
-            schemaVersion: 2,
-            scopeType: 'blocks',
-            anchor,
-            quoteText: anchor.quoteText,
-            fromPosition: anchor.sourceStart,
-            toPosition: anchor.sourceEnd,
-            noteContentHash: calculateContentHash(note.rawMarkdown),
-            anchorFingerprint: `l${index}`,
-            idempotencyKey: `l${index}`,
-            importance: 'important'
-          });
-        }
+        markParagraphs(
+          app.modules.knowledge,
+          note,
+          Array.from({ length: count }, (_, index) => [index, 'important'])
+        );
         const p = await policy(),
           proposed = new Set(),
           sourceCounts = [],
@@ -1121,23 +1097,11 @@ export const aiKnowledgePropose = [
             title: '两要点',
             rawMarkdown: sentences.join('\n\n')
           });
-          for (let index = 0; index < 2; index++) {
-            const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), index);
-            app.modules.knowledge.contentAnnotationService.createAnnotation({
-              noteId: note.id,
-              spaceId: note.spaceId,
-              schemaVersion: 2,
-              scopeType: 'blocks',
-              anchor,
-              quoteText: anchor.quoteText,
-              fromPosition: anchor.sourceStart,
-              toPosition: anchor.sourceEnd,
-              noteContentHash: calculateContentHash(note.rawMarkdown),
-              anchorFingerprint: `n${index}`,
-              idempotencyKey: `n${index}`,
-              importance: 'important'
-            });
-          }
+          markParagraphs(
+            app.modules.knowledge,
+            note,
+            Array.from({ length: 2 }, (_, index) => [index, 'important'])
+          );
           const p = await policy();
           let round = 0;
           respond(request => {
@@ -1190,23 +1154,11 @@ export const aiKnowledgePropose = [
             title,
             rawMarkdown: blocks(prefix).join('\n\n')
           });
-          for (let index = 0; index < count; index++) {
-            const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), index);
-            app.modules.knowledge.contentAnnotationService.createAnnotation({
-              noteId: note.id,
-              spaceId: note.spaceId,
-              schemaVersion: 2,
-              scopeType: 'blocks',
-              anchor,
-              quoteText: anchor.quoteText,
-              fromPosition: anchor.sourceStart,
-              toPosition: anchor.sourceEnd,
-              noteContentHash: calculateContentHash(note.rawMarkdown),
-              anchorFingerprint: `${prefix}${index}`,
-              idempotencyKey: `${prefix}${index}`,
-              importance: 'important'
-            });
-          }
+          markParagraphs(
+            app.modules.knowledge,
+            note,
+            Array.from({ length: count }, (_, index) => [index, 'important'])
+          );
           return note;
         };
         const a = make('私密甲笔记', '甲', 1),
