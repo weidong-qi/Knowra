@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagManagerView } from './TagManagerView';
 
 const mocked = vi.hoisted(() => ({ state: {} as Record<string, unknown> }));
-vi.mock('../../store/AppStoreProvider', () => ({ useAppStore: (selector: (state: Record<string, unknown>) => unknown) => selector(mocked.state) }));
+vi.mock('../../store/AppStoreProvider', () => ({
+  useAppStore: (selector: (state: Record<string, unknown>) => unknown) => selector(mocked.state)
+}));
 vi.mock('../../app/router', () => ({ useNavigate: () => vi.fn() }));
 
 beforeEach(() => {
@@ -15,13 +17,36 @@ beforeEach(() => {
       notes: []
     },
     canWriteWorkspace: () => true,
-    createTag: vi.fn(), updateTag: vi.fn(), deleteTag: vi.fn().mockResolvedValue(undefined), mergeTags: vi.fn(), reorderTags: vi.fn(),
-    createTagGroup: vi.fn(), updateTagGroup: vi.fn(), deleteTagGroup: vi.fn()
+    createTag: vi.fn(),
+    updateTag: vi.fn(),
+    deleteTag: vi.fn().mockResolvedValue(undefined),
+    mergeTags: vi.fn(),
+    reorderTags: vi.fn(),
+    createTagGroup: vi.fn(),
+    updateTagGroup: vi.fn(),
+    deleteTagGroup: vi.fn()
   };
 });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('TagManagerView 标签删除', () => {
+  it('标签管理创建自定义色并在编辑时保留原值', async () => {
+    const user = userEvent.setup();
+    render(<TagManagerView />);
+    await user.click(screen.getByRole('button', { name: '新建标签' }));
+    await user.type(screen.getByRole('textbox', { name: '名称' }), '自定义标签');
+    await user.type(screen.getByRole('textbox', { name: '十六进制颜色' }), '#ABCDEF');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+    expect(mocked.state.createTag).toHaveBeenCalledWith({ name: '自定义标签', color: '#abcdef', groupId: 'group-1' });
+    await user.click(screen.getByRole('button', { name: /的更多操作$/ }));
+    await user.click(screen.getByRole('menuitem', { name: '编辑' }));
+    const input = screen.getByRole('textbox', { name: '十六进制颜色' });
+    await user.type(input, '#010203');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+    expect(mocked.state.updateTag).toHaveBeenCalledWith('tag-1', expect.objectContaining({ color: '#010203' }));
+  });
   it('确认后先提供撤销窗口，撤销不向服务端发送删除', async () => {
     const user = userEvent.setup();
     render(<TagManagerView />);
@@ -32,7 +57,9 @@ describe('TagManagerView 标签删除', () => {
     expect(mocked.state.deleteTag).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: '撤销删除' }));
     vi.useFakeTimers();
-    act(() => { vi.advanceTimersByTime(11000); });
+    act(() => {
+      vi.advanceTimersByTime(11000);
+    });
     expect(mocked.state.deleteTag).not.toHaveBeenCalled();
     expect(screen.getByText('测试标签')).toBeInTheDocument();
   });
@@ -51,7 +78,11 @@ describe('TagManagerView 标签使用统计', () => {
       tags,
       tagGroups: [{ id: 'group-1', name: '普通标签', sortOrder: 0, selectionMode: 'multiple', isSystem: false }],
       notes: [
-        { id: 'live-1', deleted: false, tagIds: ['tag-popular', 'tag-repeated', 'tag-repeated', 'tag-repeated', 'tag-tied'] },
+        {
+          id: 'live-1',
+          deleted: false,
+          tagIds: ['tag-popular', 'tag-repeated', 'tag-repeated', 'tag-repeated', 'tag-tied']
+        },
         { id: 'live-2', deleted: false, tagIds: ['tag-popular'] },
         { id: 'deleted-1', deleted: true, tagIds: ['tag-repeated', 'tag-popular', 'tag-deleted'] },
         { id: 'deleted-2', deleted: true, tagIds: ['tag-deleted'] }
@@ -62,21 +93,31 @@ describe('TagManagerView 标签使用统计', () => {
   }
 
   /* 筛选、使用情况与排序都在“筛选与排序”浮层里；先打开再操作，Esc 关闭。 */
-  const openOptions = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: '筛选与排序' }));
+  const openOptions = (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(screen.getByRole('button', { name: '筛选与排序' }));
   const closeOptions = (user: ReturnType<typeof userEvent.setup>) => user.keyboard('{Escape}');
 
   it('仅按存活笔记去重计数，按使用量稳定排序并筛选全部零使用标签', async () => {
     const user = userEvent.setup();
     setUsageData();
     render(<TagManagerView />);
-    for (const [name, count] of [['常用', 2], ['重复引用', 1], ['相同用量', 1], ['未使用', 0], ['仅回收站', 0]] as const) {
+    for (const [name, count] of [
+      ['常用', 2],
+      ['重复引用', 1],
+      ['相同用量', 1],
+      ['未使用', 0],
+      ['仅回收站', 0]
+    ] as const) {
       expect(screen.getByText(name, { selector: 'article *' }).closest('article')).toHaveTextContent(`${count} 篇笔记`);
     }
     await openOptions(user);
     expect(screen.getByRole('button', { name: /未使用\s*2/ })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '按使用量' }));
     await closeOptions(user);
-    const visibleNames = () => screen.getAllByRole('article').map((card) => within(card).getByText(/^(常用|重复引用|相同用量|未使用|仅回收站)$/).textContent);
+    const visibleNames = () =>
+      screen
+        .getAllByRole('article')
+        .map(card => within(card).getByText(/^(常用|重复引用|相同用量|未使用|仅回收站)$/).textContent);
     expect(visibleNames()).toEqual(['常用', '重复引用', '相同用量', '未使用', '仅回收站']);
 
     await openOptions(user);
@@ -100,10 +141,10 @@ describe('TagManagerView 标签使用统计', () => {
     await user.click(screen.getByRole('button', { name: /未使用\s*2/ }));
     await closeOptions(user);
 
-    mocked.state.serverData = { ...data, notes: [
-      ...data.notes,
-      { id: 'live-new', deleted: false, tagIds: ['tag-zero', 'tag-zero'] }
-    ] };
+    mocked.state.serverData = {
+      ...data,
+      notes: [...data.notes, { id: 'live-new', deleted: false, tagIds: ['tag-zero', 'tag-zero'] }]
+    };
     view.rerender(<TagManagerView />);
     expect(screen.getAllByRole('article')).toHaveLength(1);
     expect(screen.getByText('仅回收站')).toBeInTheDocument();
@@ -148,7 +189,9 @@ describe('TagManagerView 标签使用统计', () => {
     expect(screen.getByRole('dialog', { name: '删除标签“原型标签”？' })).toHaveTextContent('该标签被 1 篇笔记引用。');
     mocked.state.serverData = { ...data, tags: [], notes };
     view.rerender(<TagManagerView />);
-    expect(screen.getByRole('dialog', { name: '删除标签“原型标签”？' })).toHaveTextContent('该标签尚未使用，可直接删除。');
+    expect(screen.getByRole('dialog', { name: '删除标签“原型标签”？' })).toHaveTextContent(
+      '该标签尚未使用，可直接删除。'
+    );
     expect(screen.getByRole('button', { name: '删除标签' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /合并到/ })).not.toBeInTheDocument();
     expect(mocked.state.deleteTag).not.toHaveBeenCalled();

@@ -106,16 +106,16 @@ export async function exercisePdfAnnotationWorkflow(page) {
   await expect.poll(async () => (await marks()).length).toBe(1);
   // 非输入区域的 Mac/Web 快捷键；重做删除后再撤销，不能被原生菜单吞掉。
   await page.getByLabel('PDF 页面', { exact: true }).focus();
-  await page.keyboard.press('Meta+Shift+z');
+  await page.keyboard.press('ControlOrMeta+Shift+z');
   await expect.poll(async () => (await marks()).length).toBe(0);
-  await page.keyboard.press('Meta+z');
+  await page.keyboard.press('ControlOrMeta+z');
   await expect.poll(async () => (await marks()).length).toBe(1);
   // 输入框内的撤销只改文字，不得删除或恢复整个标注。
   await clickMark();
   await page.getByRole('button', { name: '编辑批注', exact: true }).click();
   await field.press('End');
   await field.pressSequentially(' appended');
-  await field.press('Meta+z');
+  await field.press('ControlOrMeta+z');
   await expect(field).not.toHaveValue(/appended/);
   await editor.getByRole('button', { name: '完成', exact: true }).click();
   await saved();

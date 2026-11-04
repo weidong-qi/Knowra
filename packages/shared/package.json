@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./tag-colors": {
+      "types": "./src/tag-colors.d.ts",
+      "default": "./src/tag-colors.js"
+    },
     "./attachments": {
       "types": "./src/attachments.d.ts",
       "default": "./src/attachments.js"

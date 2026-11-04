@@ -1,5 +1,6 @@
 import { useId, type CSSProperties } from 'react';
 import type { Tag } from '@study-accelerator/web-core';
+import { tagColorStyle } from '../tags';
 import { FolderIcon, PdfFileIcon } from '../../components/icons/knowra';
 import type { IndexItem } from './notesIndexPresentation';
 import { notePreview } from './NotesIndexItemMeta';
@@ -46,6 +47,7 @@ export function NotesIndexArt({
     <span
       className={`${styles.art} ${cover ? styles.cover : ''}`}
       data-color={color}
+      style={folder ? undefined : tagColorStyle(tags[0]?.color, '--art-color')}
       data-art-kind={folder ? 'folder' : 'document'}
       data-folder-style={folder ? 'illustrated' : undefined}
       aria-hidden="true"
