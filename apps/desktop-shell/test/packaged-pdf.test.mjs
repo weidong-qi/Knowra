@@ -138,18 +138,24 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   );
   await cdp.detach();
   await page.getByRole('button', { name: '适合宽度', exact: true }).click();
-  await page
-    .locator('.textLayer')
-    .first()
-    .evaluate(layer => {
-      const span = layer.querySelector('span');
-      const range = document.createRange();
-      range.selectNodeContents(span);
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      layer.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    });
+  // 捏合结束后的延迟绘制会重建文字层；等待新文字层能产生选区色条，再创建标注。
+  await expect
+    .poll(async () => {
+      await page
+        .locator('.textLayer')
+        .first()
+        .evaluate(layer => {
+          const span = [...layer.querySelectorAll('span')].find(el => el.textContent === '知境阅读与标注');
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          layer.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        });
+      return page.getByRole('button', { name: '标注为疑问', exact: true }).isVisible();
+    })
+    .toBe(true);
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   const textMark = await page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').boundingBox();
