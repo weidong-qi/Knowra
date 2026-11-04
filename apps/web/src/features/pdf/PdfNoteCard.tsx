@@ -1,7 +1,8 @@
-import { Button, TextAreaField } from '../../components/ui';
+import { DeleteIcon } from '../../components/icons/knowra';
+import { IconButton, TextAreaField } from '../../components/ui';
 import styles from './PdfReader.module.css';
 
-/** 点击便签图标后在其旁展开的文字卡片，可直接输入与删除。 */
+/** 点击便签图标后在其旁展开的文字卡片，卡片本身即输入区，可直接输入与删除。 */
 export function PdfNoteCard({
   left,
   top,
@@ -19,17 +20,27 @@ export function PdfNoteCard({
 }) {
   return (
     <div className={styles.noteCard} style={{ left, top }} role="group" aria-label="便签内容">
+      <div className={styles.noteHead}>
+        <IconButton
+          size={24}
+          aria-label="删除便签"
+          title="删除便签"
+          className={styles.noteDelete}
+          isDisabled={disabled}
+          onPress={onDelete}
+        >
+          <DeleteIcon size={14} />
+        </IconButton>
+      </div>
       <TextAreaField
         label="便签"
+        presentation="composer"
         value={value}
         maxLength={2000}
         autoFocus={!value}
         isDisabled={disabled}
         onChange={onChange}
       />
-      <Button size="mini" variant="danger" isDisabled={disabled} onPress={onDelete}>
-        删除便签
-      </Button>
     </div>
   );
 }

@@ -27,6 +27,9 @@ import { PdfSidePanel, type PdfPanelTab } from './PdfSidePanel';
 import { pdfViewerCss } from './pdfRuntime';
 import styles from './PdfReader.module.css';
 
+/** 跳转到标注时为顶部浮动工具栏预留的空间（px）。 */
+const JUMP_TOP_CLEARANCE = 96;
+
 export function PdfReaderView({
   note,
   canWrite,
@@ -175,6 +178,9 @@ export function PdfReaderView({
         destArray: [null, { name: 'XYZ' }, first.rect[0], first.rect[3], null],
         allowNegativeOffset: false
       });
+      // 定位后把目标往下让出浮动工具栏的高度，避免标注被顶部操作栏遮住。
+      const scroller = engine.container;
+      if (scroller) scroller.scrollTop = Math.max(0, scroller.scrollTop - JUMP_TOP_CLEARANCE);
       setSelected(item.id);
       setPanel(true);
       setPanelTab('marks');
@@ -600,6 +606,7 @@ export function PdfReaderView({
           <PdfSidePanel
             tab={panelTab}
             onTab={setPanelTab}
+            onClose={() => setPanel(false)}
             items={items}
             outline={outline}
             selected={selected}

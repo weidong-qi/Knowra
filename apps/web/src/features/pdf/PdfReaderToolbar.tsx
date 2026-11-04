@@ -5,7 +5,7 @@ import {
   FocusIcon,
   ListIcon,
   MoreHorizontalIcon,
-  PanelIcon,
+  HighlightIcon,
   RefreshIcon,
   SearchIcon
 } from '../../components/icons/knowra';
@@ -144,11 +144,11 @@ export function PdfReaderToolbar({
           <SearchIcon size={16} />
         </IconButton>
       )}
+      <IconButton size={28} aria-label="标注" title="标注" aria-pressed={panel} onPress={() => onPanel()}>
+        <HighlightIcon size={16} />
+      </IconButton>
       <IconButton size={28} aria-label="目录" title="目录" aria-pressed={outlineOpen} onPress={() => onOutline()}>
         <ListIcon size={16} />
-      </IconButton>
-      <IconButton size={28} aria-label="标注" title="标注" aria-pressed={panel} onPress={() => onPanel()}>
-        <PanelIcon size={16} />
       </IconButton>
       <MenuTrigger>
         <IconButton size={28} aria-label="更多" title="更多">
