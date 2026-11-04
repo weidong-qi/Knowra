@@ -65,6 +65,34 @@ async function fixture(t, options = {}) {
 }
 const clean = device => assert.equal(device.engine.status().error, null, JSON.stringify(device.engine.status()));
 
+function addLegacyAnnotation(cloud, note, id) {
+  const version = cloud.knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
+  const anchor = anchorForBlock(projectMarkdown(note.rawMarkdown), 0);
+  return new ContentAnnotation({
+    id,
+    spaceId: note.spaceId,
+    noteId: note.id,
+    noteVersionId: version.id,
+    schemaVersion: 2,
+    scopeType: 'blocks',
+    anchor: { ...anchor, noteVersionId: version.id },
+    originSnapshot: {
+      noteVersionId: version.id,
+      contentHash: version.contentHash,
+      scopeType: 'blocks',
+      segments: anchor.segments,
+      quoteText: anchor.quoteText,
+      headingPath: []
+    },
+    quoteText: anchor.quoteText,
+    fromPosition: anchor.sourceStart,
+    toPosition: anchor.sourceEnd,
+    anchorFingerprint: id,
+    noteContentHash: version.contentHash,
+    idempotencyKey: id
+  });
+}
+
 test('训练资产作为云端只读集合下行回收与清理状态', async t => {
   const cloud = await fixture(t);
   const item = cloud.knowledge.knowledgeItemService.createCandidate({
@@ -770,6 +798,42 @@ test('离线正文改写使设备未知的云端重点证据降级并同步到�
   }
 });
 
+test('重点原文恢复后，各设备恢复对应证据健康但不自动确认知识', async t => {
+  const cloud = await fixture(t);
+  const note = cloud.knowledge.noteService.updateNote(cloud.note.id, {
+    rawMarkdown: markText('原始重点内容', 'restore')
+  });
+  const { item, evidence } = cloud.knowledge.knowledgeItemService.createCandidate({
+    title: '跨设备恢复来源',
+    canonicalStatement: '原始证据',
+    sourceMode: 'annotation',
+    evidence: [{ sourceType: 'annotation', annotationId: inlineId(note.id, 'restore') }]
+  });
+  cloud.knowledge.knowledgeItemService.confirmItem(item.id);
+  const question = cloud.knowledge.questionService.createQuestion({
+    stem: '解释来源内容',
+    referenceAnswer: '原始重点内容',
+    sources: [{ sourceType: 'knowledgeEvidence', sourceId: evidence[0].id }]
+  });
+  const a = cloud.device('restore-writer');
+  await a.connect();
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: markText('改写重点内容', 'restore') });
+  await a.engine.sync();
+  clean(a);
+  assert.equal(cloud.dataStore.state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'stale');
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: markText('原始重点内容', 'restore') });
+  await a.engine.sync();
+  clean(a);
+  const b = cloud.device('restore-reader');
+  await b.connect();
+  clean(b);
+  for (const state of [a.store.state, cloud.dataStore.state, b.store.state]) {
+    assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'valid');
+    assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'needsRevision');
+    assert.equal(state.questionSources.find(value => value.questionId === question.id).status, 'active');
+  }
+});
+
 test('旧客户端上传重点变更时，云端按原文判断嵌套改写与空标记', async t => {
   for (const [name, before, after, markId, expected, anchorStatus] of [
     [
@@ -933,6 +997,95 @@ test('已有旧重点备注仍可同步，正文改写时云端独有证据降�
   for (const state of [cloud.dataStore.state, b.store.state]) {
     assert.equal(state.contentAnnotations.find(value => value.id === row.id).lifecycleStatus, 'deleted');
     assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'stale');
+  }
+});
+
+test('旧重点正文离线改写后撤销，保守降级与后续修改仍能同步', async t => {
+  for (const [changedText, expectedAnchor, expectedEvidence] of [
+    ['完全改写', 'needsReview', 'stale'],
+    ['', 'missing', 'insufficient']
+  ])
+    await t.test(expectedAnchor, async t => {
+      const cloud = await fixture(t);
+      const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '原文 其他' });
+      const row = addLegacyAnnotation(cloud, note, 'legacy-reverted');
+      cloud.knowledge.repositories.contentAnnotationRepository.save(row);
+      const a = cloud.device('legacy-reverted-writer');
+      await a.connect();
+      const { item, evidence } = cloud.knowledge.knowledgeItemService.createCandidate({
+        title: '旧重点来源',
+        canonicalStatement: '历史来源',
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'annotation', annotationId: row.id }]
+      });
+      cloud.knowledge.knowledgeItemService.confirmItem(item.id);
+      a.knowledge.noteService.updateNote(note.id, { rawMarkdown: changedText });
+      a.knowledge.noteService.updateNote(note.id, { rawMarkdown: note.rawMarkdown });
+      await a.engine.sync();
+      clean(a);
+      assert.equal(a.engine.status().pendingEntities, 0);
+      const b = cloud.device('legacy-reverted-reader');
+      await b.connect();
+      clean(b);
+      for (const state of [a.store.state, cloud.dataStore.state, b.store.state]) {
+        assert.equal(state.contentAnnotations.find(value => value.id === row.id).anchorStatus, expectedAnchor);
+        assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, expectedEvidence);
+        assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'needsRevision');
+      }
+      a.knowledge.noteService.updateNote(note.id, { rawMarkdown: '原文 其他，后续修改' });
+      await a.engine.sync();
+      clean(a);
+      assert.equal(cloud.knowledge.noteService.getNote(note.id).rawMarkdown, '原文 其他，后续修改');
+      const { prepareBatchState } = await import('../../api/src/modules/sync/batch-domain.js');
+      const current = cloud.dataStore.state.contentAnnotations.find(value => value.id === row.id);
+      const forged = { ...current, anchorStatus: 'resolved', anchorReason: null, status: 'active' };
+      assert.throws(
+        () =>
+          prepareBatchState(
+            cloud.dataStore.state,
+            [{ collection: 'contentAnnotations', id: row.id, value: forged }],
+            'demo'
+          ),
+        { code: 'SYNC_CLIENT_UPGRADE_REQUIRED' }
+      );
+      assert.throws(
+        () =>
+          prepareBatchState(
+            cloud.dataStore.state,
+            [{ collection: 'contentAnnotations', id: row.id, value: { ...current, quoteText: '伪造摘录' } }],
+            'demo'
+          ),
+        { code: 'SYNC_CLIENT_UPGRADE_REQUIRED' }
+      );
+    });
+});
+
+test('云端旧重点缺少生命周期字段时，离线正文改写仍使来源降级', async t => {
+  const cloud = await fixture(t);
+  const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '原文 其他' });
+  const a = cloud.device('legacy-raw-writer');
+  await a.connect();
+  const row = addLegacyAnnotation(cloud, note, 'legacy-raw-fields');
+  delete row.lifecycleStatus;
+  delete row.anchorStatus;
+  cloud.knowledge.repositories.contentAnnotationRepository.save(row);
+  const { item, evidence } = cloud.knowledge.knowledgeItemService.createCandidate({
+    title: '旧重点来源',
+    canonicalStatement: '历史来源',
+    sourceMode: 'annotation',
+    evidence: [{ sourceType: 'annotation', annotationId: row.id }]
+  });
+  cloud.knowledge.knowledgeItemService.confirmItem(item.id);
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: '完全改写' });
+  await a.engine.sync();
+  clean(a);
+  const b = cloud.device('legacy-raw-reader');
+  await b.connect();
+  clean(b);
+  for (const state of [cloud.dataStore.state, b.store.state]) {
+    assert.equal(state.contentAnnotations.find(value => value.id === row.id).anchorStatus, 'needsReview');
+    assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'stale');
+    assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'needsRevision');
   }
 });
 

@@ -31,7 +31,10 @@ import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contr
 import { syncError } from './journal.js';
 import { validateKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.js';
 import { addedNoteLinkTargets } from '../knowledge/application/note-link-relations.js';
-import { legacyAnnotationSourceChange } from '../knowledge/application/content-annotation-service.js';
+import {
+  legacyAnnotationHealth,
+  legacyAnnotationSourceChange
+} from '../knowledge/application/content-annotation-service.js';
 import {
   applyInlineAnnotationChanges,
   INLINE_KEY_PREFIX,
@@ -61,6 +64,15 @@ const legacySourceFields = [
 const legacySource = row => Object.fromEntries(legacySourceFields.map(field => [field, row?.[field] ?? null]));
 const legacySyncUnavailable = () =>
   syncError('SYNC_CLIENT_UPGRADE_REQUIRED', '旧格式重点的待同步数据暂无法处理，已保留本机数据和待同步队列。', 422);
+// 合并离线编辑时正文可能已撤销，但客户端产生的保守降级仍需交付。
+// 只允许健康状态变差，不能通过同步把旧来源重新标为有效。
+function isLegacyHealthDowngrade(previous, next) {
+  const rank = { resolved: 0, needsReview: 1, missing: 2 };
+  const before = legacyAnnotationHealth(previous).anchorStatus;
+  const after = legacyAnnotationHealth(next).anchorStatus;
+  const reason = after === 'needsReview' ? 'sourceChanged' : after === 'missing' ? 'sourceDeleted' : null;
+  return Boolean(reason && next.anchorReason === reason && rank[before] !== undefined && rank[after] >= rank[before]);
+}
 const builders = {
   notes: buildCreateNoteDto,
   folders: buildCreateFolderDto,
@@ -95,9 +107,8 @@ export function prepareBatchState(before, changes, ownerId, preparedAttachments 
     const { collection, id } = change;
     const old = before[collection].find(item => item.id === id);
     if (collection === 'contentAnnotations' && change.value && change.value.schemaVersion !== 3) {
-      const oldLifecycle = old?.lifecycleStatus ?? (old?.status === 'archived' ? 'archived' : 'active');
-      const nextLifecycle =
-        change.value.lifecycleStatus ?? (change.value.status === 'archived' ? 'archived' : 'active');
+      const oldHealth = legacyAnnotationHealth(old);
+      const nextHealth = legacyAnnotationHealth(change.value);
       const oldNote = before.notes.find(note => note.id === old?.noteId);
       const incomingNote = changes.find(item => item.collection === 'notes' && item.id === old?.noteId)?.value;
       const loss =
@@ -105,14 +116,17 @@ export function prepareBatchState(before, changes, ownerId, preparedAttachments 
           ? legacyAnnotationSourceChange(old, oldNote.rawMarkdown, incomingNote.rawMarkdown)
           : null;
       const healthChanged =
-        (old?.anchorStatus ?? 'resolved') !== (change.value.anchorStatus ?? 'resolved') ||
+        oldHealth.anchorStatus !== nextHealth.anchorStatus ||
         (old?.anchorReason ?? null) !== (change.value.anchorReason ?? null);
       if (
         !old ||
-        (oldLifecycle !== 'active' && nextLifecycle === 'active') ||
+        (oldHealth.lifecycleStatus !== 'active' && nextHealth.lifecycleStatus === 'active') ||
         !sameEntity('contentAnnotations', legacySource(old), legacySource(change.value)) ||
         (healthChanged &&
-          (!loss || loss.anchorStatus !== change.value.anchorStatus || loss.anchorReason !== change.value.anchorReason))
+          (!loss ||
+            loss.anchorStatus !== change.value.anchorStatus ||
+            loss.anchorReason !== change.value.anchorReason) &&
+          !isLegacyHealthDowngrade(old, change.value))
       )
         throw legacySyncUnavailable();
     }

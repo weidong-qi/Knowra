@@ -8,6 +8,7 @@ import {
 } from '@study-accelerator/shared/knowra-marks';
 import { createInlineAnnotationSourceResolver } from './inline-annotation-ranges.js';
 import { ContentAnnotation, INLINE_ANCHOR_FORMAT, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.js';
+import { isEvidenceUsable } from '../domain/evidence-applicability.js';
 
 /**
  * 重点内联化 I2（《重点标记内联化方案》3.2）：正文是重点位置的唯一来源，保存时从正文标记派生元数据行。
@@ -404,7 +405,7 @@ export function withInlineAnnotations(
       const marksOnly = isMarksOnlyChange(annotationChange?.before, note.rawMarkdown);
       const target = marksOnlyLifecycle && marksOnly ? marksOnlyLifecycle : lifecycle;
       const result = target.onNoteContentChanged(note, version, annotationChange);
-      const watch = onSourceChanged && !marksOnly && typeof annotationChange?.before === 'string';
+      const watch = onSourceChanged && typeof annotationChange?.before === 'string';
       return then(result, value =>
         then(watch ? repository.list({ noteId: note.id, includeDeleted: true }) : null, rows => {
           const sources = rows ? inlineSourceChanges(note, rows, annotationChange.before) : null;
@@ -426,30 +427,36 @@ export function withInlineAnnotations(
   };
 }
 
-/** 以原文被改的重点为来源的证据转"待核对"，原文被删的转"依据不足"，并让引用这些证据的题目来源过期。 */
-export function degradeInlineSourceEvidence({ knowledgeItemService, questionService }) {
+/** 逐条重算重点证据及题目来源；恢复健康不会自动确认知识或题目。 */
+export function degradeInlineSourceEvidence({ knowledgeItemService, questionService, questionSourceRepository }) {
   return ({ changed, removed }) => {
-    const mark = (ids, status) => ids.flatMap(id => knowledgeItemService.markEvidenceByAnnotationId(id, status));
-    const evidence = [...mark(changed, 'stale'), ...mark(removed, 'insufficient')];
+    const ids = [...new Set([...changed, ...removed])];
+    const evidence = knowledgeItemService.reconcileEvidenceByAnnotationIds(ids);
+    questionSourceRepository.markBySourceIds(
+      'knowledgeEvidence',
+      evidence.filter(isEvidenceUsable).map(item => item.id),
+      'active'
+    );
     return questionService.markSourcesStale(
       'knowledgeEvidence',
-      evidence.map(item => item.id)
+      evidence.filter(item => !isEvidenceUsable(item)).map(item => item.id)
     );
   };
 }
 
 /** PostgreSQL 版：依赖都是异步的，逐条等待以保持事务内的顺序。 */
-export function degradeInlineSourceEvidenceAsync({ knowledgeItemService, questionService }) {
+export function degradeInlineSourceEvidenceAsync({ knowledgeItemService, questionService, questionSourceRepository }) {
   return async ({ changed, removed }) => {
-    const evidence = [];
-    for (const [ids, status] of [
-      [changed, 'stale'],
-      [removed, 'insufficient']
-    ])
-      for (const id of ids) evidence.push(...(await knowledgeItemService.markEvidenceByAnnotationId(id, status)));
+    const ids = [...new Set([...changed, ...removed])];
+    const evidence = await knowledgeItemService.reconcileEvidenceByAnnotationIds(ids);
+    await questionSourceRepository.markBySourceIds(
+      'knowledgeEvidence',
+      evidence.filter(isEvidenceUsable).map(item => item.id),
+      'active'
+    );
     await questionService.markSourcesStale(
       'knowledgeEvidence',
-      evidence.map(item => item.id)
+      evidence.filter(item => !isEvidenceUsable(item)).map(item => item.id)
     );
   };
 }

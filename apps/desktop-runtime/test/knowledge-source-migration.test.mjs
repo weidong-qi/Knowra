@@ -65,3 +65,71 @@ for (const driver of ['sqlite', 'json'])
     assert.equal(driver === 'sqlite' ? store.readOutbox().length : store.getSyncJournal().head, count + 1);
     store.close?.();
   });
+
+for (const driver of ['sqlite', 'json'])
+  test(`${driver}：重点摘录恢复时逐条重算证据，撤回与审核状态不自动恢复`, t => {
+    const root = temporaryDirectory(t);
+    const file = path.join(root, driver === 'sqlite' ? 'local.sqlite' : 'cloud.json');
+    const open = () => (driver === 'sqlite' ? createSqliteDataStore(file) : createFileDataStore(file));
+    let store = open();
+    const context = () =>
+      createAppContext({ dataStore: store, uploadsDir: path.join(root, 'uploads'), storageRootDir: root });
+    let knowledge = context().modules.knowledge;
+    const space = knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
+    let note = knowledge.noteService.createNote({
+      title: '重点来源',
+      rawMarkdown: markText('原文', 'restore'),
+      spaceId: space.id
+    });
+    const annotationId = inlineId(note.id, 'restore');
+    const candidate = title =>
+      knowledge.knowledgeItemService.createCandidate({
+        title,
+        canonicalStatement: title,
+        sourceMode: 'annotation',
+        evidence: [{ sourceType: 'annotation', annotationId }]
+      });
+    const original = candidate('原文来源');
+    knowledge.knowledgeItemService.confirmItem(original.item.id);
+    const withdrawn = candidate('已撤回来源');
+    knowledge.knowledgeItemService.retireEvidence(withdrawn.item.id, withdrawn.evidence[0].id);
+    const question = knowledge.questionService.createQuestion({
+      stem: '检查来源',
+      referenceAnswer: '原文',
+      sources: [{ sourceType: 'knowledgeEvidence', sourceId: original.evidence[0].id }]
+    });
+    note = knowledge.noteService.updateNote(note.id, { rawMarkdown: markText('改写', 'restore') });
+    assert.equal(knowledge.repositories.knowledgeEvidenceRepository.findById(original.evidence[0].id).status, 'stale');
+    const changed = candidate('改写来源');
+    knowledge.knowledgeItemService.confirmItem(changed.item.id);
+    knowledge.noteService.updateNote(note.id, { rawMarkdown: markText('原文', 'restore') });
+    const check = () => {
+      assert.equal(
+        knowledge.repositories.knowledgeEvidenceRepository.findById(original.evidence[0].id).status,
+        'valid'
+      );
+      assert.equal(knowledge.repositories.knowledgeEvidenceRepository.findById(changed.evidence[0].id).status, 'stale');
+      assert.equal(
+        knowledge.repositories.knowledgeEvidenceRepository.findById(withdrawn.evidence[0].id).applicabilityStatus,
+        'withdrawn'
+      );
+      assert.equal(
+        knowledge.repositories.knowledgeItemRepository.findById(original.item.id).reviewStatus,
+        'needsRevision'
+      );
+      assert.equal(
+        knowledge.repositories.knowledgeItemRepository.findById(changed.item.id).reviewStatus,
+        'needsRevision'
+      );
+      assert.equal(
+        knowledge.repositories.questionSourceRepository.list({ questionId: question.id })[0].status,
+        'active'
+      );
+    };
+    check();
+    store.close?.();
+    store = open();
+    knowledge = context().modules.knowledge;
+    check();
+    store.close?.();
+  });

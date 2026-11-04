@@ -11,20 +11,30 @@ const fail = (code, message, statusCode = 400) => createAppError(code, message, 
 /** 重点内联化 I4b：重点只能写在正文标记里，旧格式重点不再新建、改范围、确认范围、排除或恢复。 */
 export const legacyAnnotationRemoved = () => fail('ANNOTATION_LEGACY_REMOVED', '重点写在正文里，请在笔记中标记', 410);
 
+/** 历史记录可能只有旧 status 字段；与仓储读取时采用相同的默认值。 */
+export function legacyAnnotationHealth(annotation) {
+  return {
+    lifecycleStatus: annotation?.lifecycleStatus ?? (annotation?.status === 'archived' ? 'archived' : 'active'),
+    anchorStatus: annotation?.anchorStatus ?? (annotation?.status === 'stale' ? 'needsReview' : 'resolved')
+  };
+}
+
 /** 旧重点不再跟随正文；无法确认原摘录时，保守降级其来源。 */
 export function legacyAnnotationSourceChange(annotation, before, after) {
+  const { lifecycleStatus, anchorStatus } = legacyAnnotationHealth(annotation);
   if (
-    annotation?.schemaVersion === INLINE_ANNOTATION_SCHEMA ||
-    annotation?.lifecycleStatus !== 'active' ||
+    !annotation ||
+    annotation.schemaVersion === INLINE_ANNOTATION_SCHEMA ||
+    lifecycleStatus !== 'active' ||
     typeof before !== 'string' ||
     typeof after !== 'string' ||
     sameKnowraText(before, after)
   )
     return null;
   if (!stripKnowraMarks(after).trim()) {
-    return annotation.anchorStatus === 'missing' ? null : { anchorStatus: 'missing', anchorReason: 'sourceDeleted' };
+    return anchorStatus === 'missing' ? null : { anchorStatus: 'missing', anchorReason: 'sourceDeleted' };
   }
-  if (annotation.anchorStatus === 'missing' || annotation.anchorStatus === 'needsReview') return null;
+  if (anchorStatus === 'missing' || anchorStatus === 'needsReview') return null;
   if (annotation.schemaVersion === 2 && annotation.anchor) {
     try {
       const resolved = resolveAnchor(after, annotation.anchor);

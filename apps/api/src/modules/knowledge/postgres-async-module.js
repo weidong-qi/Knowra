@@ -342,6 +342,7 @@ export function createPostgresKnowledgeModule({
     'retireEvidence',
     'markEvidenceByNoteId',
     'markEvidenceByAnnotationId',
+    'reconcileEvidenceByAnnotationIds',
     'markEvidenceByNoteVersionId'
   ]) {
     knowledgeItemService[method] = (...args) =>
