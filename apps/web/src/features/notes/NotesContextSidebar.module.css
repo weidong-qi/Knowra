@@ -30,9 +30,10 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 8px 8px;
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-color: transparent transparent;
   scrollbar-width: thin;
 }
+.scrollBody:hover { scrollbar-color: var(--border-strong) transparent; }
 
 .section { padding-top: 14px; }
 .section:first-child { padding-top: 8px; }
@@ -71,7 +72,7 @@
 .sectionToggle:hover { color: var(--text-primary); }
 .sectionChevron { display: inline-flex; transition: transform var(--motion-fast) var(--motion-ease); }
 .sectionChevron[data-expanded] { transform: rotate(90deg); }
-.sectionBody, .folderTree { display: grid; gap: 2px; }
+.sectionBody, .folderTree { display: grid; gap: 1px; }
 .sectionBody[hidden] { display: none; }
 
 .folderRow, .documentRow {
@@ -89,9 +90,9 @@
   transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
 
-.folderRow { min-height: 34px; grid-template-columns: 18px minmax(0, 1fr) auto; padding: 4px 8px 4px 2px; }
-.documentRow { min-height: 34px; grid-template-columns: 18px minmax(0, 1fr); padding: 4px 8px; }
-.folderRow > svg { color: var(--accent); }
+.folderRow { min-height: 30px; grid-template-columns: 18px minmax(0, 1fr) auto; padding: 4px 8px 4px 2px; }
+.documentRow { min-height: 30px; grid-template-columns: 18px minmax(0, 1fr); padding: 4px 8px; }
+.folderRow > svg { color: color-mix(in srgb, var(--ni-ink-3, var(--text-muted)) 80%, transparent); transition: color var(--motion-fast) var(--motion-ease); }
 .documentRow > svg { color: var(--text-muted); }
 .folderRow:hover, .documentRow:hover { background: var(--surface-hover); color: var(--text-primary); }
 .folderRow:active, .documentRow:active { background: var(--surface-pressed); }
@@ -129,13 +130,13 @@
 
 .folderToggle {
   width: 18px;
-  min-height: 34px;
+  min-height: 30px;
   display: grid;
   place-items: center;
   border: 0;
   border-radius: var(--radius-control);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--ni-ink-4, var(--border-control));
 }
 
 .folderToggle:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
@@ -209,3 +210,7 @@
 @media (prefers-reduced-motion: reduce) { .trashLid { transition: none; } }
 
 .sidebarContent[data-ni-theme="mono"] .tags { --ink-danger: var(--ni-ink-2); --ink-danger-soft: var(--ni-fill-2); }
+
+/* 区块标题右侧的「＋」「⋮」等操作：平时灰，悬停才变深，不抢文件夹与标签本身。 */
+.sectionHeader button:not(.sectionToggle) { color: var(--ni-ink-3, var(--text-muted)); }
+.sectionHeader button:not(.sectionToggle):hover:not(:disabled) { color: var(--text-primary); }
