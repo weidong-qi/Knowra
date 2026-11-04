@@ -12,7 +12,10 @@
   --ni-glow-dot:0 0 6px color-mix(in srgb,var(--ni-accent) 55%,transparent);
   --shadow-accent:0 0 0 1px color-mix(in srgb,var(--ni-accent) 80%,#000),0 1px 2px rgba(24,30,48,.2),inset 0 1px 0 rgba(255,255,255,.22),0 6px 14px -6px color-mix(in srgb,var(--ni-accent) 55%,transparent);
   --nav-selected-bg:linear-gradient(#ffffffb0,#ffffff65); --nav-selected-line:#dfe2e9; --nav-selected-ink:#283344; --nav-selected-shadow:0 1px 2px #21273506,inset 0 1px #fff;
-  --ni-accent:#f26b1d; --ni-accent-ink:#c4510c;
+  /* 中性为底：accent 走墨色（按钮/选中/焦点），装饰色 deco 单独保留橙色（文件夹、插图、热力格）。 */
+  --ni-accent:#17181b; --ni-accent-ink:#17181b;
+  --ni-deco:#f26b1d; --ni-deco-ink:#c4510c;
+  --button-primary-bg:#17181b; --button-primary-hover:#2e3036; --button-primary-ink:#f7f8fa;
   --ni-accent-soft:color-mix(in srgb,var(--ni-accent) 9%,#fff);
   --ni-accent-line:color-mix(in srgb,var(--ni-accent) 24%,#fff);
   --ni-st-active:#ffb81f; --ni-st-done:#22c55e;
@@ -92,7 +95,7 @@ color-scheme:dark;
   --ni-hover:rgba(255,255,255,.055); --ni-press:rgba(255,255,255,.09);
   --ni-selected:rgba(255,255,255,.09);
   /* 深色下主按钮降亮度、去外发光，避免刺眼。 */
-  --button-primary-bg:color-mix(in srgb,var(--ni-accent) 72%,#17181c); --button-primary-hover:color-mix(in srgb,var(--ni-accent) 82%,#17181c); --button-primary-ink:rgba(255,255,255,.92);
+  --button-primary-bg:#ececee; --button-primary-hover:#ffffff; --button-primary-ink:#131417;
   /* 上下文侧栏左上角的白色柔光（参考 Linear 深色）。 */
   --ni-ctx-glow:radial-gradient(340px 280px at 0% 0%,rgba(255,255,255,.075),transparent 70%);
   /* 工作区面板：同一光源（左上）的白色柔光与顶边渐变高光。 */
@@ -107,7 +110,8 @@ color-scheme:dark;
   --ni-glow-dot:0 0 8px color-mix(in srgb,var(--ni-accent) 60%,transparent);
   --shadow-accent:inset 0 1px 0 rgba(255,255,255,.14),0 0 0 1px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.4);
   --nav-selected-bg:linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.055)); --nav-selected-line:rgba(255,255,255,.1); --nav-selected-ink:#f3f4f6; --nav-selected-shadow:0 1px 2px #21273506,inset 0 1px rgba(255,255,255,.07);
-  --ni-accent:#f26b1d; --ni-accent-ink:#ff9a62;
+  --ni-accent:#ececee; --ni-accent-ink:#ececee;
+  --ni-deco:#f26b1d; --ni-deco-ink:#ff9a62;
   --ni-accent-soft:color-mix(in srgb,var(--ni-accent) 15%,var(--ni-page)); --ni-accent-line:color-mix(in srgb,var(--ni-accent) 38%,var(--ni-page));
   --ni-st-active:#ffc233; --ni-st-done:#34d27b;
   --ni-ambient:transparent;

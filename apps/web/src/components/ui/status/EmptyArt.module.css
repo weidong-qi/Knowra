@@ -1,4 +1,4 @@
-.art { display: block; max-width: 100%; height: auto; --art-accent: var(--ni-accent, var(--accent-solid, #f26b1d)); }
+.art { display: block; max-width: 100%; height: auto; --art-accent: var(--ni-deco, var(--ni-accent, var(--accent-solid, #f26b1d))); }
 .page { fill: var(--ni-surf, #fff); stroke: var(--ni-line-2, rgba(24, 30, 48, .14)); stroke-width: 1.5; }
 .line { fill: var(--ni-fill-3, rgba(24, 30, 48, .07)); }
 .bar { fill: var(--ni-ink-4, #b4b9c6); }

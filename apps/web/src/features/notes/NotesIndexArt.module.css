@@ -4,7 +4,7 @@
 .art[data-color='orange'] { --art-color: var(--ink-warning, #e4b343); }
 .art[data-color='red'] { --art-color: var(--ink-danger, #df6a88); }
 .art[data-color='violet'] { --art-color: var(--ink-violet, #ac84eb); }
-.art[data-color='folder'] { --art-color: var(--ni-accent, var(--accent)); }
+.art[data-color='folder'] { --art-color: var(--ni-deco, var(--ni-accent, var(--accent))); }
 .document, .folder { overflow: visible; filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--ni-ink, #242b38) 16%, transparent)); transition: transform 160ms ease; }
 .paper { fill: var(--ni-surf, var(--surface-page)); stroke: var(--ni-line-2, var(--border-subtle)); }
 .fold { fill: var(--ni-fill-2, var(--surface-hover)); stroke: var(--ni-line, var(--border-subtle)); }

@@ -1,7 +1,7 @@
 .panel { container-type: inline-size; background: var(--glow-panel, none), var(--ni-page); color: var(--ni-ink); }
 .header { flex:none; min-height:52px; display:flex; align-items:center; gap:10px; padding:0 20px; background:var(--ni-glow-divider, linear-gradient(var(--ni-line),var(--ni-line))) bottom/100% 1px no-repeat; }
 .heading { display:flex; align-items:center; gap:8px; min-width:0; flex:0 1 auto; max-width:60%; font-size:14px; letter-spacing:-.01em; }
-.heading > svg { color:var(--ni-accent); }
+.heading > svg { color:var(--ni-deco, var(--ni-accent)); }
 .heading strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
 .heading > span { flex:none; padding:1px 7px; border-radius:999px; font-size:11.5px; color:var(--ni-ink-3); background:var(--ni-fill-3); font-weight:400; font-variant-numeric:tabular-nums; }
 .breadcrumb { min-width:0; flex:1; margin-left:2px; font-size:11px; color:var(--ni-ink-3); opacity:.85; overflow:hidden; }
@@ -25,7 +25,7 @@
 .empty strong { font-size:14px; font-weight:550; color:var(--ni-ink); }
 .empty p { margin:0; }
 .empty > svg { margin-bottom:6px; }
-.emptyArt { width:66px; height:66px; display:grid; place-items:center; border:1px solid var(--ni-line); border-radius:16px; background:var(--ni-surf); color:var(--ni-accent); margin-bottom:10px; }
+.emptyArt { width:66px; height:66px; display:grid; place-items:center; border:1px solid var(--ni-line); border-radius:16px; background:var(--ni-surf); color:var(--ni-deco, var(--ni-accent)); margin-bottom:10px; }
 .bulkBar { position:absolute; z-index:5; left:50%; bottom:42px; transform:translateX(-50%); display:flex; align-items:center; gap:8px; max-width:calc(100% - 24px); padding:6px 12px; border-radius:var(--radius-panel); background:var(--ni-surf); box-shadow:0 0 0 1px var(--ni-line-2),0 8px 32px #0002; font-size:12px; white-space:nowrap; }
 .bulkBar strong { font-size:12px; font-weight:500; }
 .loadState, .loadError, .capabilityNotice { flex:none; margin:0; padding:6px 20px; font-size:12px; line-height:1.6; color:var(--ni-ink-2); border-bottom:1px solid var(--ni-line); }
