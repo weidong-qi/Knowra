@@ -162,24 +162,24 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   assert(textMark);
   await page.mouse.click(textMark.x + textMark.width / 2, textMark.y + textMark.height / 2);
   await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
-  const previousClipboard = await app.evaluate(({ clipboard }) => ({
-    text: clipboard.readText(),
-    html: clipboard.readHTML(),
-    rtf: clipboard.readRTF(),
-    image: [...clipboard.readImage().toPNG()]
-  }));
+  await app.evaluate(async ({ clipboard, ClipboardItem }) => {
+    globalThis.pdfTestClipboard = await Promise.all(
+      (await clipboard.read()).map(
+        async item =>
+          new ClipboardItem(
+            Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)])))
+          )
+      )
+    );
+  });
   try {
     await page.getByRole('button', { name: '复制', exact: true }).click();
-    assert.equal(await app.evaluate(({ clipboard }) => clipboard.readText()), '知境阅读与标注');
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe('知境阅读与标注');
   } finally {
-    await app.evaluate(({ clipboard, nativeImage }, previous) => {
-      clipboard.write({
-        text: previous.text,
-        html: previous.html,
-        rtf: previous.rtf,
-        ...(previous.image.length ? { image: nativeImage.createFromBuffer(Buffer.from(previous.image)) } : {})
-      });
-    }, previousClipboard);
+    await app.evaluate(async ({ clipboard }) => {
+      await clipboard.write(globalThis.pdfTestClipboard);
+      delete globalThis.pdfTestClipboard;
+    });
   }
   assert.deepEqual(foreign, []);
   if (process.env.KNOWRA_E2E_OUTPUT) {

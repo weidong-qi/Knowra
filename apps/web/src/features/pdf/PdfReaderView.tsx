@@ -10,6 +10,7 @@ import { registerDesktopSave } from '../../app/desktopLifecycle';
 import { registerNavigationGuard } from '../../app/navigationGuard';
 import { useNavigate, useLocation } from '../../app/router';
 import { downloadTextFile } from '../../browser/downloadFile';
+import { writeClipboardText } from '../../browser/clipboard';
 import { EditorTabs } from '../editor/EditorTabs';
 import { downloadAttachment } from '../editor/attachmentAccess';
 import { listPdfAnnotations, pdfFileUrl, pdfRequest, randomId } from './pdfApi';
@@ -631,9 +632,11 @@ export function PdfReaderView({
               canWrite={editable}
               onClose={() => setAnnotationAction(null)}
               onCopy={() => {
-                void navigator.clipboard
-                  .writeText(actionItem.quoteText)
-                  .then(() => setAnnotationAction(null))
+                void writeClipboardText(actionItem.quoteText)
+                  .then(copied => {
+                    if (copied) setAnnotationAction(null);
+                    else setError('复制失败，请重试或从标注面板选择原文复制。');
+                  })
                   .catch(() => setError('复制失败，请重试或从标注面板选择原文复制。'));
               }}
               onKind={kind => {
