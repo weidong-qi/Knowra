@@ -1,5 +1,6 @@
 import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.ts';
 import { validationError } from '../knowledge-errors.js';
+import { parseTagColor, type TagColor } from '@study-accelerator/shared/tag-colors';
 
 export interface TagDtoInput {
   id?: unknown;
@@ -16,7 +17,7 @@ export interface CreateTagDto {
   id: string;
   spaceId: string;
   name: string;
-  color: unknown;
+  color: TagColor;
   groupId: string | null;
   code: string | null;
   isSystem: boolean;
@@ -25,13 +26,10 @@ export interface CreateTagDto {
 
 export interface UpdateTagDto {
   name?: string;
-  color?: unknown;
+  color?: TagColor;
   groupId?: string | null;
   sortOrder?: number;
 }
-
-// 别名字典保留普通原型查找；动态 has 不证明值是字符串或颜色枚举。
-const TAG_COLORS = new Set<unknown>(['neutral', 'blue', 'green', 'orange', 'red', 'violet']);
 
 function normalizeName(value: unknown): string {
   const name = requireText(value, 'TAG_NAME_REQUIRED', 'Tag name is required');
@@ -40,25 +38,12 @@ function normalizeName(value: unknown): string {
   return name;
 }
 
-function normalizeColor(value: unknown = 'neutral'): unknown {
-  const aliases: Record<string, unknown> = {
-    slate: 'neutral',
-    cyan: 'blue',
-    amber: 'orange',
-    mastery: 'green',
-    importance: 'orange',
-    purpose: 'blue',
-    '#3c68ff': 'blue'
-  };
-  const color = aliases[String(value).toLowerCase()] ?? String(value).toLowerCase();
-  if (!TAG_COLORS.has(color)) throw validationError('TAG_COLOR_INVALID', 'Tag color is invalid');
+function normalizeColor(value: unknown = 'neutral'): TagColor {
+  const color = parseTagColor(value);
+  if (!color) throw validationError('TAG_COLOR_INVALID', '颜色须为预设色或 #RRGGBB 格式的不透明颜色');
   return color;
 }
 
-export function buildCreateTagDto(
-  input: TagDtoInput & { color?: string | null }
-): Omit<CreateTagDto, 'color'> & { color: string };
-export function buildCreateTagDto(input?: TagDtoInput): CreateTagDto;
 export function buildCreateTagDto(input: TagDtoInput = {}): CreateTagDto {
   const name = normalizeName(input.name);
   return {

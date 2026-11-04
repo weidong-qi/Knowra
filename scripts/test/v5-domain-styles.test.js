@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { tagColorStyle } from '../../apps/web/src/features/tags/tagColor.ts';
 
 const root = resolve(import.meta.dirname, '../../apps/web/src');
 const paths = [
@@ -21,7 +22,7 @@ for (const path of paths)
     assert.match(css, /var\(--text-/);
     assert.match(css, /var\(--radius-/);
   });
-test('领域选择态无左侧强调条，标签蓝色不跟随品牌橙色', () => {
+test('领域选择态无左侧强调条', () => {
   const knowledge = readFileSync(resolve(root, paths[0]), 'utf8');
   const training = readFileSync(resolve(root, paths[2]), 'utf8');
   for (const css of [knowledge, training]) {
@@ -29,6 +30,10 @@ test('领域选择态无左侧强调条，标签蓝色不跟随品牌橙色', ()
       if (/aria-current|\.selected\b/.test(selector)) assert.doesNotMatch(declarations, /border-left|inset/);
     }
   }
+});
+test('标签管理使用共享颜色映射，预设蓝色不跟随品牌色', () => {
   const tags = readFileSync(resolve(root, paths[4]), 'utf8');
-  assert.match(tags, /data-color=['"]blue['"][^}]+var\(--color-info/);
+  assert.match(tags, /\.color\s+i\s*\{[^}]*background:\s*var\(--tag-color\)/);
+  assert.deepEqual(tagColorStyle('blue'), { '--tag-color': 'var(--color-info)' });
+  assert.deepEqual(tagColorStyle('#3C68FF'), { '--tag-color': '#3c68ff' });
 });

@@ -1,4 +1,5 @@
 import { validatePdfRelations } from '@study-accelerator/shared/pdf';
+import { parseTagColor } from '@study-accelerator/shared/tag-colors';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { calculateContentHash, projectMarkdown, resolveAnchor, listTracking } from '@study-accelerator/content-anchor';
 import { nextKnowledgeItemTimestamp } from '../modules/knowledge/application/knowledge-item-concurrency.js';
@@ -160,15 +161,6 @@ function normalizeTagSystem(state) {
   for (const group of state.tagGroups) {
     if (!groupsById.has(group.id)) groupsById.set(group.id, group);
   }
-  const colors = {
-    slate: 'neutral',
-    cyan: 'blue',
-    amber: 'orange',
-    mastery: 'green',
-    importance: 'orange',
-    purpose: 'blue',
-    '#3c68ff': 'blue'
-  };
   for (const space of state.spaces) {
     buildDefaultTagGroups(space.id).forEach(group => {
       if (!groupsById.has(group.id)) {
@@ -178,7 +170,7 @@ function normalizeTagSystem(state) {
     });
   }
   state.tags.forEach((tag, index) => {
-    tag.color = colors[String(tag.color ?? 'neutral').toLowerCase()] ?? tag.color ?? 'neutral';
+    tag.color = parseTagColor(tag.color ?? 'neutral') ?? tag.color ?? 'neutral';
     tag.isSystem = Boolean(tag.isSystem);
     tag.sortOrder = Number(tag.sortOrder) || index + 1;
     if (!tag.groupId) tag.groupId = `tag-group-${tag.spaceId}-ordinary`;
