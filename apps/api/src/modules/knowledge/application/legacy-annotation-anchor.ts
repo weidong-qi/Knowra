@@ -10,7 +10,7 @@ import {
 import { knowraMarkSpans, stripKnowraMarksMapped } from '@study-accelerator/shared/knowra-marks';
 
 /** 去标记会连同标记前的行尾空白一起移除，比较摘录和标题时忽略这类空白。 */
-const sameText = (a: string | undefined, b: string | undefined) =>
+export const sameAnchorText = (a: string | undefined, b: string | undefined) =>
   (a ?? '').replace(/[ \t]+(?=\n|$)/g, '') === (b ?? '').replace(/[ \t]+(?=\n|$)/g, '');
 
 /** 将去标记后的范围映回当前正文，拆开穿过标记语法的区间。 */
@@ -47,9 +47,9 @@ function rebuildCleanAnchor(
     rebuilt = anchorForSection(projection, index);
     if (
       rebuilt.section?.headingLevel !== anchor.section.headingLevel ||
-      !sameText(rebuilt.section?.title, anchor.section.title) ||
+      !sameAnchorText(rebuilt.section?.title, anchor.section.title) ||
       rebuilt.section?.endBoundaryLevel !== anchor.section.endBoundaryLevel ||
-      !sameText(rebuilt.section?.endBoundaryTitle, anchor.section.endBoundaryTitle)
+      !sameAnchorText(rebuilt.section?.endBoundaryTitle, anchor.section.endBoundaryTitle)
     )
       return null;
   } else if (anchor.scopeType === 'list' && anchor.list) {
@@ -70,7 +70,7 @@ function rebuildCleanAnchor(
     });
   } else return null;
   if (
-    !sameText(rebuilt.quoteText, anchor.quoteText) ||
+    !sameAnchorText(rebuilt.quoteText, anchor.quoteText) ||
     rebuilt.sourceStart !== source.toClean(anchor.sourceStart) ||
     rebuilt.sourceEnd !== source.toClean(anchor.sourceEnd)
   )
@@ -116,7 +116,7 @@ export function resolveLegacyAnnotationAnchor(
   } catch {
     // 去标记后原节点可能消失，仍可尝试在同一偏移重建节点路径。
   }
-  if (!baseline || baseline.status !== 'resolved' || !sameText(baseline.quoteText, anchor.quoteText)) {
+  if (!baseline || baseline.status !== 'resolved' || !sameAnchorText(baseline.quoteText, anchor.quoteText)) {
     try {
       const rebuilt = rebuildCleanAnchor(source, anchor);
       if (!rebuilt) return { ...original, status: 'needsReview', reason: 'legacySourceUnverified' };
@@ -126,7 +126,7 @@ export function resolveLegacyAnnotationAnchor(
       return { ...original, status: 'needsReview', reason: 'legacySourceUnverified' };
     }
   }
-  if (baseline.status !== 'resolved' || !sameText(baseline.quoteText, anchor.quoteText))
+  if (baseline.status !== 'resolved' || !sameAnchorText(baseline.quoteText, anchor.quoteText))
     return { ...baseline, status: 'needsReview', reason: 'legacySourceUnverified' };
 
   const current = stripKnowraMarksMapped(markdown);

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { AppError } from '../src/errors/app-error.js';
-import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.js';
+import {
+  createContentAnnotationService,
+  legacyAnnotationSourceChange
+} from '../src/modules/knowledge/application/content-annotation-service.js';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.js';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
@@ -112,6 +115,37 @@ export const contentAnnotationServiceTests = [
           ).status,
           'needsReview'
         );
+      }
+    }
+  },
+  {
+    name: '旧来源含行尾块级标记时，编辑无关正文不会把旧重点降级为来源变化',
+    run() {
+      const cases = [
+        ['# 标题 <!--k already s=section-->\n\n正文\n', m => anchorForSection(projectMarkdown(m), 0)],
+        [
+          '- 条目 <!--k already s=list-->\n- 其他\n',
+          m => {
+            const projection = projectMarkdown(m);
+            return anchorForListItem(projection, projection.listItems[0].path, false);
+          }
+        ],
+        [
+          '甲段 <!--k already s=block-->\n\n乙段\n',
+          m => anchorForSourceRange(projectMarkdown(m), 0, m.indexOf('乙') + 1, { scopeType: 'selection' })
+        ]
+      ];
+      for (const [source, build] of cases) {
+        const anchor = build(source);
+        const annotation = legacyRow({
+          schemaVersion: 2,
+          quoteText: anchor.quoteText,
+          fromPosition: anchor.sourceStart,
+          toPosition: anchor.sourceEnd,
+          anchor
+        });
+        const sourceVersion = { noteId: annotation.noteId, content: source };
+        assert.equal(legacyAnnotationSourceChange(annotation, source, `${source}\n追加`, sourceVersion), null);
       }
     }
   },
