@@ -27,6 +27,7 @@ interface PdfReaderToolbarProps {
   onOutline(): void;
   onDownload(): Promise<void>;
   onExport(): Promise<void>;
+  onExtract(): Promise<void>;
   onPanel(): void;
   onTool(tool: string): void;
 }
@@ -44,6 +45,7 @@ export function PdfReaderToolbar({
   onOutline,
   onDownload,
   onExport,
+  onExtract,
   onPanel,
   onTool
 }: PdfReaderToolbarProps) {
@@ -151,12 +153,16 @@ export function PdfReaderToolbar({
               if (key === 'favorite') void onFavorite();
               if (key === 'download') void onDownload();
               if (key === 'export') void onExport();
+              if (key === 'extract') void onExtract();
             }}
           >
             <MenuItem id="favorite" isDisabled={!canWrite}>
               {note.favorite ? '取消收藏' : '收藏'}
             </MenuItem>
             <MenuItem id="download">下载原文件</MenuItem>
+            <MenuItem id="extract" isDisabled={!loaded || !canWrite}>
+              提取到笔记
+            </MenuItem>
             <MenuItem id="export" isDisabled={!loaded}>
               导出摘录
             </MenuItem>

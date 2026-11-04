@@ -18,6 +18,7 @@ import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
 import { exportPdfExcerpt, rectToPdf, type PdfSelection } from './pdfGeometry';
 import { paintPdfAnnotations, readPdfSelection } from './pdfOverlay';
+import { buildPdfExtractNote } from './pdfExtract';
 import { PdfSelectionBar, type PdfBarAnchor } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
@@ -256,6 +257,21 @@ export function PdfReaderView({
       setError(String(reason));
     }
   }
+  async function extractToNote() {
+    try {
+      await session.flush();
+      const markdown = buildPdfExtractNote(note.title, note.id, session.values());
+      if (!markdown) {
+        setError('还没有可提取的标注。');
+        return;
+      }
+      const id = await store.createNote(note.folderId, `${note.title} · 摘录`);
+      await store.saveNoteContent(id, markdown);
+      onOpenNote(id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    }
+  }
   async function downloadOriginal() {
     try {
       const attachments = await store.listNoteAttachments(note.id);
@@ -386,6 +402,7 @@ export function PdfReaderView({
             }}
             onDownload={downloadOriginal}
             onExport={exportExcerpt}
+            onExtract={extractToNote}
             onPanel={() => {
               setPanel(panel && panelTab === 'marks' ? false : true);
               setPanelTab('marks');
