@@ -114,7 +114,8 @@ test('真实章节重点：代码新增内容后保存、重新选来源和重�
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       const colors = [];
       while (walker.nextNode()) {
-        if (walker.currentNode.textContent.trim()) colors.push(getComputedStyle(walker.currentNode.parentElement).color);
+        if (walker.currentNode.textContent.trim())
+          colors.push(getComputedStyle(walker.currentNode.parentElement).color);
       }
       return colors;
     });
@@ -130,15 +131,18 @@ test('真实章节重点：代码新增内容后保存、重新选来源和重�
   await expect(code).toContainText('新增行');
   await expectCodeColor();
   await expect.poll(() => k.contentAnnotationService.getAnnotation(annotation.id).quoteText).toContain('新增行');
-  await editor.locator('h2').first().evaluate(el => {
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    range.collapse(true);
-    el.closest('[contenteditable]').focus();
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-    document.dispatchEvent(new Event('selectionchange'));
-  });
+  await editor
+    .locator('h2')
+    .first()
+    .evaluate(el => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(true);
+      el.closest('[contenteditable]').focus();
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.dispatchEvent(new Event('selectionchange'));
+    });
   await page.getByRole('button', { name: '切换文档检查器', exact: true }).click();
   await page.getByRole('tab', { name: '标注', exact: true }).click();
   await page.getByRole('button', { name: '重点 1 更多操作' }).click();
