@@ -54,11 +54,29 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           persist-credentials: false
+      # 镜像验证的是后端、数据库与部署连线。PR 若只改文档或前端源码/端到端规格，则跳过；
+      # main push、手动触发以及其他任何改动都照常运行。作业本身仍成功，汇总门禁不受影响。
+      - name: Decide whether the isolated image is needed
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          run=true
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            remaining="$(git diff --name-only "$BASE_SHA" HEAD | grep -Ev '^(docs/|apps/web/(src|e2e|public)/)|\.md$' || true)"
+            [[ -n "$remaining" ]] || run=false
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "isolated image: run=$run" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@v6
+        if: steps.scope.outputs.run == 'true'
         with:
           node-version: '24'
       - name: Build and verify isolated synthetic containers
+        if: steps.scope.outputs.run == 'true'
         run: bash scripts/smoke-isolated-compose.sh
   checks:
     name: Node 24 · fast checks
