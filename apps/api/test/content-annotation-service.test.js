@@ -142,7 +142,8 @@ export const contentAnnotationServiceTests = [
           quoteText: anchor.quoteText,
           fromPosition: anchor.sourceStart,
           toPosition: anchor.sourceEnd,
-          anchor
+          anchor,
+          originSnapshot: { quoteText: anchor.quoteText, segments: anchor.segments }
         });
         const sourceVersion = { noteId: annotation.noteId, content: source };
         assert.equal(legacyAnnotationSourceChange(annotation, source, `${source}\n追加`, sourceVersion), null);
