@@ -1,0 +1,71 @@
+/* 首页欢迎区：像网站首屏，文案在左、插画在右；窄屏上下堆叠。 */
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-6);
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+  background: radial-gradient(520px 320px at 100% 0%, var(--accent-soft), transparent 70%), var(--surface-raised);
+  box-shadow: var(--shadow-card);
+}
+.copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-1);
+  color: var(--text-secondary);
+  font: 500 var(--font-size-meta)/1.5 var(--font-ui);
+}
+.version {
+  color: var(--text-muted);
+}
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(34px, 5vw, 52px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.subtitle {
+  max-width: 460px;
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--text-body, var(--text-secondary));
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.actions kbd {
+  margin-left: var(--space-1);
+  font: 500 11px/1 var(--font-ui);
+  opacity: 0.7;
+}
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-5);
+  }
+  .hero > :last-child {
+    order: -1;
+    max-width: 300px;
+    justify-self: center;
+  }
+}

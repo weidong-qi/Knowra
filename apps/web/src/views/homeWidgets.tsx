@@ -8,7 +8,7 @@ import { Button } from '../components/ui/button/Button';
 import { EmptyState } from '../components/ui/status';
 import { ClockIcon } from '../components/icons/knowra';
 import type { HomeStats } from './homeViewModel';
-import { HeatmapBlock, RecentNotes, StatsTiles, StatusBlock, TagsBlock } from './HomeActivity';
+import { HeatmapBlock, RecentCards, StatsTiles, StatusBlock, TagsBlock } from './HomeActivity';
 import { Workbenches } from './HomeWorkbenches';
 
 export type HomeWidgetId = 'recent' | 'stats' | 'heatmap' | 'status' | 'tags' | 'workbenches';
@@ -54,7 +54,6 @@ export const HOME_WIDGETS: Record<HomeWidgetId, HomeWidgetDefinition> = {
   recent: {
     title: '最近编辑',
     icon: <ClockIcon size={14} />,
-    flush: true,
     actions: ctx => (
       <Button variant="ghost" size="compact" onClick={ctx.onOpenMaterials} isDisabled={!ctx.onOpenMaterials}>
         查看全部
@@ -62,7 +61,7 @@ export const HOME_WIDGETS: Record<HomeWidgetId, HomeWidgetDefinition> = {
     ),
     render: ctx =>
       ctx.stats.recentNotes.length ? (
-        <RecentNotes notes={ctx.stats.recentNotes.slice(0, 7)} tags={ctx.tags} onOpen={ctx.onSelectNote} />
+        <RecentCards notes={ctx.stats.recentNotes.slice(0, 4)} tags={ctx.tags} onOpen={ctx.onSelectNote} />
       ) : (
         <EmptyState
           title="还没有资料"

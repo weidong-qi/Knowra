@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button/Button';
 import { EmptyState, LoadingState } from '../components/ui/status';
 import { RefreshIcon } from '../components/icons/knowra';
 import styles from './HomeView.module.css';
-import { HomeHeader } from './HomeHeader';
+import { HomeHero } from './HomeHero';
 import { HomeWidget } from './HomeWidget';
 import { DEFAULT_HOME_LAYOUT, HOME_WIDGETS, type HomeWidgetArea, type HomeWidgetContext } from './homeWidgets';
 import { computeStats, greetingFor, formatToday, summaryLine } from './homeViewModel';
@@ -52,7 +52,7 @@ export function HomeView({
   if (loadState === 'loading' && notes.length === 0 && dataMode !== 'cache') {
     return (
       <div className={styles.view}>
-        <HomeHeader
+        <HomeHero
           id="home-title-loading"
           today={today}
           title={greeting}
@@ -69,7 +69,7 @@ export function HomeView({
   if (loadState === 'error' && notes.length === 0) {
     return (
       <div className={styles.view}>
-        <HomeHeader
+        <HomeHero
           id="home-title-error"
           today={today}
           title={greeting}
@@ -123,7 +123,7 @@ export function HomeView({
 
   return (
     <div className={styles.view}>
-      <HomeHeader
+      <HomeHero
         id="home-title"
         today={today}
         title={greeting}
