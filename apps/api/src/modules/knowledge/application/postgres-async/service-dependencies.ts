@@ -21,6 +21,9 @@ export type StoredAnchorReconciliation = Omit<
   anchor?: import('@prisma/client').Prisma.JsonValue | import('@study-accelerator/content-anchor').ContentAnchor;
 };
 export interface PostgresRepositories {
+  pdfAnnotationRepository: ReturnType<
+    typeof import('../../../pdf/repository.ts').createPostgresPdfAnnotationRepository
+  >;
   tagRepository: ReturnType<
     typeof import('../../infrastructure/postgres/tag-repository.ts').createPostgresTagRepository
   >;
@@ -228,6 +231,7 @@ export interface PostgresModuleDependencies extends Partial<PostgresRepositories
       import('../../infrastructure/postgres/content-annotation-repository.ts').ContentAnnotationRepositoryOptions['db'] &
       import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationExclusionRepositoryOptions['db'] &
       import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationRevisionRepositoryOptions['db'] &
+      import('../../../pdf/repository.ts').PdfAnnotationRepositoryOptions['db'] &
       import('../../infrastructure/postgres/annotation-support-repositories.ts').AnalysisScopeRepositoryOptions['db']
   >;
   getPurgeTombstone?: TransactionDependencies['getTombstone'];

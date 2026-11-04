@@ -6,6 +6,7 @@ import {
 } from './application/inline-annotations.js';
 import { createAsyncNoteDependencyLifecycle } from './application/postgres-async/note-dependency-lifecycle.js';
 import { createAsyncSpaceAssetLifecycle } from './application/postgres-async/space-asset-lifecycle.js';
+import { createPostgresPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createAsyncNavigationReferencePolicy } from './application/postgres-async/navigation-reference-policy.js';
 import {
   asyncTaskCoverage,
@@ -64,6 +65,7 @@ export function createPostgresKnowledgeModule({
   tagGroupRepository,
   knowledgeSpaceRepository,
   contentAnnotationRepository,
+  pdfAnnotationRepository,
   annotationExclusionRepository,
   annotationRevisionRepository,
   analysisScopeRepository,
@@ -89,6 +91,7 @@ export function createPostgresKnowledgeModule({
     tagGroupRepository,
     knowledgeSpaceRepository,
     contentAnnotationRepository,
+    pdfAnnotationRepository,
     annotationExclusionRepository,
     annotationRevisionRepository,
     analysisScopeRepository,
@@ -118,6 +121,7 @@ export function createPostgresKnowledgeModule({
     knowledgeEvidenceRepository,
     knowledgeArtifactProvenanceRepository,
     contentAnnotationRepository,
+    pdfAnnotationRepository,
     annotationExclusionRepository,
     annotationRevisionRepository,
     analysisScopeRepository,
@@ -211,6 +215,7 @@ export function createPostgresKnowledgeModule({
                 knowledgeEvidenceRepository: createPostgresKnowledgeEvidenceRepository({ db: tx }),
                 knowledgeArtifactProvenanceRepository: createPostgresKnowledgeArtifactProvenanceRepository({ db: tx }),
                 contentAnnotationRepository: createPostgresContentAnnotationRepository({ db: tx }),
+                pdfAnnotationRepository: createPostgresPdfAnnotationRepository({ db: tx }),
                 annotationExclusionRepository: createPostgresAnnotationExclusionRepository({ db: tx }),
                 annotationRevisionRepository: createPostgresAnnotationRevisionRepository({ db: tx }),
                 analysisScopeRepository: createPostgresAnalysisScopeRepository({ db: tx }),
@@ -679,6 +684,7 @@ export function createPostgresKnowledgeModule({
       tagRepository,
       tagGroupRepository,
       contentAnnotationRepository,
+      pdfAnnotationRepository,
       analysisScopeRepository,
       noteVersionRepository,
       runTransaction

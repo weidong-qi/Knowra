@@ -15,6 +15,63 @@ import { createAppStore } from '../store/createAppStore';
 import { registerNavigationGuard } from './navigationGuard';
 
 describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
+  it.each(['/settings', '/settings?tab=workspace'])(
+    '直达或刷新设置页 %s 时加载工作区，成功前保持备份导入只读',
+    async pathname => {
+      for (const attempt of ['首次直达', '刷新重建']) {
+        const api = createWorkspaceApiStub();
+        let complete!: (value: Awaited<ReturnType<WorkspaceApi['loadWorkspaceResources']>>) => void;
+        vi.mocked(api.loadWorkspaceResources).mockReturnValueOnce(
+          new Promise(resolve => {
+            complete = resolve;
+          })
+        );
+        const store = createAppStore({
+          api,
+          cacheKey: `settings-${attempt}`,
+          mockSnapshot: createEmptyWorkspaceSnapshot()
+        });
+        const view = render(
+          <RouterProvider location={{ pathname, navigate: vi.fn() }}>
+            <AppProviders store={store}>
+              <App />
+            </AppProviders>
+          </RouterProvider>
+        );
+        const button = screen.getByRole('button', { name: '导入资料库…' });
+        await waitFor(() => expect(api.loadWorkspaceResources).toHaveBeenCalledTimes(1));
+        expect(button).toBeDisabled();
+        expect(store.getState().canWriteWorkspace()).toBe(false);
+        await act(async () => complete({ folderTree: [], notes: [], tags: [] }));
+        await waitFor(() => expect(button).toBeEnabled());
+        expect(api.listKnowledgeSpaces).toHaveBeenCalledTimes(1);
+        expect(store.getState().dataMode).toBe('api');
+        view.unmount();
+      }
+    }
+  );
+
+  it('直达设置页的工作区加载失败时，备份导入继续只读', async () => {
+    const api = createWorkspaceApiStub();
+    vi.mocked(api.loadWorkspaceResources).mockRejectedValueOnce(new Error('资料服务不可用'));
+    const store = createAppStore({
+      api,
+      cacheKey: 'settings-load-error',
+      mockSnapshot: createEmptyWorkspaceSnapshot()
+    });
+    render(
+      <RouterProvider location={{ pathname: '/settings', navigate: vi.fn() }}>
+        <AppProviders store={store}>
+          <App />
+        </AppProviders>
+      </RouterProvider>
+    );
+    await waitFor(() => expect(store.getState().workspaceLoadState).toBe('error'));
+    expect(store.getState().canWriteWorkspace()).toBe(false);
+    expect(screen.getByRole('button', { name: '导入资料库…' })).toBeDisabled();
+    expect(store.getState().workspaceError).toBe('资料服务不可用');
+  });
+
   it('deduplicates workspace loading under React Strict Mode and renders the home shell', async () => {
     const api = createWorkspaceApiStub();
     const store = createAppStore({

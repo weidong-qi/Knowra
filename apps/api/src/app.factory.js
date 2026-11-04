@@ -12,6 +12,7 @@ import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-
 import { createFileDataStore } from './infrastructure/file-data-store.js';
 import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.js';
 import { createInMemoryNoteRepository } from './modules/knowledge/infrastructure/note-repository.js';
+import { createInMemoryPdfAnnotationRepository } from './modules/pdf/repository.ts';
 import { createInMemoryFolderRepository } from './modules/knowledge/infrastructure/folder-repository.js';
 import { createInMemoryTagRepository } from './modules/knowledge/infrastructure/tag-repository.js';
 import { createInMemoryTagGroupRepository } from './modules/knowledge/infrastructure/tag-group-repository.js';
@@ -80,6 +81,11 @@ export function createAppContext(options = {}) {
       : null);
 
   const knowledge = createKnowledgeModule({
+    pdfAnnotationRepository:
+      options.pdfAnnotationRepository ??
+      (dataStore
+        ? createInMemoryPdfAnnotationRepository({ records: dataStore.state.pdfAnnotations, onChange: dataStore.flush })
+        : undefined),
     noteRepository:
       options.noteRepository ??
       (dataStore

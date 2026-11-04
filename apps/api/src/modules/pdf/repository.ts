@@ -1,4 +1,5 @@
 import { validatePdfAnnotation } from '@study-accelerator/shared/pdf';
+import type { Prisma } from '@prisma/client';
 function readAnnotation(value: unknown): PdfStoredAnnotation {
   validatePdfAnnotation(value);
   return value as PdfStoredAnnotation;
@@ -186,6 +187,57 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
           return current;
         });
       return db!.attachment.update({ where: { id: attachment.id }, data: { status: 'ready', verifiedAt: new Date() } });
+    }
+  };
+}
+
+interface PdfAnnotationListOptions {
+  spaceId?: string;
+  includeDeleted?: boolean;
+}
+export interface PdfAnnotationRepositoryOptions {
+  db: Pick<Prisma.TransactionClient, 'pdfAnnotation'>;
+}
+export function createInMemoryPdfAnnotationRepository({
+  records = [],
+  onChange
+}: { records?: PdfStoredAnnotation[]; onChange?: () => void } = {}) {
+  return {
+    list({ spaceId, includeDeleted = false }: PdfAnnotationListOptions = {}) {
+      return structuredClone(
+        records.filter(item => (!spaceId || item.spaceId === spaceId) && (includeDeleted || !item.deletedAt))
+      );
+    },
+    save(record: PdfStoredAnnotation) {
+      validatePdfAnnotation(record);
+      const index = records.findIndex(item => item.id === record.id);
+      if (index < 0) records.push(structuredClone(record));
+      else records[index] = structuredClone(record);
+      onChange?.();
+      return structuredClone(record);
+    }
+  };
+}
+export function createPostgresPdfAnnotationRepository({ db }: PdfAnnotationRepositoryOptions) {
+  return {
+    supportsAsync: true,
+    async list({ spaceId, includeDeleted = false }: PdfAnnotationListOptions = {}) {
+      const rows = await db.pdfAnnotation.findMany({
+        where: spaceId ? { payload: { path: ['spaceId'], equals: spaceId } } : {},
+        orderBy: { id: 'asc' }
+      });
+      return rows.map(row => readAnnotation(row.payload)).filter(item => includeDeleted || !item.deletedAt);
+    },
+    async save(record: PdfStoredAnnotation) {
+      validatePdfAnnotation(record);
+      const row = await db.pdfAnnotation.update({
+        where: { id: record.id },
+        data: {
+          revision: record.revision,
+          payload: { ...record, segments: record.segments.map(segment => ({ ...segment })) }
+        }
+      });
+      return readAnnotation(row.payload);
     }
   };
 }

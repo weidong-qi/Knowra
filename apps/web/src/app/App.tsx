@@ -43,6 +43,7 @@ import styles from './App.module.css';
 export function App() {
   useMaterialsRoute();
   const location = useLocation();
+  const routePathname = location.pathname.split('?')[0];
   const navigate = useNavigate();
   const storeActiveDomain = useAppStore((state) => state.navigation.activeWorkDomain);
   const setActiveWorkDomain = useAppStore((state) => state.setActiveWorkDomain);
@@ -81,8 +82,14 @@ export function App() {
     applyAppPreferences(preferences);
   }, [preferences]);
 
-  const shouldLoadWorkspace = location.pathname === '/' || location.pathname.startsWith('/assistant') || location.pathname.startsWith('/materials') || location.pathname.startsWith('/knowledge') || location.pathname.startsWith('/training');
-  // 仅在 / 路由（非 /showcase）触发 workspace 加载。
+  const shouldLoadWorkspace =
+    routePathname === '/' ||
+    routePathname === '/settings' ||
+    routePathname.startsWith('/assistant') ||
+    routePathname.startsWith('/materials') ||
+    routePathname.startsWith('/knowledge') ||
+    routePathname.startsWith('/training');
+  // 设置页的备份导入也依赖工作区写入状态；组件展台仍不触发加载。
   useEffect(() => {
     if (!shouldLoadWorkspace) return;
     void loadWorkspace();
@@ -175,7 +182,6 @@ export function App() {
   }, [location.pathname, storeActiveDomain]);
 
   const canWrite = canWriteWorkspace();
-  const routePathname = location.pathname.split('?')[0];
   const isShowcaseActive = routePathname.startsWith('/showcase');
   const isSettingsActive = routePathname === '/settings';
   const isAssistantActive = routePathname === '/assistant';

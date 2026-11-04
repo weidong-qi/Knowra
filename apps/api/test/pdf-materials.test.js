@@ -8,7 +8,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { createServer } from '../src/server.js';
-import { MAX_PDF_BYTES } from '@study-accelerator/shared/pdf';
+import { MAX_PDF_BYTES, validatePdfRelations } from '@study-accelerator/shared/pdf';
 import { syntheticPdf } from '../../../scripts/test-support/pdf-fixtures.mjs';
 
 async function fixture(run) {
@@ -30,6 +30,67 @@ async function fixture(run) {
   }
 }
 export const pdfMaterialsTests = [
+  {
+    name: 'PDF 空间迁移包含标注与墓碑：预览失效、同事务回滚与重启一致性',
+    run: () =>
+      fixture(async ({ pdf, input, context, store, root }) => {
+        const knowledge = context.modules.knowledge;
+        const note = await pdf.importPdf(input, Readable.from([syntheticPdf()]));
+        const target = knowledge.knowledgeSpaceService.createKnowledgeSpace({ userId: 'demo', name: '目标空间' });
+        for (const id of ['live', 'deleted']) {
+          await pdf.mutate(note.id, id, {
+            operationId: `create-${id}`,
+            expectedRevision: 0,
+            type: 'region',
+            segments: [{ pageIndex: 0, rect: [10, 10, 40, 40] }]
+          });
+        }
+        await pdf.mutate(note.id, 'deleted', { operationId: 'delete', expectedRevision: 1 }, true);
+        const preview = knowledge.previewSpaceMigration(input.spaceId, target.id, 'demo');
+        assert.equal(preview.counts.pdfAnnotations, 2);
+        await pdf.mutate(note.id, 'live', { operationId: 'edit', expectedRevision: 1, comment: '预览后修改评论' });
+        assert.throws(
+          () =>
+            knowledge.migrateSpaceAssets(
+              input.spaceId,
+              { targetSpaceId: target.id, expectedPreviewHash: preview.previewHash },
+              'demo'
+            ),
+          { code: 'SPACE_MIGRATION_PREVIEW_STALE' }
+        );
+        const current = knowledge.previewSpaceMigration(input.spaceId, target.id, 'demo');
+        assert.notEqual(current.previewHash, preview.previewHash);
+        const migration = { targetSpaceId: target.id, expectedPreviewHash: current.previewHash };
+        const before = structuredClone(store.state);
+        const repository = knowledge.repositories.pdfAnnotationRepository;
+        const save = repository.save;
+        repository.save = record => {
+          const saved = save(record);
+          if (record.id === 'deleted') throw new Error('模拟 PDF 标注迁移失败');
+          return saved;
+        };
+        try {
+          assert.throws(() => knowledge.migrateSpaceAssets(input.spaceId, migration, 'demo'), /PDF 标注迁移失败/);
+        } finally {
+          repository.save = save;
+        }
+        assert.deepEqual(store.state, before);
+        assert.equal(knowledge.migrateSpaceAssets(input.spaceId, migration, 'demo').status, 'scoped-assets-migrated');
+        assert.equal(store.state.notes.find(item => item.id === note.id).spaceId, target.id);
+        assert.deepEqual(
+          store.state.pdfAnnotations,
+          before.pdfAnnotations.map(item => ({ ...item, spaceId: target.id, revision: item.revision + 1 }))
+        );
+        await assert.rejects(
+          pdf.mutate(note.id, 'live', { operationId: 'stale-after-move', expectedRevision: 2, comment: '旧窗口保存' }),
+          { code: 'PDF_ANNOTATION_CONFLICT' }
+        );
+        validatePdfRelations(store.state);
+        const reopened = createFileDataStore(path.join(root, 'data.json'));
+        assert.deepEqual(reopened.state.pdfAnnotations, store.state.pdfAnnotations);
+        validatePdfRelations(reopened.state);
+      })
+  },
   {
     name: 'PDF 独立资料与标注：幂等、并发、重启、原文件身份和原子回滚',
     run: () =>

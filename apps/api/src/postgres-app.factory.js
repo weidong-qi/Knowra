@@ -15,6 +15,7 @@ import { createPostgresSnapshotService } from './infrastructure/postgres-snapsho
 import { createPostgresKnowledgeModule } from './modules/knowledge/postgres-async-module.js';
 import { createPostgresKnowledgeHttpHandlers } from './modules/knowledge/http/postgres-async-handlers.js';
 import { createPostgresNoteRepository } from './modules/knowledge/infrastructure/postgres/note-repository.ts';
+import { createPostgresPdfAnnotationRepository } from './modules/pdf/repository.ts';
 import { createPostgresFolderRepository } from './modules/knowledge/infrastructure/postgres/folder-repository.ts';
 import { createPostgresTagRepository } from './modules/knowledge/infrastructure/postgres/tag-repository.ts';
 import { createPostgresTagGroupRepository } from './modules/knowledge/infrastructure/postgres/tag-group-repository.ts';
@@ -96,6 +97,7 @@ export async function createPostgresAppContext({
   const aiBudget = createPostgresBudgetAuthority(db);
 
   const repositories = {
+    pdfAnnotationRepository: createPostgresPdfAnnotationRepository({ db }),
     noteRepository: createPostgresNoteRepository({ db }),
     folderRepository: createPostgresFolderRepository({ db }),
     tagRepository: createPostgresTagRepository({ db }),
