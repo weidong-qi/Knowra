@@ -12,7 +12,16 @@ import { syntheticCjkPdf } from '../../../scripts/test-support/pdf-fixtures.mjs'
 test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退出评论保存', { timeout: 90000 }, async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-packaged-pdf-'));
   let app;
+  let completed = false;
   t.after(async () => {
+    if (!completed && app) {
+      try {
+        const failedPage = await app.firstWindow();
+        t.diagnostic(`PDF 验收失败页面：${failedPage.url()}\n${await failedPage.locator('body').ariaSnapshot()}`);
+      } catch (error) {
+        t.diagnostic(`PDF 失败页面读取失败：${error.message}`);
+      }
+    }
     await closeTestApplication(app);
     fs.rmSync(directory, { recursive: true, force: true });
   });
@@ -73,6 +82,11 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await page.mouse.move(bounds.x + 140, bounds.y + 120);
   await page.mouse.up();
   await page.getByRole('button', { name: '标注为重点', exact: true }).click();
+  const mark = page.getByRole('button', { name: /^定位标注 第 \d+ 页 区域标注$/ });
+  await expect(mark).toBeVisible();
+  const markLabel = await mark.getAttribute('aria-label');
+  assert(markLabel);
+  t.diagnostic(`本次区域标注：${markLabel}`);
   const comment = page.getByRole('textbox', { name: '评论', exact: true });
   await comment.fill('退出前的本机评论');
   // 在 450ms 防抖结束前退出，必须由现有退出握手提交。
@@ -83,7 +97,8 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await page.waitForLoadState('domcontentloaded');
   await page.goto(new URL(route, page.url()).href);
   await page.reload();
-  await page.getByRole('button', { name: '定位标注 第 1 页 区域标注', exact: true }).click();
+  await expect(page.locator('.textLayer').first()).toContainText('知境阅读与标注', { timeout: 30000 });
+  await page.getByRole('button', { name: markLabel, exact: true }).click();
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('退出前的本机评论', {
     timeout: 30000
   });
@@ -100,4 +115,5 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
     await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'packaged-pdf.png') });
   }
+  completed = true;
 });
