@@ -105,8 +105,8 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(within(rail).queryByRole('button', { name: '新建笔记' })).not.toBeInTheDocument();
     expect(within(rail).queryByRole('button', { name: '组件库' })).not.toBeInTheDocument();
 
-    // 首屏摘要里的笔记数来自真实 workspace。
-    expect(screen.getByText(/共 1 篇笔记/)).toBeInTheDocument();
+    // 首屏「最近编辑」便签来自真实 workspace：当前空间只有 1 篇笔记。
+    expect(within(screen.getByRole('list', { name: '最近编辑' })).getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('shows the home with error state and retries after a failed load', async () => {

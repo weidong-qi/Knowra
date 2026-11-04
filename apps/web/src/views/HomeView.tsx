@@ -10,7 +10,7 @@ import styles from './HomeView.module.css';
 import { HomeHero } from './HomeHero';
 import { HomeWidget } from './HomeWidget';
 import { DEFAULT_HOME_LAYOUT, HOME_WIDGETS, type HomeWidgetArea, type HomeWidgetContext } from './homeWidgets';
-import { computeStats, greetingFor, formatToday, summaryLine } from './homeViewModel';
+import { computeStats, greetingFor, formatToday } from './homeViewModel';
 
 export interface HomeViewProps {
   loadState: 'idle' | 'loading' | 'ready' | 'error';
@@ -42,7 +42,7 @@ export function HomeView({
   onOpenKnowledge,
   onOpenSearch,
   onOpenCreate,
-  onOpenSchedule,
+
   onSelectNote
 }: HomeViewProps) {
   const stats = useMemo(() => computeStats(notes, folders, tags), [notes, folders, tags]);
@@ -52,15 +52,7 @@ export function HomeView({
   if (loadState === 'loading' && notes.length === 0 && dataMode !== 'cache') {
     return (
       <div className={styles.view}>
-        <HomeHero
-          id="home-title-loading"
-          today={today}
-          title={greeting}
-          subtitle="正在连接资料服务，加载目录与笔记…"
-          onOpenCreate={onOpenCreate}
-          onOpenSchedule={onOpenSchedule}
-          onOpenSearch={onOpenSearch}
-        />
+        <HomeHero id="home-title-loading" today={today} title={greeting} />
         <LoadingState label="正在加载资料…" />
       </div>
     );
@@ -69,15 +61,7 @@ export function HomeView({
   if (loadState === 'error' && notes.length === 0) {
     return (
       <div className={styles.view}>
-        <HomeHero
-          id="home-title-error"
-          today={today}
-          title={greeting}
-          subtitle="资料服务暂时不可用，请稍后重试。"
-          onOpenCreate={onOpenCreate}
-          onOpenSchedule={onOpenSchedule}
-          onOpenSearch={onOpenSearch}
-        />
+        <HomeHero id="home-title-error" today={today} title={greeting} />
         <EmptyState
           title="资料加载失败"
           description={error ?? '请检查 API 端口或稍后重试。'}
@@ -138,15 +122,7 @@ export function HomeView({
         </div>
       ) : null}
 
-      <HomeHero
-        id="home-title"
-        today={today}
-        title={greeting}
-        subtitle={loadState === 'error' ? '当前显示最近一次本地缓存。连接恢复后可继续编辑。' : summaryLine(stats)}
-        onOpenCreate={onOpenCreate}
-        onOpenSchedule={onOpenSchedule}
-        onOpenSearch={onOpenSearch}
-      >
+      <HomeHero id="home-title" today={today} title={greeting}>
         {renderArea('hero')}
       </HomeHero>
 

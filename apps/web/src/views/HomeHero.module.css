@@ -1,4 +1,4 @@
-/* 首页首屏：铺满整页的艺术背景 + 超大标题 + 浮出的彩色便签卡片。 */
+/* 首页首屏：铺满整页的插画背景，正中太阳，底部浮出彩色便签卡片。 */
 .hero {
   --hero-top: #fff1e2;
   --hero-mid: #ffd3b3;
@@ -50,43 +50,29 @@
   --sun-b: #e8501c;
 }
 
-.sun {
+.srOnly {
   position: absolute;
-  z-index: 0;
-  right: clamp(24px, 7vw, 120px);
-  top: clamp(40px, 7vh, 88px);
-  width: clamp(140px, 17vw, 230px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: radial-gradient(circle at 34% 28%, var(--sun-a), var(--sun-b) 72%);
-  box-shadow:
-    0 0 0 clamp(8px, 1vw, 14px) rgb(255 255 255 / 28%),
-    0 24px 48px -22px rgb(232 80 28 / 45%);
-}
-.sunFace {
-  --pf-color: #2a1a12;
-  transform: scale(1.8);
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
-.copy {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  max-width: min(760px, 100%);
-  padding: clamp(40px, 9vh, 96px) clamp(24px, 6vw, 96px) 0;
-}
 .kicker {
+  position: absolute;
+  z-index: 1;
+  top: clamp(20px, 4vh, 40px);
+  left: clamp(20px, 4vw, 48px);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  margin: 0 0 var(--space-2);
-  font: 500 var(--font-size-meta)/1.5 var(--font-ui);
+  margin: 0;
+  font: 500 var(--font-size-meta) / 1.5 var(--font-ui);
 }
 .kickerPill {
   padding: 4px 12px;
@@ -102,50 +88,27 @@
 .version {
   color: var(--text-secondary);
 }
-.title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: clamp(42px, 7vw, 88px);
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.04;
-  text-wrap: balance;
-  overflow-wrap: anywhere;
+
+/* 太阳：页面正中偏上，带两圈光晕，里面是像素小脸 */
+.sun {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  margin-top: clamp(48px, 11vh, 120px);
+  width: clamp(190px, 25vw, 300px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 34% 28%, var(--sun-a), var(--sun-b) 72%);
+  box-shadow:
+    0 0 0 clamp(10px, 1.3vw, 18px) rgb(255 255 255 / 30%),
+    0 0 0 clamp(24px, 3vw, 42px) rgb(255 255 255 / 14%),
+    0 30px 60px -24px rgb(232 80 28 / 50%);
 }
-.subtitle {
-  max-width: 520px;
-  margin: var(--space-3) 0 var(--space-4);
-  color: var(--text-primary);
-  font-size: clamp(16px, 1.6vw, 20px);
-  line-height: 1.6;
-  opacity: 0.8;
-  overflow-wrap: anywhere;
-}
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-.actions button {
-  height: 46px;
-  padding-inline: 22px;
-  font-size: 14px;
-}
-.actions kbd {
-  margin-left: var(--space-1);
-  font: 500 11px/1 var(--font-ui);
-  opacity: 0.7;
-}
-.createButton {
-  box-shadow: 0 10px 22px -8px rgb(196 81 12 / 60%);
-}
-.ghostButton {
-  background: rgb(255 255 255 / 70%);
-  backdrop-filter: blur(10px);
-}
-:global([data-ni-mode='dark']) .ghostButton {
-  background: rgb(255 255 255 / 10%);
+.sunFace {
+  --pf-color: #2a1a12;
+  transform: scale(2.4);
 }
 
 /* 底部：彩色便签卡片，部分被页面底边裁切，像从下方翻出来 */
@@ -158,14 +121,10 @@
 
 @media (max-width: 860px) {
   .sun {
-    width: 130px;
-    right: 16px;
-    top: 20px;
+    width: 170px;
+    margin-top: 72px;
   }
   .sunFace {
-    transform: scale(1.5);
-  }
-  .copy {
-    padding-top: 120px;
+    transform: scale(2);
   }
 }
