@@ -128,11 +128,21 @@ export function PdfReaderView({
   useEffect(() => {
     if (viewer.viewerRef.current) paintPdfAnnotations(viewer.viewerRef.current, items, selected, ghost);
   });
+  const pendingJump = useRef<string | null>(null);
   const jump = useCallback(
     (item: PdfAnnotation) => {
       const first = item.segments[0],
         engine = viewer.viewerRef.current;
       if (!engine) return;
+      if (!engine.pagesCount) {
+        // PDF 页面尚未初始化：先选中并展开面板，页面就绪后由下方 effect 完成定位。
+        pendingJump.current = item.id;
+        setSelected(item.id);
+        setPanel(true);
+        setPanelTab('marks');
+        return;
+      }
+      pendingJump.current = null;
       if (first.pageIndex >= engine.pagesCount) {
         setError('标注页码不在当前 PDF 内，草稿与原文件均已保留。');
         return;
@@ -150,7 +160,7 @@ export function PdfReaderView({
   );
   useEffect(() => {
     if (!loaded || !viewer.count) return;
-    const id = new URLSearchParams(location.pathname.split('?')[1]).get('pdfAnnotation');
+    const id = pendingJump.current ?? new URLSearchParams(location.pathname.split('?')[1]).get('pdfAnnotation');
     const item = session.values().find(value => value.id === id);
     if (item) jump(item);
   }, [loaded, viewer.count, location.pathname, session, jump]);

@@ -22,7 +22,16 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
       env: { ...process.env, KNOWRA_DESKTOP_SMOKE_DIR: directory },
       timeout: PACKAGED_STARTUP_TIMEOUT_MS
     });
-  app = await launch();
+  // 主进程在 loadURL 完成后才写 ready.json；等它出现再操作页面，
+  // 否则 goto/reload 会与应用自身的启动导航竞争（慢机器上丢失路由）。
+  const ready = path.join(directory, 'ready.json');
+  const launchReady = async () => {
+    fs.rmSync(ready, { force: true });
+    const started = await launch();
+    await expect.poll(() => fs.existsSync(ready), { timeout: 30000 }).toBe(true);
+    return started;
+  };
+  app = await launchReady();
   let page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
   const foreign = [];
@@ -68,7 +77,7 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   // 在 450ms 防抖结束前退出，必须由现有退出握手提交。
   await closeTestApplication(app);
   app = null;
-  app = await launch();
+  app = await launchReady();
   page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
   await page.goto(new URL(route, page.url()).href);
