@@ -78,6 +78,16 @@ describe('NotesContextSidebar', () => {
     expect(onOpenIndex).toHaveBeenCalledOnce();
   });
 
+  it('文件夹行悬停操作：更多操作菜单提供子文件夹、笔记、移动、重命名与删除', async () => {
+    renderSidebar();
+
+    expect(screen.getByRole('button', { name: '在产品设计中新建笔记' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '产品设计更多操作' }));
+    for (const name of ['新建子文件夹', '新建笔记', '移动到…', '重命名', '删除']) {
+      expect(await screen.findByRole('menuitem', { name })).toBeInTheDocument();
+    }
+  });
+
   it('selects folders and tags, expands note children, and delegates text search to the backend', async () => {
     const { api, store } = renderSidebar();
 
@@ -85,14 +95,15 @@ describe('NotesContextSidebar', () => {
     await userEvent.click(folderButton);
     expect(store.getState().navigation.selectedFolderId).toBe('folder-1');
     expect(store.getState().notesIndex.scope).toBe('all');
+    // 点击文件夹行只选中并打开索引，不改变展开状态；展开与收起只由箭头负责。
+    expect(store.getState().navigation.openFolders['folder-1']).toBeFalsy();
+    expect(screen.queryByRole('button', { name: '规划草案' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '展开产品设计' }));
     expect(store.getState().navigation.openFolders['folder-1']).toBe(true);
     expect(screen.getByRole('button', { name: '规划草案' })).toBeInTheDocument();
     await userEvent.click(folderButton);
     expect(store.getState().navigation.selectedFolderId).toBe('folder-1');
     expect(store.getState().notesIndex.scope).toBe('all');
-    expect(store.getState().navigation.openFolders['folder-1']).toBe(false);
-    expect(screen.queryByRole('button', { name: '规划草案' })).not.toBeInTheDocument();
-    await userEvent.click(folderButton);
     expect(store.getState().navigation.openFolders['folder-1']).toBe(true);
     expect(screen.getByRole('button', { name: '规划草案' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: '收起产品设计' }));
