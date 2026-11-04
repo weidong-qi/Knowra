@@ -16,6 +16,7 @@ it('只读时仍可复制，但不能修改分类或删除', () => {
       canWrite={false}
       onClose={() => undefined}
       onCopy={copy}
+      onEdit={() => undefined}
       onKind={change}
       onDelete={remove}
     />
@@ -24,6 +25,7 @@ it('只读时仍可复制，但不能修改分类或删除', () => {
   fireEvent.click(dialog.getByRole('button', { name: '复制' }));
   expect(copy).toHaveBeenCalledOnce();
   expect(dialog.getByRole('button', { name: '删除' })).toBeDisabled();
+  expect(dialog.getByRole('button', { name: '添加批注' })).toBeDisabled();
   const kind = dialog.getByRole('button', { name: '改为疑问' });
   expect(kind).toHaveAttribute('aria-pressed', 'true');
   expect(kind).toBeDisabled();
@@ -41,6 +43,7 @@ it('操作面板按既有分类回传修改，保持已选状态', () => {
       canWrite
       onClose={() => undefined}
       onCopy={() => undefined}
+      onEdit={() => undefined}
       onKind={change}
       onDelete={() => undefined}
     />

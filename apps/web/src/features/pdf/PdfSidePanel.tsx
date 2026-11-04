@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { CloseIcon } from '../../components/icons/knowra';
 import { IconButton, PressableButton, Tabs, type TabsItem } from '../../components/ui';
 import { PdfAnnotationsList } from './PdfAnnotationsPanel';
+import { EMPTY_PDF_FILTER, filterPdfAnnotations, PdfAnnotationFilters } from './PdfAnnotationFilters';
 import styles from './PdfReader.module.css';
 
 export type PdfPanelTab = 'marks' | 'outline';
@@ -37,6 +39,9 @@ export function PdfSidePanel({
   onDelete(id: string): void;
   onOutlineItem(item: PdfOutlineItem): void;
 }) {
+  const [filter, setFilter] = useState(EMPTY_PDF_FILTER);
+  const visible = filterPdfAnnotations(items, filter);
+  const hiddenSelected = items.find(item => item.id === selected && !visible.some(mark => mark.id === item.id));
   const tabs: TabsItem[] = [
     { id: 'marks', label: items.length ? `标注 ${items.length}` : '标注' },
     { id: 'outline', label: '目录' }
@@ -55,14 +60,34 @@ export function PdfSidePanel({
       >
         {item =>
           item.id === 'marks' ? (
-            <PdfAnnotationsList
-              items={items}
-              selected={selected}
-              canWrite={canWrite}
-              onSelect={onSelect}
-              onChange={onChange}
-              onDelete={onDelete}
-            />
+            <>
+              <PdfAnnotationFilters items={items} count={visible.length} filter={filter} onChange={setFilter} />
+              {items.length && !visible.length ? (
+                <p className={styles.panelEmpty}>没有匹配的标注，请调整或清除筛选。</p>
+              ) : null}
+              <PdfAnnotationsList
+                items={visible}
+                emptyHint={!items.length}
+                selected={selected}
+                canWrite={canWrite}
+                onSelect={onSelect}
+                onChange={onChange}
+                onDelete={onDelete}
+              />
+              {hiddenSelected ? (
+                <section aria-label="当前选中标注">
+                  <p className={styles.panelEmpty}>当前选中标注不符合筛选，仍可继续编辑。</p>
+                  <PdfAnnotationsList
+                    items={[hiddenSelected]}
+                    selected={selected}
+                    canWrite={canWrite}
+                    onSelect={onSelect}
+                    onChange={onChange}
+                    onDelete={onDelete}
+                  />
+                </section>
+              ) : null}
+            </>
           ) : outline.length ? (
             outline.map((entry, index) => (
               <PressableButton

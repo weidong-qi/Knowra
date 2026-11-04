@@ -315,6 +315,65 @@
   gap: 10px;
   overflow-wrap: anywhere;
 }
+.markFilters {
+  position: sticky;
+  top: -8px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px 8px;
+  background: var(--surface-card-tint, var(--surface-page));
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 6px;
+}
+.markFilterFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.markFilterFields > * {
+  min-width: 0;
+  width: 100%;
+}
+.markFilterFields > :last-child {
+  grid-column: 1 / -1;
+}
+.markFilterSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+}
+.commentEditor {
+  width: min(320px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  border-color: color-mix(in srgb, var(--pdf-annotation-color) 65%, var(--border-subtle));
+}
+.commentEditorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px;
+  font-size: var(--font-size-meta);
+}
+.commentQuote {
+  max-height: 80px;
+  overflow-y: auto;
+  margin: 6px 4px;
+  font-size: var(--font-size-meta);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+.commentEditor textarea[data-input-control] {
+  min-height: 90px;
+  max-height: 240px;
+}
 .markCard:hover {
   background: var(--surface-hover);
 }

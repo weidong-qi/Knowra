@@ -1,6 +1,6 @@
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { Button, PointMenu, PopoverDialog, PressableButton } from '../../components/ui';
-import { CopyIcon, DeleteIcon } from '../../components/icons/knowra';
+import { CopyIcon, DeleteIcon, EditIcon } from '../../components/icons/knowra';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import styles from './PdfReader.module.css';
 
@@ -11,6 +11,7 @@ export function PdfAnnotationActions({
   canWrite,
   onClose,
   onCopy,
+  onEdit,
   onKind,
   onDelete
 }: {
@@ -19,6 +20,7 @@ export function PdfAnnotationActions({
   canWrite: boolean;
   onClose(): void;
   onCopy(): void;
+  onEdit(): void;
   onKind(kind: string): void;
   onDelete(): void;
 }) {
@@ -32,6 +34,16 @@ export function PdfAnnotationActions({
     >
       <PopoverDialog aria-label="PDF 标注操作" className={styles.annotationActions}>
         <div className={styles.annotationCommands}>
+          <Button
+            variant="ghost"
+            size="mini"
+            shape="square"
+            icon={<EditIcon size={16} />}
+            isDisabled={!canWrite}
+            onPress={onEdit}
+          >
+            {item.comment ? '编辑批注' : '添加批注'}
+          </Button>
           <Button variant="ghost" size="mini" shape="square" icon={<CopyIcon size={16} />} onPress={onCopy}>
             复制
           </Button>

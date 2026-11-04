@@ -19,7 +19,8 @@ export function PdfAnnotationsList({
   canWrite,
   onSelect,
   onChange,
-  onDelete
+  onDelete,
+  emptyHint = true
 }: {
   items: PdfAnnotation[];
   selected: string | null;
@@ -27,10 +28,11 @@ export function PdfAnnotationsList({
   onSelect(item: PdfAnnotation): void;
   onChange(id: string, fields: Partial<PdfAnnotation>): void;
   onDelete(id: string): void;
+  emptyHint?: boolean;
 }) {
   return (
     <>
-      {!items.length ? (
+      {!items.length && emptyHint ? (
         <p className={styles.panelEmpty}>
           选中文字后点一下颜色即可标注；用区域框选标记图片、公式和扫描页；用便签在页面任意位置写想法。
         </p>

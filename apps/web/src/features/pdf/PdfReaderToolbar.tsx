@@ -7,7 +7,9 @@ import {
   MoreHorizontalIcon,
   HighlightIcon,
   RefreshIcon,
-  SearchIcon
+  SearchIcon,
+  UndoIcon,
+  RedoIcon
 } from '../../components/icons/knowra';
 import { IconButton, SearchBox, SegmentedButton, SegmentedControl } from '../../components/ui';
 import { Menu, MenuItem, MenuPopover, MenuTrigger } from '../../components/ui/overlay';
@@ -22,6 +24,10 @@ interface PdfReaderToolbarProps {
   panel: boolean;
   outlineOpen: boolean;
   tool: string;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo(): void;
+  onRedo(): void;
   onBack(): void;
   onFavorite(): Promise<void>;
   onOutline(): void;
@@ -40,6 +46,10 @@ export function PdfReaderToolbar({
   panel,
   outlineOpen,
   tool,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   onBack,
   onFavorite,
   onOutline,
@@ -60,6 +70,25 @@ export function PdfReaderToolbar({
       <strong className={styles.title} title={note.title}>
         {note.title}
       </strong>
+      <span className={styles.separator} aria-hidden="true" />
+      <IconButton
+        size={28}
+        aria-label="撤销标注操作"
+        title="撤销标注操作（⌘Z / Ctrl+Z）"
+        isDisabled={!editable || !canUndo}
+        onPress={onUndo}
+      >
+        <UndoIcon size={16} />
+      </IconButton>
+      <IconButton
+        size={28}
+        aria-label="重做标注操作"
+        title="重做标注操作（⌘⇧Z / Ctrl+Shift+Z）"
+        isDisabled={!editable || !canRedo}
+        onPress={onRedo}
+      >
+        <RedoIcon size={16} />
+      </IconButton>
       <span className={styles.separator} aria-hidden="true" />
       <IconButton size={28} aria-label="缩小 PDF" title="缩小" onPress={() => engine()?.decreaseScale()}>
         <span className={styles.glyph}>−</span>
