@@ -385,7 +385,12 @@ test('V4-07 段落菜单复用编辑器命令并通过现有保存链路持久�
     range.collapse(true);
     selection?.removeAllRanges();
     selection?.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
   });
+  // 等待编辑器读取 DOM 选区后再触发 Tab，避免沿用点击时的旧光标。
+  await page.evaluate(
+    () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  );
   await page.keyboard.press('Tab');
   await page.keyboard.type('缩进验收');
   await expect(editor).toBeFocused();
