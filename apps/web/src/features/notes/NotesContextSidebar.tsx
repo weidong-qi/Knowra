@@ -34,7 +34,7 @@ import { scrollEntryContainer, useEntryDragDrop, useEntryDropTarget } from './En
 import styles from './NotesContextSidebar.module.css';
 import { useNotesIndexAppearance } from './notesIndexAppearanceModel';
 import { notesIndexAppearanceProps } from './NotesIndexAppearance';
-import { NotesUpdateDistribution, NotesTrashDecoration, NotesLibraryDecoration } from './NotesSidebarDecoration';
+import { NotesTrashDecoration, NotesLibraryDecoration } from './NotesSidebarDecoration';
 
 interface NavEntry {
   scope: Exclude<NotesIndexScope, 'root' | 'trash'>;
@@ -64,7 +64,6 @@ export function NotesContextSidebar({
   const notesIndex = useAppStore(state => state.notesIndex);
   const selectedFolderId = useAppStore(state => state.navigation.selectedFolderId);
   const selectNotesScope = useAppStore(state => state.selectNotesScope);
-  const selectNotesTag = useAppStore(state => state.selectNotesTag);
   const searchNotes = useAppStore(state => state.searchNotes);
   const retryWorkspace = useAppStore(state => state.retryWorkspace);
   const canWrite = useAppStore(state => state.canWriteWorkspace());
@@ -83,6 +82,7 @@ export function NotesContextSidebar({
   const [tagMenu, setTagMenu] = useState<{ tagId: string; x: number; y: number } | null>(null);
   const [pinnedTagIds, setPinnedTagIds] = useState<string[]>(() => readPinnedTagIds());
   const [tagsExpanded, setTagsExpanded] = useState(true);
+  const [showAllTags, setShowAllTags] = useState(false);
   const treeOperations = useSidebarTreeOperations();
   const entryDragDrop = useEntryDragDrop();
   const rootDrop = useEntryDropTarget(null);
@@ -94,10 +94,13 @@ export function NotesContextSidebar({
   const visibleTags = useMemo(() => {
     const usage = countTagUsage(serverData.tags, serverData.notes);
     const pinned = pinnedTagIds.map(id => serverData.tags.find(tag => tag.id === id)).filter(Boolean);
-    return (
-      pinned.length ? pinned : serverData.tags.slice().sort((a, b) => (usage[b.id] ?? 0) - (usage[a.id] ?? 0))
-    ).slice(0, 8);
-  }, [pinnedTagIds, serverData.notes, serverData.tags]);
+    const sorted = serverData.tags.slice().sort((a, b) => (usage[b.id] ?? 0) - (usage[a.id] ?? 0));
+    if (showAllTags) {
+      const pinnedIds = new Set(pinned.map(tag => tag!.id));
+      return [...pinned, ...sorted.filter(tag => !pinnedIds.has(tag.id))];
+    }
+    return (pinned.length ? pinned : sorted).slice(0, 8);
+  }, [pinnedTagIds, serverData.notes, serverData.tags, showAllTags]);
   const contextTag = serverData.tags.find(tag => tag.id === tagMenu?.tagId);
 
   useEffect(() => {
@@ -299,9 +302,19 @@ export function NotesContextSidebar({
                     selected={activeTagIds.includes(tag.id)}
                     aria-pressed={activeTagIds.includes(tag.id)}
                     onClick={() => {
-                      selectNotesTag(activeTagIds.includes(tag.id) ? null : tag.id);
-                      if (activeTagIds.includes(tag.id)) navigate('/materials');
-                      else navigate(`/materials?tags=${encodeURIComponent(tag.id)}&match=all`);
+                      const nextIds = activeTagIds.includes(tag.id)
+                        ? activeTagIds.filter(id => id !== tag.id)
+                        : [...activeTagIds, tag.id];
+                      const params = new URLSearchParams(
+                        location.pathname.split('?')[0] === '/materials' ? location.pathname.split('?')[1] : ''
+                      );
+                      params.delete('folder');
+                      params.delete('scope');
+                      if (nextIds.length) params.set('tags', nextIds.join(','));
+                      else params.delete('tags');
+                      if (!params.has('match')) params.set('match', 'all');
+                      selectNotesScope('all');
+                      navigate(`/materials?${params}`);
                     }}
                     onContextMenu={event => {
                       event.preventDefault();
@@ -320,19 +333,19 @@ export function NotesContextSidebar({
                   ) : null}
                 </div>
               ) : null}
-              {serverData.tags.length > visibleTags.length ? (
+              {showAllTags || serverData.tags.length > visibleTags.length ? (
                 <Button
                   className={styles.allTags}
                   variant="ghost"
                   size="compact"
-                  onPress={() => navigate('/materials/tags')}
+                  aria-expanded={showAllTags}
+                  onPress={() => setShowAllTags(current => !current)}
                 >
-                  全部标签·{serverData.tags.length}
+                  {showAllTags ? '收起标签' : `全部标签·${serverData.tags.length}`}
                 </Button>
               ) : null}
             </div>
           </SidebarSection>
-          <NotesUpdateDistribution notes={serverData.notes} />
         </div>
 
         <footer className={styles.footer}>

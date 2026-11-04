@@ -1,77 +1,68 @@
 .chip {
   --tag-color: var(--text-secondary);
-  --tag-fill: var(--surface-raised);
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  min-height: 24px;
+  gap: 6px;
+  height: 20px;
   max-width: 100%;
-  padding: 3px 9px;
+  padding: 0 9px;
   border: 0;
   border-radius: var(--radius-pill);
-  background: var(--tag-fill);
-  color: var(--tag-color);
-  box-shadow: 0 0 0 1px var(--border-subtle);
-  font: 400 12px/1.5 var(--font-ui);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  font: 500 12px/1 var(--font-ui);
   text-decoration: none;
   transition:
     background var(--motion-fast) var(--motion-ease),
-    box-shadow var(--motion-fast) var(--motion-ease);
+    box-shadow var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease);
+}
+.chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--tag-color);
+  box-shadow:
+    0 0 0 1px var(--border-strong),
+    0 0 0 2px color-mix(in srgb, var(--tag-color) 12%, transparent);
 }
 .chip[data-color='blue'] {
   --tag-color: var(--color-info);
-  --tag-fill: var(--color-info-soft);
 }
 .chip[data-color='green'] {
   --tag-color: var(--ink-success);
-  --tag-fill: var(--ink-success-soft);
 }
 .chip[data-color='orange'] {
   --tag-color: var(--ink-warning);
-  --tag-fill: var(--ink-warning-soft);
 }
 .chip[data-color='red'] {
   --tag-color: var(--ink-danger);
-  --tag-fill: var(--ink-danger-soft);
 }
 .chip[data-color='violet'] {
   --tag-color: var(--ink-violet);
-  --tag-fill: var(--ink-violet-soft);
-}
-/* 自定义色用圆点保留原色，文字维持主题对比度，兼容纯白与纯黑。 */
-.chip[data-color^='#'] {
-  --tag-fill: color-mix(in srgb, var(--tag-color) 10%, var(--surface-raised));
-  color: var(--text-primary);
-}
-.chip[data-color^='#']::before {
-  content: '';
-  display: inline-block;
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--tag-color);
-  box-shadow: 0 0 0 1px var(--border-strong);
 }
 .chip[data-selected='true'] {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tag-color) 35%, transparent);
-  font-weight: 500;
-}
-.chip[data-color^='#'][data-selected='true'] {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tag-color) 45%, var(--border-strong));
+  color: var(--text-primary);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--tag-color) 45%, var(--border-subtle)),
+    0 2px 0 color-mix(in srgb, var(--tag-color) 50%, var(--surface-raised));
 }
 .interactive {
   cursor: pointer;
 }
 .interactive:hover {
-  background: color-mix(in srgb, var(--tag-color) 12%, var(--surface-page));
+  background: var(--surface-hover);
 }
 .interactive:active {
-  background: color-mix(in srgb, var(--tag-color) 18%, var(--surface-page));
+  background: var(--surface-hover);
 }
 .interactive:focus-visible {
-  outline: 0;
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
 }
 .name {
   overflow: hidden;
@@ -79,16 +70,22 @@
   white-space: nowrap;
 }
 .check {
-  font: 500 12px/1 var(--font-ui);
+  display: none;
 }
 .remove {
   font: 400 14px/1 var(--font-ui);
 }
+/* 触屏保持 44px 点击区，但不撑大胶囊外观。 */
 @media (pointer: coarse), (max-width: 767px) {
-  .interactive {
+  .interactive::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
     min-width: 44px;
-    min-height: 44px;
-    justify-content: center;
+    height: 44px;
+    transform: translate(-50%, -50%);
   }
 }
 @media (prefers-reduced-motion: reduce) {
