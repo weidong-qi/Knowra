@@ -351,3 +351,143 @@
     height: 40px;
   }
 }
+
+/* 标签墙和清单共用操作与数据，分组栏沿用笔记索引的磨砂样式。 */
+.groups {
+  display: block;
+  padding: 0 0 32px;
+}
+.groupHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 38px;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 1px solid var(--ni-line, var(--border-subtle));
+  border-radius: 0;
+  background: color-mix(in srgb, var(--ni-page, var(--surface-page)) 86%, transparent);
+  backdrop-filter: blur(10px);
+}
+.groupTitle {
+  gap: 8px;
+}
+.groupTitle h2 {
+  font-size: 14px;
+}
+.groupToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ni-ink, var(--text-primary));
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.groupToggle > svg {
+  color: var(--ni-ink-3, var(--text-muted));
+  transition: transform var(--motion-fast) var(--motion-ease);
+}
+.groupToggle[aria-expanded='false'] > svg {
+  transform: rotate(-90deg);
+}
+.groupToggle:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+.cards[hidden][data-view] {
+  display: none;
+}
+.cards[data-view='wall'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 20px 22px;
+}
+.cards[data-view='list'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding: 4px 20px 20px;
+}
+.cards .card {
+  gap: 0;
+  padding: 0;
+  box-shadow: none;
+}
+.cards[data-view='wall'] .card {
+  border-radius: var(--radius-pill);
+}
+.cards[data-view='list'] .card {
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+.cardHead {
+  min-height: 38px;
+  gap: 3px;
+}
+.cardOpen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px 5px 10px;
+}
+.cards[data-view='list'] .cardOpen {
+  width: 100%;
+  justify-content: space-between;
+  padding: 7px 10px;
+}
+.tagChip {
+  min-height: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+}
+.usage {
+  color: var(--text-secondary);
+  font: 400 12px/1.5 var(--font-ui);
+  white-space: nowrap;
+}
+.cardMenu {
+  margin: 0 4px 0 0;
+}
+@media (pointer: coarse), (max-width: 767px) {
+  .groupHeader {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+  .cards[data-view='wall'] {
+    padding: 14px;
+  }
+  .cards[data-view='list'] {
+    padding: 4px 14px 16px;
+  }
+  .cardHead {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 560px) {
+  .compactHeader nav {
+    display: none;
+  }
+}
+@media (max-width: 410px) {
+  .compactHeader.compactHeader {
+    flex-wrap: wrap;
+  }
+  .compactHeader > :last-child {
+    flex: 1 1 100%;
+  }
+  .compactTools {
+    justify-content: flex-end;
+  }
+}
