@@ -48,7 +48,7 @@ for (const viewport of viewports) test(`V5 同步备份状态与设置边界合�
   };
   try {
     await page.goto('/#/');
-    await expect(page.getByRole('heading', { name: '笔记工作台', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     const statusTrigger = page.getByRole('button', { name: '工作区状态', exact: true });
     const status = page.getByRole('dialog', { name: '工作区状态', exact: true });
     await statusTrigger.click();

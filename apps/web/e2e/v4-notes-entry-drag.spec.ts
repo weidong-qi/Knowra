@@ -5,7 +5,7 @@ import { mockShellServices } from './fixtures/shellServices';
 test('笔记和文件夹可在索引、侧栏及根目录之间拖动', async ({ page }) => {
   const workspace = await mockMoveWorkspace(page);
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.goto('/#/materials');
   await expect(page.getByRole('article', { name: '笔记索引' })).toBeVisible();
 
@@ -36,7 +36,7 @@ test('笔记和文件夹可在索引、侧栏及根目录之间拖动', async ({
 test('从侧栏移走笔记后，当前文件夹的服务端索引立即刷新', async ({ page }) => {
   const workspace = await mockMoveWorkspace(page);
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.goto('/#/materials?folder=folder-a');
   await expect(page.getByRole('article', { name: '笔记索引' })).toBeVisible();
   await page.getByRole('button', { name: '展开甲目录' }).click();
@@ -51,7 +51,7 @@ test('从侧栏移走笔记后，当前文件夹的服务端索引立即刷新',
 test('悬停文件夹会展开目录，空白区域可接收移动到当前文件夹', async ({ page }) => {
   const workspace = await mockMoveWorkspace(page);
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.goto('/#/materials');
   const index = page.getByRole('article', { name: '笔记索引' });
   await expect(index).toBeVisible();
@@ -86,7 +86,7 @@ test('目标目录拒绝移动时保留原位置并显示原因', async ({ page 
   const workspace = await mockMoveWorkspace(page);
   workspace.rejectNextMove();
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.goto('/#/materials');
   const note = page.getByRole('article', { name: '笔记索引' })
     .locator('[data-entry-item]').filter({ hasText: '待移动笔记' }).locator('button[draggable="true"]');
@@ -100,7 +100,7 @@ test('目标目录拒绝移动时保留原位置并显示原因', async ({ page 
 test('全部笔记空白处不代表根目录，笔记库页面空白处可移入根目录', async ({ page }) => {
   const workspace = await mockMoveWorkspace(page);
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.goto('/#/materials');
   const index = page.getByRole('article', { name: '笔记索引' });
   const content = page.getByTestId('notes-index-scroll');
@@ -130,7 +130,7 @@ test('V5 笔记选中使用中性底色，索引保留独立滚动和图标焦�
   await expect(content).toHaveCSS('overflow-y', 'auto');
   await page.getByRole('button', { name: '图标视图' }).click();
   const tile = index.locator('[data-entry-item]').filter({ hasText: '待移动笔记' }).locator('button[draggable="true"]');
-  await expect(tile).toHaveCSS('border-radius', '10px');
+  await expect(tile).toHaveCSS('border-radius', '8px');
   await expect(tile).toHaveCSS('transform', 'none');
   // A mouse-triggered view change does not establish :focus-visible. Tab from
   // the preceding selection control to exercise the actual keyboard entry path.

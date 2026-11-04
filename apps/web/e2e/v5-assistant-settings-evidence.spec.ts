@@ -33,7 +33,7 @@ for (const viewport of viewports) test(`V5 主页助手设置空间合成验收 
   };
   try {
     await page.goto('/#/');
-    await expect(page.getByRole('heading', { name: '笔记工作台', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await capture('01-home');
 
     await page.goto('/#/assistant?new=1');

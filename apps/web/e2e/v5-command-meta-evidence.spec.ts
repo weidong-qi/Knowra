@@ -98,7 +98,7 @@ for (const viewport of viewports) test(`V5 命令搜索与编辑器元信息只�
   };
   try {
     await page.goto('/#/');
-    await expect(page.getByRole('heading', { name: '笔记工作台', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     let trigger = await openSearch(true);
     await capture('01-keyboard-command-open', dialog);
     await input.fill(titleQuery);

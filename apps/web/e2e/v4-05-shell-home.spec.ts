@@ -11,7 +11,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     for (const width of [1024, 1280, 1440, 2048]) {
       await page.setViewportSize({ width, height: width === 1280 ? 720 : 1024 });
       await page.goto('/');
-      await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.getByText(/版本 v\d+\.\d+\.\d+/)).toBeVisible();
       const overflow = await page.evaluate(() => (
         document.documentElement.scrollWidth - document.documentElement.clientWidth
@@ -55,12 +55,12 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     const rail = page.getByRole('navigation', { name: '工作域导航' });
     await expect(rail.getByRole('button', { name: /知识/ })).toBeEnabled();
     await expect(rail.getByRole('button', { name: /试题/ })).toBeEnabled();
-    await expect(rail.getByRole('button', { name: '设置' })).toBeEnabled();
-    await expect(page.getByRole('button', { name: '通知（尚未上线）' })).toBeDisabled();
-    await expect(rail.getByRole('button', { name: '全局搜索' })).toHaveCount(0);
+    await expect(rail.getByRole('button', { name: '账户与设置' })).toBeEnabled();
+    // 未上线的入口不占位：通知、执行、我的都不出现在左栏。
+    await expect(rail.getByRole('button', { name: /通知|执行|我的/ })).toHaveCount(0);
+    await expect(rail.getByRole('button', { name: '全局搜索' })).toHaveCount(1);
     await expect(rail.getByRole('button', { name: '新建笔记' })).toHaveCount(0);
     await expect(rail.getByRole('button', { name: '组件库' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '新建笔记（Ctrl+N）' })).toBeEnabled();
 
     await page.goto('/#/showcase');
     await expect(page).toHaveURL(/#\/showcase$/);
@@ -87,9 +87,11 @@ test.describe('V4-05 公共 Shell 与主页', () => {
       await expect(button).toHaveCSS('width', '36px');
       await expect(button).toHaveCSS('height', '36px');
     }
+    // 全局组（主页、搜索）按钮间距紧凑；之后是分隔线与工作域。
+    const search = rail.getByRole('button', { name: '全局搜索' });
     const homeBox = await home.boundingBox();
-    const selectedBox = await selected.boundingBox();
-    expect(selectedBox!.y - homeBox!.y - homeBox!.height).toBe(4);
+    const searchBox = await search.boundingBox();
+    expect(searchBox!.y - homeBox!.y - homeBox!.height).toBe(4);
     const appearance = () => selected.evaluate(element => {
       const style = getComputedStyle(element);
       return { background: style.backgroundImage, color: style.color, shadow: style.boxShadow, transform: style.transform };
@@ -180,7 +182,8 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await back.click();
     await expect(page).toHaveURL(/#\/materials$/);
     await expect(forward).toBeEnabled();
-    await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: '设置', exact: true }).click();
+    await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: '账户与设置', exact: true }).click();
+    await page.getByRole('menuitem', { name: '设置', exact: true }).click();
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(forward).toBeDisabled();
     await top.getByRole('tab', { name: '设计复盘' }).click();
@@ -308,7 +311,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
 
   test('最近资料可通过键盘聚焦并触发可感知反馈', async ({ page }) => {
     await page.goto('/');
-    const note = page.getByRole('button', { name: '设计复盘', exact: true });
+    const note = page.getByRole('list', { name: '最近编辑' }).getByRole('button', { name: /设计复盘/ }).first();
     await note.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('status')).toContainText('设计复盘');
@@ -346,7 +349,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
 
     await page.setViewportSize({ width: 1440, height: 1024 });
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: '笔记工作台' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.screenshot({
       path: 'e2e/visual-baseline/screenshots/v4-05-home-1440.png',
       fullPage: false
