@@ -199,6 +199,7 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
   await page.mouse.down();
   await page.mouse.move(scanned.x + 150, scanned.y + 140, { steps: 5 });
   await page.mouse.up();
+  await page.getByRole('button', { name: '标注为重点', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   assert.equal(
     (await (await context.request.get(`${runtime.origin}/api/pdf/${chinese.id}/annotations`)).json()).data[0].type,
