@@ -14,7 +14,7 @@
   position: absolute;
   top: 12px;
   left: 50%;
-  z-index: 5;
+  z-index: 12;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -266,7 +266,8 @@
 @media (max-width: 760px) {
   .sidePanel {
     position: absolute;
-    inset: 0 0 0 auto;
+    /* 窄屏面板盖在阅读区上，让出顶部工具栏，保证能用工具栏关闭它。 */
+    inset: 56px 0 0 auto;
     z-index: 10;
     width: min(310px, 90%);
     margin: 0;

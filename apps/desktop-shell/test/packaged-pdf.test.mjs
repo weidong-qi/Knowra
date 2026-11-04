@@ -81,7 +81,8 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await app.evaluate(({ dialog }, destination) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: destination });
   }, destination);
-  await page.getByRole('button', { name: '原文件', exact: true }).click();
+  await page.getByRole('button', { name: '更多', exact: true }).click();
+  await page.getByRole('menuitem', { name: '下载原文件', exact: true }).click();
   await expect.poll(() => fs.existsSync(destination)).toBe(true);
   assert.deepEqual(fs.readFileSync(destination), bytes);
   assert.deepEqual(foreign, []);
