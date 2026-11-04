@@ -296,7 +296,7 @@ const enumNames: Record<string, Record<string, string>> = {
   scopeType: { selection: '选中文字', blocks: '段落范围', section: '标题范围' },
   lifecycleStatus: { active: '有效', archived: '已取消' },
   anchorStatus: { resolved: '已定位', needsReview: '需要复核', missing: '原文缺失' },
-  kind: { important: '重点', question: '疑问', supplement: '补充', pitfall: '易错', temporary: '临时' },
+  kind: { important: '重点', question: '疑问', supplement: '补充', pitfall: '易错', temporary: '普通' },
   importance: { normal: '一般', important: '重要', core: '核心' },
   anchorReason: {
     sourceDeleted: '原文已删除',

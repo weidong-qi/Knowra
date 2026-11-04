@@ -77,7 +77,8 @@ for (const { trailingNewline, delayedAnnotations } of [
       await expect(highlight).toHaveText('重要文字');
       const original = await current();
       await page.waitForResponse(
-        response => response.url() === `${runtime.origin}/api/local-runtime/sync` && response.request().method() === 'GET'
+        response =>
+          response.url() === `${runtime.origin}/api/local-runtime/sync` && response.request().method() === 'GET'
       );
       const mountedEditor = await editor.elementHandle();
 
@@ -102,7 +103,9 @@ for (const { trailingNewline, delayedAnnotations } of [
       assert.equal(remoteAnnotation.anchorStatus, 'resolved');
       assert.equal(remoteAnnotation.quoteText, remoteQuote);
       if (delayedAnnotations) {
-        const gate = new Promise(resolve => { releaseAnnotations = resolve; });
+        const gate = new Promise(resolve => {
+          releaseAnnotations = resolve;
+        });
         await page.route('**/api/knowledge/annotations?*', async route => {
           const response = await route.fetch();
           delayedResponseReady = true;
@@ -124,7 +127,8 @@ for (const { trailingNewline, delayedAnnotations } of [
       assert.equal(adopted.anchorStatus, 'resolved');
 
       await highlight.evaluate(element => {
-        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT), node = walker.nextNode();
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT),
+          node = walker.nextNode();
         const range = document.createRange();
         range.setStart(node, 1);
         range.collapse(true);

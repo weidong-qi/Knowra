@@ -193,6 +193,8 @@ export function App() {
   const isNoteEditor = editorNoteId !== null;
   const effectiveEditorView = useMemo(() => getEffectiveEditorViewState(editorView), [editorView]);
   const editorNote = editorNoteId ? notes.find((note) => note.id === editorNoteId) ?? null : null;
+  // PDF 阅读页有自己的工具栏与右侧检查器，外壳的检查器/专注模式开关不适用。
+  const isPdfEditor = editorNote?.contentKind === 'pdf';
   const openNoteTabs = openNoteTabIds
     .map((id) => notes.find((note) => note.id === id && !note.deleted))
     .filter((note): note is NonNullable<typeof note> => Boolean(note));
@@ -325,7 +327,7 @@ export function App() {
               handleEditorViewAction('toggle-focus');
             }
           }
-        ].filter(panel => isNoteEditor || panel.id === 'sidebar')
+        ].filter(panel => (isNoteEditor || panel.id === 'sidebar') && !(isPdfEditor && panel.id !== 'sidebar'))
       }}
       mobileTabs
       liveAnnouncement={liveAnnouncement}

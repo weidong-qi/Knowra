@@ -3,10 +3,9 @@ import type { Note } from '@study-accelerator/web-core';
 import {
   ChevronLeftIcon,
   FocusIcon,
-  HighlightIcon,
   ListIcon,
   MoreHorizontalIcon,
-  PanelIcon,
+  HighlightIcon,
   RefreshIcon,
   SearchIcon
 } from '../../components/icons/knowra';
@@ -23,15 +22,14 @@ interface PdfReaderToolbarProps {
   panel: boolean;
   outlineOpen: boolean;
   tool: string;
-  selection: boolean;
   onBack(): void;
   onFavorite(): Promise<void>;
   onOutline(): void;
   onDownload(): Promise<void>;
   onExport(): Promise<void>;
+  onExtract(): Promise<void>;
   onPanel(): void;
   onTool(tool: string): void;
-  onHighlight(): void;
 }
 export function PdfReaderToolbar({
   note,
@@ -42,15 +40,14 @@ export function PdfReaderToolbar({
   panel,
   outlineOpen,
   tool,
-  selection,
   onBack,
   onFavorite,
   onOutline,
   onDownload,
   onExport,
+  onExtract,
   onPanel,
-  onTool,
-  onHighlight
+  onTool
 }: PdfReaderToolbarProps) {
   const [query, setQuery] = useState(''),
     [searchOpen, setSearchOpen] = useState(false);
@@ -103,16 +100,15 @@ export function PdfReaderToolbar({
         >
           区域
         </SegmentedButton>
+        <SegmentedButton
+          aria-label="便签工具"
+          aria-pressed={tool === 'note'}
+          isDisabled={!editable}
+          onPress={() => onTool('note')}
+        >
+          便签
+        </SegmentedButton>
       </SegmentedControl>
-      <IconButton
-        size={28}
-        aria-label="高亮选区"
-        title="高亮选区"
-        isDisabled={!editable || !selection}
-        onPress={() => onHighlight()}
-      >
-        <HighlightIcon size={16} />
-      </IconButton>
       <span className={styles.toolbarSpacer} />
       {searchOpen ? (
         <div className={styles.search}>
@@ -148,11 +144,11 @@ export function PdfReaderToolbar({
           <SearchIcon size={16} />
         </IconButton>
       )}
+      <IconButton size={28} aria-label="标注" title="标注" aria-pressed={panel} onPress={() => onPanel()}>
+        <HighlightIcon size={16} />
+      </IconButton>
       <IconButton size={28} aria-label="目录" title="目录" aria-pressed={outlineOpen} onPress={() => onOutline()}>
         <ListIcon size={16} />
-      </IconButton>
-      <IconButton size={28} aria-label="标注" title="标注" aria-pressed={panel} onPress={() => onPanel()}>
-        <PanelIcon size={16} />
       </IconButton>
       <MenuTrigger>
         <IconButton size={28} aria-label="更多" title="更多">
@@ -165,12 +161,16 @@ export function PdfReaderToolbar({
               if (key === 'favorite') void onFavorite();
               if (key === 'download') void onDownload();
               if (key === 'export') void onExport();
+              if (key === 'extract') void onExtract();
             }}
           >
             <MenuItem id="favorite" isDisabled={!canWrite}>
               {note.favorite ? '取消收藏' : '收藏'}
             </MenuItem>
             <MenuItem id="download">下载原文件</MenuItem>
+            <MenuItem id="extract" isDisabled={!loaded || !canWrite}>
+              提取到笔记
+            </MenuItem>
             <MenuItem id="export" isDisabled={!loaded}>
               导出摘录
             </MenuItem>

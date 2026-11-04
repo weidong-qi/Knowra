@@ -1,6 +1,6 @@
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { Button, Dialog, DialogBody, DialogFooter } from '../../components/ui';
-import { KIND_OPTIONS, IMPORTANCE_OPTIONS } from '../editor/inspector/annotationOptions';
+import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import type { PdfDraft } from './pdfSession';
 
 export type PdfConflictReview = { draft: PdfDraft; remote: PdfAnnotation | null };
@@ -16,8 +16,8 @@ export function PdfConflictDialog({
   const describe = (value: Partial<PdfAnnotation>) => (
     <>
       <p>
-        {value.quoteText || '区域标注'} · {KIND_OPTIONS.find(option => option.id === value.kind)?.label} ·{' '}
-        {IMPORTANCE_OPTIONS.find(option => option.id === value.importance)?.label}
+        {value.quoteText || (value.type === 'note' ? '便签' : '区域标注')} ·{' '}
+        {KIND_OPTIONS.find(option => option.id === value.kind)?.label}
       </p>
       <p>{value.comment || '没有评论'}</p>
     </>
