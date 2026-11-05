@@ -45,7 +45,7 @@ export async function exercisePdfBackgroundRendering(page) {
     );
   const space = await api('/api/knowledge/spaces/default', 'POST', {});
   const bytes = syntheticPdf({
-    pages: ['First editable text', 'Second page loaded later'].map(text => ({ text, width: 420, height: 260 }))
+    pages: ['First editable text', 'Second page loaded later'].map(text => ({ text, width: 420, height: 360 }))
   });
   const query = new URLSearchParams({ operationId: 'background-pdf', spaceId: space.id, fileName: '后台渲染.pdf' });
   const note = await api(`/api/storage/pdf-imports?${query}`, 'POST', [...bytes], true);
@@ -55,7 +55,7 @@ export async function exercisePdfBackgroundRendering(page) {
     kind: 'important',
     quoteText: 'First editable text',
     comment: '',
-    segments: [{ pageIndex: 0, rect: [40, 185, 210, 205] }],
+    segments: [{ pageIndex: 0, rect: [40, 285, 210, 305] }],
     expectedRevision: 0,
     operationId: 'background-mark'
   });
@@ -89,12 +89,26 @@ export async function exercisePdfBackgroundRendering(page) {
       await expect(field).toHaveValue('hello');
       await expect(field).toBeFocused();
       await expect.poll(async () => (await api(marksUrl))[0].comment).toBe('hello');
+      const viewport = page.getByLabel('PDF 页面', { exact: true });
+      // 缩放或定位积压的 scroll 事件，若未改变实际位置，不能打断刚打开的编辑器。
+      await viewport.evaluate(el => el.dispatchEvent(new Event('scroll')));
+      await expect(editor).toBeVisible();
+      assert.equal(await original.evaluate(el => el.isConnected && document.activeElement === el), true);
       await original.dispose();
-      await editor.getByRole('button', { name: '完成', exact: true }).click();
+      const moved = await viewport.evaluate(el => {
+        const before = el.scrollTop;
+        el.scrollTop += 40;
+        el.dispatchEvent(new Event('scroll'));
+        return el.scrollTop !== before;
+      });
+      assert(moved, '夹具应有可滚动的阅读区');
+      await expect(editor).toHaveCount(0);
     } else {
       await page.evaluate(() => window.releasePdfBackgroundText());
       await expect(page.locator('.textLayer').nth(1)).toContainText('Second page loaded later');
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await expect(actions).toBeVisible();
+      await page.getByLabel('PDF 页面', { exact: true }).evaluate(el => el.dispatchEvent(new Event('scroll')));
       await expect(actions).toBeVisible();
       await actions.getByRole('button', { name: '编辑批注', exact: true }).click();
       await expect(page.getByRole('textbox', { name: '批注内容' })).toHaveValue('hello');

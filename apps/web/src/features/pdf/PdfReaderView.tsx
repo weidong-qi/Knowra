@@ -58,6 +58,7 @@ export function PdfReaderView({
   const [commentEditor, setCommentEditor] = useState<{ id: string; x: number; y: number } | null>(null);
   const annotationPress = useRef<{ id: string; x: number; y: number } | null>(null);
   const skipTextMouseUp = useRef(false);
+  const scrollPosition = useRef({ top: 0, left: 0 });
   const [pending, setPending] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [tool, setTool] = useState('text'),
     [panel, setPanel] = useState(true);
@@ -318,8 +319,15 @@ export function PdfReaderView({
     const left = right + 220 > window.innerWidth - 8 ? geo.bounds.left + box.x * kx - 228 : right;
     return { left: Math.max(8, left), top };
   }
+  function syncScrollPosition(element: HTMLElement) {
+    const { scrollTop: top, scrollLeft: left } = element;
+    const moved = scrollPosition.current.top !== top || scrollPosition.current.left !== left;
+    scrollPosition.current = { top, left };
+    return moved;
+  }
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
+    syncScrollPosition(event.currentTarget);
     setAnnotationAction(null);
     annotationPress.current = null;
     skipTextMouseUp.current = false;
@@ -621,6 +629,7 @@ export function PdfReaderView({
                 window.getSelection()?.isCollapsed !== false
               ) {
                 skipTextMouseUp.current = true;
+                syncScrollPosition(event.currentTarget);
                 setSelected(press.id);
                 setPending(null);
                 setAnnotationAction({ id: press.id, x: event.clientX, y: event.clientY + 12 });
@@ -655,7 +664,9 @@ export function PdfReaderView({
               setPending(value && anchor ? { value, anchor } : null);
               if (!value) setGhost(null);
             }}
-            onScroll={() => {
+            onScroll={event => {
+              // 布局调整的 scroll 事件可能晚于标注点击派发；当前位置没变时，浮层仍有效。
+              if (!syncScrollPosition(event.currentTarget)) return;
               setAnnotationAction(null);
               setCommentEditor(null);
               if (cardOpen) render(value => value + 1);
