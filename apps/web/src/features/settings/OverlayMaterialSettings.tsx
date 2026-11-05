@@ -9,7 +9,7 @@ import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
 
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
-const DEFAULT_BUTTON_STYLE_LABELS: Record<DefaultButtonStyle, string> = { soft: '纯白', glass: '冷白描边' };
+const DEFAULT_BUTTON_STYLE_LABELS: Record<DefaultButtonStyle, string> = { soft: '无边软影', glass: '乳白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
 
 export function OverlayMaterialSettings() {
@@ -65,7 +65,7 @@ export function OverlayMaterialSettings() {
       <div className={`${styles.settingRow} ${styles.materialRow}`}>
         <div className={styles.settingCopy}>
           <h4>默认按钮样式</h4>
-          <p>影响普通按钮（如「搜索」「日程」）。纯白边缘最清楚；冷白描边像一块发光的亚克力。深色和浅色模式通用，切换后即时保存。</p>
+          <p>影响白色的普通按钮（如「搜索」「日程」）。无边软影靠柔和投影托起，乳白玻璃半透明通透，切换后即时保存。</p>
         </div>
         <div className={`${styles.settingControl} ${styles.materialControl}`}>
           <SegmentedControl aria-label="默认按钮样式">

@@ -24,7 +24,7 @@ export type DialogStyle = typeof DIALOG_STYLES[number];
 
 export const NOTES_INDEX_APPEARANCE_KEY = 'knowra:notes-index-appearance:v1';
 export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
-  mode: 'light', theme: 'orange', shape: 'pill', overlayMaterial: 'glass', buttonStyle: 'paper', defaultButtonStyle: 'glass', dialogStyle: 'float'
+  mode: 'light', theme: 'orange', shape: 'pill', overlayMaterial: 'glass', buttonStyle: 'paper', defaultButtonStyle: 'soft', dialogStyle: 'float'
 };
 const listeners = new Set<() => void>();
 let snapshot = readAppearance();
@@ -39,7 +39,7 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     shape: 'pill',
     overlayMaterial: candidate.overlayMaterial === 'acrylic' ? 'acrylic' : 'glass',
     buttonStyle: BUTTON_STYLES.includes(candidate.buttonStyle as ButtonStyle) ? candidate.buttonStyle as ButtonStyle : 'paper',
-    defaultButtonStyle: DEFAULT_BUTTON_STYLES.includes(candidate.defaultButtonStyle as DefaultButtonStyle) ? candidate.defaultButtonStyle as DefaultButtonStyle : 'glass',
+    defaultButtonStyle: DEFAULT_BUTTON_STYLES.includes(candidate.defaultButtonStyle as DefaultButtonStyle) ? candidate.defaultButtonStyle as DefaultButtonStyle : 'soft',
     dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle) ? candidate.dialogStyle as DialogStyle : 'float'
   };
 }
