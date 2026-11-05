@@ -84,13 +84,14 @@
   --shadow-action-satin-hover: inset 0 1px 0 #ffbf8670, 0 0 0 2px #d48b4930, 0 4px 10px #0007;
   --shadow-action-satin-pressed: inset 0 2px 4px #4e271b80;
 color-scheme:dark;
-  --ink-rgb:236 236 238; --ink-bg-rgb:24 25 29;
-  --ni-chrome:#0b0c0f; --ni-page:#18191d;
-  --ni-ink:#ececee; --ni-ink-2:#a3a7b1; --ni-ink-3:#7d828d; --ni-ink-4:#50545d;
-  --ni-body:#d3d5db; --ni-ink-3-text:#8a8f9a;
-  --ni-line:rgba(255,255,255,.07); --ni-line-2:rgba(255,255,255,.12);
-  --ni-hover:rgba(255,255,255,.055); --ni-press:rgba(255,255,255,.09);
-  --ni-selected:rgba(255,255,255,.09);
+  --ink-rgb:245 245 247; --ink-bg-rgb:26 28 32;
+  /* 白天友好版：页面底色略提亮、分隔线与弱化文字加亮，保证强光下层次和文字仍可辨认。 */
+  --ni-chrome:#101114; --ni-page:#1a1c20;
+  --ni-ink:#f5f5f7; --ni-ink-2:#b6bac3; --ni-ink-3:#9196a0; --ni-ink-4:#6b707a;
+  --ni-body:#e0e2e7; --ni-ink-3-text:#9196a0;
+  --ni-line:rgba(255,255,255,.14); --ni-line-2:rgba(255,255,255,.22);
+  --ni-hover:rgba(255,255,255,.07); --ni-press:rgba(255,255,255,.11);
+  --ni-selected:rgba(255,255,255,.12);
   /* 深色下主按钮降亮度、去外发光，避免刺眼。 */
   --button-primary-bg:color-mix(in srgb,var(--ni-accent) 72%,#17181c); --button-primary-hover:color-mix(in srgb,var(--ni-accent) 82%,#17181c); --button-primary-ink:rgba(255,255,255,.92);
   /* 上下文侧栏左上角的白色柔光（参考 Linear 深色）。 */
@@ -107,26 +108,26 @@ color-scheme:dark;
   --ni-glow-dot:0 0 8px color-mix(in srgb,var(--ni-accent) 60%,transparent);
   --shadow-accent:inset 0 1px 0 rgba(255,255,255,.14),0 0 0 1px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.4);
   --nav-selected-bg:linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.055)); --nav-selected-line:rgba(255,255,255,.1); --nav-selected-ink:#f3f4f6; --nav-selected-shadow:0 1px 2px #21273506,inset 0 1px rgba(255,255,255,.07);
-  --ni-accent:#f26b1d; --ni-accent-ink:#ff9a62;
+  --ni-accent:#f26b1d; --ni-accent-ink:#ff8a4c;
   --ni-accent-soft:color-mix(in srgb,var(--ni-accent) 15%,var(--ni-page)); --ni-accent-line:color-mix(in srgb,var(--ni-accent) 38%,var(--ni-page));
   --ni-st-active:#ffc233; --ni-st-done:#34d27b;
   --ni-ambient:transparent;
   --ni-mark:color-mix(in srgb,var(--ni-accent) 32%,transparent);
-  --ni-fav:#ffc233; --ni-fav-line:#ffc233; --ni-toast-act:#ff9a62; --ni-btn-on-accent:#fff;
+  --ni-fav:#ffc233; --ni-fav-line:#ffc233; --ni-toast-act:#ff8a4c; --ni-btn-on-accent:#fff;
   --ni-danger:#ef6a6a; --ni-danger-soft:rgba(239,106,106,.13); --ni-danger-ring:#8c4444;
-  --ni-surf:#24262c; --ni-surf-2:rgba(255,255,255,.035);
-  --ni-ctx-bg:rgba(21,22,26,.9); --ni-ctx-bg-solid:rgba(21,22,26,.98); --ni-ctx-border:rgba(255,255,255,.08); --ni-ctx-hl:rgba(255,255,255,.06);
-  --ni-pop-bg:rgba(34,36,42,.97); --ni-gh-bg:#1c1d22f2; --ni-toast-bg:#34373f;
+  --ni-surf:#24272d; --ni-surf-2:rgba(255,255,255,.05);
+  --ni-ctx-bg:rgba(30,32,37,.92); --ni-ctx-bg-solid:rgba(30,32,37,.98); --ni-ctx-border:rgba(255,255,255,.12); --ni-ctx-hl:rgba(255,255,255,.08);
+  --ni-pop-bg:rgba(38,41,47,.97); --ni-gh-bg:#202228f2; --ni-toast-bg:#3a3e46;
   --ni-nv-sel:linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.055)); --ni-nv-sel-line:rgba(255,255,255,.1); --ni-nv-sel-ink:#f3f4f6;
   --ni-rail-sel:linear-gradient(180deg,#2d2f36,#25272d);
   --ni-ring:rgba(255,255,255,.09); --ni-ring-2:rgba(255,255,255,.28); --ni-ring-3:rgba(255,255,255,.5);
   --ni-fill-1:rgba(255,255,255,.055); --ni-fill-2:rgba(255,255,255,.08); --ni-fill-3:rgba(255,255,255,.07); --ni-fill-4:rgba(255,255,255,.02);
   --ni-sw-off:rgba(255,255,255,.2); --ni-scroll:rgba(255,255,255,.16); --ni-hair:rgba(255,255,255,.1);
   --ni-sheen:rgba(255,255,255,.03); --ni-hl-c:rgba(255,255,255,.07);
-  --ni-sh-ctx:0 0 0 1px rgba(255,255,255,.07);
-  --ni-sh-page:0 0 0 1px rgba(255,255,255,.08);
+  --ni-sh-ctx:0 0 0 1px rgba(255,255,255,.12);
+  --ni-sh-page:0 0 0 1px rgba(255,255,255,.13);
   --ni-sh-pop:inset 0 1px 0 var(--ni-ctx-hl),0 0 0 1px rgba(255,255,255,.11),0 2px 4px rgba(0,0,0,.35),0 10px 24px -8px rgba(0,0,0,.5),0 28px 64px -14px rgba(0,0,0,.75);
-  --ni-sh-card:0 0 0 1px rgba(255,255,255,.08);
+  --ni-sh-card:0 0 0 1px rgba(255,255,255,.13);
 }
 
 .theme[data-ni-mode="dark"] {
