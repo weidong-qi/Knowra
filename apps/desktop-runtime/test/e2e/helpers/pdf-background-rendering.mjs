@@ -23,22 +23,32 @@ export async function exercisePdfBackgroundRendering(page) {
     };
   });
   const origin = new URL(page.url()).origin;
-  const api = async (url, method = 'GET', data) => {
-    const response = await page.request.fetch(`${origin}${url}`, { method, ...(data ? { data } : {}) });
-    assert(response.ok(), await response.text());
-    return (await response.json()).data;
-  };
+  // 使用应用自己的 fetch；Electron 的中文产品名可能进入 User-Agent，
+  // Node 侧 APIRequestContext 无法转发这类请求头。
+  const api = (url, method = 'GET', data, binary = false) =>
+    page.evaluate(
+      async ({ url, method, data, binary }) => {
+        const response = await fetch(url, {
+          method,
+          ...(data === undefined
+            ? {}
+            : {
+                headers: { 'Content-Type': binary ? 'application/pdf' : 'application/json' },
+                body: binary ? new Uint8Array(data) : JSON.stringify(data)
+              })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(JSON.stringify(result));
+        return result.data;
+      },
+      { url, method, data, binary }
+    );
   const space = await api('/api/knowledge/spaces/default', 'POST', {});
   const bytes = syntheticPdf({
     pages: ['First editable text', 'Second page loaded later'].map(text => ({ text, width: 420, height: 260 }))
   });
   const query = new URLSearchParams({ operationId: 'background-pdf', spaceId: space.id, fileName: '后台渲染.pdf' });
-  const imported = await page.request.post(`${origin}/api/storage/pdf-imports?${query}`, {
-    headers: { 'Content-Type': 'application/pdf' },
-    data: bytes
-  });
-  assert.equal(imported.status(), 201);
-  const note = (await imported.json()).data;
+  const note = await api(`/api/storage/pdf-imports?${query}`, 'POST', [...bytes], true);
   const marksUrl = `/api/pdf/${note.id}/annotations`;
   await api(`${marksUrl}/background-mark`, 'PUT', {
     type: 'highlight',
