@@ -42,12 +42,12 @@ const references = [
   'analysisScopeSnapshots'
 ] as const;
 /** 能让一条重点免于回收的引用方：重点自身的排除区间与修订随它一起处理，不算外部引用。 */
-const annotationReferences = [
+export const ANNOTATION_RETENTION_REFERENCE_COLLECTIONS = Object.freeze([
   'knowledgeEvidence',
   'knowledgeArtifactProvenance',
   'questionSources',
   'analysisScopeSnapshots'
-] as const;
+] as const);
 const pair = (id: string, revision: RetentionJsonValue | undefined) => JSON.stringify([id, revision]);
 const size = (record: object) => Buffer.byteLength(JSON.stringify(record));
 const newestFirst = (a: HistoryRevision, b: HistoryRevision) =>
@@ -184,7 +184,7 @@ function selectAnnotationsToPrune(
 ) {
   // 与版本/修订引用采用同一 token 索引，包含自由文本和字符串化的私有任务载荷。
   const referenced = createNoteVersionReferenceIndex({
-    ...Object.fromEntries(annotationReferences.map(name => [name, state[name] ?? []])),
+    ...Object.fromEntries(ANNOTATION_RETENTION_REFERENCE_COLLECTIONS.map(name => [name, state[name] ?? []])),
     external: externalReferences
   });
   const exclusionsByParent = new Map<string, HistoryExclusion[]>();

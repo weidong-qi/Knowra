@@ -475,24 +475,20 @@ function createApi(): WorkspaceApi {
     queryNotes: vi.fn().mockResolvedValue({ items: [], hasNext: false }),
     getLinkedNotes: vi.fn().mockResolvedValue([]),
     listAnnotations: vi.fn().mockResolvedValue([]),
-    createAnnotation: vi.fn(),
     deleteAnnotation: vi.fn(),
     restoreAnnotation: vi.fn(),
-    updateAnnotationAnchor: vi.fn(),
     listNoteVersions: vi.fn().mockResolvedValue([]),
     getNoteVersion: vi.fn(),
     listNoteAttachments: vi.fn().mockResolvedValue([]),
     uploadNoteAttachment: vi.fn(),
     renameNoteAttachment: vi.fn(),
-    inspectAttachmentDeletion: vi
-      .fn()
-      .mockResolvedValue({
-        asset: { type: 'attachment', id: 'attachment-1' },
-        decision: 'can-purge-no-history',
-        references: [],
-        reasonCodes: [],
-        coverage: { persistedCurrentAndHistory: true }
-      }),
+    inspectAttachmentDeletion: vi.fn().mockResolvedValue({
+      asset: { type: 'attachment', id: 'attachment-1' },
+      decision: 'can-purge-no-history',
+      references: [],
+      reasonCodes: [],
+      coverage: { persistedCurrentAndHistory: true }
+    }),
     verifyNoteAttachment: vi.fn(),
     restoreNoteAttachment: vi.fn(),
     listAttachmentCleanup: vi.fn().mockResolvedValue({ items: [], pending: 0 }),
