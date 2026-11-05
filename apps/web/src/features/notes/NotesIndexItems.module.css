@@ -36,6 +36,9 @@
 .rowSummary { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12.5px/1.5 var(--font-ui); color: var(--ni-ink-3, var(--text-muted)); }
 .nameCell:disabled, .tile:disabled { opacity: 1; cursor: default; }
 .entryIcon { --knowra-icon-accent: currentColor; flex: none; display: grid; place-items: center; color: var(--ni-ink-3, var(--text-muted)); }
+/* PDF 类型角标（方案 E）：贴在图标左下角，只标注 PDF 文件。 */
+.pdfIcon { position: relative; display: inline-grid; place-items: center; }
+.pdfBadge { position: absolute; left: -3px; bottom: -3px; padding: 1px 2px; border-radius: 2px; background: #d6452f; color: #fff; font: 700 6.5px/1 var(--font-ui); letter-spacing: 0.02em; pointer-events: none; }
 /* 列表文件夹：实心橙色（方案 E），文件保持线性墨色。 */
 .entryIcon[data-art-kind='folder'] { color: var(--ni-accent, var(--accent)); }
 .status { --status-color: var(--ni-ink-3, var(--text-muted)); display: inline-flex; align-items: center; gap: 6px; color: var(--ni-ink-2, var(--text-secondary)); font-size: 12px; font-weight: 400; white-space: nowrap; }

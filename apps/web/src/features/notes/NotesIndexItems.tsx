@@ -177,7 +177,10 @@ function IndexTableRow({
             {isFolder ? (
               <SolidFolderIcon size={18} />
             ) : item.kind === 'note' && item.note.contentKind === 'pdf' ? (
-              <PdfFileIcon size={18} />
+              <span className={styles.pdfIcon}>
+                <PdfFileIcon size={18} />
+                <span className={styles.pdfBadge}>PDF</span>
+              </span>
             ) : (
               <NoteIcon size={18} />
             )}
