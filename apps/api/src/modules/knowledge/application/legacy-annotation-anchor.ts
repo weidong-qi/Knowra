@@ -10,7 +10,7 @@ import {
 import { knowraMarkSpans, stripKnowraMarksMapped } from '@study-accelerator/shared/knowra-marks';
 
 /** 去标记会连同标记前的行尾空白一起移除，比较摘录和标题时忽略这类空白。 */
-export const sameAnchorText = (a: string | undefined, b: string | undefined) =>
+export const sameAnchorText = (a: string | null | undefined, b: string | null | undefined) =>
   (a ?? '').replace(/[ \t]+(?=\n|$)/g, '') === (b ?? '').replace(/[ \t]+(?=\n|$)/g, '');
 
 /** 将去标记后的范围映回当前正文，拆开穿过标记语法的区间。 */
