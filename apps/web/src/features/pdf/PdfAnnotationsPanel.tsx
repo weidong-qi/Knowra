@@ -19,7 +19,9 @@ export function PdfAnnotationsList({
   canWrite,
   onSelect,
   onChange,
-  onDelete
+  onDelete,
+  filteredOutId,
+  emptyHint = true
 }: {
   items: PdfAnnotation[];
   selected: string | null;
@@ -27,10 +29,12 @@ export function PdfAnnotationsList({
   onSelect(item: PdfAnnotation): void;
   onChange(id: string, fields: Partial<PdfAnnotation>): void;
   onDelete(id: string): void;
+  emptyHint?: boolean;
+  filteredOutId?: string;
 }) {
   return (
     <>
-      {!items.length ? (
+      {!items.length && emptyHint ? (
         <p className={styles.panelEmpty}>
           选中文字后点一下颜色即可标注；用区域框选标记图片、公式和扫描页；用便签在页面任意位置写想法。
         </p>
@@ -41,7 +45,11 @@ export function PdfAnnotationsList({
           className={styles.markCard}
           data-selected={selected === item.id || undefined}
           data-kind={item.kind}
+          aria-label={filteredOutId === item.id ? '当前选中标注' : undefined}
         >
+          {filteredOutId === item.id ? (
+            <p className={styles.panelEmpty}>当前选中标注不符合筛选，仍可继续编辑。</p>
+          ) : null}
           <div className={styles.markHead}>
             <PressableButton
               className={styles.markJump}

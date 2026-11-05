@@ -31,6 +31,45 @@ export function rectToViewport(viewport: PdfViewport, rect: number[]) {
     height: Math.abs(r[3] - r[1])
   };
 }
+/** 合并同页同一行的相邻文字片段，填平空格及大小写字形之间的缝隙；不跨行、跨栏。 */
+export function mergePdfTextSegments(segments: PdfSegment[]): PdfSegment[] {
+  const lines: PdfSegment[][] = [];
+  for (const segment of [...segments].sort((a, b) => a.pageIndex - b.pageIndex || b.rect[3] - a.rect[3])) {
+    const [left, bottom, right, top] = segment.rect;
+    const height = top - bottom;
+    const line = lines.find(([first]) => {
+      if (first.pageIndex !== segment.pageIndex) return false;
+      const [, baseBottom, , baseTop] = first.rect;
+      const baseHeight = baseTop - baseBottom;
+      return (
+        Math.min(top, baseTop) - Math.max(bottom, baseBottom) >= Math.min(height, baseHeight) * 0.7 &&
+        Math.abs(top + bottom - baseTop - baseBottom) <= Math.max(height, baseHeight) * 0.7
+      );
+    });
+    const copy = { pageIndex: segment.pageIndex, rect: [left, bottom, right, top] as PdfSegment['rect'] };
+    if (line) line.push(copy);
+    else lines.push([copy]);
+  }
+  return lines.flatMap(line => {
+    const merged: PdfSegment[] = [];
+    for (const segment of line.sort((a, b) => a.rect[0] - b.rect[0])) {
+      const previous = merged.at(-1);
+      if (
+        previous &&
+        segment.rect[0] - previous.rect[2] <=
+          Math.min(previous.rect[3] - previous.rect[1], segment.rect[3] - segment.rect[1]) * 0.6
+      ) {
+        previous.rect = [
+          previous.rect[0],
+          Math.min(previous.rect[1], segment.rect[1]),
+          Math.max(previous.rect[2], segment.rect[2]),
+          Math.max(previous.rect[3], segment.rect[3])
+        ];
+      } else merged.push(segment);
+    }
+    return merged;
+  });
+}
 export function sortPdfAnnotations(items: PdfAnnotation[]) {
   return [...items].sort(
     (a, b) =>

@@ -102,6 +102,25 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('退出前的本机评论', {
     timeout: 30000
   });
+  const savedRegion = page.locator('[data-knowra-pdf-overlay] [data-type="region"]');
+  // 定位后的延迟布局可能改变阅读位置，用当前可见标注的坐标悬停。
+  await expect
+    .poll(async () => {
+      const savedMark = await savedRegion.boundingBox();
+      const frame = await page.getByLabel('PDF 页面', { exact: true }).boundingBox();
+      if (!savedMark || !frame) return '';
+      const x = savedMark.x + savedMark.width / 2,
+        y = savedMark.y + savedMark.height / 2;
+      if (x < frame.x || x > frame.x + frame.width || y < frame.y || y > frame.y + frame.height) {
+        await savedRegion.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
+        return '';
+      }
+      await page.mouse.move(x, y);
+      return (await page.getByRole('tooltip').allTextContents()).join('');
+    })
+    .toContain('退出前的本机评论');
+  await page.mouse.move(5, 5);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
   const destination = path.join(directory, '原 PDF.pdf');
   await app.evaluate(({ dialog }, destination) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: destination });
@@ -110,6 +129,71 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await page.getByRole('menuitem', { name: '下载原文件', exact: true }).click();
   await expect.poll(() => fs.existsSync(destination)).toBe(true);
   assert.deepEqual(fs.readFileSync(destination), bytes);
+  const pdfCanvas = page.locator('.canvasWrapper').first();
+  const originalSize = await pdfCanvas.boundingBox();
+  assert(originalSize);
+  const cdp = await page.context().newCDPSession(page);
+  const pinch = scaleFactor =>
+    cdp.send('Input.synthesizePinchGesture', {
+      x: originalSize.x + originalSize.width / 2,
+      y: originalSize.y + 140,
+      scaleFactor,
+      gestureSourceType: 'mouse'
+    });
+  await pinch(1.25);
+  await expect.poll(async () => (await pdfCanvas.boundingBox()).width).toBeGreaterThan(originalSize.width * 1.1);
+  const zoomedSize = await pdfCanvas.boundingBox();
+  await pinch(0.8);
+  await expect.poll(async () => (await pdfCanvas.boundingBox()).width).toBeLessThan(zoomedSize.width * 0.9);
+  assert.equal(
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getZoomFactor()),
+    1
+  );
+  await cdp.detach();
+  await page.getByRole('button', { name: '适合宽度', exact: true }).click();
+  // 捏合结束后的延迟绘制会重建文字层；等待新文字层能产生选区色条，再创建标注。
+  await expect
+    .poll(async () => {
+      await page
+        .locator('.textLayer')
+        .first()
+        .evaluate(layer => {
+          const span = [...layer.querySelectorAll('span')].find(el => el.textContent === '知境阅读与标注');
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          layer.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        });
+      return page.getByRole('button', { name: '标注为疑问', exact: true }).isVisible();
+    })
+    .toBe(true);
+  await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
+  await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  const textMark = await page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').boundingBox();
+  assert(textMark);
+  await page.mouse.click(textMark.x + textMark.width / 2, textMark.y + textMark.height / 2);
+  await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
+  await app.evaluate(async ({ clipboard, ClipboardItem }) => {
+    globalThis.pdfTestClipboard = await Promise.all(
+      (await clipboard.read()).map(
+        async item =>
+          new ClipboardItem(
+            Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)])))
+          )
+      )
+    );
+  });
+  try {
+    await page.getByRole('button', { name: '复制', exact: true }).click();
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe('知境阅读与标注');
+  } finally {
+    await app.evaluate(async ({ clipboard }) => {
+      await clipboard.write(globalThis.pdfTestClipboard);
+      delete globalThis.pdfTestClipboard;
+    });
+  }
   assert.deepEqual(foreign, []);
   if (process.env.KNOWRA_E2E_OUTPUT) {
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });

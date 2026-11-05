@@ -3,6 +3,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { pdfjs, PDFViewer, EventBus, PDFLinkService, PDFFindController, pdfResourceOptions } from './pdfRuntime';
 import { pdfFileUrl, pdfHeaders } from './pdfApi';
 import { readRuntimeConfig } from '../../app/runtimeConfig';
+import { attachPdfPinchZoom } from './pdfPinchZoom';
 
 export function usePdfViewer(attachmentId: string, noteId: string, sha256: string) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -15,6 +16,8 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
   const [error, setError] = useState('');
   const [passwordRequest, setPasswordRequest] = useState<{ update(value: string): void; wrong: boolean } | null>(null);
   const [revision, setRevision] = useState(0);
+  // 后台页绘制只重画标注；真正的视口变化才让坐标浮层失效。
+  const [viewportRevision, setViewportRevision] = useState(0);
   useEffect(() => {
     const container = containerRef.current!;
     const runtime = readRuntimeConfig();
@@ -43,6 +46,7 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
       removePageBorders: true
     });
     viewerRef.current = viewer;
+    const detachPinchZoom = attachPdfPinchZoom(container, viewer);
     eventRef.current = bus;
     linkRef.current = links;
     links.setViewer(viewer);
@@ -96,12 +100,20 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
     });
     resize.observe(container);
     bus.on('pagechanging', (event: { pageNumber: number }) => {
-      if (active) setPage(event.pageNumber);
+      if (!active) return;
+      setPage(event.pageNumber);
+      setViewportRevision(value => value + 1);
       persist();
     });
-    for (const name of ['pagerendered', 'scalechanging', 'rotationchanging'])
+    for (const name of ['pagerendered', 'textlayerrendered'])
       bus.on(name, () => {
         if (active) setRevision(value => value + 1);
+      });
+    for (const name of ['scalechanging', 'rotationchanging'])
+      bus.on(name, () => {
+        if (!active) return;
+        setRevision(value => value + 1);
+        setViewportRevision(value => value + 1);
         persist();
       });
     const loading = pdfjs.getDocument({
@@ -126,6 +138,7 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
       });
     return () => {
       active = false;
+      detachPinchZoom();
       clearTimeout(timer);
       resize.disconnect();
       try {
@@ -160,6 +173,7 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
     error,
     passwordRequest,
     setPasswordRequest,
-    revision
+    revision,
+    viewportRevision
   };
 }

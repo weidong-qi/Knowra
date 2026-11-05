@@ -1,5 +1,13 @@
-import { rectToPdf, rectToViewport, exportPdfExcerpt, noteRectAt, moveRect, PDF_NOTE_SIZE } from './pdfGeometry';
-import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
+import {
+  rectToPdf,
+  rectToViewport,
+  exportPdfExcerpt,
+  noteRectAt,
+  moveRect,
+  PDF_NOTE_SIZE,
+  mergePdfTextSegments
+} from './pdfGeometry';
+import type { PdfAnnotation, PdfSegment } from '@study-accelerator/shared/pdf';
 it('旋转后视口矩形回到同一 PDF 坐标，CSS 缩放和页面偏移不改变锚点', () => {
   const rotations = [
     {
@@ -86,5 +94,29 @@ describe('便签几何', () => {
     const clamped = moveRect(viewport, bounds, rect, -9999, -9999);
     expect(clamped[0]).toBeCloseTo(0);
     expect(clamped[3]).toBeCloseTo(300);
+  });
+});
+
+describe('连续文字标注', () => {
+  it('连接同一行的空格和大小写字形，保留原始片段不变', () => {
+    const segments: PdfSegment[] = [
+      { pageIndex: 0, rect: [10, 100, 18, 120] },
+      { pageIndex: 0, rect: [18, 100, 55, 115] },
+      { pageIndex: 0, rect: [61, 100, 72, 120] },
+      { pageIndex: 0, rect: [72, 100, 140, 115] }
+    ];
+    const before = JSON.stringify(segments);
+    expect(mergePdfTextSegments(segments)).toEqual([{ pageIndex: 0, rect: [10, 100, 140, 120] }]);
+    expect(JSON.stringify(segments)).toBe(before);
+  });
+  it('不跨行、跨栏、跨页或把上标合进正文', () => {
+    const segments: PdfSegment[] = [
+      { pageIndex: 0, rect: [10, 100, 60, 120] },
+      { pageIndex: 0, rect: [140, 100, 190, 120] },
+      { pageIndex: 0, rect: [10, 75, 60, 95] },
+      { pageIndex: 0, rect: [60, 119, 67, 128] },
+      { pageIndex: 1, rect: [10, 100, 60, 120] }
+    ];
+    expect(mergePdfTextSegments(segments)).toHaveLength(5);
   });
 });
