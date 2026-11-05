@@ -60,24 +60,14 @@ describe('NotesContextSidebar', () => {
       })
     );
   });
-  it('将更新时间分布放在标签之后的同一滚动区域，回收站单独保留', () => {
+  it('侧栏不再显示最近更新时间分布', () => {
     renderSidebar();
-    const distribution = screen.getByRole('region', { name: '已加载笔记 · 最近更新时间分布' });
-    const trash = screen.getByRole('button', { name: /回收站1/ });
-    expect(distribution.compareDocumentPosition(trash) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('每篇仅计一次')).toBeInTheDocument();
-    expect(screen.queryByText('本地已同步')).not.toBeInTheDocument();
-    const tags = screen.getByRole('button', { name: '标签' });
-    expect(tags.compareDocumentPosition(distribution) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const scrollBody = distribution.parentElement!;
-    expect(scrollBody.className).toContain('scrollBody');
-    expect(scrollBody.contains(tags)).toBe(true);
-    expect(scrollBody.contains(trash)).toBe(false);
+    expect(screen.queryByRole('region', { name: '已加载笔记 · 最近更新时间分布' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /回收站1/ })).toBeInTheDocument();
   });
   it('侧栏始终使用全局定稿外观与明暗模式', () => {
     act(() => setNotesIndexAppearance({ mode: 'dark' }));
     renderSidebar();
-    expect(screen.getByRole('region', { name: '已加载笔记 · 最近更新时间分布' })).toBeInTheDocument();
     const surface = document.querySelector('[data-ni-mode]');
     expect(surface).toHaveAttribute('data-ni-mode', 'dark');
     expect(surface).toHaveAttribute('data-ni-shape', 'pill');
@@ -174,7 +164,7 @@ describe('NotesContextSidebar', () => {
     expect(screen.getByRole('button', { name: '规划草案' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: '设计' }));
-    expect(store.getState().notesIndex.selectedTagId).toBe('tag-1');
+    expect(store.getState().notesIndex.selectedTagId).toBeNull();
     expect(store.getState().navigation.selectedFolderId).toBeNull();
 
     act(() => store.getState().setNotesQuery('正文关键词'));
@@ -264,7 +254,7 @@ describe('NotesContextSidebar', () => {
     ]);
   });
 
-  it('固定标签优先于使用量，保留固定顺序并忽略已经不存在的标签', () => {
+  it('固定标签优先于使用量，展开后显示全部标签并可收起', async () => {
     localStorage.setItem('knowra:pinned-tags', JSON.stringify(['tag-zero', 'tag-missing', 'tag-low']));
     renderSidebar({
       tags: [
@@ -283,6 +273,13 @@ describe('NotesContextSidebar', () => {
         .getAllByRole('button')
         .map(button => button.textContent)
     ).toEqual(['未使用', '较少使用', '全部标签·3']);
+    expect(screen.queryByRole('button', { name: '常用' })).not.toBeInTheDocument();
+    const initialHash = window.location.hash;
+    await userEvent.click(screen.getByRole('button', { name: '全部标签·3' }));
+    expect(window.location.hash).toBe(initialHash);
+    expect(screen.getByRole('button', { name: '常用' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '收起标签' })).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(screen.getByRole('button', { name: '收起标签' }));
     expect(screen.queryByRole('button', { name: '常用' })).not.toBeInTheDocument();
   });
 
@@ -540,15 +537,13 @@ function createApi(): WorkspaceApi {
     listNoteAttachments: vi.fn().mockResolvedValue([]),
     uploadNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
     renameNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
-    inspectAttachmentDeletion: vi
-      .fn()
-      .mockResolvedValue({
-        asset: { type: 'attachment', id: 'attachment-1' },
-        decision: 'can-purge-no-history',
-        references: [],
-        reasonCodes: [],
-        coverage: { persistedCurrentAndHistory: true }
-      }),
+    inspectAttachmentDeletion: vi.fn().mockResolvedValue({
+      asset: { type: 'attachment', id: 'attachment-1' },
+      decision: 'can-purge-no-history',
+      references: [],
+      reasonCodes: [],
+      coverage: { persistedCurrentAndHistory: true }
+    }),
     verifyNoteAttachment: vi.fn(),
     restoreNoteAttachment: vi.fn(),
     listAttachmentCleanup: vi.fn().mockResolvedValue({ items: [], pending: 0 }),

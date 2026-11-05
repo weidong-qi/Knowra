@@ -31,6 +31,30 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe('TagManagerView 视图与分组', () => {
+  it('切换标签墙与清单后仍可操作标签，分组可折叠和展开', async () => {
+    const user = userEvent.setup();
+    render(<TagManagerView />);
+    expect(screen.getByRole('button', { name: '标签墙' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: '清单' }));
+    expect(screen.getByRole('button', { name: '清单' })).toHaveAttribute('aria-pressed', 'true');
+    const tag = screen.getByText('测试标签').closest('article')!;
+    expect(tag).toHaveTextContent('0 篇笔记');
+    await user.click(within(tag).getByRole('button', { name: /的更多操作$/ }));
+    expect(screen.getByRole('menuitem', { name: '编辑' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    const toggle = screen.getByRole('button', { name: '普通标签' });
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('测试标签')).not.toBeVisible();
+    await user.click(toggle);
+    expect(screen.getByText('测试标签')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: '标签墙' }));
+    expect(screen.getByRole('button', { name: '标签墙' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('测试标签')).toBeVisible();
+  });
+});
+
 describe('TagManagerView 标签删除', () => {
   it('标签管理创建自定义色并在编辑时保留原值', async () => {
     const user = userEvent.setup();

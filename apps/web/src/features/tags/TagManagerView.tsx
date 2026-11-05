@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Tag, TagColor, TagGroup } from '@study-accelerator/web-core';
 import { parseTagColor } from '@study-accelerator/shared/tag-colors';
 import { TagColorPicker } from './TagColorPicker';
-import { tagColorLabel, tagColorStyle } from './tagColor';
 import {
   Button,
   Dialog,
@@ -28,7 +27,14 @@ import { useNavigate } from '../../app/router';
 import { useAppStore } from '../../store/AppStoreProvider';
 import { TagChip, normalizeTagColor } from './TagChip';
 import { countTagUsage } from './tagUsage';
-import { FilterLinesIcon, MoreHorizontalIcon, PlusIcon, SearchIcon, TagIcon } from '../../components/icons/knowra';
+import {
+  ChevronDownIcon,
+  FilterLinesIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  SearchIcon,
+  TagIcon
+} from '../../components/icons/knowra';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import { notesIndexAppearanceProps } from '../notes/NotesIndexAppearance';
 import { useNotesIndexAppearance } from '../notes/notesIndexAppearanceModel';
@@ -57,6 +63,8 @@ export function TagManagerView() {
   const deleteTagGroup = useAppStore(state => state.deleteTagGroup);
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [view, setView] = useState<'wall' | 'list'>('wall');
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
   const [groupFilter, setGroupFilter] = useState('all');
   const [sort, setSort] = useState<SortMode>('manual');
   const [unusedOnly, setUnusedOnly] = useState(false);
@@ -215,6 +223,16 @@ export function TagManagerView() {
       </Popover>
     </PopoverTrigger>
   );
+  const viewSwitch = (
+    <SegmentedControl density="compact" aria-label="标签展示方式">
+      <SegmentedButton aria-pressed={view === 'wall'} onPress={() => setView('wall')}>
+        标签墙
+      </SegmentedButton>
+      <SegmentedButton aria-pressed={view === 'list'} onPress={() => setView('list')}>
+        清单
+      </SegmentedButton>
+    </SegmentedControl>
+  );
   const header = (actions: ReactNode, className?: string) => (
     <WorkspacePanelHeader
       title="标签管理"
@@ -242,6 +260,7 @@ export function TagManagerView() {
         ? /* 平板/手机版：标题与工具合为一行——筛选与排序、搜索（默认图标）、新建。 */
           header(
             <div className={styles.compactTools} role="toolbar" aria-label="筛选标签">
+              {viewSwitch}
               {options}
               {search}
               {canWrite ? (
@@ -267,6 +286,7 @@ export function TagManagerView() {
         : /* 桌面版：标题、搜索、筛选与排序、新建同在一行。 */
           header(
             <div className={styles.deskTools} role="toolbar" aria-label="筛选标签">
+              {viewSwitch}
               {search}
               {options}
               {canWrite ? (
@@ -297,12 +317,26 @@ export function TagManagerView() {
           </p>
         ) : null}
         <div className={styles.groups}>
-          {sections.map(({ group, items }, groupIndex) => (
+          {sections.map(({ group, items }) => (
             <section className={styles.group} key={group.id} aria-labelledby={`group-${group.id}`}>
               <header className={styles.groupHeader}>
                 <div className={styles.groupTitle}>
-                  <span className={styles.groupNumber}>{String(groupIndex + 1).padStart(2, '0')}</span>
-                  <h2 id={`group-${group.id}`}>{group.name}</h2>
+                  <h2 id={`group-${group.id}`}>
+                    <PressableButton
+                      type="button"
+                      className={styles.groupToggle}
+                      aria-expanded={!collapsedGroups.includes(group.id)}
+                      aria-controls={`group-content-${group.id}`}
+                      onPress={() =>
+                        setCollapsedGroups(current =>
+                          current.includes(group.id) ? current.filter(id => id !== group.id) : [...current, group.id]
+                        )
+                      }
+                    >
+                      <ChevronDownIcon size={14} />
+                      {group.name}
+                    </PressableButton>
+                  </h2>
                   <span className={styles.groupCount}>{items.length} 个标签</span>
                   <span className={styles.meta}>{group.selectionMode === 'single' ? '单选' : '多选'}</span>
                   {group.isSystem ? <span className={styles.system}>内置</span> : null}
@@ -349,7 +383,12 @@ export function TagManagerView() {
                   )
                 ) : null}
               </header>
-              <div className={styles.cards}>
+              <div
+                className={styles.cards}
+                data-view={view}
+                id={`group-content-${group.id}`}
+                hidden={collapsedGroups.includes(group.id)}
+              >
                 {items.map((tag, index) => (
                   <article
                     className={styles.card}
@@ -371,6 +410,7 @@ export function TagManagerView() {
                         onPress={() => navigate(`/materials?tags=${encodeURIComponent(tag.id)}&match=all`)}
                       >
                         <TagChip tag={tag} className={styles.tagChip} />
+                        <span className={styles.usage}>{usage[tag.id] ?? 0} 篇笔记</span>
                       </PressableButton>
                       {canWrite ? (
                         <MenuTrigger>
@@ -410,14 +450,6 @@ export function TagManagerView() {
                           </MenuPopover>
                         </MenuTrigger>
                       ) : null}
-                    </div>
-                    <div className={styles.cardInfo}>
-                      <span className={styles.usage}>
-                        <strong>{usage[tag.id] ?? 0}</strong> 篇笔记
-                      </span>
-                      <span className={styles.color} style={tagColorStyle(tag.color)} title={tagColorLabel(tag.color)}>
-                        <i aria-hidden="true" />
-                      </span>
                     </div>
                   </article>
                 ))}
