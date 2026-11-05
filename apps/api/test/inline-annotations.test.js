@@ -1054,7 +1054,7 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
             );
 
             const sectionText =
-              '前言\n\n# 标题\n\n保留<mark data-k="existing">内容</mark>\n\n秘密内容\n\n# 下一节\n\n结尾';
+              '前言\n\n# 标题 <!--k section-existing s=section-->\n\n保留<mark data-k="existing">内容</mark>\n\n秘密内容\n\n# 下一节\n\n结尾';
             let sectionNote = await makeNote(sectionText);
             const [sectionVersion] = await k.noteVersionService.listVersions({ noteId: sectionNote.id });
             const sectionAnchor = anchorForSection(projectMarkdown(sectionText), 0);
@@ -1082,6 +1082,7 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
               idempotencyKey: randomUUID()
             });
             await k.repositories.contentAnnotationRepository.save(sectionRow);
+            const sectionEvidence = await makeEvidence(sectionNote, sectionRow.id);
             const secretStart = sectionText.indexOf('秘密内容');
             await k.repositories.annotationExclusionRepository.save({
               id: randomUUID(),
@@ -1100,6 +1101,19 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
               rawMarkdown: sectionMarked,
               expectedUpdatedAt: sectionNote.updatedAt
             });
+            sectionNote = await k.noteService.updateNote(sectionNote.id, {
+              rawMarkdown: `${sectionNote.rawMarkdown}修改`,
+              expectedUpdatedAt: sectionNote.updatedAt
+            });
+            assert.equal(
+              (await k.repositories.knowledgeEvidenceRepository.findById(sectionEvidence.id)).status,
+              'valid',
+              '旧章节来源含块标记时，无关编辑不降级证据'
+            );
+            assert.equal(
+              (await k.repositories.knowledgeItemRepository.findById(sectionEvidence.knowledgeItemId)).reviewStatus,
+              'confirmed'
+            );
             const sectionScope = await k.annotationScopeService.previewAnalysisScope({
               spaceId: space.id,
               mode: 'marked',

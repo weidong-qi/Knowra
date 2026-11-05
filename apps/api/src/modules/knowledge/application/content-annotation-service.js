@@ -5,7 +5,7 @@ import { createAppError } from '../../../errors/app-error.js';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
 import { buildUpdateContentAnnotationDto } from './dto/content-annotation-dto.ts';
 import { createInMemoryContentAnnotationRepository } from '../infrastructure/content-annotation-repository.js';
-import { resolveLegacyAnnotationAnchor } from './legacy-annotation-anchor.ts';
+import { resolveLegacyAnnotationAnchor, sameAnchorText } from './legacy-annotation-anchor.ts';
 
 const contentHash = calculateContentHash;
 const fail = (code, message, statusCode = 400) => createAppError(code, message, statusCode);
@@ -46,7 +46,7 @@ export function legacyAnnotationSourceChange(annotation, before, after, sourceVe
           ? sourceVersion.content
           : null;
       const resolved = resolveLegacyAnnotationAnchor(after, annotation.anchor, source);
-      if (resolved.status === 'resolved' && resolved.quoteText === annotation.quoteText) return null;
+      if (resolved.status === 'resolved' && sameAnchorText(resolved.quoteText, annotation.quoteText)) return null;
     } catch {
       // 损坏的旧锚点不应阻止正文保存，需要用户核对。
     }

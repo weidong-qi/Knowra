@@ -4,7 +4,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
+import {
+  anchorForBlock,
+  anchorForSection,
+  calculateContentHash,
+  projectMarkdown
+} from '@study-accelerator/content-anchor';
 import { knowraCheck } from '@study-accelerator/shared/knowra-marks';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
@@ -1248,6 +1253,64 @@ test('云端旧重点之前新增标记后继续同步，无关修改不降级�
     assert.equal(state.contentAnnotations.find(value => value.id === row.id).anchorStatus, 'resolved');
     assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'valid');
     assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'confirmed');
+  }
+});
+
+test('旧章节来源含行尾标记时，无关编辑同步保留证据，真实改写仍降级', async t => {
+  const cloud = await fixture(t);
+  const source = '# 标题 <!--k section-existing s=section-->\n\n原始内容\n\n# 其他\n\n末尾';
+  const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: source });
+  const a = cloud.device('legacy-section-writer');
+  await a.connect();
+  clean(a);
+  const version = cloud.knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
+  const anchor = anchorForSection(projectMarkdown(source), 0);
+  const row = new ContentAnnotation({
+    ...addLegacyAnnotation(cloud, note, 'legacy-section'),
+    scopeType: 'section',
+    anchor,
+    quoteText: anchor.quoteText,
+    fromPosition: anchor.sourceStart,
+    toPosition: anchor.sourceEnd,
+    originSnapshot: {
+      noteVersionId: version.id,
+      contentHash: version.contentHash,
+      scopeType: 'section',
+      segments: anchor.segments,
+      quoteText: anchor.quoteText
+    }
+  });
+  cloud.knowledge.repositories.contentAnnotationRepository.save(row);
+  const { item, evidence } = cloud.knowledge.knowledgeItemService.createCandidate({
+    title: '旧章节来源',
+    canonicalStatement: '原始内容',
+    sourceMode: 'annotation',
+    evidence: [{ sourceType: 'annotation', annotationId: row.id }]
+  });
+  cloud.knowledge.knowledgeItemService.confirmItem(item.id);
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: `${source}追加` });
+  await a.engine.sync();
+  clean(a);
+  const b = cloud.device('legacy-section-reader');
+  await b.connect();
+  clean(b);
+  for (const device of [a, b]) {
+    assert.equal(device.knowledge.annotationScopeService.previewAnnotation(row.id).resolution.status, 'resolved');
+  }
+  for (const state of [cloud.dataStore.state, a.store.state, b.store.state]) {
+    assert.equal(state.contentAnnotations.find(value => value.id === row.id).anchorStatus, 'resolved');
+    assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'valid');
+    assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'confirmed');
+  }
+  a.knowledge.noteService.updateNote(note.id, { rawMarkdown: source.replace('原始内容', '真实改写') });
+  await a.engine.sync();
+  clean(a);
+  await b.engine.sync();
+  clean(b);
+  for (const state of [cloud.dataStore.state, a.store.state, b.store.state]) {
+    assert.equal(state.contentAnnotations.find(value => value.id === row.id).anchorStatus, 'needsReview');
+    assert.equal(state.knowledgeEvidence.find(value => value.id === evidence[0].id).status, 'stale');
+    assert.equal(state.knowledgeItems.find(value => value.id === item.id).reviewStatus, 'needsRevision');
   }
 });
 
