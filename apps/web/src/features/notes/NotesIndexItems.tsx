@@ -2,7 +2,7 @@ import type { Folder, Note, Tag } from '@study-accelerator/web-core';
 import { Checkbox } from '../../components/ui';
 import { NoteIcon, PdfFileIcon, SolidFolderIcon } from '../../components/icons/knowra';
 import type { SidebarTreeAction } from './SidebarFolderTree';
-import { countFolderNotes, formatUpdatedAt } from './notesIndexModel';
+import { countFolderNotes, folderTypeCounts, formatUpdatedAt } from './notesIndexModel';
 import { folderLocation, displayNoteStatus } from './notesIndexNavigation';
 import {
   itemKey,
@@ -256,6 +256,7 @@ export function IndexTile({
   const isFolder = item.kind === 'folder';
   const entity = isFolder ? item.folder : item.note;
   const count = isFolder ? countFolderNotes(item.folder, notes) : 0;
+  const typeCounts = isFolder ? folderTypeCounts(item.folder, notes) : null;
   const status = isFolder ? '文件夹' : item.note.deleted ? '回收站' : displayNoteStatus(item.note.status);
   const noteTags = isFolder ? [] : itemTags(item.note, tags);
   const dragDrop = useEntryDragDrop();
@@ -354,6 +355,12 @@ export function IndexTile({
               <span className={styles.tileDate}>{formatUpdatedAt(entity.updatedAt)}</span>
             ) : null}
           </small>
+          {view === 'card' && isFolder && typeCounts ? (
+            <span className={styles.folderChips}>
+              {typeCounts.notes > 0 ? <span className={styles.folderChip}><b>{typeCounts.notes}</b>笔记</span> : null}
+              {typeCounts.pdfs > 0 ? <span className={styles.folderChip}><b>{typeCounts.pdfs}</b>PDF</span> : null}
+            </span>
+          ) : null}
           {view === 'grid' && properties.tags ? <ItemTags tags={noteTags} dots /> : null}
         </span>
       </button>

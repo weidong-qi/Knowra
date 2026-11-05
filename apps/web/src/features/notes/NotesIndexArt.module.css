@@ -84,6 +84,7 @@
   stroke-width: 1.3;
   stroke-linecap: round;
 }
+/* 卡片文件夹（方案 D）：无瓦片，大号实心文件夹作为视觉中心。 */
 .folderBadge {
   --knowra-icon-accent: currentColor;
   display: grid;
@@ -91,10 +92,7 @@
   flex: none;
   width: 40px;
   height: 40px;
-  border: 1px solid var(--ni-accent-line, var(--accent-line));
-  border-radius: 12px;
   color: var(--ni-accent, var(--accent));
-  background: var(--ni-accent-soft, var(--accent-soft));
 }
 .cover {
   width: calc(100% + 32px);

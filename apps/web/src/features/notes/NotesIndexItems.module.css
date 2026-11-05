@@ -92,6 +92,10 @@
 .tileShell[data-view='card'] .tileTitle { justify-content: space-between; }
 .tileShell[data-view='card'] .tileCopy strong { font-size: 14px; font-weight: 600; }
 .tileShell[data-view='card'] .tileCopy small { justify-content: flex-start; margin-top: auto; padding-top: 8px; }
+/* 文件夹卡片底部的类型统计（方案 D）：笔记数与 PDF 数用小 chip 并列。 */
+.folderChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.folderChip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--ni-surf, var(--surface-page)); box-shadow: 0 0 0 1px var(--ni-line, var(--border-subtle)); color: var(--ni-ink-2, var(--text-secondary)); font: 400 11px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
+.folderChip b { color: var(--ni-ink, var(--text-primary)); font-weight: 600; }
 .tileShell[data-view='card'] .tileDate { margin-left: auto; }
 .tileShell[data-view='card'] .tile[data-selected] { background: var(--ni-accent-soft, var(--surface-selected)); box-shadow: 0 0 0 1.5px var(--ni-accent, var(--accent)); }
 .tileShell[data-view='card'] .tile[data-drop-active] { box-shadow: 0 0 0 2px var(--ni-accent, var(--accent)); }

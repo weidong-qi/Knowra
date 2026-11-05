@@ -61,6 +61,20 @@ export function countFolderNotes(folder: Folder, notes: Note[]): number {
   return notes.filter((note) => !note.deleted && note.folderId && folderIds.has(note.folderId)).length;
 }
 
+/** 文件夹内（含子文件夹）的笔记与 PDF 数量，用于卡片底部的类型统计。 */
+export function folderTypeCounts(folder: Folder, notes: Note[]): { notes: number; pdfs: number } {
+  const folderIds = new Set<string>();
+  collectFolderIds(folder, folderIds);
+  let pdfs = 0;
+  let others = 0;
+  for (const note of notes) {
+    if (note.deleted || !note.folderId || !folderIds.has(note.folderId)) continue;
+    if (note.contentKind === 'pdf') pdfs += 1;
+    else others += 1;
+  }
+  return { notes: others, pdfs };
+}
+
 export function folderMatchesQuery(folder: Folder, notes: Note[], query: string): boolean {
   const normalizedQuery = query.trim().toLocaleLowerCase();
   if (!normalizedQuery) return true;

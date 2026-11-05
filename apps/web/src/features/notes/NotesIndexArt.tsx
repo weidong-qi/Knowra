@@ -1,7 +1,7 @@
 import { useId, type CSSProperties } from 'react';
 import type { Tag } from '@study-accelerator/web-core';
 import { tagColorStyle } from '../tags';
-import { FolderIcon } from '../../components/icons/knowra';
+import { SolidFolderIcon } from '../../components/icons/knowra';
 import type { IndexItem } from './notesIndexPresentation';
 import { notePreview } from './NotesIndexItemMeta';
 import styles from './NotesIndexArt.module.css';
@@ -34,7 +34,7 @@ export function NotesIndexArt({
   if (folder && folderStyle === 'badge')
     return (
       <span className={styles.folderBadge} data-art-kind="folder" data-folder-style="badge" aria-hidden="true">
-        <FolderIcon size={24} />
+        <SolidFolderIcon size={40} />
       </span>
     );
   const paperCount = !noteCount ? 0 : noteCount < 3 ? 1 : noteCount < 8 ? 2 : 3;
