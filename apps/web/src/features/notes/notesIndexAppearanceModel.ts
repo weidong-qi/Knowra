@@ -8,7 +8,12 @@ export interface NotesIndexAppearance {
   buttonStyle: ButtonStyle;
   defaultButtonStyle: DefaultButtonStyle;
   dialogStyle: DialogStyle;
+  folderArt: FolderArt;
 }
+
+/** 卡片视图文件夹插画：手绘线稿（默认）、山间、纸片拼贴、发芽、夜空。 */
+export const FOLDER_ARTS = ['sketch', 'mountain', 'sticky', 'sprout', 'night'] as const;
+export type FolderArt = typeof FOLDER_ARTS[number];
 
 /** 主按钮（Button primary）外观：纸感、白玻璃。 */
 export const BUTTON_STYLES = ['paper', 'frost'] as const;
@@ -24,7 +29,7 @@ export type DialogStyle = typeof DIALOG_STYLES[number];
 
 export const NOTES_INDEX_APPEARANCE_KEY = 'knowra:notes-index-appearance:v1';
 export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
-  mode: 'light', theme: 'orange', shape: 'pill', overlayMaterial: 'glass', buttonStyle: 'paper', defaultButtonStyle: 'soft', dialogStyle: 'float'
+  mode: 'light', theme: 'orange', shape: 'pill', overlayMaterial: 'glass', buttonStyle: 'paper', defaultButtonStyle: 'soft', dialogStyle: 'float', folderArt: 'sketch'
 };
 const listeners = new Set<() => void>();
 let snapshot = readAppearance();
@@ -40,7 +45,8 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     overlayMaterial: candidate.overlayMaterial === 'acrylic' ? 'acrylic' : 'glass',
     buttonStyle: BUTTON_STYLES.includes(candidate.buttonStyle as ButtonStyle) ? candidate.buttonStyle as ButtonStyle : 'paper',
     defaultButtonStyle: DEFAULT_BUTTON_STYLES.includes(candidate.defaultButtonStyle as DefaultButtonStyle) ? candidate.defaultButtonStyle as DefaultButtonStyle : 'soft',
-    dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle) ? candidate.dialogStyle as DialogStyle : 'float'
+    dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle) ? candidate.dialogStyle as DialogStyle : 'float',
+    folderArt: FOLDER_ARTS.includes(candidate.folderArt as FolderArt) ? candidate.folderArt as FolderArt : 'sketch'
   };
 }
 

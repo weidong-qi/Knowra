@@ -13,6 +13,8 @@ import {
 import { IndexItemActions, RecycleNoteActions, openIndexItemMenu } from './IndexItemActions';
 import { useEntryDragDrop, useEntryDropTarget } from './EntryDragDrop';
 import { NotesIndexArt } from './NotesIndexArt';
+import { FolderCardArt } from './NotesIndexFolderArt';
+import { useNotesIndexAppearance } from './notesIndexAppearanceModel';
 import { MathText } from '../../components/math/MathText';
 import { ItemTags, ItemStatus, ItemFavorite, itemTags, notePreview } from './NotesIndexItemMeta';
 import styles from './NotesIndexItems.module.css';
@@ -260,6 +262,7 @@ export function IndexTile({
   const status = isFolder ? '文件夹' : item.note.deleted ? '回收站' : displayNoteStatus(item.note.status);
   const noteTags = isFolder ? [] : itemTags(item.note, tags);
   const dragDrop = useEntryDragDrop();
+  const { folderArt } = useNotesIndexAppearance();
   const folderDrop = useEntryDropTarget(isFolder && !isRecycleView && !selectionMode ? entity.id : undefined);
   return (
     <div
@@ -291,6 +294,7 @@ export function IndexTile({
       <button
         type="button"
         className={styles.tile}
+        data-folder-art={isFolder && view === 'card' ? folderArt : undefined}
         data-index-primary
         aria-label={isFolder ? item.folder.name : item.note.title || '未命名笔记'}
         aria-description={
@@ -321,6 +325,7 @@ export function IndexTile({
           else onSelectNote(entity.id);
         }}
       >
+        {isFolder && view === 'card' ? <FolderCardArt style={folderArt} /> : null}
         <span className={styles.tileArt}>
           <NotesIndexArt
             item={item}
