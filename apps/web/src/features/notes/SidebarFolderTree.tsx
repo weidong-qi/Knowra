@@ -151,7 +151,7 @@ function FolderBranch({
                 onOpenIndex?.();
               }}
             >
-              {expanded ? <SolidExpandedFolderIcon size={18} /> : <SolidFolderIcon size={18} />}
+              {expanded ? <SolidExpandedFolderIcon size={20} /> : <SolidFolderIcon size={20} />}
               <span>{folder.name}</span>
               <small>{countFolderNotes(folder, notes)}</small>
             </PressableButton>

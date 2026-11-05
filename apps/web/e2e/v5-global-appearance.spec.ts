@@ -139,7 +139,7 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   );
 });
 
-test('热力图随标签区域滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {
+test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
   await page.route(
     url => url.pathname === '/api/knowledge/folders/tree',
@@ -158,20 +158,20 @@ test('热力图随标签区域滚动，桌面和窄屏新建入口保持尺寸�
   await page.setViewportSize({ width: 1440, height: 700 });
   await page.goto('/#/materials');
   const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
-  const distribution = sidebar.getByRole('region', { name: '已加载笔记 · 最近更新时间分布' });
+  const lastFolder = sidebar.getByRole('treeitem').last();
   const scroll = sidebar.locator('[class*="scrollBody"]');
   const trash = sidebar.getByRole('button', { name: /回收站/ });
-  await expect(distribution).toHaveCount(1);
+  await expect(sidebar.getByRole('region', { name: '已加载笔记 · 最近更新时间分布' })).toHaveCount(0);
   await expect(sidebar.getByRole('treeitem')).toHaveCount(30);
-  const position = await distribution.boundingBox();
+  const position = await lastFolder.boundingBox();
   const trashBefore = await trash.boundingBox();
   await scroll.evaluate(element => {
     element.scrollTop = element.scrollHeight;
   });
-  const moved = await distribution.boundingBox();
+  const moved = await lastFolder.boundingBox();
   expect(position!.y - moved!.y).toBeGreaterThan(100);
   expect((await trash.boundingBox())!.y).toBe(trashBefore!.y);
-  await expect(distribution).toBeInViewport();
+  await expect(lastFolder).toBeInViewport();
   await page.screenshot({ path: info.outputPath('sidebar-scroll.png') });
   for (const { width, targetSize } of [
     { width: 1440, targetSize: 30 },

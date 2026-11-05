@@ -1,12 +1,44 @@
 /* V5 表单控件：外层外壳独占描边和焦点环，原生输入保持透明。 */
-.field { display: inline-flex; flex-direction: column; gap: 6px; min-width: 0; }
-.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-.toolbarSelect { flex: 0 1 170px; min-width: 130px; }
-.toolbarSelect .selectTrigger { height: 28px; padding: 0 9px; color: var(--text-secondary); font-size: 12px; }
-.selectLeadingIcon { display: inline-flex; flex: 0 0 auto; align-items: center; pointer-events: none; }
+.field {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.toolbarSelect {
+  flex: 0 1 170px;
+  min-width: 130px;
+}
+.toolbarSelect .selectTrigger {
+  height: 28px;
+  padding: 0 9px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.selectLeadingIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  pointer-events: none;
+}
 
-.label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
-.required { color: var(--ink-danger); margin-left: 2px; }
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.required {
+  color: var(--ink-danger);
+  margin-left: 2px;
+}
 
 .inputShell {
   display: flex;
@@ -14,15 +46,32 @@
   width: 100%;
   height: 36px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control);
+  border-radius: 4px;
   background: var(--surface-page);
-  box-shadow: var(--shadow-control);
-  transition: box-shadow var(--motion-fast) var(--motion-ease), background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--border-strong) 40%, var(--surface-page));
+  transition:
+    box-shadow var(--motion-fast) var(--motion-ease),
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
 }
 
-.field:not([data-disabled]):focus-within .inputShell { outline: 0; border-color: color-mix(in srgb, var(--accent) 34%, transparent); box-shadow: var(--focus-soft); }
-.field[data-invalid] .inputShell { border-color: var(--ink-danger); background: var(--ink-danger-soft); box-shadow: none; }
-.field[data-invalid]:not([data-disabled]):focus-within .inputShell { outline: 0; border-color: var(--ink-danger); box-shadow: var(--focus-ring-danger, var(--shadow-input-invalid)); }
+.field:not([data-disabled]):focus-within .inputShell {
+  outline: 0;
+  border-color: var(--accent-text);
+  box-shadow:
+    0 2px 0 var(--accent-text),
+    0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.field[data-invalid] .inputShell {
+  border-color: var(--ink-danger);
+  background: var(--ink-danger-soft);
+  box-shadow: none;
+}
+.field[data-invalid]:not([data-disabled]):focus-within .inputShell {
+  outline: 0;
+  border-color: var(--ink-danger);
+  box-shadow: var(--focus-ring-danger, var(--shadow-input-invalid));
+}
 
 .input {
   display: inline-flex;
@@ -42,82 +91,372 @@
   box-shadow: none;
 }
 
-.input[data-focused] { outline: 0; }
+.input[data-focused] {
+  outline: 0;
+}
 
 /* 内联紧凑输入：数字类字段嵌在工具栏里，不抢视觉，聚焦时才出现底色。 */
-.fieldInline { gap: 0; }
-.fieldInline .inputShell { height: 24px; border-color: transparent; background: transparent; box-shadow: none; }
-.fieldInline:not([data-disabled]) .inputShell:hover { background: var(--surface-hover); }
-.fieldInline:not([data-disabled]):focus-within .inputShell { background: var(--surface-raised); }
-.fieldInline .input { padding: 0 2px; font-size: 12px; font-weight: 500; text-align: center; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
-.fieldInline .input::-webkit-outer-spin-button, .fieldInline .input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
-.input::placeholder, .textarea::placeholder { color: var(--text-placeholder, var(--text-muted)); font-weight: 400; }
-.textareaShell { height: auto; align-items: stretch; border-radius: var(--radius-popover); }
-.textarea { width: 100%; min-height: 96px; padding: 10px 11px; resize: vertical; border: 0; border-radius: inherit; outline: 0; background: transparent; color: var(--text-primary); font: 400 13px/1.6 var(--font-ui); }
-.field[data-disabled] .inputShell { color: var(--text-muted); background: var(--surface-hover); border-color: var(--border-subtle); box-shadow: none; cursor: not-allowed; }
-.field[data-disabled] .input, .input[data-disabled], .field[data-disabled] .textarea { color: var(--text-muted); cursor: not-allowed; }
+.fieldInline {
+  gap: 0;
+}
+.fieldInline .inputShell {
+  height: 24px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.fieldInline:not([data-disabled]) .inputShell:hover {
+  background: var(--surface-hover);
+}
+.fieldInline:not([data-disabled]):focus-within .inputShell {
+  background: var(--surface-raised);
+}
+.fieldInline .input {
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.fieldInline .input::-webkit-outer-spin-button,
+.fieldInline .input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-placeholder, var(--text-muted));
+  font-weight: 400;
+}
+.textareaShell {
+  height: auto;
+  align-items: stretch;
+  border-radius: 4px;
+}
+.textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 11px;
+  resize: vertical;
+  border: 0;
+  border-radius: inherit;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: 400 13px/1.6 var(--font-ui);
+}
+.field[data-disabled] .inputShell {
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.field[data-disabled] .input,
+.input[data-disabled],
+.field[data-disabled] .textarea {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
 
 /* 对话输入区由外层容器承载焦点态，文本域本身不额外绘制边框。 */
-.composerField { display: flex; width: 100%; gap: 0; }
+.composerField {
+  display: flex;
+  width: 100%;
+  gap: 0;
+}
 .composerField .textareaShell,
-.composerField:not([data-disabled]):focus-within .textareaShell { outline: 0; border: 0; background: transparent; box-shadow: none; }
-.composerField .textarea { min-height: 64px; max-height: 180px; padding: 13px 15px 5px; resize: none; field-sizing: content; overflow-y: auto; }
+.composerField:not([data-disabled]):focus-within .textareaShell {
+  outline: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.composerField .textarea {
+  min-height: 64px;
+  max-height: 180px;
+  padding: 13px 15px 5px;
+  resize: none;
+  field-sizing: content;
+  overflow-y: auto;
+}
 
-.error { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--ink-danger); }
-.error::before { content: '!'; display: inline-grid; place-items: center; width: 13px; height: 13px; border: 1px solid currentColor; border-radius: 50%; font-size: 9px; line-height: 1; }
-.description { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+.error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-danger);
+}
+.error::before {
+  content: '!';
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 9px;
+  line-height: 1;
+}
+.description {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
 
 /* Checkbox：选中和不确定状态共用橙色，焦点只围绕复选框。 */
-.checkbox { display: inline-flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 400; color: var(--text-primary); }
-.box { flex: 0 0 auto; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-page); border: 1px solid var(--border-strong); border-radius: 4px; box-shadow: var(--shadow-control); transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
-.checkboxCompact { gap: 0; }
-.checkboxCompact .box { width: 14px; height: 14px; border-radius: 3px; box-shadow: none; }
-.checkboxCompact .check { width: 10px; height: 10px; }
-.checkbox[data-hovered]:not([data-disabled]) .box { border-color: var(--accent); background: var(--surface-hover); }
-.box[data-selected], .box[data-indeterminate],
+.checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+.box {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-page);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  box-shadow: var(--shadow-control);
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+.checkboxCompact {
+  gap: 0;
+}
+.checkboxCompact .box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: none;
+}
+.checkboxCompact .check {
+  width: 10px;
+  height: 10px;
+}
+.checkbox[data-hovered]:not([data-disabled]) .box {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+.box[data-selected],
+.box[data-indeterminate],
 .checkbox[data-hovered]:not([data-disabled]) .box[data-selected],
-.checkbox[data-hovered]:not([data-disabled]) .box[data-indeterminate] { border-color: var(--accent-solid); background: var(--accent-solid); }
-.checkbox[data-focus-visible] { outline: 0; box-shadow: none; }
-.checkbox[data-focus-visible] .box { outline: 2px solid var(--accent-text); outline-offset: 2px; box-shadow: var(--focus-ring); }
-.checkbox[data-invalid] .box { border-color: var(--ink-danger); }
-.checkbox[data-invalid][data-focus-visible] .box { outline-color: var(--ink-danger); box-shadow: var(--focus-ring-danger, var(--shadow-input-invalid)); }
-.checkbox[data-disabled] { color: var(--text-muted); cursor: not-allowed; }
-.checkbox[data-disabled] .box { background: var(--surface-hover); border-color: var(--border-subtle); box-shadow: none; }
-.checkbox[data-disabled] .check { color: var(--text-muted); }
-.check { width: 12px; height: 12px; color: var(--surface-page); pointer-events: none; }
+.checkbox[data-hovered]:not([data-disabled]) .box[data-indeterminate] {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+}
+.checkbox[data-focus-visible] {
+  outline: 0;
+  box-shadow: none;
+}
+.checkbox[data-focus-visible] .box {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+.checkbox[data-invalid] .box {
+  border-color: var(--ink-danger);
+}
+.checkbox[data-invalid][data-focus-visible] .box {
+  outline-color: var(--ink-danger);
+  box-shadow: var(--focus-ring-danger, var(--shadow-input-invalid));
+}
+.checkbox[data-disabled] {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.checkbox[data-disabled] .box {
+  background: var(--surface-hover);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+.checkbox[data-disabled] .check {
+  color: var(--text-muted);
+}
+.check {
+  width: 12px;
+  height: 12px;
+  color: var(--surface-page);
+  pointer-events: none;
+}
 
 /* Select：触发器与输入框一致，浮层由共享 Popover 管理。 */
-.selectTrigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 36px; padding: 0 11px; font-family: var(--font-ui); font-size: 13px; font-weight: 400; color: var(--text-primary); background: var(--surface-page); border: 1px solid var(--border-strong); border-radius: var(--radius-control); box-shadow: var(--shadow-control); cursor: pointer; transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease); }
-.selectTrigger[data-hovered]:not([data-disabled]) { background: var(--surface-hover); }
-.selectTrigger[data-pressed]:not([data-disabled]) { background: var(--surface-pressed); }
-.selectTrigger[data-focus-visible] { outline: 0; border-color: color-mix(in srgb, var(--accent) 34%, transparent); box-shadow: var(--focus-soft); }
-.field[data-invalid] .selectTrigger { border-color: var(--ink-danger); background: var(--ink-danger-soft); box-shadow: none; }
-.field[data-invalid] .selectTrigger[data-focus-visible],
-.field[data-invalid]:focus-within .selectTrigger { outline: 0; box-shadow: var(--focus-ring-danger, var(--shadow-input-invalid)); }
-.field[data-disabled] .selectTrigger, .selectTrigger[data-disabled] { color: var(--text-muted); background: var(--surface-hover); border-color: var(--border-subtle); box-shadow: none; cursor: not-allowed; }
-.selectChevron { width: 12px; height: 12px; color: var(--text-muted); pointer-events: none; }
-.selectValue { flex: 1 1 auto; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.selectValue[data-placeholder], .selectValue [data-placeholder] { color: var(--text-placeholder, var(--text-muted)); font-weight: 400; }
-
-@media (max-width: 1050px) { .toolbarSelect { flex: 1 1 180px; } }
-@media (max-width: 760px) { .toolbarSelect { flex-basis: 145px; } }
-@media (max-width: 480px) { .toolbarSelect { flex: 1 1 100%; } }
-@media (max-width: 767px) {
-  .inputShell, .selectTrigger { min-height: 44px; }
-  .input, .textarea { font-size: max(16px, 1em); }
+.selectTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-primary);
+  background: var(--surface-page);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--border-strong) 40%, var(--surface-page));
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
 }
-@media (max-height: 600px) { .composerField .textarea { min-height: 44px; max-height: 80px; padding-top: 8px; } }
+.selectTrigger[data-hovered]:not([data-disabled]) {
+  background: var(--surface-hover);
+}
+.selectTrigger[data-pressed]:not([data-disabled]) {
+  background: var(--surface-pressed);
+}
+.selectTrigger[data-focus-visible] {
+  outline: 0;
+  border-color: var(--accent-text);
+  box-shadow:
+    0 2px 0 var(--accent-text),
+    0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.field[data-invalid] .selectTrigger {
+  border-color: var(--ink-danger);
+  background: var(--ink-danger-soft);
+  box-shadow: none;
+}
+.field[data-invalid] .selectTrigger[data-focus-visible],
+.field[data-invalid]:focus-within .selectTrigger {
+  outline: 0;
+  box-shadow: var(--focus-ring-danger, var(--shadow-input-invalid));
+}
+.field[data-disabled] .selectTrigger,
+.selectTrigger[data-disabled] {
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.selectChevron {
+  width: 12px;
+  height: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.selectValue {
+  flex: 1 1 auto;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.selectValue[data-placeholder],
+.selectValue [data-placeholder] {
+  color: var(--text-placeholder, var(--text-muted));
+  font-weight: 400;
+}
+
+@media (max-width: 1050px) {
+  .toolbarSelect {
+    flex: 1 1 180px;
+  }
+}
+@media (max-width: 760px) {
+  .toolbarSelect {
+    flex-basis: 145px;
+  }
+}
+@media (max-width: 480px) {
+  .toolbarSelect {
+    flex: 1 1 100%;
+  }
+}
+@media (max-width: 767px) {
+  .inputShell,
+  .selectTrigger {
+    min-height: 44px;
+  }
+  .input,
+  .textarea {
+    font-size: max(16px, 1em);
+  }
+}
+@media (max-height: 600px) {
+  .composerField .textarea {
+    min-height: 44px;
+    max-height: 80px;
+    padding-top: 8px;
+  }
+}
 
 /* Switch：标签居左、轨道居右，整行可点击。 */
-.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; cursor: pointer; user-select: none; color: var(--text-primary); font: 400 13px/1.4 var(--font-ui); }
-.switchLabel { min-width: 0; }
-.switchTrack { flex: 0 0 auto; position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--surface-pressed); transition: background var(--motion-fast) var(--motion-ease); }
-.switchThumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 22%); transition: transform var(--motion-fast) var(--motion-ease); }
-.switch[data-selected] .switchTrack { background: var(--accent-solid); }
-.switch[data-selected] .switchThumb { transform: translateX(14px); }
-.switch[data-focus-visible] .switchTrack { outline: 2px solid var(--accent-text); outline-offset: 2px; box-shadow: var(--focus-ring); }
-.switch[data-disabled] { color: var(--text-muted); cursor: not-allowed; opacity: 0.6; }
-@media (prefers-reduced-motion: reduce) { .switchTrack, .switchThumb { transition: none; } }
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-primary);
+  font: 400 13px/1.4 var(--font-ui);
+}
+.switchLabel {
+  min-width: 0;
+}
+.switchTrack {
+  flex: 0 0 auto;
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface-pressed);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+.switchThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 22%);
+  transition: transform var(--motion-fast) var(--motion-ease);
+}
+.switch[data-selected] .switchTrack {
+  background: var(--accent-solid);
+}
+.switch[data-selected] .switchThumb {
+  transform: translateX(14px);
+}
+.switch[data-focus-visible] .switchTrack {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+.switch[data-disabled] {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .switchTrack,
+  .switchThumb {
+    transition: none;
+  }
+}
 
 /* 强制色会移除阴影；系统色描边保留键盘焦点，常规主题仍使用柔和焦点环。 */
 @media (forced-colors: active) {
@@ -125,5 +464,8 @@
   .field[data-invalid] .selectTrigger[data-focus-visible],
   .field[data-invalid]:focus-within .selectTrigger,
   .field:not([data-disabled]):focus-within .inputShell,
-  .selectTrigger[data-focus-visible] { outline: 2px solid Highlight; outline-offset: 2px; }
+  .selectTrigger[data-focus-visible] {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
 }

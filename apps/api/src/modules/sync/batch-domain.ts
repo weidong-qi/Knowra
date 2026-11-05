@@ -265,12 +265,18 @@ export function prepareBatchState(
     )
       throw syncError('PDF_SOURCE_IMMUTABLE', '不能改换资料类型或 PDF 主文件。', 422);
     if (collection === 'pdfAnnotations' && old && value) {
+      // 便签可拖动，与 PDF 写入服务一致；其余标注仍锁定原文几何。
       const fixed = (item: object) =>
         Object.fromEntries(
-          ['noteId', 'spaceId', 'attachmentId', 'sha256', 'type', 'segments', 'quoteText'].map(key => [
-            key,
-            (item as Record<string, unknown>)[key]
-          ])
+          [
+            'noteId',
+            'spaceId',
+            'attachmentId',
+            'sha256',
+            'type',
+            ...(old.type === 'note' ? [] : ['segments']),
+            'quoteText'
+          ].map(key => [key, (item as Record<string, unknown>)[key]])
         );
       if (!sameEntity(collection, fixed(old), fixed(value)))
         throw syncError('PDF_SOURCE_IMMUTABLE', 'PDF 标注的原文与位置不能改换。', 422);

@@ -111,7 +111,13 @@ describe('V5 shared control styles', () => {
       [css.input, '.field:not([data-disabled]):focus-within .inputShell']
     ]) {
       const [normal, forced] = source.split('@media (forced-colors: active)');
-      assert.match(declarations(normal, selector), /box-shadow:\s*var\(--focus-soft(?:[,)]|\s)/);
+      const focus = declarations(normal, selector);
+      if (source === css.collection) {
+        assert.match(focus, /box-shadow:\s*var\(--focus-soft(?:[,)]|\s)/);
+      } else {
+        assert.match(focus, /border-color:\s*var\(--accent-text\)/);
+        assert.match(focus, /box-shadow:[^;]*0\s+0\s+0\s+3px\s+color-mix\(in srgb,\s*var\(--accent\)/);
+      }
       assert.ok(forced, `${selector} needs a forced-color fallback`);
       assert.match(declarations(forced, selector), /outline:\s*2px solid Highlight/);
       assert.match(declarations(forced, selector), /outline-offset:\s*2px/);
@@ -166,7 +172,13 @@ describe('V5 shared control styles', () => {
     assert.ok(
       declarations(css.collection, ".listbox [role='option']").includes('border-radius: var(--radius-control)')
     );
-    assert.ok(declarations(css.collection, ".listbox [role='option'][data-selected]").includes('var(--accent-text)'));
+    const selected = declarations(css.collection, ".listbox [role='option'][data-selected]");
+    assert.match(selected, /color:\s*var\(--text-primary\)/);
+    assert.match(selected, /background:\s*var\(--surface-selected\)/);
+    assert.match(
+      declarations(css.collection, ".listbox [role='option'][data-focus-visible]"),
+      /outline:\s*2px solid var\(--accent-text\)/
+    );
     assert.ok(declarations(css.collection, ".listbox [role='option'][data-disabled]").includes('cursor: not-allowed'));
   });
 

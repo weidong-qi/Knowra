@@ -7,28 +7,67 @@ import { createAppStore } from '../../store/createAppStore';
 import { NotesContextSidebar } from './NotesContextSidebar';
 import { DEFAULT_NOTES_INDEX_APPEARANCE, setNotesIndexAppearance } from './notesIndexAppearanceModel';
 
-beforeEach(() => { localStorage.removeItem('knowra:pinned-tags'); act(() => setNotesIndexAppearance(DEFAULT_NOTES_INDEX_APPEARANCE)); });
-afterEach(() => { localStorage.removeItem('knowra:pinned-tags'); });
+beforeEach(() => {
+  localStorage.removeItem('knowra:pinned-tags');
+  act(() => setNotesIndexAppearance(DEFAULT_NOTES_INDEX_APPEARANCE));
+});
+afterEach(() => {
+  localStorage.removeItem('knowra:pinned-tags');
+});
 
 describe('NotesContextSidebar', () => {
-  it('将更新时间分布放在标签之后的同一滚动区域，回收站单独保留', () => {
+  it('侧栏快速创建支持自定义色，错误草稿不能提交', async () => {
+    const user = userEvent.setup();
+    const { api, store } = renderSidebar();
+    act(() =>
+      store.setState({
+        serverData: {
+          ...store.getState().serverData,
+          tagGroups: [
+            {
+              id: 'ordinary',
+              spaceId: 'space-1',
+              name: '普通标签',
+              code: 'ordinary',
+              selectionMode: 'multiple',
+              isSystem: true,
+              sortOrder: 0
+            }
+          ]
+        }
+      })
+    );
+    vi.mocked(api.createTag).mockResolvedValue({
+      id: 'custom',
+      name: '自定义标签',
+      color: '#3c68ff',
+      groupId: 'ordinary'
+    });
+    await user.click(screen.getByRole('button', { name: '新建标签' }));
+    await user.type(screen.getByRole('textbox', { name: '标签名称' }), '自定义标签');
+    const color = screen.getByRole('textbox', { name: '十六进制颜色' });
+    await user.type(color, '#fff');
+    expect(screen.getByRole('button', { name: '创建标签' })).toBeDisabled();
+    await user.clear(color);
+    await user.type(color, '#3C68FF');
+    await user.click(screen.getByRole('button', { name: '创建标签' }));
+    await waitFor(() =>
+      expect(api.createTag).toHaveBeenCalledWith({
+        spaceId: 'space-1',
+        name: '自定义标签',
+        color: '#3c68ff',
+        groupId: 'ordinary'
+      })
+    );
+  });
+  it('侧栏不再显示最近更新时间分布', () => {
     renderSidebar();
-    const distribution = screen.getByRole('region', { name: '已加载笔记 · 最近更新时间分布' });
-    const trash = screen.getByRole('button', { name: /回收站1/ });
-    expect(distribution.compareDocumentPosition(trash) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText('每篇仅计一次')).toBeInTheDocument();
-    expect(screen.queryByText('本地已同步')).not.toBeInTheDocument();
-    const tags = screen.getByRole('button', { name: '标签' });
-    expect(tags.compareDocumentPosition(distribution) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const scrollBody = distribution.parentElement!;
-    expect(scrollBody.className).toContain('scrollBody');
-    expect(scrollBody.contains(tags)).toBe(true);
-    expect(scrollBody.contains(trash)).toBe(false);
+    expect(screen.queryByRole('region', { name: '已加载笔记 · 最近更新时间分布' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /回收站1/ })).toBeInTheDocument();
   });
   it('侧栏始终使用全局定稿外观与明暗模式', () => {
     act(() => setNotesIndexAppearance({ mode: 'dark' }));
     renderSidebar();
-    expect(screen.getByRole('region', { name: '已加载笔记 · 最近更新时间分布' })).toBeInTheDocument();
     const surface = document.querySelector('[data-ni-mode]');
     expect(surface).toHaveAttribute('data-ni-mode', 'dark');
     expect(surface).toHaveAttribute('data-ni-shape', 'pill');
@@ -125,14 +164,16 @@ describe('NotesContextSidebar', () => {
     expect(screen.getByRole('button', { name: '规划草案' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: '设计' }));
-    expect(store.getState().notesIndex.selectedTagId).toBe('tag-1');
+    expect(store.getState().notesIndex.selectedTagId).toBeNull();
     expect(store.getState().navigation.selectedFolderId).toBeNull();
 
     act(() => store.getState().setNotesQuery('正文关键词'));
-    await waitFor(() => expect(api.searchNoteIds).toHaveBeenCalledWith({
-      query: '正文关键词',
-      spaceId: 'space-1'
-    }));
+    await waitFor(() =>
+      expect(api.searchNoteIds).toHaveBeenCalledWith({
+        query: '正文关键词',
+        spaceId: 'space-1'
+      })
+    );
     expect(screen.getByText('没有匹配的文件夹')).toBeInTheDocument();
   });
 
@@ -163,38 +204,82 @@ describe('NotesContextSidebar', () => {
       { id: 'tag-zero-three', name: '空标签三' },
       { id: 'tag-zero-four', name: '空标签四' }
     ];
-    const { store } = renderSidebar({ tags, notes: [
-      createNote('live-1', '存活一', null, { tagIds: ['tag-popular', 'tag-tie-first', 'tag-repeated', 'tag-repeated', 'tag-repeated', 'tag-tie-last'] }),
-      createNote('live-2', '存活二', null, { tagIds: ['tag-popular'] }),
-      createNote('deleted-1', '已删除一', null, { deleted: true, tagIds: ['tag-repeated', 'tag-deleted'] }),
-      createNote('deleted-2', '已删除二', null, { deleted: true, tagIds: ['tag-repeated', 'tag-deleted'] })
-    ] });
-    const tagButtons = () => within(screen.getByLabelText('标签筛选')).getAllByRole('button')
-      .filter((button) => !button.textContent?.startsWith('全部标签'))
-      .map((button) => button.textContent);
+    const { store } = renderSidebar({
+      tags,
+      notes: [
+        createNote('live-1', '存活一', null, {
+          tagIds: ['tag-popular', 'tag-tie-first', 'tag-repeated', 'tag-repeated', 'tag-repeated', 'tag-tie-last']
+        }),
+        createNote('live-2', '存活二', null, { tagIds: ['tag-popular'] }),
+        createNote('deleted-1', '已删除一', null, { deleted: true, tagIds: ['tag-repeated', 'tag-deleted'] }),
+        createNote('deleted-2', '已删除二', null, { deleted: true, tagIds: ['tag-repeated', 'tag-deleted'] })
+      ]
+    });
+    const tagButtons = () =>
+      within(screen.getByLabelText('标签筛选'))
+        .getAllByRole('button')
+        .filter(button => !button.textContent?.startsWith('全部标签'))
+        .map(button => button.textContent);
 
-    expect(tagButtons()).toEqual(['常用', '同量在前', '重复引用', '同量在后', '未使用', '仅回收站', '空标签二', '空标签三']);
+    expect(tagButtons()).toEqual([
+      '常用',
+      '同量在前',
+      '重复引用',
+      '同量在后',
+      '未使用',
+      '仅回收站',
+      '空标签二',
+      '空标签三'
+    ]);
     expect(screen.queryByRole('button', { name: '空标签四' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '全部标签·9' })).toBeInTheDocument();
 
-    act(() => store.setState((state) => ({ serverData: { ...state.serverData, notes: [
-      createNote('live-3', '新存活笔记', null, { tagIds: ['tag-zero-four', 'tag-zero-four'] })
-    ] } })));
-    expect(tagButtons()).toEqual(['空标签四', '未使用', '同量在前', '常用', '重复引用', '仅回收站', '同量在后', '空标签二']);
+    act(() =>
+      store.setState(state => ({
+        serverData: {
+          ...state.serverData,
+          notes: [createNote('live-3', '新存活笔记', null, { tagIds: ['tag-zero-four', 'tag-zero-four'] })]
+        }
+      }))
+    );
+    expect(tagButtons()).toEqual([
+      '空标签四',
+      '未使用',
+      '同量在前',
+      '常用',
+      '重复引用',
+      '仅回收站',
+      '同量在后',
+      '空标签二'
+    ]);
   });
 
-  it('固定标签优先于使用量，保留固定顺序并忽略已经不存在的标签', () => {
+  it('固定标签优先于使用量，展开后显示全部标签并可收起', async () => {
     localStorage.setItem('knowra:pinned-tags', JSON.stringify(['tag-zero', 'tag-missing', 'tag-low']));
     renderSidebar({
-      tags: [{ id: 'tag-popular', name: '常用' }, { id: 'tag-low', name: '较少使用' }, { id: 'tag-zero', name: '未使用' }],
+      tags: [
+        { id: 'tag-popular', name: '常用' },
+        { id: 'tag-low', name: '较少使用' },
+        { id: 'tag-zero', name: '未使用' }
+      ],
       notes: [
         createNote('live-1', '存活一', null, { tagIds: ['tag-popular', 'tag-low'] }),
         createNote('live-2', '存活二', null, { tagIds: ['tag-popular'] })
       ]
     });
 
-    expect(within(screen.getByLabelText('标签筛选')).getAllByRole('button').map((button) => button.textContent))
-      .toEqual(['未使用', '较少使用', '全部标签·3']);
+    expect(
+      within(screen.getByLabelText('标签筛选'))
+        .getAllByRole('button')
+        .map(button => button.textContent)
+    ).toEqual(['未使用', '较少使用', '全部标签·3']);
+    expect(screen.queryByRole('button', { name: '常用' })).not.toBeInTheDocument();
+    const initialHash = window.location.hash;
+    await userEvent.click(screen.getByRole('button', { name: '全部标签·3' }));
+    expect(window.location.hash).toBe(initialHash);
+    expect(screen.getByRole('button', { name: '常用' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '收起标签' })).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(screen.getByRole('button', { name: '收起标签' }));
     expect(screen.queryByRole('button', { name: '常用' })).not.toBeInTheDocument();
   });
 
@@ -252,11 +337,13 @@ describe('NotesContextSidebar', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: '新建子文件夹' }));
     await userEvent.type(screen.getByRole('textbox', { name: '文件夹名称' }), '研究资料');
     await userEvent.click(screen.getByRole('button', { name: '创建' }));
-    await waitFor(() => expect(api.createFolder).toHaveBeenCalledWith({
-      spaceId: 'space-1',
-      parentId: 'folder-1',
-      name: '研究资料'
-    }));
+    await waitFor(() =>
+      expect(api.createFolder).toHaveBeenCalledWith({
+        spaceId: 'space-1',
+        parentId: 'folder-1',
+        name: '研究资料'
+      })
+    );
   });
 
   it('renames a folder and confirms folder deletion through project dialogs', async () => {
@@ -268,16 +355,20 @@ describe('NotesContextSidebar', () => {
     await userEvent.clear(input);
     await userEvent.type(input, '产品资料');
     await userEvent.click(screen.getByRole('button', { name: '保存' }));
-    await waitFor(() => expect(api.updateFolder).toHaveBeenCalledWith('folder-1', {
-      name: '产品资料',
-      parentId: null
-    }));
+    await waitFor(() =>
+      expect(api.updateFolder).toHaveBeenCalledWith('folder-1', {
+        name: '产品资料',
+        parentId: null
+      })
+    );
 
     fireEvent.contextMenu(screen.getByRole('button', { name: /产品设计2/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: '删除' }));
     expect(screen.getByRole('dialog', { name: '删除文件夹？' })).toHaveTextContent('请选择其中笔记的处理方式');
     await userEvent.click(screen.getByRole('button', { name: '删除' }));
-    await waitFor(() => expect(api.deleteFolder).toHaveBeenCalledWith('folder-1', { mode: 'keep', destinationId: null }));
+    await waitFor(() =>
+      expect(api.deleteFolder).toHaveBeenCalledWith('folder-1', { mode: 'keep', destinationId: null })
+    );
   });
 
   it('offers favorite, rename and delete actions from a note context menu', async () => {
@@ -372,12 +463,16 @@ function renderSidebar({
       currentSpaceId: 'space-1',
       folderTree: empty ? [] : [folder],
       foldersById: empty ? {} : { [folder.id]: folder },
-      notes: notes ?? (empty ? [] : [
-        createNote('note-1', '规划草案', 'folder-1', { favorite: true, tagIds: ['tag-1'] }),
-        createNote('note-2', '设计复盘', 'folder-1'),
-        createNote('note-3', '收件箱', null),
-        createNote('note-4', '已删除', null, { deleted: true })
-      ]),
+      notes:
+        notes ??
+        (empty
+          ? []
+          : [
+              createNote('note-1', '规划草案', 'folder-1', { favorite: true, tagIds: ['tag-1'] }),
+              createNote('note-2', '设计复盘', 'folder-1'),
+              createNote('note-3', '收件箱', null),
+              createNote('note-4', '已删除', null, { deleted: true })
+            ]),
       tags: tags ?? (empty ? [] : [{ id: 'tag-1', name: '设计' }]),
       tagGroups: []
     }
@@ -419,8 +514,14 @@ function createApi(): WorkspaceApi {
     permanentlyDeleteNote: vi.fn().mockResolvedValue({ id: 'note-1' }),
     setNoteFavorite: vi.fn().mockResolvedValue({ id: 'note-1' }),
     setNoteTags: vi.fn().mockResolvedValue({ id: 'note-1' }),
-    createTag: vi.fn(), updateTag: vi.fn(), deleteTag: vi.fn(), mergeTags: vi.fn(), reorderTags: vi.fn(),
-    createTagGroup: vi.fn(), updateTagGroup: vi.fn(), deleteTagGroup: vi.fn(),
+    createTag: vi.fn(),
+    updateTag: vi.fn(),
+    deleteTag: vi.fn(),
+    mergeTags: vi.fn(),
+    reorderTags: vi.fn(),
+    createTagGroup: vi.fn(),
+    updateTagGroup: vi.fn(),
+    deleteTagGroup: vi.fn(),
     deleteNotes: vi.fn().mockResolvedValue([]),
     assignTagToNotes: vi.fn().mockResolvedValue([]),
     updateTagsForNotes: vi.fn().mockResolvedValue([]),
@@ -436,7 +537,13 @@ function createApi(): WorkspaceApi {
     listNoteAttachments: vi.fn().mockResolvedValue([]),
     uploadNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
     renameNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
-    inspectAttachmentDeletion: vi.fn().mockResolvedValue({ asset: { type: 'attachment', id: 'attachment-1' }, decision: 'can-purge-no-history', references: [], reasonCodes: [], coverage: { persistedCurrentAndHistory: true } }),
+    inspectAttachmentDeletion: vi.fn().mockResolvedValue({
+      asset: { type: 'attachment', id: 'attachment-1' },
+      decision: 'can-purge-no-history',
+      references: [],
+      reasonCodes: [],
+      coverage: { persistedCurrentAndHistory: true }
+    }),
     verifyNoteAttachment: vi.fn(),
     restoreNoteAttachment: vi.fn(),
     listAttachmentCleanup: vi.fn().mockResolvedValue({ items: [], pending: 0 }),

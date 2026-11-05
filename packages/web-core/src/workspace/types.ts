@@ -134,7 +134,8 @@ export interface Attachment extends EntityBase {
   verifiedAt?: string | null;
 }
 
-export type TagColor = 'neutral' | 'blue' | 'green' | 'orange' | 'red' | 'violet';
+export type { TagColor } from '@study-accelerator/shared/tag-colors';
+import type { TagColor } from '@study-accelerator/shared/tag-colors';
 
 export interface Tag extends EntityBase {
   name?: string;
