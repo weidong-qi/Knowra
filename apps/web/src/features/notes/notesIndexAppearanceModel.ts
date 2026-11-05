@@ -8,12 +8,7 @@ export interface NotesIndexAppearance {
   buttonStyle: ButtonStyle;
   defaultButtonStyle: DefaultButtonStyle;
   dialogStyle: DialogStyle;
-  darkPalette: DarkPalette;
 }
-
-/** 深色配色：白天友好（默认）、接近 Linear（更深、更接近纯黑）。仅在深色模式下生效。 */
-export const DARK_PALETTES = ['daylight', 'linear'] as const;
-export type DarkPalette = typeof DARK_PALETTES[number];
 
 /** 主按钮（Button primary）外观：纸感、白玻璃。 */
 export const BUTTON_STYLES = ['paper', 'frost'] as const;
@@ -29,7 +24,7 @@ export type DialogStyle = typeof DIALOG_STYLES[number];
 
 export const NOTES_INDEX_APPEARANCE_KEY = 'knowra:notes-index-appearance:v1';
 export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
-  mode: 'light', theme: 'orange', shape: 'pill', overlayMaterial: 'glass', buttonStyle: 'paper', defaultButtonStyle: 'soft', dialogStyle: 'float', darkPalette: 'daylight'
+  mode: 'light', theme: 'orange', shape: 'pill', overlayMaterial: 'glass', buttonStyle: 'paper', defaultButtonStyle: 'soft', dialogStyle: 'float'
 };
 const listeners = new Set<() => void>();
 let snapshot = readAppearance();
@@ -45,8 +40,7 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     overlayMaterial: candidate.overlayMaterial === 'acrylic' ? 'acrylic' : 'glass',
     buttonStyle: BUTTON_STYLES.includes(candidate.buttonStyle as ButtonStyle) ? candidate.buttonStyle as ButtonStyle : 'paper',
     defaultButtonStyle: DEFAULT_BUTTON_STYLES.includes(candidate.defaultButtonStyle as DefaultButtonStyle) ? candidate.defaultButtonStyle as DefaultButtonStyle : 'soft',
-    dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle) ? candidate.dialogStyle as DialogStyle : 'float',
-    darkPalette: DARK_PALETTES.includes(candidate.darkPalette as DarkPalette) ? candidate.darkPalette as DarkPalette : 'daylight'
+    dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle) ? candidate.dialogStyle as DialogStyle : 'float'
   };
 }
 

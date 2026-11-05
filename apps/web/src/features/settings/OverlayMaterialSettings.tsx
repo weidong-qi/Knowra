@@ -4,17 +4,16 @@ import { SegmentedButton, SegmentedControl } from '../../components/ui/button/Se
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogTrigger } from '../../components/ui/overlay/Dialog';
 import { TextField } from '../../components/ui/input';
 import { Menu, MenuItem, MenuPopover, MenuTrigger, SubmenuTrigger } from '../../components/ui/overlay/Menu';
-import { BUTTON_STYLES, DARK_PALETTES, DEFAULT_BUTTON_STYLES, DIALOG_STYLES, setNotesIndexAppearance, useNotesIndexAppearance, type ButtonStyle, type DarkPalette, type DefaultButtonStyle, type DialogStyle } from '../notes/notesIndexAppearanceModel';
+import { BUTTON_STYLES, DEFAULT_BUTTON_STYLES, DIALOG_STYLES, setNotesIndexAppearance, useNotesIndexAppearance, type ButtonStyle, type DefaultButtonStyle, type DialogStyle } from '../notes/notesIndexAppearanceModel';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
 
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
 const DEFAULT_BUTTON_STYLE_LABELS: Record<DefaultButtonStyle, string> = { soft: '无边软影', glass: '乳白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
-const DARK_PALETTE_LABELS: Record<DarkPalette, string> = { daylight: '白天友好', linear: '接近 Linear' };
 
 export function OverlayMaterialSettings() {
-  const { overlayMaterial, buttonStyle, defaultButtonStyle, dialogStyle, darkPalette } = useNotesIndexAppearance();
+  const { overlayMaterial, buttonStyle, defaultButtonStyle, dialogStyle } = useNotesIndexAppearance();
   const compact = useCompactLayout();
   return <section className={styles.group} aria-labelledby="settings-appearance-heading">
     <h3 id="settings-appearance-heading">外观</h3>
@@ -91,17 +90,6 @@ export function OverlayMaterialSettings() {
               <DialogFooter><DialogClose variant="ghost">取消</DialogClose><DialogClose variant="primary">创建</DialogClose></DialogFooter>
             </Dialog>
           </DialogTrigger>
-        </div>
-      </div>
-      <div className={`${styles.settingRow} ${styles.materialRow}`}>
-        <div className={styles.settingCopy}>
-          <h4>深色配色</h4>
-          <p>仅在深色模式下生效。白天友好提亮层次与文字，接近 Linear 底色更深、分隔更细。切换后即时保存。</p>
-        </div>
-        <div className={`${styles.settingControl} ${styles.materialControl}`}>
-          <SegmentedControl aria-label="深色配色">
-            {DARK_PALETTES.map(palette => <SegmentedButton key={palette} aria-pressed={darkPalette === palette} onPress={() => setNotesIndexAppearance({ darkPalette: palette })}>{DARK_PALETTE_LABELS[palette]}</SegmentedButton>)}
-          </SegmentedControl>
         </div>
       </div>
     </div>
