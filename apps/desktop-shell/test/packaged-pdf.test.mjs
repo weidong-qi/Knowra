@@ -102,10 +102,23 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('退出前的本机评论', {
     timeout: 30000
   });
-  const savedMark = await page.locator('[data-knowra-pdf-overlay] [data-type="region"]').boundingBox();
-  assert(savedMark);
-  await page.mouse.move(savedMark.x + savedMark.width / 2, savedMark.y + savedMark.height / 2);
-  await expect(page.getByRole('tooltip')).toContainText('退出前的本机评论');
+  const savedRegion = page.locator('[data-knowra-pdf-overlay] [data-type="region"]');
+  // 定位后的延迟布局可能改变阅读位置，用当前可见标注的坐标悬停。
+  await expect
+    .poll(async () => {
+      const savedMark = await savedRegion.boundingBox();
+      const frame = await page.getByLabel('PDF 页面', { exact: true }).boundingBox();
+      if (!savedMark || !frame) return '';
+      const x = savedMark.x + savedMark.width / 2,
+        y = savedMark.y + savedMark.height / 2;
+      if (x < frame.x || x > frame.x + frame.width || y < frame.y || y > frame.y + frame.height) {
+        await savedRegion.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
+        return '';
+      }
+      await page.mouse.move(x, y);
+      return (await page.getByRole('tooltip').allTextContents()).join('');
+    })
+    .toContain('退出前的本机评论');
   await page.mouse.move(5, 5);
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   const destination = path.join(directory, '原 PDF.pdf');

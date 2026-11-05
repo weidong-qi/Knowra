@@ -119,7 +119,7 @@ export function PdfReaderView({
   useEffect(() => {
     setAnnotationAction(null);
     setCommentEditor(null);
-  }, [viewer.revision]);
+  }, [viewer.viewportRevision]);
   useEffect(() => {
     alive.current = true;
     void listPdfAnnotations(note.id)
