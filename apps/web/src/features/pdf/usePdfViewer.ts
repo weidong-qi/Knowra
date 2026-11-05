@@ -101,7 +101,7 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
       if (active) setPage(event.pageNumber);
       persist();
     });
-    for (const name of ['pagerendered', 'scalechanging', 'rotationchanging'])
+    for (const name of ['pagerendered', 'textlayerrendered', 'scalechanging', 'rotationchanging'])
       bus.on(name, () => {
         if (active) setRevision(value => value + 1);
         persist();

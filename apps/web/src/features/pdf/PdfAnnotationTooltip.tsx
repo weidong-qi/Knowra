@@ -22,8 +22,21 @@ export function PdfAnnotationTooltip({
   const item = enabled ? items.find(value => value.id === hover?.id && value.comment.trim()) : undefined;
   useEffect(() => {
     const container = containerRef.current;
-    setHover(null);
-    if (!container || !enabled) return;
+    if (!container || !enabled) {
+      setHover(null);
+      return;
+    }
+    // 文字层完成绘制可能晚于首次悬停；只在鼠标已不命中原标注时收起。
+    setHover(current => {
+      if (!current) return null;
+      const target = document.elementFromPoint(current.left, current.top);
+      return target &&
+        container.contains(target) &&
+        pdfAnnotationAtPoint(target, current.left, current.top) === current.id &&
+        items.some(value => value.id === current.id && value.comment.trim())
+        ? current
+        : null;
+    });
     const clear = () => setHover(null);
     const move = (event: PointerEvent) => {
       if (event.pointerType === 'touch' || event.buttons || !(event.target instanceof Element)) {

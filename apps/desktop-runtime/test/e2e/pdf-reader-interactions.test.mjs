@@ -150,6 +150,14 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
       .poll(async () => {
         const rotated = await legacyMark.boundingBox();
         if (!rotated) return '';
+        // 旋转后的延迟布局可能重新调整滚动位置，先确保命中点仍在阅读区内。
+        const frame = await page.getByLabel('PDF 页面', { exact: true }).boundingBox();
+        const x = rotated.x + rotated.width / 2,
+          y = rotated.y + rotated.height / 2;
+        if (!frame || x < frame.x || x > frame.x + frame.width || y < frame.y || y > frame.y + frame.height) {
+          await legacyMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
+          return '';
+        }
         await page.mouse.move(rotated.x + rotated.width / 2, rotated.y + rotated.height / 2);
         return (await page.getByRole('tooltip').allTextContents()).join('');
       })

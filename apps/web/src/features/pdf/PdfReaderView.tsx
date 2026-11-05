@@ -350,6 +350,7 @@ export function PdfReaderView({
     }
     // 点到页面任意空白处都先收起候选色条和预览框，再按当前工具决定是否开始新的标注。
     setCardOpen(false);
+    if (!annotationPress.current) setSelected(null);
     setPending(null);
     setGhost(null);
     if (!editable || (tool !== 'region' && tool !== 'note')) return;
@@ -673,6 +674,7 @@ export function PdfReaderView({
               if (event.key !== 'Escape') return;
               setAnnotationAction(null);
               setCardOpen(false);
+              setSelected(null);
               if (pending) {
                 setPending(null);
                 setGhost(null);
@@ -697,7 +699,10 @@ export function PdfReaderView({
                 setCommentEditor(annotationAction);
                 setAnnotationAction(null);
               }}
-              onClose={() => setAnnotationAction(null)}
+              onClose={() => {
+                setAnnotationAction(null);
+                setSelected(null);
+              }}
               onCopy={() => {
                 void writeClipboardText(actionItem.quoteText)
                   .then(copied => {
@@ -723,7 +728,10 @@ export function PdfReaderView({
               point={commentEditor}
               canWrite={editable}
               onChange={comment => change(editingItem.id, { comment })}
-              onClose={() => setCommentEditor(null)}
+              onClose={() => {
+                setCommentEditor(null);
+                setSelected(null);
+              }}
             />
           ) : null}
           {cardItem && cardAnchor && !noteMove ? (

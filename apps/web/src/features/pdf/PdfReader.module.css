@@ -532,6 +532,17 @@
   stroke: var(--text-primary);
   stroke-width: 1.5px;
 }
+.reader :global([data-knowra-pdf-overlay] [data-type='highlight'][data-selected]),
+.reader :global([data-knowra-pdf-overlay] [data-pdf-hit-area][data-selected]) {
+  stroke-width: 1px;
+  stroke-dasharray: 3 2;
+}
+.reader :global([data-knowra-pdf-overlay] [data-pdf-hit-area]) {
+  fill: none;
+}
+.reader :global([data-knowra-pdf-overlay] [data-type='underline'][data-selected]) {
+  stroke: none;
+}
 @media (max-width: 760px) {
   .sidePanel {
     position: absolute;
