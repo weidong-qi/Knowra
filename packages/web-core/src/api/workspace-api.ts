@@ -116,40 +116,6 @@ export interface NoteQueryPage {
   hasNext: boolean;
 }
 
-export interface CreateAnnotationInput {
-  spaceId: string;
-  noteId: string;
-  quoteText: string;
-  headingPath: string[];
-  fromPosition: number;
-  toPosition: number;
-  prefixText: string;
-  suffixText: string;
-  anchorFingerprint: string;
-  noteContentHash: string;
-  idempotencyKey: string;
-  schemaVersion?: 2;
-  scopeType?: 'selection' | 'blocks' | 'section' | 'list';
-  anchor?: ContentAnchor;
-  kind: 'important' | 'question' | 'supplement' | 'pitfall' | 'temporary';
-  importance?: Annotation['importance'];
-  comment?: string;
-  sourceMode: 'manual';
-}
-
-export type UpdateAnnotationAnchorInput = Pick<
-  CreateAnnotationInput,
-  | 'quoteText'
-  | 'headingPath'
-  | 'fromPosition'
-  | 'toPosition'
-  | 'prefixText'
-  | 'suffixText'
-  | 'anchorFingerprint'
-  | 'noteContentHash'
-  | 'anchor'
-> & { expectedRevision?: number };
-
 export interface UpdateAnnotationInput {
   expectedRevision: number;
   kind?: 'important' | 'question' | 'supplement' | 'pitfall' | 'temporary';
@@ -434,10 +400,8 @@ export interface WorkspaceApi extends AttachmentApi {
   getLinkedNotes(noteId: string): Promise<Note[]>;
   getNoteLinkRelations?(noteId: string): Promise<NoteLinkRelations>;
   listAnnotations(noteId: string, spaceId: string): Promise<Annotation[]>;
-  createAnnotation(input: CreateAnnotationInput): Promise<Annotation>;
   deleteAnnotation(annotationId: string, expectedRevision?: number): Promise<Annotation>;
   restoreAnnotation(annotationId: string, expectedRevision?: number): Promise<Annotation>;
-  updateAnnotationAnchor(annotationId: string, input: UpdateAnnotationAnchorInput): Promise<Annotation>;
   updateAnnotation?(annotationId: string, input: UpdateAnnotationInput): Promise<Annotation>;
   confirmAnnotationRange?(
     annotationId: string,
@@ -458,10 +422,6 @@ export interface WorkspaceApi extends AttachmentApi {
     id: string,
     input: { spaceId: string; expectedUpdatedAt: string }
   ): Promise<AnalysisScopeSnapshot>;
-  createAnnotationExclusion?(
-    annotationId: string,
-    input: { expectedRevision: number; noteContentHash: string; anchor: ContentAnchor }
-  ): Promise<AnnotationExclusionResult>;
   deleteAnnotationExclusion?(
     annotationId: string,
     exclusionId: string,
@@ -1009,16 +969,6 @@ export function createWorkspaceApi({ requestJson }: { requestJson: RequestJson }
         )
       );
     },
-    async createAnnotation(input) {
-      const annotation = getData<Annotation>(
-        await requestJson('/api/knowledge/annotations', {
-          method: 'POST',
-          body: JSON.stringify(input)
-        })
-      );
-      if (!annotation?.id) throw new Error('Create annotation response is invalid.');
-      return annotation;
-    },
     async deleteAnnotation(annotationId, expectedRevision) {
       const annotation = getData<Annotation>(
         await requestJson(`/api/knowledge/annotations/${encodeURIComponent(annotationId)}`, {
@@ -1037,16 +987,6 @@ export function createWorkspaceApi({ requestJson }: { requestJson: RequestJson }
         })
       );
       if (!annotation?.id) throw new Error('Restore annotation response is invalid.');
-      return annotation;
-    },
-    async updateAnnotationAnchor(annotationId, input) {
-      const annotation = getData<Annotation>(
-        await requestJson(`/api/knowledge/annotations/${encodeURIComponent(annotationId)}/anchor`, {
-          method: 'PATCH',
-          body: JSON.stringify(input)
-        })
-      );
-      if (!annotation?.id) throw new Error('Update annotation anchor response is invalid.');
       return annotation;
     },
     async updateAnnotation(annotationId, input) {
@@ -1125,16 +1065,6 @@ export function createWorkspaceApi({ requestJson }: { requestJson: RequestJson }
         ),
         '分析范围返回无效。'
       );
-    },
-    async createAnnotationExclusion(annotationId, input) {
-      const value = getData<AnnotationExclusionResult>(
-        await requestJson(`/api/knowledge/annotations/${encodeURIComponent(annotationId)}/exclusions`, {
-          method: 'POST',
-          body: JSON.stringify(input)
-        })
-      );
-      if (!value?.annotation?.id || !value.exclusion?.id) throw new Error('Annotation exclusion response is invalid.');
-      return value;
     },
     async deleteAnnotationExclusion(annotationId, exclusionId, expectedRevision) {
       const value = getData<AnnotationExclusionResult>(

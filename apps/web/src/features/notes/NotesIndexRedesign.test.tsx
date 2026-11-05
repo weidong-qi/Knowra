@@ -1,7 +1,12 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createEmptyWorkspaceSnapshot, type Note, type NoteQueryPage, type WorkspaceApi } from '@study-accelerator/web-core';
+import {
+  createEmptyWorkspaceSnapshot,
+  type Note,
+  type NoteQueryPage,
+  type WorkspaceApi
+} from '@study-accelerator/web-core';
 import { AppStoreProvider } from '../../store/AppStoreProvider';
 import { createAppStore } from '../../store/createAppStore';
 import { NotesIndexView } from './NotesIndexView';
@@ -9,31 +14,65 @@ import { NotesIndexView } from './NotesIndexView';
 const title = '规划草案';
 const fixtureNow = new Date(2026, 0, 15, 12).getTime();
 const createNote = (id: string, overrides: Partial<Note> = {}): Note => ({
-  id, title: id === 'note-1' ? title : id, folderId: null, tagIds: [], internalLinks: [], rawMarkdown: '',
-  contentLoaded: false, favorite: false, deleted: false, status: 'draft', updatedAt: new Date(fixtureNow - 1_000).toISOString(), ...overrides
+  id,
+  title: id === 'note-1' ? title : id,
+  folderId: null,
+  tagIds: [],
+  internalLinks: [],
+  rawMarkdown: '',
+  contentLoaded: false,
+  favorite: false,
+  deleted: false,
+  status: 'draft',
+  updatedAt: new Date(fixtureNow - 1_000).toISOString(),
+  ...overrides
 });
 
 async function setup(options: { notes?: Note[]; readOnly?: boolean; view?: 'list' | 'grid' } = {}) {
   const api = createApi();
   const store = createAppStore({ api, cacheKey: 'notes-redesign-test', mockSnapshot: createEmptyWorkspaceSnapshot() });
   const folder = { id: 'folder-1', name: '设计资料', parentId: null, children: [] };
-  const notes = options.notes ?? [createNote('note-1', { folderId: folder.id, summary: '索引改版真实摘要' }), createNote('note-2', { title: '已发布资料', status: 'published' })];
-  store.setState({ dataMode: options.readOnly ? 'cache' : 'api', workspaceLoadState: 'ready', serverData: {
-    spaces: [{ id: 'space-1' }], currentSpaceId: 'space-1', folderTree: [folder], foldersById: { [folder.id]: folder }, notes, tags: [], tagGroups: []
-  } });
+  const notes = options.notes ?? [
+    createNote('note-1', { folderId: folder.id, summary: '索引改版真实摘要' }),
+    createNote('note-2', { title: '已发布资料', status: 'published' })
+  ];
+  store.setState({
+    dataMode: options.readOnly ? 'cache' : 'api',
+    workspaceLoadState: 'ready',
+    serverData: {
+      spaces: [{ id: 'space-1' }],
+      currentSpaceId: 'space-1',
+      folderTree: [folder],
+      foldersById: { [folder.id]: folder },
+      notes,
+      tags: [],
+      tagGroups: []
+    }
+  });
   vi.mocked(api.queryNotes).mockImplementation(async input => {
-    let found = notes.filter(note => input.deletedOnly ? note.deleted : !note.deleted);
+    let found = notes.filter(note => (input.deletedOnly ? note.deleted : !note.deleted));
     if (input.folderId) found = found.filter(note => note.folderId === input.folderId);
     if (input.favoriteOnly) found = found.filter(note => note.favorite);
     if (input.query) found = found.filter(note => note.title.includes(input.query!));
-    found = [...found].sort((a, b) => input.sortBy === 'title' ? a.title.localeCompare(b.title, 'zh-CN') : Date.parse(a.updatedAt!) - Date.parse(b.updatedAt!));
+    found = [...found].sort((a, b) =>
+      input.sortBy === 'title'
+        ? a.title.localeCompare(b.title, 'zh-CN')
+        : Date.parse(a.updatedAt!) - Date.parse(b.updatedAt!)
+    );
     if (input.order === 'desc') found.reverse();
     const offset = input.offset ?? 0;
     const end = offset + (input.limit ?? 30);
     return { items: found.slice(offset, end), hasNext: end < found.length };
   });
   const onOpenNote = vi.fn();
-  const view = render(<AppStoreProvider store={store} dependencies={{ api, cacheKey: 'notes-redesign-test', mockSnapshot: createEmptyWorkspaceSnapshot() }}><NotesIndexView path={[]} onOpenNote={onOpenNote} /></AppStoreProvider>);
+  const view = render(
+    <AppStoreProvider
+      store={store}
+      dependencies={{ api, cacheKey: 'notes-redesign-test', mockSnapshot: createEmptyWorkspaceSnapshot() }}
+    >
+      <NotesIndexView path={[]} onOpenNote={onOpenNote} />
+    </AppStoreProvider>
+  );
   await vi.waitFor(() => expect(screen.queryByText('正在从服务端加载筛选结果…')).not.toBeInTheDocument());
   if (options.view !== 'grid') await userEvent.click(screen.getByRole('button', { name: '列表视图' }));
   return { ...view, api, store, onOpenNote, user: userEvent.setup() };
@@ -42,14 +81,20 @@ async function setup(options: { notes?: Note[]; readOnly?: boolean; view?: 'list
 async function chooseType(user: ReturnType<typeof userEvent.setup>, label: string) {
   await user.click(screen.getByRole('button', { name: '显示选项（布局、分组、排序、属性）' }));
   const dialog = screen.getByRole('dialog', { name: '索引显示选项' });
-  await user.click(within(within(dialog).getByRole('group', { name: '类型' })).getByRole('button', { name: new RegExp(`^${label}`) }));
+  await user.click(
+    within(within(dialog).getByRole('group', { name: '类型' })).getByRole('button', { name: new RegExp(`^${label}`) })
+  );
   await user.keyboard('{Escape}');
 }
 
 async function chooseGroup(user: ReturnType<typeof userEvent.setup>, label: string) {
   await user.click(screen.getByRole('button', { name: '显示选项（布局、分组、排序、属性）' }));
   const dialog = screen.getByRole('dialog', { name: '索引显示选项' });
-  await user.click(within(within(dialog).getByRole('group', { name: '分组' })).getByRole('button', { name: label === '更新时间' ? '时间' : label }));
+  await user.click(
+    within(within(dialog).getByRole('group', { name: '分组' })).getByRole('button', {
+      name: label === '更新时间' ? '时间' : label
+    })
+  );
   await user.keyboard('{Escape}');
 }
 
@@ -90,10 +135,13 @@ describe('笔记索引新版真实交互', () => {
   });
 
   it('状态与时间只筛选已加载项目，空结果仍可用原始游标加载后续命中项', async () => {
-    const notes = Array.from({ length: 35 }, (_, index) => createNote(`paged-${index}`, {
-      status: index === 34 ? 'draft' : 'active', title: index === 34 ? '后续批次草稿' : `进行中 ${index}`,
-      updatedAt: new Date(fixtureNow - (index + 1) * 1_000).toISOString()
-    }));
+    const notes = Array.from({ length: 35 }, (_, index) =>
+      createNote(`paged-${index}`, {
+        status: index === 34 ? 'draft' : 'active',
+        title: index === 34 ? '后续批次草稿' : `进行中 ${index}`,
+        updatedAt: new Date(fixtureNow - (index + 1) * 1_000).toISOString()
+      })
+    );
     const { user, api } = await setup({ notes });
     await user.click(screen.getByRole('button', { name: '筛选' }));
     await user.click(screen.getByRole('menuitem', { name: /状态/ }));
@@ -103,11 +151,15 @@ describe('笔记索引新版真实交互', () => {
     await user.click(screen.getByRole('menuitem', { name: /更新时间/ }));
     await user.click(screen.getByRole('menuitemradio', { name: '今天' }));
     await user.keyboard('{Escape}');
-    expect(screen.getByRole('group', { name: '已启用的筛选' })).toHaveTextContent('状态与时间仅筛选已加载笔记，可在底部加载更多');
+    expect(screen.getByRole('group', { name: '已启用的筛选' })).toHaveTextContent(
+      '状态与时间仅筛选已加载笔记，可在底部加载更多'
+    );
     expect(screen.getByText('没有符合当前条件的结果')).toBeInTheDocument();
     expect(api.queryNotes).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole('button', { name: '加载更多' }));
-    await vi.waitFor(() => expect(api.queryNotes).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 30, limit: 30 })));
+    await vi.waitFor(() =>
+      expect(api.queryNotes).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 30, limit: 30 }))
+    );
     expect(await screen.findByRole('button', { name: '后续批次草稿' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '设计资料' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '加载更多' })).not.toBeInTheDocument();
@@ -163,7 +215,9 @@ describe('笔记索引新版真实交互', () => {
   it('恶意标题和摘要保持纯文本，卡片与预览不创建脚本、图片或可执行链接', async () => {
     const maliciousTitle = '<img src=x onerror="window.compromised=1">';
     const summary = '<script>window.compromised=1</script><a href="javascript:alert(1)">摘要</a>';
-    const { user, container, onOpenNote } = await setup({ notes: [createNote('note-1', { title: maliciousTitle, summary })] });
+    const { user, container, onOpenNote } = await setup({
+      notes: [createNote('note-1', { title: maliciousTitle, summary })]
+    });
     expect(screen.getByRole('button', { name: maliciousTitle })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '卡片视图' }));
     expect(container.querySelector('script, img, a[href^="javascript:"]')).toBeNull();
@@ -177,7 +231,9 @@ describe('笔记索引新版真实交互', () => {
   });
 
   it('跨页先按完整状态分组，折叠后重排分页且全部折叠仍保留标题', async () => {
-    const notes = Array.from({ length: 40 }, (_, index) => createNote(`grouped-${index}`, { status: index % 2 ? 'active' : 'draft' }));
+    const notes = Array.from({ length: 40 }, (_, index) =>
+      createNote(`grouped-${index}`, { status: index % 2 ? 'active' : 'draft' })
+    );
     const { user } = await setup({ notes, readOnly: true });
     await chooseType(user, '笔记');
     await chooseGroup(user, '状态');
@@ -202,9 +258,11 @@ describe('笔记索引新版真实交互', () => {
 
   it('末页折叠到单页后重新展开仍停留第1页，不恢复过期页码', async () => {
     // 默认按更新时间降序，让 collapse-0 明确位于首页，不依赖生成夹具时的毫秒差。
-    const notes = Array.from({ length: 40 }, (_, index) => createNote(`collapse-${index}`, {
-      updatedAt: new Date(fixtureNow - (index + 1) * 1_000).toISOString()
-    }));
+    const notes = Array.from({ length: 40 }, (_, index) =>
+      createNote(`collapse-${index}`, {
+        updatedAt: new Date(fixtureNow - (index + 1) * 1_000).toISOString()
+      })
+    );
     const { user } = await setup({ notes, readOnly: true });
     await chooseType(user, '笔记');
     await chooseGroup(user, '状态');
@@ -222,12 +280,20 @@ describe('笔记索引新版真实交互', () => {
 
   it.each(['search', 'folder'] as const)('丢弃加载更多期间发生%s切换后的旧分页响应', async change => {
     const notes = [
-      ...Array.from({ length: 35 }, (_, index) => createNote(`old-${index}`, { updatedAt: new Date(fixtureNow - (index + 1) * 1_000).toISOString() })),
-      createNote('current', { title: '当前结果', folderId: 'folder-1', updatedAt: new Date(fixtureNow - 60_000).toISOString() })
+      ...Array.from({ length: 35 }, (_, index) =>
+        createNote(`old-${index}`, { updatedAt: new Date(fixtureNow - (index + 1) * 1_000).toISOString() })
+      ),
+      createNote('current', {
+        title: '当前结果',
+        folderId: 'folder-1',
+        updatedAt: new Date(fixtureNow - 60_000).toISOString()
+      })
     ];
     const { user, api, store } = await setup({ notes });
     let finish!: (page: NoteQueryPage) => void;
-    const pending = new Promise<NoteQueryPage>(resolve => { finish = resolve; });
+    const pending = new Promise<NoteQueryPage>(resolve => {
+      finish = resolve;
+    });
     vi.mocked(api.queryNotes).mockImplementationOnce(() => pending);
     await user.click(screen.getByRole('button', { name: '加载更多' }));
     expect(api.queryNotes).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 30 }));
@@ -235,9 +301,14 @@ describe('笔记索引新版真实交互', () => {
       if (change === 'search') store.getState().setNotesQuery('当前结果');
       else store.getState().selectNotesFolder('folder-1');
     });
-    await vi.waitFor(() => expect(api.queryNotes).toHaveBeenLastCalledWith(expect.objectContaining({
-      offset: 0, ...(change === 'search' ? { query: '当前结果' } : { folderId: 'folder-1' })
-    })));
+    await vi.waitFor(() =>
+      expect(api.queryNotes).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          offset: 0,
+          ...(change === 'search' ? { query: '当前结果' } : { folderId: 'folder-1' })
+        })
+      )
+    );
     expect(await screen.findByRole('button', { name: '当前结果' })).toBeInTheDocument();
     await act(async () => {
       finish({ items: [createNote('stale', { title: '旧分页迟到笔记', folderId: 'folder-1' })], hasNext: true });
@@ -280,15 +351,25 @@ describe('笔记索引新版真实交互', () => {
 
   it('触屏紧凑工具通过显示选项开启预览', async () => {
     const original = window.matchMedia;
-    window.matchMedia = vi.fn(query => ({ matches: query.includes('coarse'), media: query, onchange: null,
-      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() })) as typeof window.matchMedia;
+    window.matchMedia = vi.fn(query => ({
+      matches: query.includes('coarse'),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    })) as typeof window.matchMedia;
     try {
       const { user } = await setup({ view: 'grid' });
       await user.click(screen.getByRole('button', { name: '显示选项（布局、分组、排序、属性）' }));
       await user.click(screen.getByRole('switch', { name: '预览栏' }));
       await user.keyboard('{Escape}');
       expect(screen.getByRole('complementary', { name: '笔记预览' })).toBeInTheDocument();
-    } finally { window.matchMedia = original; }
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it('名称降序使用服务端排序，不只倒序当前页', async () => {
@@ -297,7 +378,11 @@ describe('笔记索引新版真实交互', () => {
     const sort = within(screen.getByRole('group', { name: '排序' }));
     await user.click(sort.getByRole('button', { name: '名称' }));
     await user.click(sort.getByRole('button', { name: /名称/ }));
-    await vi.waitFor(() => expect(api.queryNotes).toHaveBeenLastCalledWith(expect.objectContaining({ sortBy: 'title', order: 'desc', offset: 0 })));
+    await vi.waitFor(() =>
+      expect(api.queryNotes).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: 'title', order: 'desc', offset: 0 })
+      )
+    );
   });
 });
 
@@ -317,24 +402,36 @@ function createApi(): WorkspaceApi {
     permanentlyDeleteNote: vi.fn(),
     setNoteFavorite: vi.fn(),
     setNoteTags: vi.fn(),
-    createTag: vi.fn(), updateTag: vi.fn(), deleteTag: vi.fn(), mergeTags: vi.fn(), reorderTags: vi.fn(),
-    createTagGroup: vi.fn(), updateTagGroup: vi.fn(), deleteTagGroup: vi.fn(),
+    createTag: vi.fn(),
+    updateTag: vi.fn(),
+    deleteTag: vi.fn(),
+    mergeTags: vi.fn(),
+    reorderTags: vi.fn(),
+    createTagGroup: vi.fn(),
+    updateTagGroup: vi.fn(),
+    deleteTagGroup: vi.fn(),
     deleteNotes: vi.fn().mockResolvedValue([]),
     assignTagToNotes: vi.fn().mockResolvedValue([]),
     updateTagsForNotes: vi.fn().mockResolvedValue([]),
     queryNotes: vi.fn().mockResolvedValue({ items: [], hasNext: false }),
     getLinkedNotes: vi.fn().mockResolvedValue([]),
     listAnnotations: vi.fn().mockResolvedValue([]),
-    createAnnotation: vi.fn(),
     deleteAnnotation: vi.fn(),
     restoreAnnotation: vi.fn(),
-    updateAnnotationAnchor: vi.fn(),
     listNoteVersions: vi.fn().mockResolvedValue([]),
     getNoteVersion: vi.fn(),
     listNoteAttachments: vi.fn().mockResolvedValue([]),
     uploadNoteAttachment: vi.fn(),
     renameNoteAttachment: vi.fn(),
-    inspectAttachmentDeletion: vi.fn().mockResolvedValue({ asset: { type: 'attachment', id: 'attachment-1' }, decision: 'can-purge-no-history', references: [], reasonCodes: [], coverage: { persistedCurrentAndHistory: true } }),
+    inspectAttachmentDeletion: vi
+      .fn()
+      .mockResolvedValue({
+        asset: { type: 'attachment', id: 'attachment-1' },
+        decision: 'can-purge-no-history',
+        references: [],
+        reasonCodes: [],
+        coverage: { persistedCurrentAndHistory: true }
+      }),
     verifyNoteAttachment: vi.fn(),
     restoreNoteAttachment: vi.fn(),
     listAttachmentCleanup: vi.fn().mockResolvedValue({ items: [], pending: 0 }),

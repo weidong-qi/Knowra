@@ -20,8 +20,6 @@ import type {
   NoteVersionPage,
   NoteQueryInput,
   NoteQueryPage,
-  CreateAnnotationInput,
-  UpdateAnnotationAnchorInput,
   UpdateAnnotationInput,
   AnnotationPreview,
   AnnotationKnowledgeLinks,
@@ -107,10 +105,8 @@ export interface WorkspaceSlice {
   getLinkedNotes(noteId: string): Promise<Note[]>;
   getNoteLinkRelations(noteId: string): Promise<import('@study-accelerator/web-core').NoteLinkRelations>;
   listAnnotations(noteId: string): Promise<Annotation[]>;
-  createAnnotation(input: CreateAnnotationInput): Promise<Annotation>;
   deleteAnnotation(annotationId: string, expectedRevision?: number): Promise<Annotation>;
   restoreAnnotation(annotationId: string, expectedRevision?: number): Promise<Annotation>;
-  updateAnnotationAnchor(annotationId: string, input: UpdateAnnotationAnchorInput): Promise<Annotation>;
   updateAnnotation(annotationId: string, input: UpdateAnnotationInput): Promise<Annotation>;
   confirmAnnotationRange(
     annotationId: string,
@@ -128,14 +124,6 @@ export interface WorkspaceSlice {
     id: string,
     input: { spaceId: string; expectedUpdatedAt: string }
   ): Promise<AnalysisScopeSnapshot>;
-  createAnnotationExclusion(
-    annotationId: string,
-    input: {
-      expectedRevision: number;
-      noteContentHash: string;
-      anchor: import('@study-accelerator/web-core').ContentAnchor;
-    }
-  ): Promise<AnnotationExclusionResult>;
   deleteAnnotationExclusion(
     annotationId: string,
     exclusionId: string,
