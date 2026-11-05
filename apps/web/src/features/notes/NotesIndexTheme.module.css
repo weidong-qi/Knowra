@@ -130,6 +130,23 @@ color-scheme:dark;
   --ni-sh-card:0 0 0 1px rgba(255,255,255,.13);
 }
 
+/* 深色配色「接近 Linear」：仅覆盖底色、文字与分隔线层级，其余沿用上面的深色基础变量。 */
+.theme[data-ni-mode="dark"][data-ni-dark-palette="linear"] {
+  --ink-rgb:247 248 248; --ink-bg-rgb:15 16 18;
+  --ni-chrome:#08090a; --ni-page:#0f1012; --ni-surf:#16171a; --ni-surf-2:rgba(255,255,255,.04);
+  --ni-ink:#f7f8f8; --ni-ink-2:#a3a8b0; --ni-ink-3:#7d828d; --ni-ink-4:#5f646d;
+  --ni-body:#d6d9de; --ni-ink-3-text:#7d828d;
+  --ni-line:rgba(255,255,255,.09); --ni-line-2:rgba(255,255,255,.15);
+  --ni-hover:rgba(255,255,255,.05); --ni-press:rgba(255,255,255,.08);
+  --ni-selected:rgba(255,255,255,.08);
+  --ni-accent-ink:#ff9a62; --ni-toast-act:#ff9a62;
+  --ni-ctx-bg:rgba(20,21,24,.92); --ni-ctx-bg-solid:rgba(20,21,24,.98); --ni-ctx-border:rgba(255,255,255,.1); --ni-ctx-hl:rgba(255,255,255,.06);
+  --ni-pop-bg:rgba(24,25,28,.97); --ni-gh-bg:#16171af2; --ni-toast-bg:#25272c;
+  --ni-sh-ctx:0 0 0 1px rgba(255,255,255,.09);
+  --ni-sh-page:0 0 0 1px rgba(255,255,255,.09);
+  --ni-sh-card:0 0 0 1px rgba(255,255,255,.09);
+}
+
 .theme[data-ni-mode="dark"] {
 --ni-f-back:#7a4524;--ni-f-1:#c28050;--ni-f-2:#a3602e;
 --ni-f-paper:#cfc9bf;--ni-f-paper-line:#a39b8e;--ni-f-edge:rgba(255,255,255,.2);--ni-f-shadow:rgba(0,0,0,.5)

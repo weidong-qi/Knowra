@@ -12,7 +12,8 @@ export function notesIndexAppearanceProps(appearance: NotesIndexAppearance) {
     'data-overlay-material': appearance.overlayMaterial,
     'data-button-style': appearance.buttonStyle,
     'data-default-button-style': appearance.defaultButtonStyle,
-    'data-dialog-style': appearance.dialogStyle
+    'data-dialog-style': appearance.dialogStyle,
+    'data-ni-dark-palette': appearance.darkPalette
   };
 }
 
