@@ -14,6 +14,7 @@ import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-
 import { temporaryDirectory } from './helpers.mjs';
 import { syntheticPdf } from '../../../scripts/test-support/pdf-fixtures.mjs';
 import { createRuntimeBackup, inspectRuntimeBackup, restoreRuntimeBackup } from '../src/backup.mjs';
+import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
 
 async function runPdfSync(t, postgres = false) {
   const root = temporaryDirectory(t);
@@ -170,6 +171,118 @@ async function runPdfSync(t, postgres = false) {
     false
   );
   assert.equal((await b.context.http.pdf.list(copy.id)).length, 1);
+  // 便签位置可编辑：多次离线拖动和评论必须一起穿过真实 HTTP 同步队列。
+  const segments = rect => [{ pageIndex: 0, rect }];
+  await a.context.http.pdf.mutate(copy.id, 'movable-note', {
+    operationId: 'note-create',
+    expectedRevision: 0,
+    type: 'note',
+    segments: segments([10, 20, 28, 38]),
+    comment: '原便签'
+  });
+  await a.engine.sync();
+  await b.engine.sync();
+  for (const [revision, rect] of [
+    [1, [30, 40, 48, 58]],
+    [2, [50, 60, 68, 78]]
+  ]) {
+    await a.context.http.pdf.mutate(copy.id, 'movable-note', {
+      operationId: `note-move-${revision}`,
+      expectedRevision: revision,
+      segments: segments(rect),
+      comment: '拖动后继续编辑'
+    });
+  }
+  await a.engine.sync();
+  assert.equal(a.engine.status().error, null, JSON.stringify(a.engine.status()));
+  await b.engine.sync();
+  assert.equal(b.engine.status().error, null);
+  const moved = (await b.context.http.pdf.list(copy.id)).find(item => item.id === 'movable-note');
+  assert.deepEqual(moved.segments, segments([50, 60, 68, 78]));
+  assert.equal(moved.comment, '拖动后继续编辑');
+  assert.equal(a.engine.status().pendingEntities, 0);
+  // 只放开便签的坐标；来源、原文和类型继续保持不可变，修订不能倒退。
+  for (const fields of [
+    { noteId: 'another-note' },
+    { spaceId: 'another-space' },
+    { attachmentId: 'another-file' },
+    { sha256: 'b'.repeat(64) },
+    { type: 'region' },
+    { quoteText: '改换原文' }
+  ]) {
+    assert.throws(
+      () =>
+        prepareBatchState(
+          a.store.state,
+          [
+            {
+              collection: 'pdfAnnotations',
+              id: moved.id,
+              value: { ...moved, ...fields }
+            }
+          ],
+          'demo'
+        ),
+      { code: 'PDF_SOURCE_IMMUTABLE' }
+    );
+  }
+  assert.throws(
+    () =>
+      prepareBatchState(
+        a.store.state,
+        [
+          {
+            collection: 'pdfAnnotations',
+            id: moved.id,
+            value: { ...moved, revision: moved.revision - 1 }
+          }
+        ],
+        'demo'
+      ),
+    { code: 'PDF_ANNOTATION_CONFLICT' }
+  );
+  const fixed = a.store.state.pdfAnnotations.find(item => item.noteId === copy.id && item.type === 'region');
+  for (const type of ['highlight', 'underline', 'region']) {
+    const before = structuredClone(a.store.state);
+    const mark = before.pdfAnnotations.find(item => item.id === fixed.id);
+    Object.assign(mark, { type, quoteText: '固定原文' });
+    assert.throws(
+      () =>
+        prepareBatchState(
+          before,
+          [
+            {
+              collection: 'pdfAnnotations',
+              id: mark.id,
+              value: { ...mark, segments: segments([60, 70, 90, 100]) }
+            }
+          ],
+          'demo'
+        ),
+      { code: 'PDF_SOURCE_IMMUTABLE' }
+    );
+  }
+  // 两端同时移动同一便签仍需核对，不能靠放开坐标绕过并发保护。
+  for (const [device, rect] of [
+    [a, [70, 80, 88, 98]],
+    [b, [90, 100, 108, 118]]
+  ]) {
+    await device.context.http.pdf.mutate(copy.id, moved.id, {
+      operationId: `concurrent-${rect[0]}`,
+      expectedRevision: moved.revision,
+      segments: segments(rect)
+    });
+  }
+  await a.engine.sync();
+  await b.engine.sync();
+  assert(b.engine.status().entityConflict);
+  await b.engine.resolve({ conflictId: b.engine.status().entityConflict.id, choice: 'remote' });
+  await b.engine.sync();
+  assert.equal(b.engine.status().error, null);
+  assert.deepEqual(
+    (await b.context.http.pdf.list(copy.id)).find(item => item.id === moved.id).segments,
+    segments([70, 80, 88, 98])
+  );
 }
 test('PDF 真实双 SQLite / HTTP：二进制文件、标注、重启、回收站、三种冲突与完整备份', { timeout: 60000 }, t =>
   runPdfSync(t)
