@@ -1185,6 +1185,7 @@ test('回收站内缺失结构锚点的 v1 重点经云端标准取消下行同�
   const historical = { ...row };
   delete historical.lifecycleStatus;
   delete historical.anchorStatus;
+  delete historical.revision;
   cloud.knowledge.repositories.contentAnnotationRepository.save(historical);
   const a = cloud.device('v1-existing');
   await a.connect();
@@ -1201,10 +1202,33 @@ test('回收站内缺失结构锚点的 v1 重点经云端标准取消下行同�
       ),
     { code: 'ANNOTATION_VERSION_CONFLICT' }
   );
-  const cancelled = cloud.knowledge.contentAnnotationService.deleteAnnotation(row.id, {
-    expectedRevision: row.revision
-  });
+  const historyPayload = JSON.stringify({ kind: 'original-v1', local: historical });
+  a.store.syncTransaction(db =>
+    db.prepare('INSERT INTO sync_recovery VALUES (?, ?)').run('v1-original-history', historyPayload)
+  );
+  const beforeCancellation = structuredClone(cloud.dataStore.state);
+  const cancel = expectedRevision =>
+    fetch(`${cloud.origin}/api/knowledge/annotations/${encodeURIComponent(row.id)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expectedRevision })
+    });
+  const stale = await cancel(row.revision + 1);
+  assert.equal(stale.status, 409);
+  assert.equal((await stale.json()).error.code, 'ANNOTATION_REVISION_CONFLICT');
+  assert.deepEqual(cloud.dataStore.state, beforeCancellation);
+  const response = await cancel(row.revision);
+  assert.equal(response.status, 200);
+  const cancelled = (await response.json()).data;
   assert.equal(cancelled.lifecycleStatus, 'deleted');
+  assert.equal(cancelled.revision, row.revision + 1);
+  // 原 revision 的重放不能再产生修订或延长留存时间。
+  const afterCancellation = structuredClone(cloud.dataStore.state);
+  const replay = await cancel(row.revision);
+  assert.equal(replay.status, 409);
+  assert.deepEqual(cloud.dataStore.state, afterCancellation);
+  assert.deepEqual(cloud.dataStore.state.noteVersions, beforeCancellation.noteVersions);
+  assert.deepEqual(cloud.dataStore.state.notes, beforeCancellation.notes);
   await a.engine.sync();
   clean(a);
   const b = cloud.device('v1-new');
@@ -1229,6 +1253,31 @@ test('回收站内缺失结构锚点的 v1 重点经云端标准取消下行同�
   }
   assert.equal(a.engine.status().pendingEntities, 0);
   assert.equal(b.engine.status().pendingEntities, 0);
+  assert.equal(
+    a.store.readSync(
+      db => db.prepare('SELECT payload FROM sync_recovery WHERE id = ?').get('v1-original-history').payload
+    ),
+    historyPayload
+  );
+  const backupRoot = path.join(cloud.root, 'v1-post-cancel-backup');
+  fs.mkdirSync(backupRoot);
+  a.store.backupTo(path.join(backupRoot, 'local.sqlite'));
+  const restored = openWorkspace(backupRoot);
+  try {
+    const saved = restored.store.state.contentAnnotations.find(value => value.id === row.id);
+    assert.equal(saved.lifecycleStatus, 'deleted');
+    assert.equal(saved.deletedAt, cancelled.deletedAt);
+    assert.equal(saved.originSnapshot, null);
+    assert.equal(restored.store.state.notes.find(value => value.id === note.id).deleted, true);
+    assert.equal(
+      restored.store.readSync(
+        db => db.prepare('SELECT payload FROM sync_recovery WHERE id = ?').get('v1-original-history').payload
+      ),
+      historyPayload
+    );
+  } finally {
+    restored.store.close();
+  }
 });
 
 test('已有旧重点备注仍可同步，正文改写时云端独有证据降级', async t => {
