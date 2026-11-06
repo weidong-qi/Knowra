@@ -1,3 +1,4 @@
+import { readAnnotationToolHistory } from './annotation-history.ts';
 import { validateWriteIntent } from './note-write-intent.ts';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
@@ -137,6 +138,7 @@ export function validateConversationRecord(kind, record) {
       Boolean(record.manifestId) !== Boolean(record.grantId))
   )
     conversationError('AI_RECORD_INVALID', '模型尝试状态或授权引用无效。');
+  if (kind === 'aiConversationToolCall') readAnnotationToolHistory(record);
   return structuredClone(record);
 }
 

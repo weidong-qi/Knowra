@@ -1,3 +1,4 @@
+import { encodeSyncHistory } from './sync-history.mjs';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { randomUUID } from 'node:crypto';
@@ -42,7 +43,7 @@ function settleOutbox(db, state) {
       if (conflict) {
         db.prepare('INSERT INTO sync_recovery VALUES (?, ?)').run(
           randomUUID(),
-          JSON.stringify({
+          encodeSyncHistory({
             ...conflict,
             matchedLocal: note,
             choice: 'equivalent',
@@ -297,7 +298,7 @@ export function resolveConflict(store, { noteId, choice, rawMarkdown, remoteRevi
       if (local && conflict.remote?.aiVisibility === 'private') local.aiVisibility = 'private';
       db.prepare('INSERT INTO sync_recovery VALUES (?, ?)').run(
         randomUUID(),
-        JSON.stringify({ ...conflict, local, choice, resolvedAt: new Date().toISOString() })
+        encodeSyncHistory({ ...conflict, local, choice, resolvedAt: new Date().toISOString() })
       );
       if (choice === 'remote' || choice === 'copy' || !conflict.remote)
         replace(state, { collection: 'notes', id: noteId, value: conflict.remote });

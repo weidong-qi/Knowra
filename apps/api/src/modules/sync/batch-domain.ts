@@ -121,31 +121,15 @@ const replace = <Collection extends SyncCollection>(
   if (value) state[collection].push(value);
 };
 
-/** 只在内存中构造并校验完整事务后像；不做文件或网络 IO。 */
-export function prepareBatchState<Backend extends SyncBackend = 'local'>(
-  before: SyncProviderState<Backend>,
-  changes: SyncChange[],
-  ownerId: string,
-  preparedAttachments?: Record<string, PreparedSyncAttachment>
-): { state: SyncProviderState<Backend>; aliases: Record<string, string> };
-export function prepareBatchState(
+/** 客户端冻结请求预检与服务端共用；只核对旧重点变更，不授予同步写入权限。 */
+export function assertLegacyAnnotationChanges(
   before: SyncStoredState,
   changes: SyncChange[],
-  ownerId: string,
-  preparedAttachments: Record<string, PreparedSyncAttachment> = {}
-): { state: SyncStoredState; aliases: Record<string, string> } {
-  // 不可变历史只复制集合；领域流程与最终校验均不修改旧版本/修订。
-  let state: SyncWorkingState = Object.fromEntries(
-    Object.entries(before).map(([collection, items]) => [
-      collection,
-      ['noteVersions', 'annotationRevisions'].includes(collection) ? [...items] : cloneJsonData(items)
-    ])
-  ) as SyncWorkingState;
-  const aliases: Record<string, string> = {};
-  const now = new Date().toISOString();
-  for (const change of changes) {
+  selected: SyncChange[] = changes
+): void {
+  for (const change of selected) {
     const { collection, id } = change;
-    const old = before[collection].find(item => item.id === id);
+    const old = before[collection]?.find(item => item.id === id);
     if (collection === 'contentAnnotations' && change.value && change.value.schemaVersion !== 3) {
       const oldAnnotation = before.contentAnnotations.find(item => item.id === id);
       const oldHealth = legacyAnnotationHealth(oldAnnotation);
@@ -183,6 +167,35 @@ export function prepareBatchState(
       if (parent && parent.schemaVersion !== 3 && (!old || !sameEntity('annotationExclusions', old, change.value)))
         throw legacySyncUnavailable();
     }
+  }
+}
+
+/** 只在内存中构造并校验完整事务后像；不做文件或网络 IO。 */
+export function prepareBatchState<Backend extends SyncBackend = 'local'>(
+  before: SyncProviderState<Backend>,
+  changes: SyncChange[],
+  ownerId: string,
+  preparedAttachments?: Record<string, PreparedSyncAttachment>
+): { state: SyncProviderState<Backend>; aliases: Record<string, string> };
+export function prepareBatchState(
+  before: SyncStoredState,
+  changes: SyncChange[],
+  ownerId: string,
+  preparedAttachments: Record<string, PreparedSyncAttachment> = {}
+): { state: SyncStoredState; aliases: Record<string, string> } {
+  // 不可变历史只复制集合；领域流程与最终校验均不修改旧版本/修订。
+  let state: SyncWorkingState = Object.fromEntries(
+    Object.entries(before).map(([collection, items]) => [
+      collection,
+      ['noteVersions', 'annotationRevisions'].includes(collection) ? [...items] : cloneJsonData(items)
+    ])
+  ) as SyncWorkingState;
+  const aliases: Record<string, string> = {};
+  const now = new Date().toISOString();
+  for (const change of changes) {
+    const { collection, id } = change;
+    const old = before[collection].find(item => item.id === id);
+    assertLegacyAnnotationChanges(before, changes, [change]);
     validateKnowledgeLifecycleChange(change, old);
     if (collection === 'analysisScopeSnapshots' && old) {
       const action =
