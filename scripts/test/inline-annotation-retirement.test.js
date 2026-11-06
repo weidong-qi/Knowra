@@ -12,6 +12,10 @@ import {
   readRetirementInspection
 } from '../inspect-inline-annotation-retirement.mjs';
 import { planHistoryRetention } from '../../apps/api/src/modules/knowledge/domain/history-retention.ts';
+import { extractionBackupFixture } from '../../apps/desktop-runtime/test/fixtures/extraction-backup.fixture.mjs';
+import { validateSqliteKnowledgeExtractionTasks } from '../../apps/desktop-runtime/src/knowledge-extraction-validation.mjs';
+import { aiRecords, insertAiRecords } from '../../apps/api/test/ai-record-fixtures.js';
+import { createSqliteAiRepository } from '../../apps/desktop-runtime/src/ai-sqlite-repository.mjs';
 import { scopeHash } from '../../apps/api/src/modules/ai/record-contract.ts';
 import { createEmptyAiState } from '../../apps/api/src/modules/ai/record-state.ts';
 import { initializeDatabase } from '../../apps/desktop-runtime/src/sqlite-schema.mjs';
@@ -503,4 +507,175 @@ test('服务端 JSON 的合法私有 AI 范围引用也纳入核对，保留原�
   assert.equal(report.coverage.privateRecords, 'checked');
   assert.equal(report.privateRecords.bySource['json.aiRuntime'].referencedTargets, 1);
   assert.equal(JSON.stringify(report).includes('private-scope'), false);
+});
+
+function assertRejectedUnchanged(f) {
+  const bytes = fs.readFileSync(f.source),
+    files = fs.readdirSync(f.root);
+  const result = runCli('sqlite', f.source);
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr.includes('private-contract-sentinel'), false);
+  assert.deepEqual(fs.readFileSync(f.source), bytes);
+  assert.deepEqual(fs.readdirSync(f.root), files);
+}
+
+test('标准提炼任务表里的未来版本描述符不能被标为完整核对', t => {
+  const f = auditFixture(t, { notes: [], contentAnnotations: [] });
+  f.change(db => {
+    db.exec(`CREATE TABLE ai_knowledge_extraction_tasks (
+      owner_id TEXT NOT NULL, dataset_id TEXT NOT NULL, job_id TEXT NOT NULL,
+      descriptor_json TEXT NOT NULL, PRIMARY KEY(owner_id,dataset_id,job_id));
+      INSERT INTO metadata VALUES ('aiKnowledgeExtractionTasksVersion','1')`);
+    db.prepare('INSERT INTO ai_knowledge_extraction_tasks VALUES (?,?,?,?)').run(
+      'demo',
+      'dataset',
+      'job',
+      JSON.stringify({ schemaVersion: 999, private: 'private-contract-sentinel' })
+    );
+    assert.throws(() => validateSqliteKnowledgeExtractionTasks(db));
+  });
+  assertRejectedUnchanged(f);
+});
+
+test('必需的会话表即使为空也要验证完整列结构', t => {
+  const f = auditFixture(t, { notes: [], contentAnnotations: [] });
+  f.change(db => db.exec('DROP TABLE ai_conversation_records; CREATE TABLE ai_conversation_records(record_json TEXT)'));
+  assertRejectedUnchanged(f);
+});
+
+for (const [name, mutate] of [
+  [
+    '会话空表列类型不匹配',
+    db =>
+      db.exec(`DROP TABLE ai_conversation_records; CREATE TABLE ai_conversation_records(
+    kind TEXT NOT NULL,record_id TEXT NOT NULL,owner_id TEXT NOT NULL,dataset_id TEXT NOT NULL,
+    dataset_epoch TEXT NOT NULL,space_id TEXT NOT NULL,record_hash TEXT NOT NULL,record_json BLOB NOT NULL,PRIMARY KEY(kind,record_id))`)
+  ],
+  [
+    '会话空表缺少身份主键',
+    db =>
+      db.exec(`DROP TABLE ai_conversation_records; CREATE TABLE ai_conversation_records(
+    kind TEXT NOT NULL,record_id TEXT NOT NULL,owner_id TEXT NOT NULL,dataset_id TEXT NOT NULL,
+    dataset_epoch TEXT NOT NULL,space_id TEXT NOT NULL,record_hash TEXT NOT NULL,record_json TEXT NOT NULL)`)
+  ],
+  ['AI 空表缺少可空读取列', db => db.exec('ALTER TABLE ai_jobs DROP COLUMN question')],
+  [
+    '未知会话记录契约',
+    db =>
+      db
+        .prepare('INSERT INTO ai_conversation_records VALUES (?,?,?,?,?,?,?,?)')
+        .run(
+          'conversation',
+          'c',
+          'demo',
+          'dataset',
+          'epoch',
+          'space',
+          '0'.repeat(64),
+          JSON.stringify({ schemaVersion: 999, private: 'private-contract-sentinel' })
+        )
+  ],
+  [
+    '空的核心回执表结构损坏',
+    db =>
+      db.exec(
+        `INSERT INTO metadata VALUES ('coreOperationsVersion','1'); CREATE TABLE core_operation_receipts(receipt_json TEXT)`
+      )
+  ],
+  [
+    '空的动作账本表结构损坏',
+    db =>
+      db.exec(
+        `INSERT INTO metadata VALUES ('aiNoteActionsVersion','1'); CREATE TABLE ai_note_action_state(state_json TEXT)`
+      )
+  ],
+  [
+    '提炼任务缺少复合主键',
+    db =>
+      db.exec(`INSERT INTO metadata VALUES ('aiKnowledgeExtractionTasksVersion','1');
+    CREATE TABLE ai_knowledge_extraction_tasks(owner_id TEXT NOT NULL,dataset_id TEXT NOT NULL,job_id TEXT NOT NULL,descriptor_json TEXT NOT NULL)`)
+  ],
+  ['可选扩展冒充视图', db => db.exec('CREATE VIEW core_operation_receipts AS SELECT 1 AS receipt_json')]
+])
+  test(`${name} 不能绕过只读校验，且源字节与目录保持不变`, t => {
+    const f = auditFixture(t, { notes: [], contentAnnotations: [] });
+    f.change(mutate);
+    assertRejectedUnchanged(f);
+  });
+
+test('没有所属校验器的私有表只保留扫描结果，不能标记 checked 或退出 0', async t => {
+  const f = auditFixture(t, { notes: [], contentAnnotations: [] });
+  f.change(db => db.exec('CREATE TABLE unowned_private_extension(record_json TEXT)'));
+  const report = await fullReport(f.source);
+  assert.equal(report.coverage.privateRecords, 'unavailable-private-contract');
+  assert.equal(report.status, 'incomplete-inspection');
+  const result = runCli('sqlite', f.source);
+  assert.equal(result.status, 2, result.stderr);
+});
+
+test('合成提炼任务的合法描述、提交、AI 历史关联及会话可完整只读核对', async t => {
+  const f = await extractionBackupFixture(t);
+  await f.store.aiConversationStore.createConversation({ ownerId: 'demo', actorId: 'demo', spaceId: f.space.id });
+  const source = path.join(f.dataRoot, 'local.sqlite');
+  const before = fs.readFileSync(source),
+    files = fs.readdirSync(f.dataRoot);
+  const report = await fullReport(source);
+  assert.equal(report.status, 'pending-sync-remains');
+  assert.equal(report.legacy.total, 0);
+  assert.equal(report.coverage.privateRecords, 'checked');
+  assert.deepEqual(fs.readFileSync(source), before);
+  assert.deepEqual(fs.readdirSync(f.dataRoot), files);
+});
+
+for (const [name, mutate] of [
+  [
+    '提炼任务索引不一致',
+    db => db.exec("UPDATE ai_knowledge_extraction_tasks SET owner_id='private-contract-sentinel'")
+  ],
+  [
+    '提炼任务记录 hash 损坏',
+    db => {
+      const row = db.prepare('SELECT descriptor_json FROM ai_knowledge_extraction_tasks').get();
+      const value = JSON.parse(row.descriptor_json);
+      value.recordHash = '0'.repeat(64);
+      db.prepare('UPDATE ai_knowledge_extraction_tasks SET descriptor_json=?').run(JSON.stringify(value));
+    }
+  ],
+  [
+    '任务描述与 AIJob 历史关联不一致',
+    db => db.exec("UPDATE ai_jobs SET input_hash='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'")
+  ],
+  ['外键断裂', db => db.exec('PRAGMA foreign_keys=OFF; DELETE FROM ai_grants')]
+])
+  test(`${name} 也必须退出 1，而非只验证 JSON 语法`, async t => {
+    const f = await extractionBackupFixture(t);
+    const source = path.join(f.backup, 'local.sqlite');
+    const db = new DatabaseSync(source);
+    try {
+      db.exec('PRAGMA journal_mode=DELETE');
+      mutate(db);
+    } finally {
+      db.close();
+    }
+    assertRejectedUnchanged({ source, root: f.backup });
+  });
+
+test('真实 v4 AI 表缺少后来新增的可空字段时，仍可只读验证已有任务且不升级', async t => {
+  const f = auditFixture(t, { notes: [], contentAnnotations: [] });
+  f.change(db => {
+    db.prepare('INSERT INTO metadata VALUES (?,?)').run('datasetId', 'legacy-dataset');
+    const repository = createSqliteAiRepository(db);
+    insertAiRecords(repository, aiRecords(repository.identity()));
+    db.exec(
+      'ALTER TABLE ai_jobs DROP COLUMN question; ALTER TABLE ai_jobs DROP COLUMN result_json; PRAGMA user_version=4'
+    );
+  });
+  const bytes = fs.readFileSync(f.source),
+    files = fs.readdirSync(f.root);
+  const report = await fullReport(f.source);
+  assert.equal(report.coverage.privateRecords, 'checked');
+  assert.equal(report.status, 'no-legacy-rows');
+  assert.deepEqual(fs.readFileSync(f.source), bytes);
+  assert.deepEqual(fs.readdirSync(f.root), files);
 });

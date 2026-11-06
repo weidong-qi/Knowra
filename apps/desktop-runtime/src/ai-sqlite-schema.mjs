@@ -145,3 +145,33 @@ CREATE TABLE ai_job_events (
 );
 
 `;
+
+// 只读结构核对与升级共用相同的所属 schema，避免各自维护列清单。
+export const AI_ACCESS_SQLITE_DDL = `
+      CREATE TABLE IF NOT EXISTS ai_access_policies (
+        policy_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, dataset_id TEXT NOT NULL,
+        dataset_epoch TEXT NOT NULL, space_id TEXT NOT NULL, revision INTEGER NOT NULL,
+        record_hash TEXT NOT NULL, record_json TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS ai_access_policies_owner ON ai_access_policies(owner_id, dataset_id, dataset_epoch, space_id);
+      CREATE TABLE IF NOT EXISTS ai_run_grants (
+        grant_id TEXT PRIMARY KEY, policy_id TEXT NOT NULL REFERENCES ai_access_policies(policy_id),
+        owner_id TEXT NOT NULL, dataset_id TEXT NOT NULL, dataset_epoch TEXT NOT NULL,
+        space_id TEXT NOT NULL, record_hash TEXT NOT NULL, record_json TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS ai_run_grants_policy ON ai_run_grants(policy_id);
+      CREATE TABLE IF NOT EXISTS ai_request_manifests (
+        manifest_id TEXT PRIMARY KEY, grant_id TEXT NOT NULL REFERENCES ai_run_grants(grant_id),
+        owner_id TEXT NOT NULL, dataset_id TEXT NOT NULL, dataset_epoch TEXT NOT NULL,
+        space_id TEXT NOT NULL, record_hash TEXT NOT NULL, record_json TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS ai_request_manifests_grant ON ai_request_manifests(grant_id);
+    `;
+
+export const AI_CONVERSATION_SQLITE_DDL = `CREATE TABLE IF NOT EXISTS ai_conversation_records (
+      kind TEXT NOT NULL, record_id TEXT NOT NULL, owner_id TEXT NOT NULL,
+      dataset_id TEXT NOT NULL, dataset_epoch TEXT NOT NULL, space_id TEXT NOT NULL,
+      record_hash TEXT NOT NULL, record_json TEXT NOT NULL,
+      PRIMARY KEY (kind, record_id)
+    );
+    CREATE INDEX IF NOT EXISTS ai_conversation_scope ON ai_conversation_records(owner_id, dataset_id, dataset_epoch, space_id, kind);`;

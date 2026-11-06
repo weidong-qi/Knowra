@@ -7,6 +7,7 @@ import { validateCoreOperationState } from '../apps/api/src/infrastructure/core-
 import { validateKnowledgeExtractionCommitState } from '../apps/api/src/modules/ai/knowledge-extraction-commit-contract.js';
 import { validateExtractionTaskState } from '../apps/api/src/modules/ai/knowledge-extraction-task-contract.js';
 import { HISTORY_NON_PRIVATE_TABLES } from '../apps/desktop-runtime/src/note-version-discard-gate.mjs';
+import { validateRetirementSqlitePrivateRecords } from './inline-annotation-retirement-sqlite-validation.mjs';
 import { AI_SQLITE_DDL } from '../apps/desktop-runtime/src/ai-sqlite-schema.mjs';
 
 const validators = {
@@ -146,6 +147,8 @@ export function inspectSqlitePrivateSource(db, version) {
   if (markers.has('entitySyncVersion') && markers.get('entitySyncVersion') !== '2') throw fail();
   if (markers.has('deletionFactsVersion') && markers.get('deletionFactsVersion') !== '1') throw fail();
 
+  const privateCoverage = validateRetirementSqlitePrivateRecords(db, tables, version);
+
   const knownTables = new Set([...required, ...Object.values(extensionTables).flat(), 'sync_recovery']);
   const privateSources = [],
     pendingSyncSources = [];
@@ -221,7 +224,7 @@ export function inspectSqlitePrivateSource(db, version) {
     } else if (!row.key.endsWith('Version')) otherMetadata.push(row.value);
   }
   privateSources.push({ name: 'sqlite.metadata', records: otherMetadata });
-  return { privateSources, pendingSyncSources, coverage: { privateRecords: 'checked', pendingSync: 'checked' } };
+  return { privateSources, pendingSyncSources, coverage: { privateRecords: privateCoverage, pendingSync: 'checked' } };
 }
 
 // 只识别重点形状或明确的 contentAnnotations 容器，避免把任务自身的 schemaVersion 当成重点。
