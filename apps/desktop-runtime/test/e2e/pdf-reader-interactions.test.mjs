@@ -111,7 +111,11 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   });
   assert(legacySegments.length >= 4);
   await page.getByRole('button', { name: '标注为重点', exact: true }).click();
-  await inspector.getByRole('textbox', { name: '评论', exact: true }).fill('悬停即可查看的批注\n第二行批注');
+  const longComment = [
+    '悬停即可查看的批注',
+    ...Array.from({ length: 45 }, (_, i) => `第 ${i + 1} 行：长批注可以在预览框中滚动查看。`)
+  ].join('\n');
+  await inspector.getByRole('textbox', { name: '评论', exact: true }).fill(longComment);
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   let marks = (await (await context.request.get(`${runtime.origin}/api/pdf/${note.id}/annotations`)).json()).data;
   assert.equal(marks[0].segments.length, 1, JSON.stringify(marks[0].segments));
@@ -123,6 +127,32 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await page
     .getByRole('region', { name: 'PDF 阅读与标注' })
     .screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT ?? root, 'pdf-continuous-highlight-hover.png') });
+  // 跨过标注与 portal 预览之间的空隙，悬停后滚动到底，不带动底下的 PDF。
+  const tooltip = page.getByRole('tooltip');
+  const previewBox = await tooltip.boundingBox();
+  const reader = page.getByLabel('PDF 页面', { exact: true });
+  const readerScroll = await reader.evaluate(el => el.scrollTop);
+  await page.mouse.move(previewBox.x + previewBox.width / 2, previewBox.y + 30, { steps: 8 });
+  await expect.poll(() => tooltip.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => tooltip.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  // 按压预览内容不会被当作正文拖选而关闭。
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.mouse.wheel(0, 5000);
+  await expect.poll(() => tooltip.evaluate(el => el.scrollTop + el.clientHeight >= el.scrollHeight - 1)).toBe(true);
+  await page.mouse.wheel(0, 5000);
+  await expect(tooltip).toBeVisible();
+  assert.equal(await reader.evaluate(el => el.scrollTop), readerScroll);
+  if (process.env.KNOWRA_E2E_OUTPUT)
+    await tooltip.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-long-comment-scrolled.png') });
+  await page.mouse.move(5, 5);
+  await expect(tooltip).toHaveCount(0);
+  // Escape 在焦点仍位于阅读器外时也能立即收起悬停预览。
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(tooltip).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(tooltip).toHaveCount(0);
   // 从高亮内部开始实际拖选，浮层必须收起且文字选择继续工作。
   await page.mouse.move(box.x + 2, box.y + box.height / 2);
   await page.mouse.down();
