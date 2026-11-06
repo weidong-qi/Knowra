@@ -138,26 +138,30 @@ export async function exercisePdfAnnotationWorkflow(page) {
   await page.reload();
   await expect(page.locator('.textLayer').first()).toContainText('First selected text');
   await expect(undo).toBeDisabled();
-  await expect(page.getByText('显示 3 / 3 条标注')).toBeVisible();
+  await expect(page.getByText('3 条标注')).toBeVisible();
   const search = page.getByRole('searchbox', { name: '搜索标注和批注' });
   await search.fill('abc');
-  await expect(page.getByText('显示 1 / 3 条标注')).toBeVisible();
+  await expect(page.getByText('1 条标注')).toBeVisible();
   const choose = async (name, option) => {
-    await page
-      .getByRole('group', { name: '标注筛选', exact: true })
-      .getByRole('button', { name: new RegExp(name) })
-      .click();
-    await page.getByRole('option', { name: option, exact: true }).click();
+    await page.getByRole('button', { name: /^筛选标注/ }).click();
+    const dialog = page.getByRole('dialog', { name: '筛选标注', exact: true });
+    if (name === '标注页码') {
+      await dialog.getByRole('button', { name: /标注页码/ }).click();
+      await page.getByRole('option', { name: option, exact: true }).click();
+    } else {
+      await dialog.getByRole('group', { name, exact: true }).getByRole('button', { name: option, exact: true }).click();
+    }
+    await page.keyboard.press('Escape');
   };
   await choose('标注分类', '疑问');
   await choose('标注页码', '第 2 页');
   await expect(page.getByText('没有匹配的标注，请调整或清除筛选。')).toBeVisible();
   await search.fill('');
-  await expect(page.getByText('显示 1 / 3 条标注')).toBeVisible();
+  await expect(page.getByText('1 条标注')).toBeVisible();
   await choose('批注状态', '有批注');
-  await expect(page.getByText('显示 0 / 3 条标注')).toBeVisible();
+  await expect(page.getByText('0 条标注')).toBeVisible();
   await page.getByRole('button', { name: '清除筛选', exact: true }).click();
-  await expect(page.getByText('显示 3 / 3 条标注')).toBeVisible();
+  await expect(page.getByText('3 条标注')).toBeVisible();
   // 用真实逐键输入验证筛选命中变化：编辑器不得卸载，只保存首字符或丢失焦点。
   await choose('批注状态', '无批注');
   await page.getByRole('button', { name: /定位标注.*filter-two/ }).click();

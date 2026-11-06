@@ -48,35 +48,40 @@ describe('IconButton (ghost icon 纯图标按钮)', () => {
   });
 
   it('defaults to size 30 when size prop is omitted', () => {
-    render(
-      <IconButton aria-label="默认">
-        ×
-      </IconButton>
-    );
+    render(<IconButton aria-label="默认">×</IconButton>);
     const button = screen.getByRole('button', { name: '默认' });
     expect(button.className).toMatch(/size30/);
   });
 
-  it.each(['ghost', 'floating', 'primary'] as const)('%s forwards disabled state and does not fire onClick when disabled', (tone) => {
-    const onClick = vi.fn();
-    render(
-      <IconButton tone={tone} aria-label="禁用" disabled onClick={onClick}>
-        ×
-      </IconButton>
-    );
-    const button = screen.getByRole('button', { name: '禁用' });
-    expect(button).toBeDisabled();
+  it.each(['ghost', 'floating', 'primary', 'outline'] as const)(
+    '%s forwards disabled state and does not fire onClick when disabled',
+    tone => {
+      const onClick = vi.fn();
+      render(
+        <IconButton tone={tone} aria-label="禁用" disabled onClick={onClick}>
+          ×
+        </IconButton>
+      );
+      const button = screen.getByRole('button', { name: '禁用' });
+      expect(button).toBeDisabled();
 
-    fireEvent.click(button);
-    expect(onClick).not.toHaveBeenCalled();
-  });
+      fireEvent.click(button);
+      expect(onClick).not.toHaveBeenCalled();
+    }
+  );
 
   it('accepts data-force-* attributes so showcase can demo hover/focus/active without jsdom', () => {
     render(
       <>
-        <IconButton aria-label="force hover" data-force-hover>×</IconButton>
-        <IconButton aria-label="force focus" data-force-focus>×</IconButton>
-        <IconButton aria-label="force active" data-force-active>×</IconButton>
+        <IconButton aria-label="force hover" data-force-hover>
+          ×
+        </IconButton>
+        <IconButton aria-label="force focus" data-force-focus>
+          ×
+        </IconButton>
+        <IconButton aria-label="force active" data-force-active>
+          ×
+        </IconButton>
       </>
     );
 

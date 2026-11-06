@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
@@ -31,6 +31,13 @@ const items = [
   }
 ] as PdfAnnotation[];
 afterEach(cleanup);
+
+async function chooseFilter(user: ReturnType<typeof userEvent.setup>, group: '标注分类' | '批注状态', label: string) {
+  await user.click(screen.getByRole('button', { name: /^筛选标注/ }));
+  const dialog = screen.getByRole('dialog', { name: '筛选标注' });
+  await user.click(within(within(dialog).getByRole('group', { name: group })).getByRole('button', { name: label }));
+  await user.keyboard('{Escape}');
+}
 
 function renderEditablePanel(comment = '') {
   const changed = vi.fn();
@@ -85,23 +92,51 @@ it('侧栏可组合筛选、显示数量并清除，空结果不会伪装为没�
       onOutlineItem={() => undefined}
     />
   );
-  expect(screen.getByText('显示 3 / 3 条标注')).toBeInTheDocument();
+  expect(screen.getByText('3 条标注')).toBeInTheDocument();
+  expect(screen.queryByRole('group', { name: '标注分类' })).not.toBeInTheDocument();
   fireEvent.change(screen.getByRole('searchbox', { name: '搜索标注和批注' }), { target: { value: 'ABC' } });
-  expect(screen.getByText('显示 1 / 3 条标注')).toBeInTheDocument();
+  expect(screen.getByText('1 条标注')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /定位标注.*另一段/ })).toBeInTheDocument();
-  await user.click(within(screen.getByRole('group', { name: '标注筛选' })).getByRole('button', { name: /标注分类/ }));
-  await user.click(screen.getByRole('option', { name: '重点' }));
+  await chooseFilter(user, '标注分类', '重点');
   expect(screen.getByText('没有匹配的标注，请调整或清除筛选。')).toBeInTheDocument();
   expect(screen.queryByText(/选中文字后点一下颜色/)).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: '清除筛选' }));
-  expect(screen.getByText('显示 3 / 3 条标注')).toBeInTheDocument();
+  expect(screen.getByText('3 条标注')).toBeInTheDocument();
+
+  await user.type(screen.getByRole('searchbox'), 'ABC');
+  await user.click(screen.getByRole('button', { name: '筛选标注' }));
+  const dialog = screen.getByRole('dialog', { name: '筛选标注' });
+  await user.click(
+    within(within(dialog).getByRole('group', { name: '标注分类' })).getByRole('button', { name: '疑问' })
+  );
+  expect(dialog).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: /标注页码/ }));
+  await user.click(screen.getByRole('option', { name: '第 3 页' }));
+  await user.click(
+    within(within(dialog).getByRole('group', { name: '批注状态' })).getByRole('button', { name: '有批注' })
+  );
+  await user.keyboard('{Escape}');
+  expect(screen.getByText('1 条标注')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: '筛选标注，已启用 3 项' })).toHaveFocus());
+
+  await user.click(screen.getByRole('button', { name: /^移除 第 3 页/ }));
+  expect(screen.getByRole('button', { name: '筛选标注，已启用 2 项' })).toBeInTheDocument();
+  expect(screen.getByRole('searchbox')).toHaveValue('ABC');
+  await user.click(screen.getByRole('button', { name: /^筛选标注/ }));
+  await user.click(screen.getByRole('button', { name: '重置筛选条件' }));
+  await user.keyboard('{Escape}');
+  expect(screen.getByRole('searchbox')).toHaveValue('ABC');
+  expect(screen.getByText('1 条标注')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /^移除 / })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '清除筛选' }));
+  expect(screen.getByRole('searchbox')).toHaveValue('');
+  expect(screen.getByText('3 条标注')).toBeInTheDocument();
 });
 
 it('无批注筛选下连续输入与清空评论，保留同一个编辑器和焦点', async () => {
   const user = userEvent.setup();
   const changed = renderEditablePanel();
-  await user.click(within(screen.getByRole('group', { name: '标注筛选' })).getByRole('button', { name: /批注状态/ }));
-  await user.click(screen.getByRole('option', { name: '无批注' }));
+  await chooseFilter(user, '批注状态', '无批注');
   const field = screen.getByRole('textbox', { name: '评论' });
   await user.click(field);
   await user.keyboard('h');
@@ -124,8 +159,7 @@ it.each(['有批注', '关键词'])('%s筛选中修改评论至不匹配再恢�
   if (filter === '关键词') {
     await user.type(screen.getByRole('searchbox', { name: '搜索标注和批注' }), 'hello');
   } else {
-    await user.click(within(screen.getByRole('group', { name: '标注筛选' })).getByRole('button', { name: /批注状态/ }));
-    await user.click(screen.getByRole('option', { name: '有批注' }));
+    await chooseFilter(user, '批注状态', '有批注');
   }
   const field = screen.getByRole('textbox', { name: '评论' }) as HTMLTextAreaElement;
   await user.click(field);
