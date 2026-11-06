@@ -47,6 +47,19 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
   }
   await page.reload();
   await expect(shell).toHaveAttribute('data-ni-mode', 'dark');
+  await page.getByRole('button', { name: '预览对话框', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '新建文件夹', exact: true });
+  const folderName = dialog.getByRole('textbox', { name: '文件夹名称' });
+  const inputShell = dialog.locator('[class*="inputShell"]');
+  await folderName.focus();
+  await expect(folderName).toBeFocused();
+  await expect(inputShell).not.toHaveCSS('box-shadow', 'none');
+  await page.emulateMedia({ forcedColors: 'active' });
+  await expect(inputShell).toHaveCSS('outline-style', 'solid');
+  await expect(inputShell).toHaveCSS('outline-width', '2px');
+  await page.emulateMedia({ forcedColors: 'none' });
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   await page.screenshot({ path: info.outputPath('settings-dark.png'), animations: 'disabled' });
   await page.goto('/#/materials');
   const create = page
