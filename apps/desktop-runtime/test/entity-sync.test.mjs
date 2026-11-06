@@ -1089,6 +1089,75 @@ test('旧格式重点新建被同步门禁阻止，冻结请求和本地数据�
   );
 });
 
+test('回收站内缺失结构锚点的 v1 重点经云端标准取消下行同步，保留原文与版本', async t => {
+  const cloud = await fixture(t);
+  const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '甲乙\n' });
+  const version = cloud.knowledge.noteVersionService.listVersions({ noteId: note.id })[0];
+  cloud.knowledge.noteService.deleteNote(note.id);
+  const row = new ContentAnnotation({
+    id: 'legacy-v1-trash',
+    spaceId: note.spaceId,
+    noteId: note.id,
+    noteVersionId: version.id,
+    schemaVersion: 1,
+    status: 'stale',
+    quoteText: '甲乙',
+    fromPosition: 1,
+    toPosition: 3,
+    anchorFingerprint: 'v1-original',
+    noteContentHash: version.contentHash,
+    idempotencyKey: 'v1-original'
+  });
+  // 历史行缺少新状态字段、anchor 与 originSnapshot，不伪造结构锚点。
+  const historical = { ...row };
+  delete historical.lifecycleStatus;
+  delete historical.anchorStatus;
+  cloud.knowledge.repositories.contentAnnotationRepository.save(historical);
+  const a = cloud.device('v1-existing');
+  await a.connect();
+  clean(a);
+  assert.equal(a.store.state.contentAnnotations.find(value => value.id === row.id).schemaVersion, 1);
+  const { prepareBatchState } = await import('../../api/src/modules/sync/batch-domain.ts');
+  const localCancellation = { ...row, lifecycleStatus: 'deleted', deletedAt: new Date().toISOString(), revision: 2 };
+  assert.throws(
+    () =>
+      prepareBatchState(
+        cloud.dataStore.state,
+        [{ collection: 'contentAnnotations', id: row.id, value: localCancellation }],
+        'demo'
+      ),
+    { code: 'ANNOTATION_VERSION_CONFLICT' }
+  );
+  const cancelled = cloud.knowledge.contentAnnotationService.deleteAnnotation(row.id, {
+    expectedRevision: row.revision
+  });
+  assert.equal(cancelled.lifecycleStatus, 'deleted');
+  await a.engine.sync();
+  clean(a);
+  const b = cloud.device('v1-new');
+  await b.connect();
+  clean(b);
+  for (const state of [cloud.dataStore.state, a.store.state, b.store.state]) {
+    const stored = state.contentAnnotations.find(value => value.id === row.id);
+    assert.equal(stored.schemaVersion, 1);
+    assert.equal(stored.lifecycleStatus, 'deleted');
+    assert.equal(stored.anchor, null);
+    assert.equal(stored.originSnapshot, null);
+    assert.equal(stored.quoteText, row.quoteText);
+    assert.equal(stored.fromPosition, 1);
+    assert.equal(stored.toPosition, 3);
+    assert.equal(stored.deletedAt, cancelled.deletedAt);
+    assert.equal(state.notes.find(value => value.id === note.id).deleted, true);
+    assert.equal(state.notes.find(value => value.id === note.id).rawMarkdown, note.rawMarkdown);
+    assert.equal(
+      state.noteVersions.some(value => value.id === version.id && value.contentHash === version.contentHash),
+      true
+    );
+  }
+  assert.equal(a.engine.status().pendingEntities, 0);
+  assert.equal(b.engine.status().pendingEntities, 0);
+});
+
 test('已有旧重点备注仍可同步，正文改写时云端独有证据降级', async t => {
   const cloud = await fixture(t);
   const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '原文 其他' });
