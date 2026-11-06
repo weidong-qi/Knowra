@@ -10,45 +10,48 @@ export interface NotesIndexSelection {
 }
 
 export function getScopeCount(scope: NotesIndexScope, notes: Note[]): number {
-  const activeNotes = notes.filter((note) => !note.deleted);
+  const activeNotes = notes.filter(note => !note.deleted);
   switch (scope) {
-    case 'recent': return Math.min(activeNotes.length, RECENT_NOTE_LIMIT);
-    case 'favorites': return activeNotes.filter((note) => note.favorite).length;
-    case 'unfiled': return activeNotes.filter((note) => !note.folderId).length;
-    case 'root': return activeNotes.filter((note) => !note.folderId).length;
-    case 'trash': return notes.filter((note) => note.deleted).length;
-    default: return activeNotes.length;
+    case 'recent':
+      return Math.min(activeNotes.length, RECENT_NOTE_LIMIT);
+    case 'favorites':
+      return activeNotes.filter(note => note.favorite).length;
+    case 'unfiled':
+      return activeNotes.filter(note => !note.folderId).length;
+    case 'root':
+      return activeNotes.filter(note => !note.folderId).length;
+    case 'trash':
+      return notes.filter(note => note.deleted).length;
+    default:
+      return activeNotes.length;
   }
 }
 
-export function filterNotes(
-  notes: Note[],
-  tags: Tag[],
-  selection: NotesIndexSelection
-): Note[] {
+export function filterNotes(notes: Note[], tags: Tag[], selection: NotesIndexSelection): Note[] {
   const { notesIndex, selectedFolderId } = selection;
-  let visible = notes.filter((note) => notesIndex.scope === 'trash' ? note.deleted : !note.deleted);
+  let visible = notes.filter(note => (notesIndex.scope === 'trash' ? note.deleted : !note.deleted));
 
-  if (notesIndex.scope === 'favorites') visible = visible.filter((note) => note.favorite);
-  if (notesIndex.scope === 'unfiled') visible = visible.filter((note) => !note.folderId);
-  if (notesIndex.scope === 'root') visible = visible.filter((note) => !note.folderId);
-  if (selectedFolderId) visible = visible.filter((note) => note.folderId === selectedFolderId);
+  if (notesIndex.scope === 'favorites') visible = visible.filter(note => note.favorite);
+  if (notesIndex.scope === 'unfiled') visible = visible.filter(note => !note.folderId);
+  if (notesIndex.scope === 'root') visible = visible.filter(note => !note.folderId);
+  if (selectedFolderId) visible = visible.filter(note => note.folderId === selectedFolderId);
   if (notesIndex.selectedTagId) {
-    visible = visible.filter((note) => note.tagIds.includes(notesIndex.selectedTagId as string));
+    visible = visible.filter(note => note.tagIds.includes(notesIndex.selectedTagId as string));
   }
 
   const query = notesIndex.query.trim().toLocaleLowerCase();
   if (query) {
     const matchingIds = new Set(notesIndex.matchingNoteIds ?? []);
-    const matchingTagIds = new Set(tags
-      .filter((tag) => tag.name?.toLocaleLowerCase().includes(query))
-      .map((tag) => tag.id));
-    visible = visible.filter((note) => (
-      matchingIds.has(note.id)
-      || note.title.toLocaleLowerCase().includes(query)
-      || note.tagIds.some((tagId) => matchingTagIds.has(tagId))
-      || getSummary(note).includes(query)
-    ));
+    const matchingTagIds = new Set(
+      tags.filter(tag => tag.name?.toLocaleLowerCase().includes(query)).map(tag => tag.id)
+    );
+    visible = visible.filter(
+      note =>
+        matchingIds.has(note.id) ||
+        note.title.toLocaleLowerCase().includes(query) ||
+        note.tagIds.some(tagId => matchingTagIds.has(tagId)) ||
+        getSummary(note).includes(query)
+    );
   }
 
   visible = [...visible].sort(compareUpdatedDescending);
@@ -58,7 +61,21 @@ export function filterNotes(
 export function countFolderNotes(folder: Folder, notes: Note[]): number {
   const folderIds = new Set<string>();
   collectFolderIds(folder, folderIds);
-  return notes.filter((note) => !note.deleted && note.folderId && folderIds.has(note.folderId)).length;
+  return notes.filter(note => !note.deleted && note.folderId && folderIds.has(note.folderId)).length;
+}
+
+/** 文件夹内（含子文件夹）的笔记与 PDF 数量，用于卡片底部的类型统计。 */
+export function folderTypeCounts(folder: Folder, notes: Note[]): { notes: number; pdfs: number } {
+  const folderIds = new Set<string>();
+  collectFolderIds(folder, folderIds);
+  let pdfs = 0;
+  let others = 0;
+  for (const note of notes) {
+    if (note.deleted || !note.folderId || !folderIds.has(note.folderId)) continue;
+    if (note.contentKind === 'pdf') pdfs += 1;
+    else others += 1;
+  }
+  return { notes: others, pdfs };
 }
 
 export function folderMatchesQuery(folder: Folder, notes: Note[], query: string): boolean {
@@ -67,11 +84,12 @@ export function folderMatchesQuery(folder: Folder, notes: Note[], query: string)
   if (folder.name.toLocaleLowerCase().includes(normalizedQuery)) return true;
   const folderIds = new Set<string>();
   collectFolderIds(folder, folderIds);
-  return notes.some((note) => (
-    !note.deleted
-    && Boolean(note.folderId && folderIds.has(note.folderId))
-    && note.title.toLocaleLowerCase().includes(normalizedQuery)
-  ));
+  return notes.some(
+    note =>
+      !note.deleted &&
+      Boolean(note.folderId && folderIds.has(note.folderId)) &&
+      note.title.toLocaleLowerCase().includes(normalizedQuery)
+  );
 }
 
 export function compareUpdatedDescending(left: Note, right: Note): number {
@@ -92,7 +110,7 @@ export function formatUpdatedAt(value?: string): string {
 
 function collectFolderIds(folder: Folder, target: Set<string>) {
   target.add(folder.id);
-  folder.children.forEach((child) => collectFolderIds(child, target));
+  folder.children.forEach(child => collectFolderIds(child, target));
 }
 
 function getSummary(note: Note): string {

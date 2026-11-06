@@ -115,8 +115,10 @@ describe('V5 shared control styles', () => {
       if (source === css.collection) {
         assert.match(focus, /box-shadow:\s*var\(--focus-soft(?:[,)]|\s)/);
       } else {
-        assert.match(focus, /border-color:\s*var\(--accent-text\)/);
-        assert.match(focus, /box-shadow:[^;]*0\s+0\s+0\s+3px\s+color-mix\(in srgb,\s*var\(--accent\)/);
+        assert.match(focus, /border-color:\s*var\(--border-strong\)/);
+        assert.match(focus, /background:\s*var\(--surface-raised,\s*var\(--surface-page\)\)/);
+        assert.match(focus, /box-shadow:\s*0\s+1px\s+3px\s+rgb\(/);
+        assert.doesNotMatch(focus, /--accent/);
       }
       assert.ok(forced, `${selector} needs a forced-color fallback`);
       assert.match(declarations(forced, selector), /outline:\s*2px solid Highlight/);
