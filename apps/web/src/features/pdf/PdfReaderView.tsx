@@ -285,8 +285,10 @@ export function PdfReaderView({
     const id = randomId();
     change(id, { ...value, kind, comment });
     setSelected(id);
-    if (value.type === 'note') setCardOpen(true);
-    else {
+    if (value.type === 'note') {
+      setCardOpen(true);
+      setTool('text');
+    } else {
       setPanel(true);
       setPanelTab('marks');
     }
@@ -359,10 +361,14 @@ export function PdfReaderView({
     setDictionary(null);
     annotationPress.current = null;
     skipTextMouseUp.current = false;
-    if (tool === 'text' && event.target instanceof Element) {
+    if ((tool === 'text' || tool === 'region') && event.target instanceof Element) {
       const id = pdfAnnotationAtPoint(event.target, event.clientX, event.clientY);
-      if (items.some(item => item.id === id && (item.type === 'highlight' || item.type === 'underline')))
-        annotationPress.current = { id: id!, x: event.clientX, y: event.clientY };
+      const item = items.find(item => item.id === id);
+      if (
+        item &&
+        (item.type === 'region' || (tool === 'text' && (item.type === 'highlight' || item.type === 'underline')))
+      )
+        annotationPress.current = { id: item.id, x: event.clientX, y: event.clientY };
     }
     const icon = (event.target as Element).closest<SVGElement>('[data-note-id]');
     const iconItem = icon && items.find(item => item.id === icon.dataset.noteId);
@@ -649,15 +655,19 @@ export function PdfReaderView({
             }}
             onPointerUp={event => {
               const press = annotationPress.current;
+              // 区域工具捕获指针后 target 会变成阅读容器，按松开坐标重新命中页面。
+              const hitTarget = document.elementFromPoint?.(event.clientX, event.clientY) ?? event.target;
               annotationPress.current = null;
               if (
                 press &&
                 Math.hypot(event.clientX - press.x, event.clientY - press.y) < 4 &&
-                event.target instanceof Element &&
-                pdfAnnotationAtPoint(event.target, event.clientX, event.clientY) === press.id &&
-                window.getSelection()?.isCollapsed !== false
+                hitTarget instanceof Element &&
+                pdfAnnotationAtPoint(hitTarget, event.clientX, event.clientY) === press.id &&
+                (tool === 'region' || window.getSelection()?.isCollapsed !== false)
               ) {
                 skipTextMouseUp.current = true;
+                drag.current = null;
+                setGhost(null);
                 syncScrollPosition(event.currentTarget);
                 setSelected(press.id);
                 setPending(null);
@@ -811,6 +821,17 @@ export function PdfReaderView({
               text={dictionary.value.quoteText}
               anchor={dictionary.anchor}
               canSave={editable}
+              annotationControls={
+                editable ? (
+                  <PdfSelectionBar
+                    inline
+                    anchor={dictionary.anchor}
+                    mode={textMode}
+                    onMode={setTextMode}
+                    onPick={kind => createMark({ ...dictionary.value, type: textMode }, kind)}
+                  />
+                ) : undefined
+              }
               onSave={saveDictionary}
               onClose={() => setDictionary(null)}
             />

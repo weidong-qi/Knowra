@@ -96,3 +96,23 @@ it('切换查询后旧请求晚到也不会覆盖新词结果', async () => {
   await waitFor(() => expect(screen.queryByText('gradient')).toBeNull());
   expect(screen.getByText('n. 最小值')).toBeVisible();
 });
+
+it('翻译加载或失败时仍同时提供普通标注操作', async () => {
+  const annotate = vi.fn();
+  lookup.mockRejectedValue(new Error('词库读取失败'));
+  render(
+    <PdfDictionaryPopover
+      {...props}
+      annotationControls={
+        <div role="toolbar" aria-label="选择标注分类">
+          <button onClick={annotate}>标注为重点</button>
+        </div>
+      }
+    />
+  );
+  expect(screen.getByRole('toolbar', { name: '选择标注分类' })).toBeVisible();
+  await screen.findByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: '标注为重点' }));
+  expect(annotate).toHaveBeenCalledOnce();
+  expect(props.onSave).not.toHaveBeenCalled();
+});

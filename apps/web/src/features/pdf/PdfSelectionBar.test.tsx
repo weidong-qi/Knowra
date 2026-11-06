@@ -53,3 +53,18 @@ it('文字选区可在高亮与下划线间切换，区域和便签不显示切�
   rerender(<PdfSelectionBar anchor={{ x: 1, top: 200, bottom: 220 }} onPick={() => undefined} />);
   expect(screen.queryByRole('button', { name: /标注样式/ })).toBeNull();
 });
+
+it('查词卡片内复用操作时不使用浮层坐标，样式与分类仍可选择', () => {
+  const pick = vi.fn(),
+    mode = vi.fn();
+  render(
+    <PdfSelectionBar inline anchor={{ x: 100, top: 20, bottom: 40 }} mode="highlight" onMode={mode} onPick={pick} />
+  );
+  const bar = screen.getByRole('toolbar', { name: '选择标注分类' });
+  expect(bar).not.toHaveAttribute('style');
+  expect(bar).not.toHaveAttribute('data-below');
+  fireEvent.click(screen.getByRole('button', { name: '标注样式：下划线' }));
+  expect(mode).toHaveBeenCalledWith('underline');
+  fireEvent.click(screen.getByRole('button', { name: '标注为重点' }));
+  expect(pick).toHaveBeenCalledWith('important');
+});

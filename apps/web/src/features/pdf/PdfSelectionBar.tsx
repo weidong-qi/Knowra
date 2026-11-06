@@ -17,7 +17,8 @@ export function PdfSelectionBar({
   mode,
   onMode,
   onLookup,
-  canAnnotate = true
+  canAnnotate = true,
+  inline = false
 }: {
   anchor: PdfBarAnchor;
   onPick(kind: string): void;
@@ -26,16 +27,18 @@ export function PdfSelectionBar({
   onMode?(mode: PdfTextMode): void;
   onLookup?(): void;
   canAnnotate?: boolean;
+  /** 查词卡片内复用同一套标注操作，避免两个定位浮层重叠。 */
+  inline?: boolean;
 }) {
   // 贴近视口顶部时翻到选区下方，避免被工具栏遮住。
   const below = anchor.top < 64;
   return (
     <div
-      className={styles.selectionBar}
+      className={`${styles.selectionBar} ${inline ? styles.selectionBarInline : ''}`}
       role="toolbar"
       aria-label="选择标注分类"
-      style={{ left: anchor.x, top: below ? anchor.bottom + 8 : anchor.top - 8 }}
-      data-below={below || undefined}
+      style={inline ? undefined : { left: anchor.x, top: below ? anchor.bottom + 8 : anchor.top - 8 }}
+      data-below={(!inline && below) || undefined}
       onMouseDown={event => event.preventDefault()}
     >
       {onLookup ? (

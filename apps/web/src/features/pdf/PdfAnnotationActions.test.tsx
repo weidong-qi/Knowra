@@ -51,3 +51,25 @@ it('操作面板按既有分类回传修改，保持已选状态', () => {
   fireEvent.click(screen.getByRole('button', { name: '改为易错' }));
   expect(change).toHaveBeenCalledWith('pitfall');
 });
+
+it('区域标注可直接修改、批注和删除，不提供空原文复制', () => {
+  const edit = vi.fn(),
+    remove = vi.fn();
+  render(
+    <PdfAnnotationActions
+      item={{ ...item, type: 'region', quoteText: '' }}
+      point={{ x: 100, y: 100 }}
+      canWrite
+      onClose={() => undefined}
+      onCopy={() => undefined}
+      onEdit={edit}
+      onKind={() => undefined}
+      onDelete={remove}
+    />
+  );
+  expect(screen.queryByRole('button', { name: '复制' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '添加批注' }));
+  expect(edit).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: '删除' }));
+  expect(remove).toHaveBeenCalledOnce();
+});

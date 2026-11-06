@@ -4,7 +4,7 @@ import { CopyIcon, DeleteIcon, EditIcon } from '../../components/icons/knowra';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import styles from './PdfReader.module.css';
 
-/** 已有文字标注的操作面板，使用共享坐标定位、按钮与分类色点。 */
+/** 已有文字或区域标注的操作面板，使用共享坐标定位、按钮与分类色点。 */
 export function PdfAnnotationActions({
   item,
   point,
@@ -45,9 +45,11 @@ export function PdfAnnotationActions({
           >
             {item.comment ? '编辑批注' : '添加批注'}
           </Button>
-          <Button variant="ghost" size="mini" shape="square" icon={<CopyIcon size={16} />} onPress={onCopy}>
-            复制
-          </Button>
+          {item.type !== 'region' ? (
+            <Button variant="ghost" size="mini" shape="square" icon={<CopyIcon size={16} />} onPress={onCopy}>
+              复制
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="mini"
