@@ -4,6 +4,12 @@ import { createHash } from 'node:crypto';
 import { DatabaseSync, backup } from 'node:sqlite';
 import { projectMarkdown } from '@study-accelerator/content-anchor';
 import { calculateContentHash } from '../apps/api/src/modules/knowledge/domain/note-version.ts';
+import {
+  planHistoryRetention,
+  changedHistoryNoteIds
+} from '../apps/api/src/modules/knowledge/domain/history-retention.ts';
+import { createContentAnnotationService } from '../apps/api/src/modules/knowledge/application/content-annotation-service.js';
+import { createInMemoryContentAnnotationRepository } from '../apps/api/src/modules/knowledge/infrastructure/content-annotation-repository.js';
 import { readActiveDirectory } from '../apps/desktop-runtime/src/restore-directory.mjs';
 import { inspectAnnotationRetirement, readRetirementInspection } from './inspect-inline-annotation-retirement.mjs';
 import { isDirectExecution } from './cli-entry.mjs';
@@ -87,6 +93,35 @@ function evidence(state, row) {
   return { note, version, revisions, exclusions, diagnosis };
 }
 
+/** 在内存副本运行标准取消，再预演云端 JSON 提交时的保留策略；不绑定持久化回调。 */
+function previewCancellationRetention(cloud, row, now) {
+  const state = structuredClone(cloud.state);
+  state.annotationRevisions ??= [];
+  const at = new Date(now).toISOString();
+  const service = createContentAnnotationService({
+    repository: createInMemoryContentAnnotationRepository({ records: state.contentAnnotations }),
+    revisionRepository: {
+      save(record) {
+        state.annotationRevisions.push({ ...record, createdAt: at });
+      }
+    }
+  });
+  const cancelled = service.deleteAnnotation(row.id, { expectedRevision: row.revision ?? 1 });
+  cancelled.updatedAt = cancelled.deletedAt = at;
+  // 与 file-data-store.getHistoryRetentionReferences 一致；任务工作区/待办不是云端保留根。
+  const externalReferences = cloud.privateSources
+    .filter(source =>
+      /^json\.(aiRuntime|coreOperations|knowledgeExtractionCommits|aiKnowledgeExtractionTasks)$/.test(source.name)
+    )
+    .flatMap(source => source.records);
+  const plan = planHistoryRetention(state, {
+    now,
+    noteIds: changedHistoryNoteIds(cloud.state, state),
+    externalReferences
+  });
+  return Object.fromEntries(Object.entries(plan.summary).map(([name, summary]) => [name, summary.removed]));
+}
+
 /** 只生成维护计划；ready 仅表示这两个快照通过预检，不授权操作活动库。 */
 export function planV1AnnotationMaintenance(cloud, local, now = Date.now()) {
   const cloudReport = inspectAnnotationRetirement(cloud.state, now, cloud);
@@ -106,7 +141,8 @@ export function planV1AnnotationMaintenance(cloud, local, now = Date.now()) {
     localRows = active(local.state);
   let request = null,
     diagnosis = null,
-    baselineSha256 = null;
+    baselineSha256 = null,
+    retentionPreview = null;
   if (cloudRows.length !== 1 || localRows.length !== 1) blockers.add('expected-one-active-v1');
   else {
     const row = cloudRows[0];
@@ -127,6 +163,8 @@ export function planV1AnnotationMaintenance(cloud, local, now = Date.now()) {
       }
       if (left.exclusions.length || right.exclusions.length) blockers.add('unexpected-exclusions');
       baselineSha256 = digest({ row, ...left });
+      retentionPreview = previewCancellationRetention(cloud, row, now);
+      if (Object.values(retentionPreview).some(removed => removed > 0)) blockers.add('history-retention-side-effects');
       request = {
         method: 'DELETE',
         path: `/api/knowledge/annotations/${encodeURIComponent(row.id)}`,
@@ -144,6 +182,7 @@ export function planV1AnnotationMaintenance(cloud, local, now = Date.now()) {
     activeV1: { cloud: cloudRows.length, local: localRows.length },
     baselineSha256,
     diagnosis,
+    retentionPreview,
     pendingSync: { valuesScanned: localReport.pendingSync.valuesScanned },
     privateHistory: {
       cloudLegacyCopies: cloudReport.privateRecords.legacyCopies,
