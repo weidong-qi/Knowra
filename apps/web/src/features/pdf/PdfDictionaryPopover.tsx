@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button, Popover, PopoverDialog, Select } from '../../components/ui';
 import { dictionaryComment, lookupDictionary, type DictionaryEntry } from '../dictionary/localDictionary';
 import type { PdfBarAnchor } from './PdfSelectionBar';
@@ -8,12 +8,14 @@ export function PdfDictionaryPopover({
   text,
   anchor,
   canSave,
+  annotationControls,
   onSave,
   onClose
 }: {
   text: string;
   anchor: PdfBarAnchor;
   canSave: boolean;
+  annotationControls?: ReactNode;
   onSave(comment: string): void;
   onClose(): void;
 }) {
@@ -80,6 +82,7 @@ export function PdfDictionaryPopover({
               关闭
             </Button>
           </div>
+          {annotationControls}
           <div className={styles.meanings} aria-live="polite" aria-busy={busy}>
             {busy ? (
               <p role="status">正在查词…</p>

@@ -594,6 +594,15 @@
 .selectionBar[data-below] {
   transform: translate(-50%, 0);
 }
+.selectionBarInline {
+  position: static;
+  transform: none;
+  flex-wrap: wrap;
+  align-items: center;
+  border-radius: var(--radius-control);
+  box-shadow: none;
+  padding: 0;
+}
 .swatch {
   width: 18px;
   height: 18px;
