@@ -25,6 +25,8 @@ import { PdfNoteCard } from './PdfNoteCard';
 import { PdfAnnotationTooltip } from './PdfAnnotationTooltip';
 import { PdfAnnotationActions } from './PdfAnnotationActions';
 import { PdfCommentEditor } from './PdfCommentEditor';
+import { PdfDictionaryPopover } from './PdfDictionaryPopover';
+import { normalizeDictionaryWord } from '../dictionary/localDictionary';
 import { PdfSelectionBar, type PdfBarAnchor, type PdfTextMode } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
 import { PdfReaderToolbar } from './PdfReaderToolbar';
@@ -60,6 +62,7 @@ export function PdfReaderView({
   const skipTextMouseUp = useRef(false);
   const scrollPosition = useRef({ top: 0, left: 0 });
   const [pending, setPending] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
+  const [dictionary, setDictionary] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [tool, setTool] = useState('text'),
     [panel, setPanel] = useState(true);
   const [ghost, setGhost] = useState<PdfSegment | null>(null);
@@ -115,11 +118,13 @@ export function PdfReaderView({
   const cardItem = cardOpen ? items.find(item => item.id === selected && item.type === 'note') : undefined;
   const cardAnchor = cardItem ? noteCardAnchor(cardItem) : null;
   const isTextSelection = pending?.value.type === 'highlight' || pending?.value.type === 'underline';
+  const canLookup = isTextSelection && Boolean(normalizeDictionaryWord(pending!.value.quoteText));
   const actionItem = annotationAction ? items.find(item => item.id === annotationAction.id) : undefined;
   const editingItem = commentEditor ? items.find(item => item.id === commentEditor.id) : undefined;
   useEffect(() => {
     setAnnotationAction(null);
     setCommentEditor(null);
+    setDictionary(null);
   }, [viewer.viewportRevision]);
   useEffect(() => {
     alive.current = true;
@@ -250,6 +255,7 @@ export function PdfReaderView({
     if (timer.current) clearTimeout(timer.current);
     setAnnotationAction(null);
     setCommentEditor(null);
+    setDictionary(null);
     setCardOpen(false);
     setPending(null);
     setGhost(null);
@@ -270,14 +276,14 @@ export function PdfReaderView({
       }),
     []
   );
-  function createMark(value: PdfSelection, kind: string) {
+  function createMark(value: PdfSelection, kind: string, comment = '') {
     if (!editable) return;
     if (value.segments.length > 2000 || value.quoteText.length > 100000) {
       setError('本次选区过长，请分成几条标注保存。');
       return;
     }
     const id = randomId();
-    change(id, { ...value, kind, comment: '' });
+    change(id, { ...value, kind, comment });
     setSelected(id);
     if (value.type === 'note') setCardOpen(true);
     else {
@@ -285,8 +291,29 @@ export function PdfReaderView({
       setPanelTab('marks');
     }
     setPending(null);
+    setDictionary(null);
     setGhost(null);
     window.getSelection()?.removeAllRanges();
+  }
+  function saveDictionary(comment: string) {
+    if (!dictionary || !editable) return;
+    const value = { ...dictionary.value, type: textMode };
+    const existing = items.find(
+      item =>
+        item.type === value.type &&
+        item.quoteText === value.quoteText &&
+        JSON.stringify(item.segments) === JSON.stringify(value.segments) &&
+        item.comment === comment
+    );
+    if (existing) {
+      setSelected(existing.id);
+      setPanel(true);
+      setPanelTab('marks');
+      setDictionary(null);
+      window.getSelection()?.removeAllRanges();
+      return;
+    }
+    createMark(value, 'supplement', comment);
   }
   function textAnchor(): PdfBarAnchor | null {
     const selection = window.getSelection();
@@ -329,6 +356,7 @@ export function PdfReaderView({
     if (event.button !== 0) return;
     syncScrollPosition(event.currentTarget);
     setAnnotationAction(null);
+    setDictionary(null);
     annotationPress.current = null;
     skipTextMouseUp.current = false;
     if (tool === 'text' && event.target instanceof Element) {
@@ -583,6 +611,7 @@ export function PdfReaderView({
             onTool={next => {
               setAnnotationAction(null);
               setCommentEditor(null);
+              setDictionary(null);
               setTool(next);
               setPending(null);
               setGhost(null);
@@ -664,11 +693,28 @@ export function PdfReaderView({
               setPending(value && anchor ? { value, anchor } : null);
               if (!value) setGhost(null);
             }}
+            onDoubleClick={event => {
+              if (
+                tool !== 'text' ||
+                !viewer.viewerRef.current ||
+                !(event.target instanceof Element) ||
+                !event.target.closest('.textLayer')
+              )
+                return;
+              const value = readPdfSelection(viewer.viewerRef.current, viewer.containerRef.current!);
+              const anchor = value && textAnchor();
+              if (!value || !anchor || !normalizeDictionaryWord(value.quoteText)) return;
+              setAnnotationAction(null);
+              setCommentEditor(null);
+              setPending(null);
+              setDictionary({ value, anchor });
+            }}
             onScroll={event => {
               // 布局调整的 scroll 事件可能晚于标注点击派发；当前位置没变时，浮层仍有效。
               if (!syncScrollPosition(event.currentTarget)) return;
               setAnnotationAction(null);
               setCommentEditor(null);
+              setDictionary(null);
               if (cardOpen) render(value => value + 1);
               // 文字选区随滚动重新定位；框选的位置无法回算，滚动即收起。
               setPending(current => {
@@ -684,6 +730,7 @@ export function PdfReaderView({
             onKeyDown={event => {
               if (event.key !== 'Escape') return;
               setAnnotationAction(null);
+              setDictionary(null);
               setCardOpen(false);
               setSelected(null);
               if (pending) {
@@ -698,7 +745,7 @@ export function PdfReaderView({
           <PdfAnnotationTooltip
             containerRef={viewer.containerRef}
             items={items}
-            enabled={tool === 'text' && !pending && !cardOpen && !annotationAction && !commentEditor}
+            enabled={tool === 'text' && !pending && !dictionary && !cardOpen && !annotationAction && !commentEditor}
             revision={viewer.revision}
           />
           {actionItem && annotationAction ? (
@@ -759,11 +806,30 @@ export function PdfReaderView({
               }}
             />
           ) : null}
-          {pending && editable ? (
+          {dictionary ? (
+            <PdfDictionaryPopover
+              text={dictionary.value.quoteText}
+              anchor={dictionary.anchor}
+              canSave={editable}
+              onSave={saveDictionary}
+              onClose={() => setDictionary(null)}
+            />
+          ) : null}
+          {pending && (editable || canLookup) ? (
             <PdfSelectionBar
               anchor={pending.anchor}
               mode={isTextSelection ? textMode : undefined}
               onMode={isTextSelection ? setTextMode : undefined}
+              canAnnotate={editable}
+              onLookup={
+                canLookup
+                  ? () => {
+                      setDictionary(pending);
+                      setPending(null);
+                      setAnnotationAction(null);
+                    }
+                  : undefined
+              }
               onPick={kind => createMark(isTextSelection ? { ...pending.value, type: textMode } : pending.value, kind)}
             />
           ) : null}

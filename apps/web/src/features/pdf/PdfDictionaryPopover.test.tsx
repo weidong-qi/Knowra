@@ -1,0 +1,98 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { lookupDictionary } from '../dictionary/localDictionary';
+import { PdfDictionaryPopover } from './PdfDictionaryPopover';
+
+vi.mock('../dictionary/localDictionary', async importOriginal => ({
+  ...(await importOriginal<typeof import('../dictionary/localDictionary')>()),
+  lookupDictionary: vi.fn()
+}));
+vi.mock('../../components/ui', () => ({
+  Popover: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PopoverDialog: ({ children }: { children: ReactNode }) => <div role="dialog">{children}</div>,
+  Button: ({ children, onPress, isDisabled }: { children: ReactNode; onPress(): void; isDisabled?: boolean }) => (
+    <button onClick={onPress} disabled={isDisabled}>
+      {children}
+    </button>
+  ),
+  Select: ({
+    label,
+    selectedKey,
+    onSelectionChange,
+    options
+  }: {
+    label: string;
+    selectedKey: string;
+    onSelectionChange(key: string): void;
+    options: Array<{ id: string; label: string }>;
+  }) => (
+    <select aria-label={label} value={selectedKey} onChange={event => onSelectionChange(event.target.value)}>
+      {options.map(option => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  )
+}));
+const entry = {
+  query: 'gradients',
+  word: 'gradient',
+  phonetic: 'ɡreɪdiənt',
+  meanings: ['n. 梯度', 'a. 渐升的'],
+  language: 'zh' as const
+};
+const lookup = vi.mocked(lookupDictionary);
+const props = {
+  text: 'Gradients',
+  anchor: { x: 100, top: 150, bottom: 170 },
+  canSave: true,
+  onSave: vi.fn(),
+  onClose: vi.fn()
+};
+beforeEach(() => {
+  vi.clearAllMocks();
+  lookup.mockResolvedValue(entry);
+});
+afterEach(cleanup);
+
+it('展示原形和全部释义，保存用户选中的释义且保留来源', async () => {
+  render(<PdfDictionaryPopover {...props} />);
+  await screen.findByText('原文 Gradients → 原形 gradient');
+  fireEvent.change(screen.getByRole('combobox', { name: '保存的释义' }), { target: { value: '0' } });
+  fireEvent.click(screen.getByRole('button', { name: '保存为标注' }));
+  expect(props.onSave).toHaveBeenCalledWith('词典 · ECDICT\ngradient /ɡreɪdiənt/\nn. 梯度');
+  fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+  expect(props.onClose).toHaveBeenCalledOnce();
+});
+
+it('只读资料可以查词但不能保存', async () => {
+  render(<PdfDictionaryPopover {...props} canSave={false} />);
+  await screen.findByText('原文 Gradients → 原形 gradient');
+  expect(screen.getByRole('button', { name: '保存为标注' })).toBeDisabled();
+});
+
+it('区分未收录和读取失败，并允许重试', async () => {
+  lookup.mockRejectedValueOnce(new Error('本地词库读取失败，请重试。')).mockResolvedValueOnce(null);
+  render(<PdfDictionaryPopover {...props} />);
+  await screen.findByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: '重新查询' }));
+  await screen.findByText(/本地词典未收录/);
+  expect(screen.queryByRole('button', { name: '保存为标注' })).toBeNull();
+});
+
+it('切换查询后旧请求晚到也不会覆盖新词结果', async () => {
+  let finish!: (value: typeof entry) => void;
+  lookup.mockReturnValueOnce(
+    new Promise(resolve => {
+      finish = resolve;
+    })
+  );
+  lookup.mockResolvedValueOnce({ ...entry, query: 'minimum', word: 'minimum', meanings: ['n. 最小值'] });
+  const view = render(<PdfDictionaryPopover {...props} />);
+  view.rerender(<PdfDictionaryPopover {...props} text="minimum" />);
+  await screen.findByText('n. 最小值');
+  finish(entry);
+  await waitFor(() => expect(screen.queryByText('gradient')).toBeNull());
+  expect(screen.getByText('n. 最小值')).toBeVisible();
+});
