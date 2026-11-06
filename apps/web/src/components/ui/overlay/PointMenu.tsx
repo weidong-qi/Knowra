@@ -26,6 +26,8 @@ export interface PointMenuProps {
   maxHeight?: number;
   /** 菜单由内层 Menu 绘制；操作面板复用通用 Popover 的背景、边框与阴影。 */
   surface?: 'menu' | 'popover';
+  /** 阅读区操作面板可保持正文指针可用，允许继续选择或双击查词。 */
+  isNonModal?: boolean;
   children: ReactNode;
 }
 
@@ -40,6 +42,7 @@ export function PointMenu({
   boundaryElement,
   maxHeight,
   surface = 'menu',
+  isNonModal,
   children
 }: PointMenuProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -59,6 +62,7 @@ export function PointMenu({
       <Container
         triggerRef={anchorRef}
         isOpen={Boolean(point)}
+        isNonModal={isNonModal}
         onOpenChange={onOpenChange}
         offset={0}
         placement="bottom start"

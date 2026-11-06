@@ -22,6 +22,21 @@ it('贴近视口顶部时翻到选区下方', () => {
   expect(screen.getByRole('toolbar', { name: '选择标注分类' })).toHaveAttribute('data-below', 'true');
 });
 
+it('只读选区仍可查词，隐藏标注操作', () => {
+  const lookup = vi.fn();
+  render(
+    <PdfSelectionBar
+      anchor={{ x: 100, top: 200, bottom: 220 }}
+      onPick={() => undefined}
+      canAnnotate={false}
+      onLookup={lookup}
+    />
+  );
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: '查词' }));
+  expect(lookup).toHaveBeenCalledOnce();
+});
+
 it('文字选区可在高亮与下划线间切换，区域和便签不显示切换', () => {
   const onMode = vi.fn();
   const { rerender } = render(
