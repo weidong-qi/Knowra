@@ -27,6 +27,7 @@ export function PdfAnnotationActions({
   return (
     <PointMenu
       surface="popover"
+      isNonModal
       point={point}
       onOpenChange={open => {
         if (!open) onClose();

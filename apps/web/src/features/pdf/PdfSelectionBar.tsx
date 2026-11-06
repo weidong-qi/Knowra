@@ -1,4 +1,4 @@
-import { PressableButton } from '../../components/ui';
+import { Button, PressableButton } from '../../components/ui';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import styles from './PdfReader.module.css';
 
@@ -15,13 +15,17 @@ export function PdfSelectionBar({
   anchor,
   onPick,
   mode,
-  onMode
+  onMode,
+  onLookup,
+  canAnnotate = true
 }: {
   anchor: PdfBarAnchor;
   onPick(kind: string): void;
   /** 仅文字选区提供：在高亮和下划线之间切换，并由阅读器记住。 */
   mode?: PdfTextMode;
   onMode?(mode: PdfTextMode): void;
+  onLookup?(): void;
+  canAnnotate?: boolean;
 }) {
   // 贴近视口顶部时翻到选区下方，避免被工具栏遮住。
   const below = anchor.top < 64;
@@ -34,7 +38,12 @@ export function PdfSelectionBar({
       data-below={below || undefined}
       onMouseDown={event => event.preventDefault()}
     >
-      {mode && onMode ? (
+      {onLookup ? (
+        <Button variant="ghost" size="mini" onPress={onLookup}>
+          查词
+        </Button>
+      ) : null}
+      {canAnnotate && mode && onMode ? (
         <>
           {TEXT_MODES.map(item => (
             <PressableButton
@@ -50,18 +59,20 @@ export function PdfSelectionBar({
           <span className={styles.barDivider} aria-hidden="true" />
         </>
       ) : null}
-      {KIND_OPTIONS.map(option => (
-        <PressableButton
-          key={option.id}
-          className={styles.swatch}
-          data-kind={option.id}
-          aria-label={`标注为${option.label}`}
-          title={option.label}
-          onPress={() => onPick(option.id)}
-        >
-          <span hidden>{option.label}</span>
-        </PressableButton>
-      ))}
+      {canAnnotate
+        ? KIND_OPTIONS.map(option => (
+            <PressableButton
+              key={option.id}
+              className={styles.swatch}
+              data-kind={option.id}
+              aria-label={`标注为${option.label}`}
+              title={option.label}
+              onPress={() => onPick(option.id)}
+            >
+              <span hidden>{option.label}</span>
+            </PressableButton>
+          ))
+        : null}
     </div>
   );
 }
