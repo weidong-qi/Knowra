@@ -39,7 +39,7 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
     await expect(shell).not.toHaveAttribute('data-ni-deco');
     await expect(shell).toHaveAttribute('data-ni-theme', 'orange');
     await expect(page.getByRole('button', { name: '切换浅色模式' })).toBeVisible();
-    await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(24, 25, 29)');
+    await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
     const radius = await shell.evaluate(element =>
       getComputedStyle(element).getPropertyValue('--radius-control').trim()
     );
@@ -70,6 +70,18 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
 
 test('默认图标布局与卡片文件夹按原型展示，类型筛选收进显示选项', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
+  await page.route('**/api/ai/model-settings', route =>
+    route.fulfill({
+      json: {
+        data: {
+          configured: false,
+          modelId: 'deepseek-flash',
+          modelSupported: true,
+          supportedModelIds: ['deepseek-flash']
+        }
+      }
+    })
+  );
   const folders = ['工作', '灵感箱', '学习资料', '生活'].map((name, index) => ({
     id: `folder-${index + 1}`,
     name,
@@ -116,7 +128,8 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   const badge = index.locator('[data-folder-style="badge"]');
   await expect(badge).toHaveCount(4);
   await expect(badge.first()).toHaveCSS('width', '40px');
-  await expect(badge.first()).toHaveCSS('border-radius', '12px');
+  await expect(badge.first()).toHaveCSS('border-radius', '0px');
+  await expect(index.locator('button[data-folder-art="sketch"]')).toHaveCount(4);
   await page.screenshot({ path: info.outputPath('folder-cards.png'), animations: 'disabled' });
   await page.getByRole('button', { name: '切换深色模式' }).click();
   await expect(badge.first()).toHaveCSS('color', 'rgb(242, 107, 29)');
@@ -137,6 +150,20 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
     'aria-pressed',
     'true'
   );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#/settings');
+  const folderArt = page.getByRole('group', { name: '文件夹卡片插画' });
+  await expect(folderArt.getByRole('button', { name: '手绘线稿', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await folderArt.getByRole('button', { name: '夜空', exact: true }).click();
+  await page.reload();
+  await expect(folderArt.getByRole('button', { name: '夜空', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/#/materials');
+  await toolbar.getByRole('button', { name: '卡片视图' }).click();
+  await expect(index.locator('button[data-folder-art="night"]')).toHaveCount(4);
+  await page.screenshot({ path: info.outputPath('folder-cards-night.png'), animations: 'disabled' });
 });
 
 test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {

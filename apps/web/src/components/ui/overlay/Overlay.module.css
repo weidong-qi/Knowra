@@ -25,13 +25,21 @@
 }
 
 @keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes overlayFadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 .dialog {
@@ -73,13 +81,25 @@
 }
 
 @keyframes dialogIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes dialogOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(8px); }
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 .header {
@@ -198,7 +218,6 @@
   padding: 6px;
 }
 
-
 /* Menu 的定位容器不绘制面板；边框、背景和阴影只由内层 .menu 持有。
  * Select / 通用 Popover 仍使用 .popover 的单层面板外观。 */
 .menuPopover {
@@ -216,9 +235,17 @@
   transform-origin: var(--trigger-anchor-point, 50% 0);
 }
 
-:is(.popover, .menuPopover)[data-placement='top'] { --pop-y: 6px; }
-:is(.popover, .menuPopover)[data-placement='left'] { --pop-x: 6px; --pop-y: 0px; }
-:is(.popover, .menuPopover)[data-placement='right'] { --pop-x: -6px; --pop-y: 0px; }
+:is(.popover, .menuPopover)[data-placement='top'] {
+  --pop-y: 6px;
+}
+:is(.popover, .menuPopover)[data-placement='left'] {
+  --pop-x: 6px;
+  --pop-y: 0px;
+}
+:is(.popover, .menuPopover)[data-placement='right'] {
+  --pop-x: -6px;
+  --pop-y: 0px;
+}
 
 :is(.popover, .menuPopover)[data-entering] {
   animation: popoverIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -229,23 +256,45 @@
 }
 
 @keyframes popoverIn {
-  from { opacity: 0; transform: translate(var(--pop-x), var(--pop-y)) scale(0.94); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translate(var(--pop-x), var(--pop-y)) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes popoverOut {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: scale(0.97); }
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
 }
 
 @keyframes popIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes popOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 .menu {
@@ -376,17 +425,57 @@
 }
 
 /* rich 变体：操作面板。分组标题、图标底板和说明行，行高与点击区域更宽松。 */
-.menuRich { min-width: 248px; padding: 6px; border-radius: 14px; }
-.menuRich .menuHead { padding: 10px 10px 4px; font-size: 11px; letter-spacing: .06em; }
-.menuRich .item { gap: 10px; min-height: 0; padding: 7px 8px; border-radius: 10px; }
-.menuRich .itemIcon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--surface-hover); transition: background var(--motion-fast) var(--motion-ease); }
-.menuRich .item[data-focused] .itemIcon { background: var(--surface-pressed); }
-.menuRich .item[data-danger] .itemIcon { background: var(--ink-danger-soft); }
-.menuRich .item[data-disabled] .itemIcon { opacity: .6; }
-.menuRich .separator { margin: 6px 4px; }
-.itemText { display: grid; gap: 1px; min-width: 0; }
-.itemDesc { color: var(--text-muted); font-size: 11px; font-weight: 400; line-height: 1.4; }
-.item[data-danger] .itemDesc { color: color-mix(in srgb, var(--ink-danger) 70%, var(--text-muted)); }
+.menuRich {
+  min-width: 248px;
+  padding: 6px;
+  border-radius: 14px;
+}
+.menuRich .menuHead {
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.menuRich .item {
+  gap: 10px;
+  min-height: 0;
+  padding: 7px 8px;
+  border-radius: 10px;
+}
+.menuRich .itemIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--surface-hover);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+.menuRich .item[data-focused] .itemIcon {
+  background: var(--surface-pressed);
+}
+.menuRich .item[data-danger] .itemIcon {
+  background: var(--ink-danger-soft);
+}
+.menuRich .item[data-disabled] .itemIcon {
+  opacity: 0.6;
+}
+.menuRich .separator {
+  margin: 6px 4px;
+}
+.itemText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.itemDesc {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.item[data-danger] .itemDesc {
+  color: color-mix(in srgb, var(--ink-danger) 70%, var(--text-muted));
+}
 
 /* Tooltip */
 /* 提升特异性：局部外观 portal（如 .theme）会设置 color，不能盖掉反色文字，否则文字与背景同色成黑块。 */
@@ -413,23 +502,73 @@
 
 /* ===== 对话框样式（设置 → 外观 → 对话框样式）：由 underlay 上的 data-dialog-style 切换 ===== */
 /* 三种样式共同点：去掉标题区/底部的分割线，按钮靠右，圆角加大 */
-:global([data-dialog-style]) .dialog .header { border-bottom: 0; padding: 24px 26px 4px; background: transparent; }
-:global([data-dialog-style]) .dialog .description { padding: 6px 26px 0; }
-:global([data-dialog-style]) .dialog .body { padding: 14px 26px 22px; }
-:global([data-dialog-style]) .dialog .footer { border-top: 0; justify-content: flex-end; padding: 14px 20px; }
+:global([data-dialog-style]) .dialog .header {
+  border-bottom: 0;
+  padding: 24px 26px 4px;
+  background: transparent;
+}
+:global([data-dialog-style]) .dialog .description {
+  padding: 6px 26px 0;
+}
+:global([data-dialog-style]) .dialog .body {
+  padding: 14px 26px 22px;
+}
+:global([data-dialog-style]) .dialog .footer {
+  border-top: 0;
+  justify-content: flex-end;
+  padding: 14px 20px;
+}
 
 /* 浮起卡片：26px 圆角 + 大范围柔影，底部为淡色托盘（仅明度差） */
-:global([data-dialog-style='float']) .dialog { border-radius: 26px; border-color: transparent; box-shadow: 0 1px 3px rgb(24 30 48 / 6%), 0 30px 70px -18px rgb(24 30 48 / 38%); }
-:global([data-dialog-style='float']) .dialog .footer { background: color-mix(in srgb, var(--surface-sidebar) 80%, transparent); }
-:global([data-ni-mode='dark'][data-dialog-style='float']) .dialog { box-shadow: 0 1px 3px rgb(0 0 0 / 30%), 0 30px 70px -18px rgb(0 0 0 / 65%); }
+:global([data-dialog-style='float']) .dialog {
+  border-radius: 26px;
+  border-color: transparent;
+  box-shadow:
+    0 1px 3px rgb(24 30 48 / 6%),
+    0 30px 70px -18px rgb(24 30 48 / 38%);
+}
+:global([data-dialog-style='float']) .dialog .footer {
+  background: color-mix(in srgb, var(--surface-sidebar) 80%, transparent);
+}
+:global([data-ni-mode='dark'][data-dialog-style='float']) .dialog {
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 30%),
+    0 30px 70px -18px rgb(0 0 0 / 65%);
+}
 
 /* 内嵌托盘：外层留 8px 边，内容在大圆角卡片里，按钮在卡片外的托盘上 */
-:global([data-dialog-style='tray']) .dialog { border-radius: 28px; border-color: transparent; padding: 8px; background: var(--surface-sidebar); box-shadow: 0 0 0 1px rgb(24 30 48 / 6%), 0 28px 64px -16px rgb(24 30 48 / 34%); }
-:global([data-dialog-style='tray']) .dialog .header { background: var(--surface-page); border-radius: 22px 22px 0 0; padding: 18px 20px 6px; }
-:global([data-dialog-style='tray']) .dialog .description { background: var(--surface-page); padding: 0 20px; }
-:global([data-dialog-style='tray']) .dialog .body { background: var(--surface-page); border-radius: 0 0 22px 22px; padding: 12px 20px 20px; }
-:global([data-dialog-style='tray']) .dialog .footer { background: transparent; padding: 12px 8px 6px; }
-:global([data-ni-mode='dark'][data-dialog-style='tray']) .dialog { box-shadow: 0 0 0 1px rgb(255 255 255 / 8%), 0 28px 64px -16px rgb(0 0 0 / 65%); }
+:global([data-dialog-style='tray']) .dialog {
+  border-radius: 28px;
+  border-color: transparent;
+  padding: 8px;
+  background: var(--surface-sidebar);
+  box-shadow:
+    0 0 0 1px rgb(24 30 48 / 6%),
+    0 28px 64px -16px rgb(24 30 48 / 34%);
+}
+:global([data-dialog-style='tray']) .dialog .header {
+  background: var(--surface-page);
+  border-radius: 22px 22px 0 0;
+  padding: 18px 20px 6px;
+}
+:global([data-dialog-style='tray']) .dialog .description {
+  background: var(--surface-page);
+  padding: 0 20px;
+}
+:global([data-dialog-style='tray']) .dialog .body {
+  background: var(--surface-page);
+  border-radius: 0 0 22px 22px;
+  padding: 12px 20px 20px;
+}
+:global([data-dialog-style='tray']) .dialog .footer {
+  background: transparent;
+  padding: 12px 8px 6px;
+}
+:global([data-ni-mode='dark'][data-dialog-style='tray']) .dialog {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 13%),
+    0 28px 64px -16px rgb(0 0 0 / 65%);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .dialog,
@@ -443,7 +582,9 @@
 }
 
 @media (max-width: 767px) {
-  .item { min-height: 44px; }
+  .item {
+    min-height: 44px;
+  }
 }
 
 /* 业务面板保留自己的标题与内部滚动，模态交互由统一 Dialog 负责。 */
@@ -452,18 +593,26 @@
   height: min(760px, calc(100dvh - 32px));
   max-height: calc(100dvh - 32px);
 }
-.panelSize > .overlay { height: 100%; overflow: hidden; }
+.panelSize > .overlay {
+  height: 100%;
+  overflow: hidden;
+}
 
 /* 不引入布局盒，桌面检查器仍是原来的 grid item。 */
-.inlinePanel { display: contents; }
+.inlinePanel {
+  display: contents;
+}
 
 @media (forced-colors: active) {
-  .popover, .menu {
+  .popover,
+  .menu {
     background: Canvas;
     border-color: CanvasText;
     box-shadow: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
-  .menu:focus-visible { box-shadow: none; }
+  .menu:focus-visible {
+    box-shadow: none;
+  }
 }
