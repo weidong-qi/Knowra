@@ -1,3 +1,4 @@
+import { validatePersonalTodoHistory } from '../apps/api/src/modules/personal-todos/history-contract.ts';
 import { createNoteVersionReferenceIndex } from '../apps/api/src/modules/knowledge/domain/note-version-references.ts';
 import { referencedAnnotationRevisions } from '../apps/api/src/modules/knowledge/domain/history-retention.ts';
 import { LOCAL_DATA_COLLECTIONS } from '../apps/api/src/infrastructure/local-data-schema.js';
@@ -7,7 +8,7 @@ import { validateCoreOperationState } from '../apps/api/src/infrastructure/core-
 import { validateKnowledgeExtractionCommitState } from '../apps/api/src/modules/ai/knowledge-extraction-commit-contract.js';
 import { validateExtractionTaskState } from '../apps/api/src/modules/ai/knowledge-extraction-task-contract.js';
 import { HISTORY_NON_PRIVATE_TABLES } from '../apps/desktop-runtime/src/note-version-discard-gate.mjs';
-import { validateRetirementSqlitePrivateRecords } from './inline-annotation-retirement-sqlite-validation.mjs';
+import { validatePrivateHistory } from '../apps/desktop-runtime/src/private-history-validation.mjs';
 import { AI_SQLITE_DDL } from '../apps/desktop-runtime/src/ai-sqlite-schema.mjs';
 
 const validators = {
@@ -17,6 +18,7 @@ const validators = {
   knowledgeExtractionCommits: validateKnowledgeExtractionCommitState,
   aiKnowledgeExtractionTasks: validateExtractionTaskState
 };
+const allValidators = { ...validators, personalTodos: validatePersonalTodoHistory };
 const fail = () => new Error('私有记录或待同步状态不可完整核对，未生成清理结论。');
 const json = value => {
   try {
@@ -31,7 +33,7 @@ export function inspectJsonPrivateSource(document, state) {
   const present = new Set();
   const allowed = new Set([
     ...LOCAL_DATA_COLLECTIONS,
-    ...Object.keys(validators),
+    ...Object.keys(allValidators),
     'schemaVersion',
     'version',
     'data',
@@ -45,7 +47,7 @@ export function inspectJsonPrivateSource(document, state) {
         ['json.data', state]
       ]) {
     if (Object.keys(source).some(key => !allowed.has(key) || (key === 'data' && source === state))) throw fail();
-    for (const [key, validate] of Object.entries(validators)) {
+    for (const [key, validate] of Object.entries(allValidators)) {
       if (!Object.hasOwn(source, key)) continue;
       // 验证副本，不采用校验器可能生成的默认值或内存升级结果。
       try {
@@ -64,7 +66,7 @@ export function inspectJsonPrivateSource(document, state) {
     privateSources,
     pendingSyncSources: [],
     coverage: {
-      privateRecords: present.size === Object.keys(validators).length ? 'checked' : 'unavailable-core-export',
+      privateRecords: Object.keys(validators).every(key => present.has(key)) ? 'checked' : 'unavailable-core-export',
       pendingSync: 'not-applicable-server-json'
     }
   };
@@ -147,7 +149,7 @@ export function inspectSqlitePrivateSource(db, version) {
   if (markers.has('entitySyncVersion') && markers.get('entitySyncVersion') !== '2') throw fail();
   if (markers.has('deletionFactsVersion') && markers.get('deletionFactsVersion') !== '1') throw fail();
 
-  const privateCoverage = validateRetirementSqlitePrivateRecords(db, tables, version);
+  const privateCoverage = validatePrivateHistory(db, tables, version);
 
   const knownTables = new Set([...required, ...Object.values(extensionTables).flat(), 'sync_recovery']);
   const privateSources = [],

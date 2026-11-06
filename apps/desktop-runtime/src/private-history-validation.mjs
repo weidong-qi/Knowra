@@ -1,20 +1,18 @@
+import { validateSyncHistoryRows } from './sync-history.mjs';
+import { readPersonalTodoHistory } from './personal-todos/history-reader.mjs';
 import { DatabaseSync } from 'node:sqlite';
-import {
-  AI_SQLITE_DDL,
-  AI_ACCESS_SQLITE_DDL,
-  AI_CONVERSATION_SQLITE_DDL
-} from '../apps/desktop-runtime/src/ai-sqlite-schema.mjs';
-import { AI_SQL_DEFINITIONS, decodeAiRow } from '../apps/api/src/modules/ai/record-sql-map.ts';
-import { validateAiEvent } from '../apps/api/src/modules/ai/record-contract.ts';
-import { createSqliteAiRepository } from '../apps/desktop-runtime/src/ai-sqlite-repository.mjs';
-import { validateSqliteAccessRows } from '../apps/desktop-runtime/src/ai-sqlite-access-store.mjs';
-import { validateSqliteConversationRows } from '../apps/desktop-runtime/src/ai-sqlite-conversation-store.mjs';
-import { validateSqliteCoreOperationRows } from '../apps/desktop-runtime/src/core-operation-store.mjs';
-import { validateSqliteActionRows } from '../apps/desktop-runtime/src/ai-sqlite-action-store.mjs';
-import { validateSqliteKnowledgeExtractionBackup } from '../apps/desktop-runtime/src/knowledge-extraction-validation.mjs';
-import { TASK_WORKSPACE_COLLECTIONS } from '../apps/api/src/modules/task-workspaces/repository-port.ts';
-import { readTaskWorkspaceSnapshot } from '../apps/desktop-runtime/src/task-workspaces/sqlite-store.mjs';
-import { HISTORY_NON_PRIVATE_TABLES } from '../apps/desktop-runtime/src/note-version-discard-gate.mjs';
+import { AI_SQLITE_DDL, AI_ACCESS_SQLITE_DDL, AI_CONVERSATION_SQLITE_DDL } from './ai-sqlite-schema.mjs';
+import { AI_SQL_DEFINITIONS, decodeAiRow } from '../../api/src/modules/ai/record-sql-map.ts';
+import { validateAiEvent } from '../../api/src/modules/ai/record-contract.ts';
+import { createSqliteAiRepository } from './ai-sqlite-repository.mjs';
+import { validateSqliteAccessRows } from './ai-sqlite-access-store.mjs';
+import { validateSqliteConversationRows } from './ai-sqlite-conversation-store.mjs';
+import { validateSqliteCoreOperationRows } from './core-operation-store.mjs';
+import { validateSqliteActionRows } from './ai-sqlite-action-store.mjs';
+import { validateSqliteKnowledgeExtractionBackup } from './knowledge-extraction-validation.mjs';
+import { TASK_WORKSPACE_COLLECTIONS } from '../../api/src/modules/task-workspaces/repository-port.ts';
+import { readTaskWorkspaceSnapshot } from './task-workspaces/sqlite-store.mjs';
+import { HISTORY_NON_PRIVATE_TABLES } from './note-version-discard-gate.mjs';
 
 const quote = name => `"${name.replaceAll('"', '""')}"`;
 const invalid = () => {
@@ -76,7 +74,7 @@ function validateTableShapes(db, tables, version) {
 }
 
 /** 所属模块的只读解码、哈希、索引及历史关联校验，不能仅以 JSON 可解析标记 checked。 */
-export function validateRetirementSqlitePrivateRecords(db, tables, version) {
+export function validatePrivateHistory(db, tables, version) {
   try {
     if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='view' LIMIT 1").get()) invalid();
     if (
@@ -126,6 +124,9 @@ export function validateRetirementSqlitePrivateRecords(db, tables, version) {
     for (const kind of TASK_WORKSPACE_COLLECTIONS)
       if (tables.has(`task_workspace_${kind}`)) checked.add(`task_workspace_${kind}`);
     // 旧上传和冲突由调用方按不可重放的原始请求读取；其他无所属契约的表只扫描，不冒充完整校验。
+    validateSyncHistoryRows(db);
+    readPersonalTodoHistory(db);
+    if (tables.has('personal_todos_state')) checked.add('personal_todos_state');
     const unchecked = [...tables].some(
       name =>
         !HISTORY_NON_PRIVATE_TABLES.includes(name) &&

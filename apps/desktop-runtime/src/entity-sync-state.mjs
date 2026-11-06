@@ -1,3 +1,4 @@
+import { encodeSyncHistory } from './sync-history.mjs';
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
@@ -836,7 +837,7 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
     }
     db.prepare('INSERT INTO sync_recovery VALUES (?, ?)').run(
       randomUUID(),
-      JSON.stringify({
+      encodeSyncHistory({
         kind: 'entity-conflict',
         choice,
         local: cloneJsonData(state),

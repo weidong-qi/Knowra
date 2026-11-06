@@ -1,3 +1,4 @@
+import { readAnnotationToolHistory } from './annotation-history.ts';
 import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.ts';
@@ -180,6 +181,12 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         .filter(row => row.conversationId === conversationId && row.sequence > afterSequence)
         .sort((a, b) => a.sequence - b.sequence)
         .slice(0, limit);
+    },
+    async listAnnotationHistory(turnId) {
+      return (await read()).conversationToolCalls
+        .filter(call => call.turnId === turnId)
+        .map(readAnnotationToolHistory)
+        .filter(Boolean);
     },
     async listToolCalls(turnId) {
       return (await read()).conversationToolCalls

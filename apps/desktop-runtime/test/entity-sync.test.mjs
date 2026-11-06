@@ -1089,6 +1089,79 @@ test('旧格式重点新建被同步门禁阻止，冻结请求和本地数据�
   );
 });
 
+test('含旧重点新建的冻结批次在本机暂停，重复重试不重放请求且保留队列', async t => {
+  const cloud = await fixture(t);
+  let batches = 0;
+  const a = cloud.device('frozen-legacy-client', async (url, init) => {
+    if (url.endsWith('/batch')) batches++;
+    return fetch(url, init);
+  });
+  await a.connect();
+  batches = 0;
+  const row = addLegacyAnnotation(cloud, cloud.note, 'never-uploaded');
+  a.knowledge.repositories.contentAnnotationRepository.save(row);
+  const { nextEntityUpload } = await import('../src/entity-sync-state.mjs');
+  const { readMeta } = await import('../src/sync-state.mjs');
+  const frozen = nextEntityUpload(a.store),
+    outbox = a.store.readOutbox();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await a.engine.sync();
+    assert.equal(a.engine.status().error.code, 'SYNC_CLIENT_UPGRADE_REQUIRED');
+    assert.deepEqual(
+      a.store.readSync(db => readMeta(db, 'entityUpload')),
+      frozen
+    );
+    assert.deepEqual(a.store.readOutbox(), outbox);
+  }
+  const { createRuntimeBackup } = await import('../src/backup.mjs');
+  const { prepareRestoredDirectory } = await import('../src/restore-directory.mjs');
+  const backup = createRuntimeBackup(a.store, path.join(cloud.root, 'frozen-legacy-client'));
+  const restoredDirectory = prepareRestoredDirectory(cloud.root, backup);
+  const b = cloud.device(path.relative(cloud.root, restoredDirectory), async (url, init) => {
+    if (url.endsWith('/batch')) batches++;
+    return fetch(url, init);
+  });
+  await b.connect();
+  assert.equal(b.engine.status().error.code, 'SYNC_CLIENT_UPGRADE_REQUIRED');
+  assert.deepEqual(
+    b.store.readSync(db => readMeta(db, 'entityUpload')),
+    frozen
+  );
+  assert.equal(
+    b.store.state.contentAnnotations.some(item => item.id === row.id),
+    true
+  );
+  assert.equal(batches, 0);
+  assert.equal(
+    cloud.dataStore.state.contentAnnotations.some(item => item.id === row.id),
+    false
+  );
+});
+
+test('恢复后的历史封装不能伪装成冻结请求发送，原记录保留且同步暂停', async t => {
+  const cloud = await fixture(t);
+  let writes = 0;
+  const a = cloud.device('history-replay-client', async (url, init) => {
+    if (init?.method === 'POST' && (url.endsWith('/batch') || url.endsWith('/push'))) writes++;
+    return fetch(url, init);
+  });
+  await a.connect();
+  writes = 0;
+  const { encodeSyncHistory } = await import('../src/sync-history.mjs');
+  const { writeMeta, readMeta } = await import('../src/sync-state.mjs');
+  const archived = JSON.parse(
+    encodeSyncHistory({ kind: 'entity-conflict', local: { notes: [] }, base: [], remote: [], choice: 'remote' })
+  );
+  a.store.metadataTransaction(db => writeMeta(db, 'entityUpload', archived));
+  await a.engine.sync();
+  assert.equal(a.engine.status().error.code, 'SYNC_HISTORY_READ_ONLY');
+  assert.equal(writes, 0);
+  assert.deepEqual(
+    a.store.readSync(db => readMeta(db, 'entityUpload')),
+    archived
+  );
+});
+
 test('回收站内缺失结构锚点的 v1 重点经云端标准取消下行同步，保留原文与版本', async t => {
   const cloud = await fixture(t);
   const note = cloud.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '甲乙\n' });

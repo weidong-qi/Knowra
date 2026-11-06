@@ -1,3 +1,4 @@
+import { validatePrivateHistory } from './private-history-validation.mjs';
 import { validateTaskWorkspaceBackup } from './task-workspaces/backup-validation.mjs';
 import { assertRestoreReadiness, readRestoreSnapshot } from './restore-readiness.mjs';
 import { validateSqliteDeletionFacts } from './sqlite-deletion-facts-contract.mjs';
@@ -365,6 +366,14 @@ export function inspectRuntimeBackup(backupDirectory, { restoreContext } = {}) {
       if (version >= 7) conversationAttachments = validateSqliteConversationRows(db).conversationAttachments;
     }
     validateSqliteKnowledgeExtractionBackup(db, aiJobs);
+    const privateTables = new Set(
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        .all()
+        .map(row => row.name)
+    );
+    if (validatePrivateHistory(db, privateTables, version) !== 'checked')
+      throw new Error('备份含尚无只读契约的私有历史扩展；请保留原始资料，不能激活此备份。');
     const state = createEmptyLocalState();
     for (const row of db.prepare('SELECT collection, payload FROM entities').all()) {
       if (!LOCAL_DATA_COLLECTIONS.includes(row.collection)) throw new Error('备份包含未知资料类型。');

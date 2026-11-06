@@ -1,3 +1,6 @@
+import { readSyncHistory, assertNotHistoryOperation } from './sync-history.mjs';
+import { assertLegacyAnnotationChanges } from '../../api/src/modules/sync/batch-domain.ts';
+import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.js';
 import fs from 'node:fs';
 import { Readable } from 'node:stream';
 import {
@@ -235,6 +238,7 @@ export function createSyncEngine(
     }
   }
   async function sendOperation(operation) {
+    assertNotHistoryOperation(operation);
     try {
       acknowledge(store, operation, await request('push', operation));
     } catch (failure) {
@@ -273,6 +277,24 @@ export function createSyncEngine(
       const knowledgeSupported = meta('capabilities')?.includes(KNOWLEDGE_SYNC_CAPABILITY) ?? false;
       const operation = nextEntityUpload(store, { knowledgeSupported });
       if (!operation) return sent;
+      assertNotHistoryOperation(operation);
+      if (
+        operation.changes.some(
+          entry =>
+            (entry.collection === 'contentAnnotations' && entry.value?.schemaVersion !== 3) ||
+            entry.collection === 'annotationExclusions'
+        )
+      ) {
+        store.readSync(db => {
+          const baseline = createEmptyLocalState();
+          for (const row of db
+            .prepare("SELECT collection,payload FROM sync_base WHERE payload IS NOT NULL AND payload != 'null'")
+            .iterate()) {
+            if (Object.hasOwn(baseline, row.collection)) baseline[row.collection].push(JSON.parse(row.payload));
+          }
+          assertLegacyAnnotationChanges(baseline, operation.changes);
+        });
+      }
       if (!knowledgeSupported && operation.changes.some(entry => KNOWLEDGE_COLLECTIONS.includes(entry.collection))) {
         const failure = new Error('云端尚不支持知识同步，知识已保存在本机；请升级云端后重试。');
         failure.code = 'SYNC_KNOWLEDGE_UNSUPPORTED';
@@ -376,6 +398,7 @@ export function createSyncEngine(
         .map(row => JSON.parse(row.request))
     );
     const batch = meta('entityUpload');
+    assertNotHistoryOperation(batch);
     let currentBatch = true;
     if (batch) {
       try {
@@ -385,6 +408,7 @@ export function createSyncEngine(
       }
     }
     for (const operation of [...notes, ...(!currentBatch && batch ? [batch] : [])]) {
+      assertNotHistoryOperation(operation);
       if (operation.datasetEpoch !== meta('serverEpoch')) {
         const failure = new Error('资料库世代已变化，升级前的未确认操作无法核对；原请求和本地修改已保留。');
         failure.code = 'SYNC_LEGACY_OPERATION_UNRESOLVED';
@@ -578,9 +602,12 @@ export function createSyncEngine(
         !meta('serverUrl') ||
         meta('clientPaused') ||
         phase === 'auth-required' ||
-        ['PROTOCOL_UNSUPPORTED', 'SYNC_CLIENT_UPGRADE_REQUIRED', 'SYNC_LEGACY_OPERATION_UNRESOLVED'].includes(
-          error?.code
-        ),
+        [
+          'PROTOCOL_UNSUPPORTED',
+          'SYNC_CLIENT_UPGRADE_REQUIRED',
+          'SYNC_LEGACY_OPERATION_UNRESOLVED',
+          'SYNC_HISTORY_READ_ONLY'
+        ].includes(error?.code),
       retryAt,
       changed,
       more
@@ -692,7 +719,7 @@ export function createSyncEngine(
         ...db
           .prepare('SELECT payload FROM sync_recovery ORDER BY rowid DESC')
           .all()
-          .map(row => JSON.parse(row.payload))
+          .map(row => readSyncHistory(row.payload))
       ]),
     async retry() {
       return exclusive(async () => {
