@@ -6,6 +6,20 @@ import { syntheticPdf } from '../../../../../scripts/test-support/pdf-fixtures.m
 
 export async function exercisePdfDictionary(page) {
   const origin = new URL(page.url()).origin;
+  // 走页面的真实会话；Electron 的中文应用名可能出现在 UA 中，Node 请求上下文不能编码该请求头。
+  const api = (url, method = 'GET', data) =>
+    page.evaluate(
+      async ({ url, method, data }) => {
+        const response = await fetch(url, {
+          method,
+          ...(data ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) } : {})
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(JSON.stringify(result));
+        return result.data;
+      },
+      { url, method, data }
+    );
   const errors = [];
   const external = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -16,19 +30,29 @@ export async function exercisePdfDictionary(page) {
     }
     return route.continue();
   });
-  const space = (await (await page.request.post(`${origin}/api/knowledge/spaces/default`, { data: {} })).json()).data;
+  const space = await api('/api/knowledge/spaces/default', 'POST', {});
   const params = new URLSearchParams({
     operationId: 'dictionary-pdf',
     spaceId: space.id,
     fileName: '离线查词验收.pdf'
   });
-  const response = await page.request.post(`${origin}/api/storage/pdf-imports?${params}`, {
-    headers: { 'Content-Type': 'application/pdf' },
-    data: syntheticPdf({ pages: [{ text: 'Gradients and zzzqvunknown', width: 420, height: 595 }] })
-  });
-  assert.equal(response.status(), 201);
-  const note = (await response.json()).data;
-  const marks = async () => (await (await page.request.get(`${origin}/api/pdf/${note.id}/annotations`)).json()).data;
+  const note = await page.evaluate(
+    async ({ params, bytes }) => {
+      const response = await fetch(`/api/storage/pdf-imports?${params}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: new Uint8Array(bytes)
+      });
+      const result = await response.json();
+      if (response.status !== 201) throw new Error(JSON.stringify(result));
+      return result.data;
+    },
+    {
+      params: String(params),
+      bytes: [...syntheticPdf({ pages: [{ text: 'Gradients and zzzqvunknown', width: 420, height: 595 }] })]
+    }
+  );
+  const marks = () => api(`/api/pdf/${note.id}/annotations`);
   await page.reload();
   await page.goto(`${origin}/#/materials/notes/${note.id}`);
   await expect(page.locator('.textLayer')).toContainText('Gradients', { timeout: 25000 });
