@@ -55,7 +55,7 @@ async function fixture(t) {
   const device = await readRetirementInspection('sqlite', path.join(localRoot, 'local.sqlite'));
   // 本地造数据的 outbox 在真实同步前并未确认；纯计划用例显式清空扫描上下文。
   device.pendingSyncSources = [];
-  return { root, cloudSource, localRoot, local, cloud, device, row };
+  return { root, cloudSource, localRoot, local, cloud, device, row, store, knowledge };
 }
 
 test('单条回收站 v1 的双端完整快照生成标准取消请求，不改写原记录或公开私有内容', async t => {
@@ -296,5 +296,76 @@ test('真实 v1 没有 revision 时沿用仓储只读默认 1，未知 revision 
     const rejected = planV1AnnotationMaintenance(f.cloud, f.device, now);
     assert.equal(rejected.report.status, 'blocked');
     assert.equal(rejected.request, null);
+  }
+});
+
+test('维护取消复用标准服务但不顺带回收回收站笔记的旧版本', async t => {
+  const f = await fixture(t);
+  const { calculateContentHash } = await import('../../apps/api/src/modules/knowledge/domain/note-version.ts');
+  const oldVersion = {
+    id: 'unreferenced-old-note-version',
+    noteId: f.row.noteId,
+    content: '更早的原文',
+    contentHash: calculateContentHash('更早的原文'),
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+    createdBy: 'user'
+  };
+  f.store.runSyncBatchTransaction(() => {
+    f.store.state.noteVersions.push(oldVersion);
+  });
+  const before = structuredClone(f.store.state);
+  const { planHistoryRetention } = await import('../../apps/api/src/modules/knowledge/domain/history-retention.ts');
+  assert.equal(
+    planHistoryRetention(f.store.state, {
+      now: Date.now(),
+      noteIds: new Set([f.row.noteId]),
+      externalReferences: f.store.getHistoryRetentionReferences()
+    }).removedVersions.has(oldVersion.id),
+    true
+  );
+  const cancelled = f.store.runSyncBatchTransaction(() =>
+    f.knowledge.contentAnnotationService.deleteAnnotation(f.row.id, { expectedRevision: 1 })
+  );
+  assert.equal(cancelled.lifecycleStatus, 'deleted');
+  assert.equal(cancelled.revision, 2);
+  assert.deepEqual(structuredClone(f.store.state.noteVersions), before.noteVersions);
+  assert.deepEqual(structuredClone(f.store.state.notes), before.notes);
+  assert.deepEqual(
+    structuredClone(f.store.state.annotationRevisions.slice(0, before.annotationRevisions.length)),
+    before.annotationRevisions
+  );
+  assert.equal(f.store.state.annotationRevisions.length, before.annotationRevisions.length + 1);
+  const persisted = await readRetirementInspection('local-json', f.cloudSource);
+  assert.deepEqual(persisted.state.noteVersions, before.noteVersions);
+  assert.equal(persisted.state.contentAnnotations[0].lifecycleStatus, 'deleted');
+});
+
+test('预检预演普通取消的留存清理，有额外历史回收时阻止生成请求且不改源', async t => {
+  const f = await fixture(t);
+  const { calculateContentHash } = await import('../../apps/api/src/modules/knowledge/domain/note-version.ts');
+  const version = {
+    id: 'old-extra-version',
+    noteId: f.row.noteId,
+    content: '此前内容',
+    contentHash: calculateContentHash('此前内容'),
+    createdAt: '2026-09-01T00:00:00.000Z',
+    createdBy: 'user'
+  };
+  for (const inspection of [f.cloud, f.device]) inspection.state.noteVersions.push(structuredClone(version));
+  const original = JSON.stringify([f.cloud, f.device]);
+  const result = planV1AnnotationMaintenance(f.cloud, f.device, now);
+  assert.equal(result.report.status, 'blocked');
+  assert(result.report.blockers.includes('history-retention-side-effects'));
+  assert.equal(result.report.retentionPreview.noteVersions, 1);
+  assert.equal(result.request, null);
+  assert.equal(JSON.stringify([f.cloud, f.device]), original);
+  assert.equal(JSON.stringify(result.report).includes(version.id), false);
+  // 引用上下文由读取器校验；此处覆盖普通文档与 data 包装的私有保留根选择。
+  for (const name of ['json.coreOperations', 'json.data.coreOperations']) {
+    f.cloud.privateSources.push({ name, records: [{ result: { noteVersionId: version.id } }] });
+    const protectedResult = planV1AnnotationMaintenance(f.cloud, f.device, now);
+    assert.equal(protectedResult.report.status, 'ready-for-maintenance-window');
+    assert.equal(protectedResult.report.retentionPreview.noteVersions, 0);
+    f.cloud.privateSources.pop();
   }
 });

@@ -108,10 +108,12 @@ function previewCancellationRetention(cloud, row, now) {
   });
   const cancelled = service.deleteAnnotation(row.id, { expectedRevision: row.revision ?? 1 });
   cancelled.updatedAt = cancelled.deletedAt = at;
-  // 与 file-data-store.getHistoryRetentionReferences 一致；任务工作区/待办不是云端保留根。
+  // 与 file-data-store.getHistoryRetentionReferences 一致，兼容根文档和 data 包装；任务工作区/待办不是保留根。
   const externalReferences = cloud.privateSources
     .filter(source =>
-      /^json\.(aiRuntime|coreOperations|knowledgeExtractionCommits|aiKnowledgeExtractionTasks)$/.test(source.name)
+      /^json(?:\.data)?\.(aiRuntime|coreOperations|knowledgeExtractionCommits|aiKnowledgeExtractionTasks)$/.test(
+        source.name
+      )
     )
     .flatMap(source => source.records);
   const plan = planHistoryRetention(state, {
