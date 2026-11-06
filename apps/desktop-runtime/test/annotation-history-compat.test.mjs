@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -359,4 +361,91 @@ test('旧 JSON 的个人待办扩展为可选 v1 契约，有值时必须校验�
   const bytes = fs.readFileSync(source);
   await assert.rejects(readRetirementInspection('local-json', source));
   assert.deepEqual(fs.readFileSync(source), bytes);
+});
+
+test('未知私有版本即使历史数据位于已识别表中，CLI 和候选恢复也必须一致拒绝', t => {
+  const f = fixture(t),
+    backup = createRuntimeBackup(f.store, f.root);
+  const directory = copyBackup({ ...f, backup }, 'future-private-version', db => {
+    db.exec('PRAGMA journal_mode=DELETE');
+    db.prepare('INSERT INTO metadata VALUES (?,?)').run('futurePrivateHistoryVersion', '999');
+    db.prepare('INSERT INTO sync_recovery VALUES (?,?)').run(
+      'future-private',
+      encodeSyncHistory({
+        kind: 'future-private-history',
+        payload: { schemaVersion: 999, private: 'private-version-sentinel' }
+      })
+    );
+  });
+  const before = treeHashes(directory),
+    rootBefore = fs.readdirSync(f.root);
+  const cli = fileURLToPath(new URL('../../../scripts/inspect-inline-annotation-retirement.mjs', import.meta.url));
+  const result = spawnSync(
+    process.execPath,
+    [cli, '--driver=sqlite', `--source=${path.join(directory, 'local.sqlite')}`],
+    { encoding: 'utf8' }
+  );
+  assert.equal(result.status, 1, result.stderr);
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr.includes('private-version-sentinel'), false);
+  assert.throws(() => inspectRuntimeBackup(directory));
+  assert.throws(() => prepareRestoredDirectory(f.root, directory));
+  assert.deepEqual(treeHashes(directory), before);
+  assert.deepEqual(fs.readdirSync(f.root), rootBefore);
+  assert.equal(readActiveDirectory(f.root), f.root);
+});
+
+for (const [name, mutate] of [
+  ['同步元数据版本未知', db => db.prepare('UPDATE metadata SET value=? WHERE key=?').run('999', 'entitySyncVersion')],
+  ['已识别动作表缺少版本标记', db => db.prepare('DELETE FROM metadata WHERE key=?').run('aiNoteActionsVersion')],
+  ['版本标记存在但动作表缺失', db => db.exec('DROP TABLE ai_note_action_state')],
+  ['必需的历史恢复表缺失', db => db.exec('DROP TABLE sync_recovery')],
+  ['当前数据库必需的会话表缺失', db => db.exec('DROP TABLE ai_conversation_records')]
+])
+  test(`${name} 时 CLI、备份检查与候选恢复均拒绝，原件保持不变`, t => {
+    const f = fixture(t),
+      backup = createRuntimeBackup(f.store, f.root);
+    const directory = copyBackup({ ...f, backup }, 'invalid-private-schema', db => {
+      db.exec('PRAGMA journal_mode=DELETE');
+      mutate(db);
+    });
+    const before = treeHashes(directory),
+      rootBefore = fs.readdirSync(f.root);
+    const cli = fileURLToPath(new URL('../../../scripts/inspect-inline-annotation-retirement.mjs', import.meta.url));
+    const result = spawnSync(
+      process.execPath,
+      [cli, '--driver=sqlite', `--source=${path.join(directory, 'local.sqlite')}`],
+      { encoding: 'utf8' }
+    );
+    assert.equal(result.status, 1, result.stderr);
+    assert.equal(result.stdout, '');
+    assert.throws(() => inspectRuntimeBackup(directory));
+    assert.throws(() => prepareRestoredDirectory(f.root, directory));
+    assert.deepEqual(treeHashes(directory), before);
+    assert.deepEqual(fs.readdirSync(f.root), rootBefore);
+    assert.equal(readActiveDirectory(f.root), f.root);
+  });
+
+test('合法旧备份同时缺少可选扩展的版本标记和表时仍可检查并准备候选', t => {
+  const f = fixture(t),
+    backup = createRuntimeBackup(f.store, f.root);
+  const directory = copyBackup({ ...f, backup }, 'legacy-without-optional-extension', db => {
+    db.exec(
+      "PRAGMA journal_mode=DELETE; DELETE FROM metadata WHERE key='coreOperationsVersion'; DROP TABLE core_operation_receipts"
+    );
+  });
+  const before = treeHashes(directory);
+  const cli = fileURLToPath(new URL('../../../scripts/inspect-inline-annotation-retirement.mjs', import.meta.url));
+  const result = spawnSync(
+    process.execPath,
+    [cli, '--driver=sqlite', `--source=${path.join(directory, 'local.sqlite')}`],
+    { encoding: 'utf8' }
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).coverage.privateRecords, 'checked');
+  assert.equal(inspectRuntimeBackup(directory).valid, true);
+  const candidate = prepareRestoredDirectory(f.root, directory);
+  assert.equal(fs.existsSync(path.join(candidate, 'local.sqlite')), true);
+  assert.deepEqual(treeHashes(directory), before);
+  assert.equal(readActiveDirectory(f.root), f.root);
 });

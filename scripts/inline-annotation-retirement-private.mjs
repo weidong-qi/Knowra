@@ -8,8 +8,10 @@ import { validateCoreOperationState } from '../apps/api/src/infrastructure/core-
 import { validateKnowledgeExtractionCommitState } from '../apps/api/src/modules/ai/knowledge-extraction-commit-contract.js';
 import { validateExtractionTaskState } from '../apps/api/src/modules/ai/knowledge-extraction-task-contract.js';
 import { HISTORY_NON_PRIVATE_TABLES } from '../apps/desktop-runtime/src/note-version-discard-gate.mjs';
-import { validatePrivateHistory } from '../apps/desktop-runtime/src/private-history-validation.mjs';
-import { AI_SQLITE_DDL } from '../apps/desktop-runtime/src/ai-sqlite-schema.mjs';
+import {
+  validatePrivateHistory,
+  privateHistoryTableNames
+} from '../apps/desktop-runtime/src/private-history-validation.mjs';
 
 const validators = {
   aiRuntime: validateAiState,
@@ -100,20 +102,6 @@ const settledMetadata = new Set([
   'serverUrl',
   'authoritativePurgeResult'
 ]);
-const extensionTables = {
-  coreOperationsVersion: ['core_operation_receipts'],
-  aiNoteActionsVersion: ['ai_note_action_state'],
-  knowledgeExtractionCommitsVersion: ['knowledge_extraction_commits'],
-  aiKnowledgeExtractionTasksVersion: ['ai_knowledge_extraction_tasks'],
-  taskWorkspaceVersion: [
-    'task_workspace_workspaces',
-    'task_workspace_documents',
-    'task_workspace_tasks',
-    'task_workspace_attempts',
-    'task_workspace_receipts'
-  ],
-  personalTodosVersion: ['personal_todos_state']
-};
 const quote = name => `"${name.replaceAll('"', '""')}"`;
 const nonempty = value =>
   value !== null && value !== false && value !== '' && (typeof value !== 'object' || Object.keys(value).length > 0);
@@ -126,32 +114,9 @@ export function inspectSqlitePrivateSource(db, version) {
       .map(row => row.name)
   );
   const metadata = db.prepare('SELECT key,value FROM metadata').all();
-  if (metadata.some(row => typeof row.key !== 'string' || typeof row.value !== 'string')) throw fail();
-  const markers = new Map(metadata.map(row => [row.key, row.value]));
-  const required = ['sync_outbox', 'sync_base', 'local_revisions'];
-  if (version >= 2) required.push('sync_uploads', 'sync_conflicts', 'sync_recovery');
-  if (version >= 4) required.push(...[...AI_SQLITE_DDL.matchAll(/CREATE TABLE (\w+)/g)].map(match => match[1]));
-  if (version >= 6) required.push('ai_access_policies', 'ai_run_grants', 'ai_request_manifests');
-  if (version >= 7) required.push('ai_conversation_records');
-  if (required.some(name => !tables.has(name))) throw fail();
-  for (const [marker, names] of Object.entries(extensionTables)) {
-    const value = markers.get(marker);
-    if (value === undefined && names.every(name => !tables.has(name))) continue;
-    if (value !== '1' || names.some(name => !tables.has(name))) throw fail();
-  }
-  const knownVersions = new Set([
-    ...Object.keys(extensionTables),
-    'localDataSchemaVersion',
-    'entitySyncVersion',
-    'deletionFactsVersion'
-  ]);
-  if (metadata.some(row => row.key.endsWith('Version') && !knownVersions.has(row.key))) throw fail();
-  if (markers.has('entitySyncVersion') && markers.get('entitySyncVersion') !== '2') throw fail();
-  if (markers.has('deletionFactsVersion') && markers.get('deletionFactsVersion') !== '1') throw fail();
-
   const privateCoverage = validatePrivateHistory(db, tables, version);
 
-  const knownTables = new Set([...required, ...Object.values(extensionTables).flat(), 'sync_recovery']);
+  const knownTables = privateHistoryTableNames(version);
   const privateSources = [],
     pendingSyncSources = [];
   for (const table of tables) {

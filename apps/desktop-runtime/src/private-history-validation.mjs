@@ -14,6 +14,56 @@ import { TASK_WORKSPACE_COLLECTIONS } from '../../api/src/modules/task-workspace
 import { readTaskWorkspaceSnapshot } from './task-workspaces/sqlite-store.mjs';
 import { HISTORY_NON_PRIVATE_TABLES } from './note-version-discard-gate.mjs';
 
+const extensionTables = {
+  coreOperationsVersion: ['core_operation_receipts'],
+  aiNoteActionsVersion: ['ai_note_action_state'],
+  knowledgeExtractionCommitsVersion: ['knowledge_extraction_commits'],
+  aiKnowledgeExtractionTasksVersion: ['ai_knowledge_extraction_tasks'],
+  taskWorkspaceVersion: [
+    'task_workspace_workspaces',
+    'task_workspace_documents',
+    'task_workspace_tasks',
+    'task_workspace_attempts',
+    'task_workspace_receipts'
+  ],
+  personalTodosVersion: ['personal_todos_state']
+};
+function requiredPrivateTables(version) {
+  const required = ['sync_outbox', 'sync_base', 'local_revisions'];
+  if (version >= 2) required.push('sync_uploads', 'sync_conflicts', 'sync_recovery');
+  if (version >= 4) required.push(...[...AI_SQLITE_DDL.matchAll(/CREATE TABLE (\w+)/g)].map(match => match[1]));
+  if (version >= 6) required.push('ai_access_policies', 'ai_run_grants', 'ai_request_manifests');
+  if (version >= 7) required.push('ai_conversation_records');
+  return required;
+}
+
+export function privateHistoryTableNames(version) {
+  return new Set([...requiredPrivateTables(version), ...Object.values(extensionTables).flat(), 'sync_recovery']);
+}
+
+/** CLI 与备份恢复使用同一版本/表存在性规则，空表也不能绕过。 */
+function validatePrivateHistorySchema(db, tables, version) {
+  const metadata = db.prepare('SELECT key,value FROM metadata').all();
+  if (metadata.some(row => typeof row.key !== 'string' || typeof row.value !== 'string')) invalid();
+  const markers = new Map(metadata.map(row => [row.key, row.value]));
+  const required = requiredPrivateTables(version);
+  if (required.some(name => !tables.has(name))) invalid();
+  for (const [marker, names] of Object.entries(extensionTables)) {
+    const value = markers.get(marker);
+    if (value === undefined && names.every(name => !tables.has(name))) continue;
+    if (value !== '1' || names.some(name => !tables.has(name))) invalid();
+  }
+  const knownVersions = new Set([
+    ...Object.keys(extensionTables),
+    'localDataSchemaVersion',
+    'entitySyncVersion',
+    'deletionFactsVersion'
+  ]);
+  if (metadata.some(row => row.key.endsWith('Version') && !knownVersions.has(row.key))) invalid();
+  if (markers.has('entitySyncVersion') && markers.get('entitySyncVersion') !== '2') invalid();
+  if (markers.has('deletionFactsVersion') && markers.get('deletionFactsVersion') !== '1') invalid();
+}
+
 const quote = name => `"${name.replaceAll('"', '""')}"`;
 const invalid = () => {
   throw new Error('SQLite 私有资料结构、契约或完整性校验失败，未生成核对结论。');
@@ -76,6 +126,7 @@ function validateTableShapes(db, tables, version) {
 /** 所属模块的只读解码、哈希、索引及历史关联校验，不能仅以 JSON 可解析标记 checked。 */
 export function validatePrivateHistory(db, tables, version) {
   try {
+    validatePrivateHistorySchema(db, tables, version);
     if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='view' LIMIT 1").get()) invalid();
     if (
       db
