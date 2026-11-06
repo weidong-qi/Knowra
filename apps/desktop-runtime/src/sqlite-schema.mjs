@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { AI_SQLITE_DDL } from './ai-sqlite-schema.mjs';
+import { AI_SQLITE_DDL, AI_ACCESS_SQLITE_DDL, AI_CONVERSATION_SQLITE_DDL } from './ai-sqlite-schema.mjs';
 
 export const LOCAL_DATABASE_VERSION = 7;
 export const SYNC_PROTOCOL_VERSION = 1;
@@ -10,7 +10,11 @@ export function initializeDatabase(db, filePath) {
   if (version === LOCAL_DATABASE_VERSION) return;
   if (version === 6) return tryAiUpgrade(() => upgradeAiConversationSchema(db, filePath));
   if (version === 5) return tryAiUpgrade(() => upgradeAiAccessSchema(db, filePath));
-  if (version === 4) return tryAiUpgrade(() => { upgradeAiAnswerSchema(db, filePath); upgradeAiAccessSchema(db, filePath); });
+  if (version === 4)
+    return tryAiUpgrade(() => {
+      upgradeAiAnswerSchema(db, filePath);
+      upgradeAiAccessSchema(db, filePath);
+    });
   if (version === 3) return tryAiUpgrade(() => upgradeAiSchema(db, filePath));
   if (version === 2) {
     const backup = `${filePath}.before-v3-${Date.now()}.bak`;
@@ -75,8 +79,10 @@ export function initializeDatabase(db, filePath) {
 }
 
 function tryAiUpgrade(operation) {
-  try { operation(); return null; }
-  catch (error) {
+  try {
+    operation();
+    return null;
+  } catch (error) {
     // 这里只捕获独立 AI schema 的升级；核心表版本/完整性故障继续向上抛出。
     return { aiError: error };
   }
@@ -90,7 +96,12 @@ function upgradeAiAnswerSchema(db, filePath, { backup = true } = {}) {
   }
   db.exec('BEGIN IMMEDIATE');
   try {
-    const columns = new Set(db.prepare('PRAGMA table_info(ai_jobs)').all().map(column => column.name));
+    const columns = new Set(
+      db
+        .prepare('PRAGMA table_info(ai_jobs)')
+        .all()
+        .map(column => column.name)
+    );
     if (!columns.has('question')) db.exec('ALTER TABLE ai_jobs ADD COLUMN question TEXT');
     if (!columns.has('result_json')) db.exec('ALTER TABLE ai_jobs ADD COLUMN result_json TEXT');
     db.exec('PRAGMA user_version = 5; COMMIT;');
@@ -127,27 +138,8 @@ function upgradeAiAccessSchema(db, filePath, { backup = true } = {}) {
   }
   db.exec('BEGIN IMMEDIATE');
   try {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS ai_access_policies (
-        policy_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, dataset_id TEXT NOT NULL,
-        dataset_epoch TEXT NOT NULL, space_id TEXT NOT NULL, revision INTEGER NOT NULL,
-        record_hash TEXT NOT NULL, record_json TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS ai_access_policies_owner ON ai_access_policies(owner_id, dataset_id, dataset_epoch, space_id);
-      CREATE TABLE IF NOT EXISTS ai_run_grants (
-        grant_id TEXT PRIMARY KEY, policy_id TEXT NOT NULL REFERENCES ai_access_policies(policy_id),
-        owner_id TEXT NOT NULL, dataset_id TEXT NOT NULL, dataset_epoch TEXT NOT NULL,
-        space_id TEXT NOT NULL, record_hash TEXT NOT NULL, record_json TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS ai_run_grants_policy ON ai_run_grants(policy_id);
-      CREATE TABLE IF NOT EXISTS ai_request_manifests (
-        manifest_id TEXT PRIMARY KEY, grant_id TEXT NOT NULL REFERENCES ai_run_grants(grant_id),
-        owner_id TEXT NOT NULL, dataset_id TEXT NOT NULL, dataset_epoch TEXT NOT NULL,
-        space_id TEXT NOT NULL, record_hash TEXT NOT NULL, record_json TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS ai_request_manifests_grant ON ai_request_manifests(grant_id);
-      PRAGMA user_version = 6;
-    `);
+    db.exec(AI_ACCESS_SQLITE_DDL);
+    db.exec('PRAGMA user_version = 6');
     db.exec('COMMIT');
   } catch (error) {
     if (db.isTransaction) db.exec('ROLLBACK');
@@ -164,14 +156,8 @@ function upgradeAiConversationSchema(db, filePath, { backup = true } = {}) {
   }
   db.exec('BEGIN IMMEDIATE');
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS ai_conversation_records (
-      kind TEXT NOT NULL, record_id TEXT NOT NULL, owner_id TEXT NOT NULL,
-      dataset_id TEXT NOT NULL, dataset_epoch TEXT NOT NULL, space_id TEXT NOT NULL,
-      record_hash TEXT NOT NULL, record_json TEXT NOT NULL,
-      PRIMARY KEY (kind, record_id)
-    );
-    CREATE INDEX IF NOT EXISTS ai_conversation_scope ON ai_conversation_records(owner_id, dataset_id, dataset_epoch, space_id, kind);
-    PRAGMA user_version = 7;`);
+    db.exec(AI_CONVERSATION_SQLITE_DDL);
+    db.exec('PRAGMA user_version = 7');
     db.exec('COMMIT');
   } catch (error) {
     if (db.isTransaction) db.exec('ROLLBACK');

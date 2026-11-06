@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { isDirectExecution } from './cli-entry.mjs';
 import {
@@ -7,64 +6,9 @@ import {
   referencedAnnotationRevisions
 } from '../apps/api/src/modules/knowledge/domain/history-retention.ts';
 import { createNoteVersionReferenceIndex } from '../apps/api/src/modules/knowledge/domain/note-version-references.ts';
-import { LOCAL_DATA_SCHEMA_VERSION, LOCAL_SNAPSHOT_VERSION } from '../apps/api/src/infrastructure/local-data-schema.js';
-import { LOCAL_DATABASE_VERSION } from '../apps/desktop-runtime/src/sqlite-schema.mjs';
-
-function parseJson(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error('源数据不是有效 JSON，未生成核对结论。');
-  }
-}
-
-function assertBusinessSchema(version) {
-  if (version !== undefined && (!Number.isInteger(version) || version < 1 || version > LOCAL_DATA_SCHEMA_VERSION))
-    throw new Error('业务存储 schema 版本不受支持，未生成核对结论。');
-}
-
-function assertJsonVersion(document) {
-  if (!document || typeof document !== 'object' || Array.isArray(document)) throw new Error('JSON 存储文档格式无效。');
-  if (document.version !== undefined && ![LOCAL_SNAPSHOT_VERSION, 'v2-local-json'].includes(document.version))
-    throw new Error('JSON 快照版本不受支持，未生成核对结论。');
-  assertBusinessSchema(document.schemaVersion);
-}
-
-/** 只统计核心实体，不加载普通存储，避免触发迁移、自动回收或写回。 */
-export async function readRetirementSource(driver, source) {
-  if (driver === 'local-json') {
-    const parsed = parseJson(fs.readFileSync(source, 'utf8'));
-    assertJsonVersion(parsed);
-    if (!Object.hasOwn(parsed, 'data')) return parsed;
-    assertJsonVersion(parsed.data);
-    return parsed.data;
-  }
-  if (driver !== 'sqlite') throw new Error('driver 只支持 local-json 或 sqlite。');
-  const { DatabaseSync } = await import('node:sqlite');
-  const database = new DatabaseSync(source, { readOnly: true });
-  try {
-    database.exec('BEGIN');
-    const version = database.prepare('PRAGMA user_version').get().user_version;
-    if (!Number.isInteger(version) || version < 1 || version > LOCAL_DATABASE_VERSION)
-      throw new Error('SQLite 数据库版本不受支持，未生成核对结论。');
-    const marker = database.prepare("SELECT value FROM metadata WHERE key = 'localDataSchemaVersion'").get()?.value;
-    if (marker !== undefined && (typeof marker !== 'string' || !/^[1-9][0-9]*$/.test(marker)))
-      throw new Error('SQLite 业务 schema 标记无效，未生成核对结论。');
-    // 与桌面存储读取规则一致：没有业务 schema 标记的历史库按 schema6 解释，不写回标记。
-    const schemaVersion = marker === undefined ? 6 : Number(marker);
-    assertBusinessSchema(schemaVersion);
-    const state = Object.assign(Object.create(null), { schemaVersion, notes: [], contentAnnotations: [] });
-    for (const row of database.prepare('SELECT collection, payload FROM entities').all()) {
-      if (typeof row.collection !== 'string' || typeof row.payload !== 'string')
-        throw new Error('SQLite 核心实体格式无效。');
-      if (!Object.hasOwn(state, row.collection)) state[row.collection] = [];
-      state[row.collection].push(parseJson(row.payload));
-    }
-    return state;
-  } finally {
-    database.close();
-  }
-}
+import { assertJsonVersion, readRetirementInspection } from './inline-annotation-retirement-source.mjs';
+import { inspectPrivateReferences } from './inline-annotation-retirement-private.mjs';
+export { readRetirementSource, readRetirementInspection } from './inline-annotation-retirement-source.mjs';
 
 const counts = values => {
   const result = Object.create(null);
@@ -73,7 +17,7 @@ const counts = values => {
 };
 
 /** 这是旧行存量检查，不是删除计划，也不代表存储迁移已可部署。 */
-export function inspectAnnotationRetirement(state, now = Date.now()) {
+export function inspectAnnotationRetirement(state, now = Date.now(), inspection) {
   assertJsonVersion(state);
   if (!Array.isArray(state?.notes) || !Array.isArray(state?.contentAnnotations) || !Number.isFinite(now))
     throw new Error('核对需要 notes、contentAnnotations 集合及有效时间。');
@@ -126,7 +70,7 @@ export function inspectAnnotationRetirement(state, now = Date.now()) {
     else retentionEnds.push(deletedAt + DELETED_ANNOTATION_RETENTION_MS);
   }
   const notes = new Map(state.notes.map(note => [note.id, note]));
-  return {
+  const report = {
     scope: 'core-entities-only',
     status: legacy.length ? 'legacy-rows-remain' : 'no-legacy-rows',
     generatedAt: new Date(now).toISOString(),
@@ -147,12 +91,27 @@ export function inspectAnnotationRetirement(state, now = Date.now()) {
         : null
     }
   };
+  if (inspection) {
+    if (inspection.state !== state) throw new Error('核对上下文与核心实体不一致。');
+    report.scope = 'active-store-with-private-and-pending-sync';
+    report.coverage = inspection.coverage;
+    report.privateRecords = inspectPrivateReferences(inspection.privateSources, targets, revisions);
+    report.pendingSync = inspectPrivateReferences(inspection.pendingSyncSources, targets, revisions);
+    if (!legacy.length) {
+      if (Object.values(inspection.coverage).some(value => value.startsWith('unavailable')))
+        report.status = 'incomplete-inspection';
+      else if (report.privateRecords.legacyCopies || report.pendingSync.legacyCopies)
+        report.status = 'legacy-copies-remain';
+      else if (report.pendingSync.valuesScanned) report.status = 'pending-sync-remains';
+    }
+  }
+  return report;
 }
 
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
     console.log(
-      '用法：node scripts/inspect-inline-annotation-retirement.mjs --driver=local-json|sqlite --source=文件\n只读核对核心实体，不输出正文、标题、对象 ID 或执行删除；旧行仍在时退出码为 2。即使留存期已过也不会假定旧行已回收。私有任务、待同步请求和旧备份的兼容性须另行核对。'
+      '用法：node scripts/inspect-inline-annotation-retirement.mjs --driver=local-json|sqlite --source=文件\n只读核对活动核心实体、私有记录和未确认同步请求，不输出正文、标题、对象 ID 或执行删除；旧行/旧副本/未确认请求仍在或覆盖不完整时退出 2，未知版本或格式损坏退出 1。已确认 outbox 不算待同步；旧备份兼容性须另行核对。'
     );
     return;
   }
@@ -163,10 +122,10 @@ async function main(args) {
     options[match[1]] = match[2];
   }
   if (!options.driver || !options.source) throw new Error('必须明确指定 --driver 和 --source。');
-  const state = await readRetirementSource(options.driver, path.resolve(options.source));
-  const report = inspectAnnotationRetirement(state);
+  const inspection = await readRetirementInspection(options.driver, path.resolve(options.source));
+  const report = inspectAnnotationRetirement(inspection.state, Date.now(), inspection);
   console.log(JSON.stringify(report, null, 2));
-  process.exitCode = report.legacy.total ? 2 : 0;
+  process.exitCode = report.status === 'no-legacy-rows' ? 0 : 2;
 }
 
 if (isDirectExecution(import.meta.url)) {
