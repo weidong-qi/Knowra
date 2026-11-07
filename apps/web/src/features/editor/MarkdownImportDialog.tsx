@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { MarkdownImportSource } from '@study-accelerator/web-core';
-import { Button, Dialog, DialogBody, DialogClose, DialogFooter, FileDropField } from '../../components/ui';
+import { Button, Dialog, DialogBody, DialogClose, DialogFooter, FileDropField, IconButton } from '../../components/ui';
 import { CloseIcon, NoteIcon } from '../../components/icons/knowra';
 import styles from './MarkdownImportDialog.module.css';
 
@@ -88,14 +88,14 @@ export function MarkdownImportDialog({
                 <li key={fileKey(file)}>
                   <NoteIcon size={16} />
                   <span><strong>{file.name}</strong><small>{formatBytes(file.size)}</small></span>
-                  <button
-                    type="button"
+                  <IconButton
+                    size={28}
                     aria-label={`移除 ${file.name}`}
-                    disabled={pending}
-                    onClick={() => setFiles((current) => current.filter((item) => fileKey(item) !== fileKey(file)))}
+                    isDisabled={pending}
+                    onPress={() => setFiles(current => current.filter(item => fileKey(item) !== fileKey(file)))}
                   >
                     <CloseIcon size={14} />
-                  </button>
+                  </IconButton>
                 </li>
               ))}
             </ul>
