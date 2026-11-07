@@ -8,12 +8,16 @@ import { executablePath } from './packaged-app-path.mjs';
 import { PACKAGED_STARTUP_TIMEOUT_MS } from './editor-readiness.mjs';
 import { closeTestApplication, launchTestApplication } from './app-lifecycle.mjs';
 import { syntheticCjkPdf } from '../../../scripts/test-support/pdf-fixtures.mjs';
+import { capturePdfNavigation, navigateToPackagedPdf } from './pdf-navigation.mjs';
 
 test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退出评论保存', { timeout: 90000 }, async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-packaged-pdf-'));
   let app;
   let completed = false;
+  const navigationEvents = [];
+  let navigation;
   t.after(async () => {
+    if (!completed) t.diagnostic(`PDF 导航诊断：${JSON.stringify(navigationEvents)}`);
     if (!completed && app) {
       try {
         const failedPage = await app.firstWindow();
@@ -22,6 +26,7 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
         t.diagnostic(`PDF 失败页面读取失败：${error.message}`);
       }
     }
+    navigation?.dispose();
     await closeTestApplication(app);
     fs.rmSync(directory, { recursive: true, force: true });
   });
@@ -42,6 +47,7 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   };
   app = await launchReady();
   let page = await app.firstWindow();
+  navigation = capturePdfNavigation(page, 'initial-import', navigationEvents);
   await page.waitForLoadState('domcontentloaded');
   const foreign = [];
   page.on('request', request => {
@@ -70,10 +76,13 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
     },
     [...bytes]
   );
-  const route = `/#/materials/notes/${note.id}`;
-  await page.goto(new URL(route, page.url()).href);
-  await page.reload();
+  let expectedUrl = await navigateToPackagedPdf(page, note.id, {
+    refreshWorkspace: true,
+    diagnostic: navigation.checkpoint
+  });
   await expect(page.locator('.textLayer').first()).toContainText('知境阅读与标注', { timeout: 30000 });
+  assert.equal(page.url(), expectedUrl, '首次 PDF 文字层就绪后必须仍在目标笔记。');
+  navigation.checkpoint({ phase: 'text-layer-ready', url: page.url(), expectedUrl });
   await page.getByRole('button', { name: '区域框选', exact: true }).click();
   const bounds = await page.locator('.canvasWrapper').first().boundingBox();
   assert(bounds);
@@ -91,13 +100,16 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await comment.fill('退出前的本机评论');
   // 在 450ms 防抖结束前退出，必须由现有退出握手提交。
   await closeTestApplication(app);
+  navigation.dispose();
   app = null;
   app = await launchReady();
   page = await app.firstWindow();
+  navigation = capturePdfNavigation(page, 'after-restart', navigationEvents);
   await page.waitForLoadState('domcontentloaded');
-  await page.goto(new URL(route, page.url()).href);
-  await page.reload();
+  expectedUrl = await navigateToPackagedPdf(page, note.id, { diagnostic: navigation.checkpoint });
   await expect(page.locator('.textLayer').first()).toContainText('知境阅读与标注', { timeout: 30000 });
+  assert.equal(page.url(), expectedUrl, '重启后 PDF 文字层就绪时必须仍在目标笔记。');
+  navigation.checkpoint({ phase: 'text-layer-ready', url: page.url(), expectedUrl });
   await page.getByRole('button', { name: markLabel, exact: true }).click();
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('退出前的本机评论', {
     timeout: 30000
