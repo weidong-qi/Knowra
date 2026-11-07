@@ -1,10 +1,90 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { test } from 'node:test';
+import { anchorForBlock, projectMarkdown } from '@study-accelerator/content-anchor';
+import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.ts';
+import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { temporaryDirectory, markText, inlineId } from './helpers.mjs';
+
+for (const sqlite of [false, true])
+  for (const schemaVersion of [1, 2])
+    test(`${sqlite ? 'SQLite' : 'JSON'}：普通保存与重启保全到期 v${schemaVersion} 旧重点及其历史`, t => {
+      const root = temporaryDirectory(t);
+      const file = path.join(root, sqlite ? 'local.sqlite' : 'cloud.json');
+      const open = () => (sqlite ? createSqliteDataStore(file) : createFileDataStore(file));
+      let store = open();
+      t.after(() => store.close?.());
+      const knowledge = createAppContext({ dataStore: store, storageRootDir: root }).modules.knowledge;
+      const space = knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
+      const note = knowledge.noteService.createNote({ spaceId: space.id, title: '到期保全', rawMarkdown: '当前正文' });
+      const version = new NoteVersion({
+        id: 'old-version',
+        noteId: note.id,
+        content: '旧正文',
+        createdAt: '2026-01-01T00:00:00Z'
+      });
+      knowledge.repositories.noteVersionRepository.save(version);
+      const anchor = { ...anchorForBlock(projectMarkdown(version.content), 0), noteVersionId: version.id };
+      const annotation = new ContentAnnotation({
+        id: `legacy-${schemaVersion}`,
+        noteId: note.id,
+        spaceId: space.id,
+        noteVersionId: version.id,
+        schemaVersion,
+        scopeType: 'blocks',
+        anchor,
+        originSnapshot: {
+          noteVersionId: version.id,
+          contentHash: version.contentHash,
+          scopeType: 'blocks',
+          segments: anchor.segments,
+          quoteText: anchor.quoteText,
+          headingPath: []
+        },
+        quoteText: anchor.quoteText,
+        fromPosition: anchor.sourceStart,
+        toPosition: anchor.sourceEnd,
+        anchorFingerprint: 'legacy-retention',
+        noteContentHash: version.contentHash,
+        idempotencyKey: 'legacy-retention',
+        revision: 13,
+        lifecycleStatus: 'deleted',
+        deletedAt: '2026-01-02T00:00:00Z'
+      });
+      knowledge.repositories.contentAnnotationRepository.save(annotation);
+      for (let revision = 1; revision <= 13; revision++)
+        knowledge.repositories.annotationRevisionRepository.save({
+          id: `annotation-revision-${revision}`,
+          annotationId: annotation.id,
+          revision,
+          operation: 'metadataUpdated',
+          oldAnchor: null,
+          newAnchor: anchor,
+          rangeSummary: { scopeType: 'blocks', quoteText: anchor.quoteText },
+          reason: null,
+          createdAt: '2026-01-02T00:00:00Z'
+        });
+      const before = structuredClone({
+        annotations: store.state.contentAnnotations,
+        revisions: store.state.annotationRevisions,
+        versions: store.state.noteVersions
+      });
+      knowledge.noteService.updateNote(note.id, {
+        title: '到期后仍可正常保存',
+        updatedAt: new Date(Date.now() + 1000).toISOString()
+      });
+      for (let restart = 0; restart < 2; restart++) {
+        assert.deepEqual(structuredClone(store.state.contentAnnotations), before.annotations);
+        assert.deepEqual(structuredClone(store.state.annotationRevisions), before.revisions);
+        assert.deepEqual(structuredClone(store.state.noteVersions), before.versions);
+        assert.equal(store.deletionFacts?.has('contentAnnotations', annotation.id) ?? false, false);
+        store.close?.();
+        store = open();
+      }
+    });
 
 for (const sqlite of [false, true])
   test(`${sqlite ? 'SQLite 离线' : 'JSON 在线'}：连续编辑不产生重点自动修订，人工修改备注正常保存`, t => {

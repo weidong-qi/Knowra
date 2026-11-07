@@ -94,7 +94,7 @@ test('完整 JSON/SQLite 快照的过期历史阻塞请求；预演与标准 HTT
   assert.equal(report.status, 'blocked');
   assert.deepEqual(report.blockers, ['history-retention-side-effects']);
   assert.deepEqual(report.retentionPreview, {
-    annotationRevisions: 1,
+    annotationRevisions: 0,
     noteVersions: 1,
     contentAnnotations: 0,
     annotationExclusions: 0
@@ -132,7 +132,7 @@ test('完整 JSON/SQLite 快照的过期历史阻塞请求；预演与标准 HTT
   assert.deepEqual(persisted.state.notes, f.cloud.state.notes);
 });
 
-test('取消使当前修订失去自保时，也在生成请求前阻塞', async t => {
+test('取消旧重点后仍保全原修订，不把留存到期当成删除许可', async t => {
   const f = await fixture(t);
   for (const inspection of [f.cloud, f.device]) {
     inspection.state.noteVersions = inspection.state.noteVersions.filter(row => row.id !== f.oldVersion.id);
@@ -140,12 +140,12 @@ test('取消使当前修订失去自保时，也在生成请求前阻塞', async
   }
   assert.equal(planHistoryRetention(f.cloud.state, { now: f.now }).removedRevisions.size, 0);
   const result = planV1AnnotationMaintenance(f.cloud, f.device, f.now);
-  assert.deepEqual(result.report.blockers, ['history-retention-side-effects']);
-  assert.equal(result.report.retentionPreview.annotationRevisions, 1);
-  assert.equal(result.request, null);
+  assert.equal(result.report.status, 'ready-for-maintenance-window');
+  assert.equal(result.report.retentionPreview.annotationRevisions, 0);
+  assert.equal(result.request.method, 'DELETE');
 });
 
-test('预演覆盖同笔记其他已取消重点及其修订、排除区间，不只检查目标', async t => {
+test('预演保全同笔记其他已取消旧重点及其修订、排除区间', async t => {
   const f = await fixture(t);
   for (const inspection of [f.cloud, f.device]) {
     inspection.state.contentAnnotations.push({
@@ -167,10 +167,10 @@ test('预演覆盖同笔记其他已取消重点及其修订、排除区间，�
   const result = planV1AnnotationMaintenance(f.cloud, f.device, f.now);
   assert.equal(result.request, null);
   assert.deepEqual(result.report.retentionPreview, {
-    annotationRevisions: 2,
+    annotationRevisions: 0,
     noteVersions: 1,
-    contentAnnotations: 1,
-    annotationExclusions: 1
+    contentAnnotations: 0,
+    annotationExclusions: 0
   });
 });
 
@@ -199,7 +199,7 @@ test('复用保留期限的严格边界，时间变化后须重新预检', async
   const result = planV1AnnotationMaintenance(f.cloud, f.device, f.now + 1);
   assert.equal(result.report.status, 'blocked');
   assert.equal(result.report.retentionPreview.noteVersions, 1);
-  assert.equal(result.report.retentionPreview.annotationRevisions, 1);
+  assert.equal(result.report.retentionPreview.annotationRevisions, 0);
   assert.equal(result.request, null);
 });
 
@@ -214,7 +214,7 @@ test('云端私有引用遵循持久化保留根，任务工作区副本不能�
   assert.equal(planV1AnnotationMaintenance(f.cloud, f.device, f.now).request, null);
 });
 
-test('未过期但超过修订数量上限的历史也会阻塞，预演包含取消后的新修订', async t => {
+test('旧重点的原修订超过普通数量上限也保全，取消后不额外裁剪', async t => {
   const f = await fixture(t);
   for (const inspection of [f.cloud, f.device]) {
     inspection.state.noteVersions = inspection.state.noteVersions.filter(row => row.id !== f.oldVersion.id);
@@ -228,6 +228,6 @@ test('未过期但超过修订数量上限的历史也会阻塞，预演包含�
   }
   assert.equal(planHistoryRetention(f.cloud.state, { now: f.now }).removedRevisions.size, 0);
   const result = planV1AnnotationMaintenance(f.cloud, f.device, f.now);
-  assert.equal(result.report.retentionPreview.annotationRevisions, 1);
-  assert.equal(result.request, null);
+  assert.equal(result.report.retentionPreview.annotationRevisions, 0);
+  assert.equal(result.request.method, 'DELETE');
 });

@@ -24,7 +24,7 @@ export const ANNOTATION_REVISION_RETENTION: Readonly<AnnotationRevisionRetention
   sampleMs: 10 * 60 * 1000,
   maxBytesPerAnnotation: 128 * 1024
 });
-/** 已取消（deleted）的旧版重点保留 7 天后可回收；v3 确定性 ID 保留供历史恢复（《重点标记内联化方案》12.5，用户确认）。 */
+/** 已取消旧重点的最短留存期；到期仅可预演，不自动取得删除授权。 */
 export const DELETED_ANNOTATION_RETENTION_MS = 7 * DAY;
 /** 回收可能改动的全部集合：调用方据此回写，不要只回写其中一部分。 */
 export const HISTORY_RETENTION_COLLECTIONS = Object.freeze([
@@ -245,7 +245,7 @@ function selectAnnotationsToPrune(
   return { annotations: candidates, exclusions, revisions };
 }
 
-/** 只规划，不改写输入；先回收过期的已取消重点，再裁剪标注过程历史，最后释放它们独占的正文版本。 */
+/** 只规划，不改写输入；默认保全已取消旧重点及其历史，回收须单独确认与预演。 */
 export function planHistoryRetention(
   input: HistoryRetentionState,
   {
@@ -257,20 +257,35 @@ export function planHistoryRetention(
     canDiscard = () => true,
     notePolicy = NOTE_VERSION_RETENTION,
     annotationPolicy = ANNOTATION_REVISION_RETENTION,
-    deletedAnnotationRetentionMs = DELETED_ANNOTATION_RETENTION_MS
+    deletedAnnotationRetentionMs = DELETED_ANNOTATION_RETENTION_MS,
+    allowDeletedAnnotationPrune = false
   }: HistoryRetentionOptions = {}
 ): HistoryRetentionPlan {
   const notes = new Map((input.notes ?? []).map(note => [note.id, note]));
   const annotations = new Map((input.contentAnnotations ?? []).map(annotation => [annotation.id, annotation]));
   const selected = (id: string | null | undefined) => !noteIds || noteIds.has(id);
-  const pruned = selectAnnotationsToPrune(input, {
-    now,
-    selected,
-    externalReferences,
-    protectedRevisionIds,
-    canDiscard,
-    retentionMs: deletedAnnotationRetentionMs
-  });
+  // 普通业务与同步没有逐项清理授权，不因时间推进删除旧重点或裁掉其恢复依据。
+  // 显式选项只供纯规划；它不提供维护执行入口，也不能替代调用方的单独授权。
+  const retainedLegacyIds = new Set(
+    (input.contentAnnotations ?? [])
+      .filter(
+        annotation =>
+          !allowDeletedAnnotationPrune &&
+          annotation.schemaVersion !== INLINE_ANNOTATION_SCHEMA &&
+          annotation.lifecycleStatus === 'deleted'
+      )
+      .map(annotation => annotation.id)
+  );
+  const pruned = allowDeletedAnnotationPrune
+    ? selectAnnotationsToPrune(input, {
+        now,
+        selected,
+        externalReferences,
+        protectedRevisionIds,
+        canDiscard,
+        retentionMs: deletedAnnotationRetentionMs
+      })
+    : { annotations: new Set<string>(), exclusions: new Set<string>(), revisions: new Set<string>() };
   const state = pruned.annotations.size
     ? {
         ...input,
@@ -292,6 +307,7 @@ export function planHistoryRetention(
       records
         .filter(
           record =>
+            retainedLegacyIds.has(record.annotationId) ||
             protectedRevisionIds.has(record.id) ||
             isRevisionReferenced(record) ||
             !canDiscard('annotationRevisions', record)

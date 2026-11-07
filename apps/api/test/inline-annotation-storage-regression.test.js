@@ -118,7 +118,7 @@ export const inlineAnnotationStorageRegressionTests = [
     }
   },
   {
-    name: '云端保留可由历史正文恢复的 v3 确定性 ID，仍回收无引用 v2',
+    name: '云端默认保全到期 v2 与可恢复的 v3；显式维护预演也不回收 v3',
     run() {
       const state = deletedState();
       state.contentAnnotations.push({ ...state.contentAnnotations[0], id: 'annotation-inline', schemaVersion: 3 });
@@ -127,12 +127,11 @@ export const inlineAnnotationStorageRegressionTests = [
         [{ collection: 'notes', id: 'note-n', value: state.notes[0] }],
         NOW
       );
-      assert.deepEqual(
-        result.contentAnnotations.map(item => item.id),
-        ['annotation-inline']
-      );
-      assert.deepEqual(result.annotationExclusions, []);
-      assert.deepEqual(result.annotationRevisions, []);
+      assert.deepEqual(result, state);
+      const preview = planHistoryRetention(state, { now: NOW, allowDeletedAnnotationPrune: true });
+      assert.deepEqual([...preview.removedAnnotations], ['annotation-old']);
+      assert.deepEqual([...preview.removedExclusions], ['annotation-exclusion-e']);
+      assert.deepEqual([...preview.removedRevisions], ['annotation-revision-r']);
     }
   },
   ...[
@@ -144,7 +143,7 @@ export const inlineAnnotationStorageRegressionTests = [
     run() {
       const state = deletedState();
       const before = structuredClone(state);
-      const plan = planHistoryRetention(state, { now: NOW, ...options });
+      const plan = planHistoryRetention(state, { now: NOW, allowDeletedAnnotationPrune: true, ...options });
       assert.equal(plan.removedAnnotations.size, 0);
       assert.equal(plan.removedExclusions.size, 0);
       assert.equal(plan.removedRevisions.size, 0);

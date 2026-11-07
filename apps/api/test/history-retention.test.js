@@ -46,7 +46,35 @@ const deletedAnnotation = (id, age, extra = {}) => ({
 
 export const historyRetentionTests = [
   {
-    name: '已取消超过 7 天的重点连同排除区间与修订回收；未满 7 天、仍活跃或被引用的保留',
+    name: '留存到期不授权自动删除：v1/v2 旧重点、修订、排除及引用的正文默认保全',
+    run() {
+      for (const schemaVersion of [undefined, 1, 2]) {
+        const state = createEmptyLocalState();
+        state.notes = [{ id: 'n', rawMarkdown: '正文9' }];
+        state.noteVersions = [version(0), version(1), version(9)];
+        state.contentAnnotations = [
+          deletedAnnotation('legacy', 8 * DAY, { schemaVersion, revision: 2, noteVersionId: 'v0' })
+        ];
+        state.annotationExclusions = [{ id: 'exclusion', parentAnnotationId: 'legacy' }];
+        state.annotationRevisions = [
+          revision(1, 40 * DAY, { annotationId: 'legacy', newAnchor: { noteVersionId: 'v1' }, oldAnchor: null }),
+          revision(2, 8 * DAY, { annotationId: 'legacy', newAnchor: null, oldAnchor: null })
+        ];
+        const before = structuredClone(state);
+        for (const at of [now - DAY - 1, now - DAY, now - DAY + 1, now + 30 * DAY]) {
+          const plan = planHistoryRetention(state, { now: at });
+          assert.equal(plan.removedAnnotations.size, 0);
+          assert.equal(plan.removedExclusions.size, 0);
+          assert.equal(plan.removedRevisions.size, 0);
+          assert.equal(plan.removedVersions.size, 0);
+          assert.deepEqual(applyHistoryRetentionPlan(state, plan), before);
+          assert.deepEqual(state, before, '预演不修改原状态');
+        }
+      }
+    }
+  },
+  {
+    name: '显式维护预演才规划旧重点回收；未满 7 天、仍活跃或被引用的保留',
     run() {
       const state = createEmptyLocalState();
       state.notes = [{ id: 'n', rawMarkdown: '正文' }];
@@ -76,6 +104,7 @@ export const historyRetentionTests = [
       state.analysisScopeSnapshots = [{ id: 's', selections: [{ annotationId: 'annotation-scope' }] }];
       const plan = planHistoryRetention(state, {
         now,
+        allowDeletedAnnotationPrune: true,
         externalReferences: [JSON.stringify({ annotationId: 'annotation-private' })]
       });
       assert.deepEqual([...plan.removedAnnotations], ['annotation-old']);
@@ -112,13 +141,14 @@ export const historyRetentionTests = [
       ];
       const plan = planHistoryRetention(state, {
         now,
+        allowDeletedAnnotationPrune: true,
         canDiscard: collection => collection !== 'annotationExclusions'
       });
       assert.equal(plan.removedAnnotations.size, 0);
       assert.equal(plan.removedExclusions.size, 0);
       const synced = planHistoryRetention(
         { ...state, annotationExclusions: [], knowledgeArtifactProvenance: [] },
-        { now, canDiscard: collection => collection !== 'contentAnnotations' }
+        { now, allowDeletedAnnotationPrune: true, canDiscard: collection => collection !== 'contentAnnotations' }
       );
       assert.equal(synced.removedAnnotations.size, 0, '已同步的重点只由云端回收');
     }
