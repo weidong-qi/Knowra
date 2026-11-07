@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { inspectRuntimeBackup } from './backup.mjs';
+import { openReadonlySqliteSnapshot } from './sqlite-readonly-snapshot.mjs';
 import {
   syncContract,
   syncContractQuery,
@@ -21,6 +24,7 @@ import {
   frozenRecoveryHash,
   readRecoverySession,
   recoveryEntries,
+  recoveryBackupHash,
   recoveryError,
   recoveryRevision,
   verifyRetirementProof,
@@ -131,13 +135,35 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
       );
     return info;
   };
+  const validateBackup = (directory, expectedHash) => {
+    try {
+      if (inspectRuntimeBackup(directory).purpose !== 'sync-safety-recovery')
+        throw new Error('不是本次同步恢复的完整备份。');
+      const snapshot = openReadonlySqliteSnapshot(path.join(directory, 'local.sqlite'), { allowSidecars: false });
+      try {
+        if (recoveryBackupHash(snapshot.database) !== expectedHash)
+          throw new Error('备份不是当前完整资料或已发生变化。');
+      } finally {
+        snapshot.close();
+      }
+    } catch {
+      throw recoveryError(
+        'SYNC_RECOVERY_BACKUP_FAILED',
+        '完整备份未通过只读校验或与本机记录不一致；请保留原始资料，仍保持暂停。'
+      );
+    }
+  };
   const backup = async () => {
     if (typeof createBackup !== 'function')
       throw recoveryError('SYNC_RECOVERY_BACKUP_UNAVAILABLE', '缺少完整本机备份能力，尚未作废编号。');
+    const hash = store.readSync(db => recoveryBackupHash(db));
     const directory = await createBackup();
     if (typeof directory !== 'string' || !directory)
       throw recoveryError('SYNC_RECOVERY_BACKUP_FAILED', '完整备份未确认成功，仍保持暂停。');
-    return directory;
+    if (store.readSync(db => recoveryBackupHash(db)) !== hash)
+      throw recoveryError('SYNC_RECOVERY_PREVIEW_CHANGED', '备份期间本机资料已变化，请重新核对后继续。');
+    validateBackup(directory, hash);
+    return { directory, hash };
   };
 
   return {
@@ -147,21 +173,26 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
         if (!meta('safetyPause'))
           throw recoveryError('SYNC_RECOVERY_NOT_PAUSED', '当前没有结果待确认的安全暂停，无需作废编号。');
         const info = await boundServer();
+        if (current && current.stage !== 'completed' && current.localDatasetId !== store.getStatus().datasetId)
+          throw recoveryError(
+            'SYNC_RECOVERY_DIFFERENT_WORKSPACE',
+            '这份资料库已从备份恢复或更换身份，不能复用旧恢复会话；请保留备份人工核对。'
+          );
+        if (meta('authoritativePurgePending'))
+          throw recoveryError(
+            'LOCAL_PURGE_RESULT_PENDING',
+            '另有永久清理结果尚未核对，退役同步编号不能撤销该命令；请先保全并人工核对，仍保持暂停。'
+          );
         if (!current || current.stage === 'completed') {
           if (input.confirmRetire !== true || input.acceptJournalUpgrade !== true)
             throw recoveryError(
               'SYNC_RECOVERY_CONFIRMATION_REQUIRED',
               '请先明确确认旧编号永久作废与服务端同步记录格式门禁。'
             );
-          if (meta('authoritativePurgePending'))
-            throw recoveryError(
-              'LOCAL_PURGE_RESULT_PENDING',
-              '另有永久清理结果尚未核对，退役同步编号不能撤销该命令；请先保全并人工核对，仍保持暂停。'
-            );
           const oldDeviceId = syncSenderDeviceId(store);
           const requests = originalRequests(store, oldDeviceId);
           const sourceHash = store.readSync(db => frozenRecoveryHash(db));
-          const backupDirectory = await backup();
+          const protectedBackup = await backup();
           current = store.metadataTransaction(db => {
             const existing = readRecoverySession(db);
             if (existing && existing.stage !== 'completed') return existing;
@@ -177,8 +208,10 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
               serverUrl: meta('serverUrl'),
               oldDeviceId,
               newDeviceId,
-              backupDirectory,
+              backupDirectory: protectedBackup.directory,
+              backupHash: protectedBackup.hash,
               baselineEpoch: readMeta(db, 'epoch'),
+              localDatasetId: store.getStatus().datasetId,
               sourceHash,
               createdAt: new Date().toISOString(),
               command: {
@@ -204,6 +237,7 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
           current.sourceHash !== store.readSync(db => frozenRecoveryHash(db))
         )
           throw recoveryError('SYNC_RECOVERY_CHANGED', '恢复绑定或原请求已变化，请保留备份重新核对。');
+        validateBackup(current.backupDirectory, current.backupHash);
         let response = await request(
           contracted(
             `device-retirement?deviceId=${encodeURIComponent(current.oldDeviceId)}&recoveryId=${encodeURIComponent(current.id)}`
@@ -377,15 +411,31 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
           `device-retirement?deviceId=${encodeURIComponent(current.oldDeviceId)}&recoveryId=${encodeURIComponent(current.id)}`
         )
       );
+      if (current.localDatasetId !== store.getStatus().datasetId || meta('authoritativePurgePending'))
+        throw recoveryError(
+          'SYNC_RECOVERY_DIFFERENT_WORKSPACE',
+          '资料库身份已改变或有另一个永久清理结果待核对，不能沿用旧恢复决定。'
+        );
       verifyRetirementProof(current, proof, info.datasetEpoch);
+      const successor = await request(`device?deviceId=${encodeURIComponent(current.newDeviceId)}`);
+      if (successor.retired || successor.sequence !== 0)
+        throw recoveryError(
+          'SYNC_RECOVERY_SUCCESSOR_USED',
+          '这次恢复的新编号已被其他副本使用或作废，不能合并身份继续；本机资料仍保留。'
+        );
       if (current.download.binding.datasetEpoch !== info.datasetEpoch) {
         update(current.id, { stage: 'downloading', download: null });
         throw recoveryError('SYNC_RECOVERY_SNAPSHOT_CHANGED', '云端世代已变化，请继续核对既有恢复以重新下载固定快照。');
       }
       if (input.revision !== recoveryRevision(store))
         throw recoveryError('SYNC_RECOVERY_PREVIEW_CHANGED', '本机资料已变化，请刷新全部恢复对照后再选择。');
-      const backupDirectory = await backup();
-      resolveEntityRecovery(store, { ...input, backupDirectory }, noteService, entityTransfer);
+      const protectedBackup = await backup();
+      resolveEntityRecovery(
+        store,
+        { ...input, backupDirectory: protectedBackup.directory },
+        noteService,
+        entityTransfer
+      );
     },
     async verifyBarriers(info, normalRequest) {
       const barriers = meta('recoveryBarriers') ?? [];

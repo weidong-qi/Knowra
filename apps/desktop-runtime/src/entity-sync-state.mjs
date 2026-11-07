@@ -146,7 +146,11 @@ function dirtyEntries(db, state, base, boundaries = [], reviews = [], forceKeys 
     const current = new Map(state[collection].map(item => [item.id, item]));
     const ids = new Set([
       ...current.keys(),
-      ...[...base.values()].filter(entry => entry.collection === collection).map(entry => entry.id)
+      ...[...base.values()].filter(entry => entry.collection === collection).map(entry => entry.id),
+      ...[...forceKeys]
+        .map(key => JSON.parse(key))
+        .filter(([name]) => name === collection)
+        .map(([, id]) => id)
     ]);
     for (const id of ids) {
       const previous = base.get(syncKey(collection, id));
@@ -1060,6 +1064,7 @@ function resolveEntityConflictInternal(
         )
     );
     preserveAttachmentHealth(merged, state);
+    if (recovery) preserveLocalHistoryCopies(db, state, merged, remote);
     assertNoKnowledgeArtifactProvenanceDowngrade(state, merged);
     setState(state, reconcileSyncedSourceStates(merged));
     if (choice === 'copy') {
@@ -1241,6 +1246,8 @@ export function resolveEntityRecovery(
     prepare(db, state) {
       if (readRecoverySession(db)?.id !== session.id || frozenRecoveryHash(db) !== session.sourceHash)
         throw recoveryError('SYNC_RECOVERY_CHANGED', '原请求或暂停事实已变化，请保留备份重新核对。');
+      if (session.localDatasetId !== store.getStatus().datasetId)
+        throw recoveryError('SYNC_RECOVERY_DIFFERENT_WORKSPACE', '旧恢复会话不能用于另一份资料库。');
       archiveRecoveryEvidence(
         db,
         state,

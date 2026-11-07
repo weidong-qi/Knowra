@@ -9,7 +9,8 @@ import { createServer } from '../../api/src/server.js';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
-import { createRuntimeBackup } from '../src/backup.mjs';
+import { createRuntimeBackup, inspectRuntimeBackup } from '../src/backup.mjs';
+import { scopeHash } from '../../api/src/modules/ai/record-contract.ts';
 import { readMeta, nextUpload } from '../src/sync-state.mjs';
 import { openWorkspace } from './helpers.mjs';
 
@@ -40,6 +41,7 @@ async function fixture(t, { delayed = false, loseRetirement = false, failBackup 
   let fail = failBackup;
   let commitFailure = false;
   let editOnBackup = null;
+  let backupOverride = null;
   const fetcher = async (url, init) => {
     if (url.endsWith('/batch')) {
       const body = JSON.parse(init.body);
@@ -86,6 +88,7 @@ async function fixture(t, { delayed = false, loseRetirement = false, failBackup 
           editOnBackup = null;
           edit(workspace);
         }
+        if (backupOverride) return backupOverride(workspace);
         return createRuntimeBackup(workspace.store, localRoot, { purpose: 'sync-safety-recovery' });
       }
     });
@@ -141,6 +144,9 @@ async function fixture(t, { delayed = false, loseRetirement = false, failBackup 
     },
     onBackup: callback => {
       editOnBackup = callback;
+    },
+    overrideBackup: callback => {
+      backupOverride = callback;
     },
     failBackup: value => {
       fail = value;
@@ -571,4 +577,186 @@ test('最终备份期间新编辑也使旧决定失效，不覆盖刚保存的�
   );
   assert.equal(f.a.knowledge.noteService.getNote(f.note.id).rawMarkdown, '最终备份期间的新编辑');
   assert.equal(f.a.engine.status().safetyPaused, true);
+});
+
+test('首次创建已提交但回执丢失，暂停后删除的缺席实体仍形成显式删除意图', async t => {
+  const f = await fixture(t);
+  const tag = f.a.knowledge.tagService.createTag({ spaceId: f.note.spaceId, name: '合成撤回的新标签' });
+  f.arm();
+  await f.a.engine.sync();
+  assert.equal(
+    f.cloudStore.state.tags.some(item => item.id === tag.id),
+    true
+  );
+  f.a.knowledge.deleteTagAndCleanup(tag.id);
+  await f.a.engine.recover(confirm);
+  const preview = f.a.engine.recoveryPreview();
+  const item = preview.items.find(entry => entry.collection === 'tags' && entry.id === tag.id);
+  assert.equal(item.local, null);
+  assert.equal(item.remote.id, tag.id);
+  // 云端选择不得越过本机永久删除事实；仍可明确选择本机删除以收敛。
+  await assert.rejects(
+    f.a.engine.recoverResolve({ recoveryId: preview.recoveryId, revision: preview.revision, choice: 'remote' }),
+    { code: 'LOCAL_DELETION_FACT_CONFLICT' }
+  );
+  assert.equal(f.a.engine.status().safetyPaused, true);
+  const final = await f.a.engine.recoverResolve({
+    recoveryId: preview.recoveryId,
+    revision: preview.revision,
+    choice: 'local'
+  });
+  assert.equal(final.phase, 'synced');
+  assert.equal(
+    f.a.store.state.tags.some(entry => entry.id === tag.id),
+    false
+  );
+  assert.equal(
+    f.cloudStore.state.tags.some(entry => entry.id === tag.id),
+    false
+  );
+});
+
+for (const choice of ['local', 'remote']) {
+  test(`采用${choice}仍保留正式 AI 私有来源引用的本机历史版本别名`, async t => {
+    const f = await fixture(t);
+    const original = f.a.store.state.noteVersions.find(item => item.noteId === f.note.id);
+    const alias = { ...original, id: 'synthetic-private-alias' };
+    f.a.store.runTransaction(() => f.a.store.state.noteVersions.push(alias));
+    const scope = {
+      contractVersion: 1,
+      kind: 'scopeSnapshot',
+      scopeSnapshotId: 'synthetic-scope',
+      ownerId: 'demo',
+      ...f.a.store.aiRepository.identity(),
+      spaceId: f.note.spaceId,
+      scopeKind: 'note',
+      allowedSources: [
+        {
+          sourceId: 'synthetic-source',
+          noteId: f.note.id,
+          noteVersionId: alias.id,
+          contentHash: alias.contentHash,
+          start: 0,
+          end: alias.content.length,
+          quoteHash: alias.contentHash,
+          characters: alias.content.length,
+          estimatedTokens: 2
+        }
+      ],
+      allowedFolderIds: [],
+      excludedSourceIds: [],
+      createdAt: '2026-11-07T00:00:00.000Z'
+    };
+    scope.scopeHash = scopeHash(scope);
+    f.a.store.aiRepository.insert('scopeSnapshot', scope);
+    await f.a.engine.sync();
+    assert(f.a.store.state.noteVersions.some(item => item.id === alias.id));
+    await f.pause();
+    await f.a.engine.recover(confirm);
+    inspectRuntimeBackup(f.meta('recoverySession').backupDirectory);
+    const preview = f.a.engine.recoveryPreview();
+    const final = await f.a.engine.recoverResolve({
+      recoveryId: preview.recoveryId,
+      revision: preview.revision,
+      choice
+    });
+    assert.equal(final.phase, 'synced');
+    assert(f.a.store.state.noteVersions.some(item => item.id === alias.id));
+    assert.equal(
+      f.a.store.aiRepository.get('scopeSnapshot', 'synthetic-scope').allowedSources[0].noteVersionId,
+      alias.id
+    );
+    assert(
+      !f.writes.some(body => body.changes.some(entry => entry.collection === 'noteVersions' && entry.id === alias.id))
+    );
+  });
+}
+
+test('普通 ready 附件损坏时保留救援备份，但不得退役或创建恢复会话', async t => {
+  const f = await fixture(t);
+  const localRoot = path.join(f.root, 'synthetic-local');
+  const context = createAppContext({
+    dataStore: f.a.store,
+    uploadsDir: path.join(localRoot, 'uploads'),
+    storageRootDir: localRoot
+  });
+  const attachment = context.http.storage.uploadAttachment({
+    noteId: f.note.id,
+    fileName: 'synthetic.txt',
+    mimeType: 'text/plain',
+    contentBase64: Buffer.from('synthetic attachment bytes').toString('base64')
+  });
+  await f.a.engine.sync();
+  await f.pause();
+  fs.writeFileSync(path.join(localRoot, attachment.storagePath), 'synthetic corrupted bytes');
+  await assert.rejects(f.a.engine.recover(confirm), { code: 'SYNC_RECOVERY_BACKUP_FAILED' });
+  assert.equal(f.retirements(), 0);
+  assert.equal(f.meta('recoverySession'), null);
+  assert.deepEqual(f.meta('entityUpload'), f.original());
+  assert.equal(fs.readdirSync(path.join(localRoot, 'backups')).length, 1);
+});
+
+for (const kind of ['other-dataset', 'stale-same-dataset', 'stale-final']) {
+  test(`有效但不属于当前完整记录的备份被拒：${kind}`, async t => {
+    const f = await fixture(t);
+    await f.pause();
+    const localRoot = path.join(f.root, 'synthetic-local');
+    if (kind === 'stale-final') await f.a.engine.recover(confirm);
+    let directory;
+    if (kind === 'other-dataset') {
+      const otherRoot = path.join(f.root, 'other-synthetic-local');
+      const other = openWorkspace(otherRoot);
+      directory = createRuntimeBackup(other.store, otherRoot, { purpose: 'sync-safety-recovery' });
+      other.store.close();
+    } else directory = createRuntimeBackup(f.a.store, localRoot, { purpose: 'sync-safety-recovery' });
+    assert.equal(inspectRuntimeBackup(directory).valid, true);
+    f.a.knowledge.noteService.updateNote(f.note.id, { rawMarkdown: '旧备份之后的后继正文' });
+    f.overrideBackup(() => directory);
+    if (kind === 'stale-final') {
+      const preview = f.a.engine.recoveryPreview();
+      await assert.rejects(
+        f.a.engine.recoverResolve({ recoveryId: preview.recoveryId, revision: preview.revision, choice: 'remote' }),
+        { code: 'SYNC_RECOVERY_BACKUP_FAILED' }
+      );
+    } else {
+      await assert.rejects(f.a.engine.recover(confirm), { code: 'SYNC_RECOVERY_BACKUP_FAILED' });
+      assert.equal(f.retirements(), 0);
+    }
+    assert.equal(f.a.knowledge.noteService.getNote(f.note.id).rawMarkdown, '旧备份之后的后继正文');
+    assert.equal(f.a.engine.status().safetyPaused, true);
+    assert.deepEqual(f.meta('entityUpload'), f.original());
+  });
+}
+
+test('从备份形成另一 dataset 后不能复用旧恢复会话，也不重新退役', async t => {
+  const f = await fixture(t);
+  await f.pause();
+  await f.a.engine.recover(confirm);
+  f.a.store.metadataTransaction(db =>
+    db.prepare("UPDATE metadata SET value='synthetic-restored-dataset' WHERE key='datasetId'").run()
+  );
+  await assert.rejects(f.a.engine.recover({}), { code: 'SYNC_RECOVERY_DIFFERENT_WORKSPACE' });
+  const preview = f.a.engine.recoveryPreview();
+  await assert.rejects(
+    f.a.engine.recoverResolve({ recoveryId: preview.recoveryId, revision: preview.revision, choice: 'local' }),
+    { code: 'SYNC_RECOVERY_DIFFERENT_WORKSPACE' }
+  );
+  assert.equal(f.retirements(), 1);
+  assert.deepEqual(f.meta('entityUpload'), f.original());
+});
+
+test('已被其它副本使用的新发送编号不能激活', async t => {
+  const f = await fixture(t);
+  await f.pause();
+  await f.a.engine.recover(confirm);
+  const preview = f.a.engine.recoveryPreview();
+  f.cloudStore.runSyncJournalTransaction(() => {
+    f.cloudStore.getSyncJournal().deviceSequences[preview.newDeviceId] = 1;
+  });
+  await assert.rejects(
+    f.a.engine.recoverResolve({ recoveryId: preview.recoveryId, revision: preview.revision, choice: 'local' }),
+    { code: 'SYNC_RECOVERY_SUCCESSOR_USED' }
+  );
+  assert.equal(f.a.engine.status().safetyPaused, true);
+  assert.deepEqual(f.meta('entityUpload'), f.original());
 });

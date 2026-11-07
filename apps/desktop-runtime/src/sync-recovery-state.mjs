@@ -22,8 +22,11 @@ export function readRecoverySession(db) {
   if (
     !object(session) ||
     session.format !== 'knowra-sync-recovery-v1' ||
-    ![session.id, session.ownerId, session.oldDeviceId, session.newDeviceId].every(identifier) ||
+    ![session.id, session.ownerId, session.oldDeviceId, session.newDeviceId, session.localDatasetId].every(
+      identifier
+    ) ||
     session.oldDeviceId === session.newDeviceId ||
+    !/^[a-f0-9]{64}$/.test(session.backupHash ?? '') ||
     typeof session.backupDirectory !== 'string' ||
     !session.backupDirectory ||
     !['prepared', 'retiring', 'downloading', 'preview', 'completed'].includes(session.stage) ||
@@ -52,6 +55,23 @@ export function frozenRecoveryHash(db) {
     serverUrl: readMeta(db, 'serverUrl'),
     ownerId: readMeta(db, 'ownerId')
   });
+}
+
+/** 恢复备份须覆盖同一份本机的全部持久记录，不能用错库或同库旧备份替代。 */
+export function recoveryBackupHash(db) {
+  return requestHash(
+    db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+      .all()
+      .map(({ name }) => ({
+        name,
+        rows: db
+          .prepare(`SELECT * FROM "${name.replaceAll('"', '""')}"`)
+          .all()
+          .map(row => JSON.stringify(row))
+          .sort()
+      }))
+  );
 }
 
 export function writeRecoverySession(db, session) {
