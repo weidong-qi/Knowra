@@ -4,6 +4,8 @@ import { PdfReaderView } from './PdfReaderView';
 import { readRuntimeConfig } from '../../app/runtimeConfig';
 import { listPdfAnnotations } from './pdfApi';
 
+// 阅读器状态测试不启动 PDF.js 或加载浏览器 worker。
+vi.mock('./pdfRuntime', () => ({ pdfViewerCss: '' }));
 vi.mock('./usePdfViewer', () => ({
   usePdfViewer: () => ({
     containerRef: { current: null },

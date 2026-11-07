@@ -14,10 +14,10 @@ const summaryStep = workflow.split('      - name: Write summary\n')[1].split('  
 const unindent = script => script.replace(/^ {10}/gm, '');
 
 for (const [name, code, stdout, stderr, expected] of [
-  ['clean check', '0', '', '', /0 个类型错误/],
-  ['type diagnostics', '2', 'src/main.js(1,1): error TS2339: test', '', /1 个类型错误/],
+  ['clean check', '0', '', '', /0 个类型错误（退出码 0）/],
+  ['type diagnostics', '2', 'src/main.js(1,1): error TS2339: test', '', /1 个类型错误（退出码 2）/],
   ['compiler launch failure', '127', '', 'tsc: command not found', /检查未完成.*127/],
-  ['stderr diagnostics', '2', '', 'error TS18003: No inputs were found', /1 个类型错误/]
+  ['stderr diagnostics', '2', '', 'error TS18003: No inputs were found', /1 个类型错误（退出码 2）/]
 ]) {
   test(`API report preserves ${name}`, { skip: process.platform === 'win32' }, t => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'knowra-style-report-'));
