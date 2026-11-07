@@ -156,3 +156,97 @@ it('切换聊天实例后旧回执不清除新会话草稿，也不导航回旧�
   expect(screen.getByRole('textbox', { name: '消息' })).toHaveValue('新会话草稿');
   expect(fixture.navigate).not.toHaveBeenCalled();
 });
+
+it('新会话创建等待时继续编辑仍发送已确认问题，并保留新草稿', async () => {
+  let releaseCreate!: (value: Conversation) => void;
+  vi.mocked(conversationApi.create).mockImplementation(
+    () =>
+      new Promise(done => {
+        releaseCreate = done;
+      })
+  );
+  vi.mocked(conversationApi.send).mockResolvedValue(succeeded);
+  render(<AssistantView pathname="/assistant?new=1" onOpenNote={vi.fn()} />);
+  fireEvent.change(screen.getByRole('textbox', { name: '消息' }), { target: { value: '确认发送的问题' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: '发送消息' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: '发送消息' }));
+  await waitFor(() => expect(conversationApi.create).toHaveBeenCalledOnce());
+  const id = vi.mocked(conversationApi.create).mock.calls[0][1];
+  fireEvent.change(screen.getByRole('textbox', { name: '消息' }), { target: { value: '创建期间的新草稿' } });
+  await act(async () => {
+    releaseCreate({ ...conversation, conversationId: id });
+  });
+  await waitFor(() =>
+    expect(conversationApi.send).toHaveBeenCalledWith(id, expect.objectContaining({ content: '确认发送的问题' }))
+  );
+  expect(screen.getByRole('textbox', { name: '消息' })).toHaveValue('创建期间的新草稿');
+  expect(fixture.navigate).toHaveBeenCalledWith(`/assistant?conversationId=${id}`);
+});
+
+it('已有会话发送等待时编辑不清空新草稿，成功回执仍刷新消息', async () => {
+  let releaseSend!: (value: ConversationTurn) => void;
+  vi.mocked(conversationApi.list).mockResolvedValue([conversation]);
+  vi.mocked(conversationApi.send).mockImplementation(
+    () =>
+      new Promise(done => {
+        releaseSend = done;
+      })
+  );
+  render(<AssistantView pathname="/assistant?conversationId=conversation-1" onOpenNote={vi.fn()} />);
+  fireEvent.change(screen.getByRole('textbox', { name: '消息' }), { target: { value: '确认的问题' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: '发送消息' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: '发送消息' }));
+  await waitFor(() => expect(conversationApi.send).toHaveBeenCalledOnce());
+  const readsBefore = vi.mocked(conversationApi.messages).mock.calls.length;
+  vi.mocked(conversationApi.messages).mockResolvedValue([
+    {
+      messageId: 'sent-message',
+      turnId: succeeded.turnId,
+      sequence: 1,
+      role: 'user',
+      content: '确认的问题',
+      sourceRefs: [],
+      sourceFree: true,
+      createdAt: conversation.createdAt
+    },
+    {
+      messageId: 'answer-message',
+      turnId: succeeded.turnId,
+      sequence: 2,
+      role: 'assistant',
+      content: '已回复的问题',
+      sourceRefs: [],
+      sourceFree: true,
+      createdAt: conversation.createdAt
+    }
+  ]);
+  fireEvent.change(screen.getByRole('textbox', { name: '消息' }), { target: { value: '下一条未发问题' } });
+  await act(async () => {
+    releaseSend(succeeded);
+  });
+  await waitFor(() => expect(vi.mocked(conversationApi.messages).mock.calls.length).toBeGreaterThan(readsBefore));
+  expect(await screen.findByText('已回复的问题')).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: '消息' })).toHaveValue('下一条未发问题');
+});
+
+it('默认空历史创建会话后自动选中新ID，成功发送的原草稿仍清空', async () => {
+  let releaseSend!: (value: ConversationTurn) => void;
+  vi.mocked(conversationApi.create).mockImplementation(async (_space, id) => ({ ...conversation, conversationId: id }));
+  vi.mocked(conversationApi.send).mockImplementation(
+    () =>
+      new Promise(done => {
+        releaseSend = done;
+      })
+  );
+  render(<AssistantView pathname="/assistant" onOpenNote={vi.fn()} />);
+  fireEvent.change(screen.getByRole('textbox', { name: '消息' }), { target: { value: '默认新会话问题' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: '发送消息' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: '发送消息' }));
+  await waitFor(() => expect(conversationApi.send).toHaveBeenCalledOnce());
+  const id = vi.mocked(conversationApi.create).mock.calls[0][1];
+  await waitFor(() => expect(conversationApi.messages).toHaveBeenCalledWith(id, 0));
+  await act(async () => {
+    releaseSend({ ...succeeded, conversationId: id });
+  });
+  await waitFor(() => expect(screen.getByRole('textbox', { name: '消息' })).toHaveValue(''));
+});

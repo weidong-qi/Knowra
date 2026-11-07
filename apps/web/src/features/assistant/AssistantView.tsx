@@ -159,6 +159,10 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
       pendingSend.current = null;
     };
   }, []);
+  const sendContext = useRef({ spaceId, pathname });
+  if (sendContext.current.spaceId !== spaceId || sendContext.current.pathname !== pathname) {
+    sendContext.current = { spaceId, pathname };
+  }
   const selection = useRef<string | null>(null);
   const refreshSequence = useRef(0);
   const scopeRevision = useRef(0);
@@ -425,6 +429,7 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
   }
 
   function chooseConversation(id: string) {
+    sendContext.current = { spaceId, pathname };
     pendingSend.current = null;
     setDraft('');
     setError(null);
@@ -435,6 +440,7 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
 
   function switchSpace(id: string) {
     if (!id || id === spaceId) return;
+    sendContext.current = { spaceId, pathname };
     pendingSend.current = null;
     setInboxOpen(false);
     setFocusedActionId(null);
@@ -484,6 +490,7 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
     )
       return;
     const capturedSelection = selection.current;
+    const capturedContext = sendContext.current;
     const content = draft.trim();
     const requestedPolicyId = chosenPolicy?.policyId ?? null;
     if (scopeChoice !== 'plain' && !chosenPolicy) {
@@ -505,8 +512,9 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
     const isCurrentSend = () =>
       alive.current &&
       space.current === spaceId &&
-      selection.current === capturedSelection &&
-      pendingSend.current === intent;
+      sendContext.current === capturedContext &&
+      (selection.current === capturedSelection ||
+        (capturedSelection === null && selection.current === intent.conversationId));
     refreshSequence.current++;
     setPending(true);
     setError(null);
@@ -526,8 +534,11 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
         requestedPolicyId: intent.requestedPolicyId
       });
       if (!isCurrentSend()) return;
-      pendingSend.current = null;
-      setDraft('');
+      // 发送结果仍须刷新；只有没有继续编辑的原草稿才可以清空。
+      if (pendingSend.current === intent) {
+        pendingSend.current = null;
+        setDraft('');
+      }
       setTurns(previous => ({ ...previous, [turn.turnId]: turn }));
       if (selection.current === intent.conversationId) await refreshConversation(intent.conversationId);
       else navigate(`/assistant?conversationId=${encodeURIComponent(intent.conversationId)}`);
@@ -744,6 +755,7 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
               size="workspace"
               variant="primary"
               onPress={() => {
+                sendContext.current = { spaceId, pathname };
                 pendingSend.current = null;
                 setDraft('');
                 setInboxOpen(false);
