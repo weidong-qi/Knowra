@@ -80,6 +80,12 @@ for (const mode of ['light', 'dark'] as const) {
           await expect(group).toHaveAttribute('aria-expanded', 'false');
           await page.keyboard.press('Space');
           await expect(group).toHaveAttribute('aria-expanded', 'true');
+          if (mobile) {
+            await group.tap();
+            await expect(group).toHaveAttribute('aria-expanded', 'false');
+            await group.tap();
+            await expect(group).toHaveAttribute('aria-expanded', 'true');
+          }
           const a = list.getByRole('button', { name: first.title, exact: true });
           const b = list.getByRole('button', { name: second.title, exact: true });
           await tabTo(page, a);
