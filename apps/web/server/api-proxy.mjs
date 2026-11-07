@@ -49,7 +49,7 @@ export async function proxyApiRequest({
         headers: buildProxyHeaders(request.headers, decision?.sameOrigin ? new URL(apiOrigin).origin : null),
         ...(shouldSendBody(request.method) ? { body: Readable.from(boundedBody()), duplex: 'half' } : {})
       });
-      response.writeHead(upstream.status, buildProxyResponseHeaders(upstream));
+      response.writeHead(upstream.status, await buildProxyResponseHeaders(upstream));
       if (request.method === 'HEAD' || !upstream.body) response.end();
       else await pipeline(Readable.fromWeb(upstream.body), response);
     } catch (error) {
@@ -66,22 +66,34 @@ export async function proxyApiRequest({
     headers: buildProxyHeaders(request.headers, decision?.sameOrigin ? new URL(apiOrigin).origin : null),
     body: shouldSendBody(request.method) ? requestBody : undefined
   });
-  const headers = buildProxyResponseHeaders(upstreamResponse);
+  const headers = await buildProxyResponseHeaders(upstreamResponse);
   const responseBody = Buffer.from(await upstreamResponse.arrayBuffer());
   response.writeHead(upstreamResponse.status, headers);
   response.end(responseBody);
 }
 
-function buildProxyResponseHeaders(upstream) {
+async function buildProxyResponseHeaders(upstream) {
   const codings = upstream.headers
     .get('content-encoding')
     ?.toLowerCase()
     .split(',')
     .map(coding => coding.trim());
-  // fetch 已解压支持的编码，原来的编码和压缩长度不能再用于下游正文。
-  // HEAD / 304 没有正文，仍需保留所描述表示的元数据；未知编码由 fetch 原样保留。
-  const decoded =
-    upstream.body && codings?.length && codings.every(coding => ['gzip', 'x-gzip', 'deflate', 'br'].includes(coding));
+  // 只放行各受支持 Node 版本都可预测的 fetch 解码；其他编码安全失败。
+  // HEAD / 304 没有正文，仍保留所描述表示的元数据。
+  const encoded = upstream.body && codings?.length && !(codings.length === 1 && codings[0] === 'identity');
+  if (encoded) {
+    const ranged = upstream.status === 206 || upstream.headers.has('content-range');
+    const supported = codings.every(coding => ['gzip', 'x-gzip', 'deflate', 'br'].includes(coding));
+    if (ranged || !supported) {
+      // fetch 可能已自动解压；转发原压缩范围、编码或长度会造成数据损坏。
+      await upstream.body.cancel().catch(() => {});
+      throw Object.assign(new Error(ranged ? '上游压缩范围响应无法安全转发' : '上游响应编码不受代理支持'), {
+        statusCode: 502,
+        code: ranged ? 'UPSTREAM_RANGE_ENCODING_UNSUPPORTED' : 'UPSTREAM_ENCODING_UNSUPPORTED'
+      });
+    }
+  }
+  const decoded = encoded;
   return Object.fromEntries(
     [...upstream.headers.entries()].filter(
       ([key]) =>

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import http from 'node:http';
 import test from 'node:test';
-import { brotliCompressSync, gzipSync } from 'node:zlib';
+import { brotliCompressSync, gzipSync, zstdCompressSync } from 'node:zlib';
 import { createV4WebServer } from './app.mjs';
 
 async function listen(server) {
@@ -94,7 +94,7 @@ for (const route of ['/api/health', '/api/storage/pdf-files/synthetic']) {
     });
   }
   for (const encoding of [null, 'synthetic-unsupported']) {
-    test(`生产代理 ${route} 保留${encoding ? '未知编码' : '未压缩'}正文与长度`, async t => {
+    test(`生产代理 ${route} ${encoding ? '明确拒绝不支持编码' : '保留未压缩正文与长度'}`, async t => {
       const origin = await fixture(t, (_request, response) => {
         response.writeHead(200, {
           'Content-Length': payload.length,
@@ -103,9 +103,64 @@ for (const route of ['/api/health', '/api/storage/pdf-files/synthetic']) {
         response.end(payload);
       });
       const result = await readRawResponse(origin + route);
-      assert.equal(result.headers['content-encoding'], encoding ?? undefined);
-      assert.equal(Number(result.headers['content-length']), payload.length);
-      assert.deepEqual(result.body, payload);
+      if (encoding) assertUnsupportedResponse(result, 'UPSTREAM_ENCODING_UNSUPPORTED');
+      else {
+        assert.equal(result.headers['content-encoding'], undefined);
+        assert.equal(Number(result.headers['content-length']), payload.length);
+        assert.deepEqual(result.body, payload);
+      }
     });
+  }
+}
+
+function assertUnsupportedResponse(result, code) {
+  assert.equal(result.status, 502);
+  assert.equal(result.headers['content-type'], 'application/json; charset=utf-8');
+  assert.equal(result.headers['content-encoding'], undefined);
+  assert.equal(result.headers['content-range'], undefined);
+  const error = JSON.parse(result.body.toString()).error;
+  assert.equal(error.code, code);
+  assert.equal(typeof error.message, 'string');
+  assert(error.message.length > 0);
+  if (result.headers['content-length'] !== undefined) {
+    assert.equal(Number(result.headers['content-length']), result.body.length);
+  }
+}
+
+for (const route of routes) {
+  for (const chunked of [false, true]) {
+    test(`生产代理 ${route} 明确拒绝 zstd ${chunked ? '分块' : '定长'}响应且不发送损坏正文`, async t => {
+      const compressed = zstdCompressSync(payload);
+      const origin = await fixture(t, (_request, response) => {
+        response.writeHead(200, {
+          'Content-Encoding': 'zstd',
+          ...(chunked ? {} : { 'Content-Length': compressed.length })
+        });
+        if (chunked) response.write(compressed.subarray(0, 5));
+        response.end(chunked ? compressed.subarray(5) : compressed);
+      });
+      assertUnsupportedResponse(await readRawResponse(origin + route), 'UPSTREAM_ENCODING_UNSUPPORTED');
+    });
+  }
+  for (const [encoding, compress] of [
+    ['gzip', gzipSync],
+    ['br', brotliCompressSync],
+    ['zstd', zstdCompressSync]
+  ]) {
+    for (const chunked of [false, true]) {
+      test(`生产代理 ${route} 明确拒绝 ${encoding} ${chunked ? '分块' : '定长'}206，不伪造范围语义`, async t => {
+        const compressed = compress(payload);
+        const origin = await fixture(t, (_request, response) => {
+          response.writeHead(206, {
+            'Content-Encoding': encoding,
+            'Content-Range': `bytes 0-${compressed.length - 1}/${compressed.length}`,
+            ...(chunked ? {} : { 'Content-Length': compressed.length })
+          });
+          if (chunked) response.write(compressed.subarray(0, 5));
+          response.end(chunked ? compressed.subarray(5) : compressed);
+        });
+        assertUnsupportedResponse(await readRawResponse(origin + route), 'UPSTREAM_RANGE_ENCODING_UNSUPPORTED');
+      });
+    }
   }
 }
