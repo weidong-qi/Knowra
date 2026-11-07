@@ -85,6 +85,7 @@ export async function startLocalRuntime({
     } = createRuntimeServices({
       dataDirectory: activeDirectory,
       budgetDirectory: dataDirectory,
+      backupRoot: dataDirectory,
       logger,
       syncOptions,
       credentialSource,
@@ -197,6 +198,7 @@ export async function startLocalRuntime({
                   replacement = createRuntimeServices({
                     dataDirectory: restoredDirectory,
                     budgetDirectory: dataDirectory,
+                    backupRoot: dataDirectory,
                     logger,
                     syncOptions,
                     credentialSource,
@@ -257,6 +259,7 @@ export async function startLocalRuntime({
                   } = createRuntimeServices({
                     dataDirectory: activeDirectory,
                     budgetDirectory: dataDirectory,
+                    backupRoot: dataDirectory,
                     logger,
                     syncOptions,
                     credentialSource,

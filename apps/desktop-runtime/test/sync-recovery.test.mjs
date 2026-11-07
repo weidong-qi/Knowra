@@ -9,7 +9,10 @@ import { createServer } from '../../api/src/server.js';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
-import { createRuntimeBackup, inspectRuntimeBackup } from '../src/backup.mjs';
+import { createRuntimeBackup, inspectRuntimeBackup, listRuntimeBackups, readBackupDrafts } from '../src/backup.mjs';
+import { prepareRestoredDirectory, activateRestoredDirectory } from '../src/restore-directory.mjs';
+import { startLocalRuntime } from '../src/runtime-server.mjs';
+import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
 import { scopeHash } from '../../api/src/modules/ai/record-contract.ts';
 import { readMeta, nextUpload } from '../src/sync-state.mjs';
 import { openWorkspace } from './helpers.mjs';
@@ -759,4 +762,54 @@ test('已被其它副本使用的新发送编号不能激活', async t => {
   );
   assert.equal(f.a.engine.status().safetyPaused, true);
   assert.deepEqual(f.meta('entityUpload'), f.original());
+});
+
+test('官方恢复目录中的真实 runtime 恢复备份可在根列表找到，并完整保存原生根草稿', async t => {
+  const f = await fixture(t);
+  await f.pause();
+  const root = path.join(f.root, 'synthetic-local');
+  const seed = createRuntimeBackup(f.a.store, root);
+  await f.a.close();
+  const active = prepareRestoredDirectory(root, seed);
+  activateRestoredDirectory(root, active, { sourceBackupId: path.basename(seed) });
+  const distRoot = path.join(f.root, 'synthetic-dist');
+  fs.mkdirSync(distRoot);
+  fs.writeFileSync(path.join(distRoot, 'index.html'), '<html><body>合成</body></html>');
+  const runtime = await startLocalRuntime({
+    dataDirectory: root,
+    distRoot,
+    syncOptions: { autoSync: false },
+    aiRuntimeFactory: () => createUnavailableAiRuntime('synthetic-offline')
+  });
+  try {
+    const drafts = {
+      version: 1,
+      drafts: {
+        [`knowra:note-draft:v1:${JSON.stringify([runtime.store.getStatus().datasetId, f.note.id])}`]: {
+          markdown: '官方恢复后根目录的重要草稿',
+          baseMarkdown: '基线正文'
+        }
+      }
+    };
+    fs.writeFileSync(path.join(root, 'recovery-drafts.json'), JSON.stringify(drafts));
+    const cookie = (await fetch(runtime.launchUrl, { redirect: 'manual' })).headers.get('set-cookie').split(';')[0];
+    const response = await fetch(`${runtime.origin}/api/local-runtime/sync/recover`, {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/json',
+        'X-Knowra-Dataset': runtime.store.getStatus().datasetId
+      },
+      body: JSON.stringify(confirm)
+    });
+    const result = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    assert.equal(result.data.recoverySession.stage, 'preview');
+    const session = runtime.store.readSync(db => readMeta(db, 'recoverySession'));
+    assert.equal(path.dirname(session.backupDirectory), path.join(root, 'backups'));
+    assert(listRuntimeBackups(root).some(item => item.id === result.data.recoverySession.backupId));
+    assert.deepEqual(readBackupDrafts(session.backupDirectory), drafts);
+  } finally {
+    await runtime.close();
+  }
 });

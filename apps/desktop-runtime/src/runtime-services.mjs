@@ -19,6 +19,7 @@ import { createAiFeatureSettings } from '../../api/src/modules/ai/feature-settin
 export function createRuntimeServices({
   dataDirectory,
   budgetDirectory = dataDirectory,
+  backupRoot = dataDirectory,
   logger = console,
   syncOptions = {},
   credentialSource = null,
@@ -93,7 +94,8 @@ export function createRuntimeServices({
       ...syncOptions,
       noteService,
       entityTransfer,
-      createRecoveryBackup: () => createRuntimeBackup(store, dataDirectory, { purpose: 'sync-safety-recovery' })
+      createRecoveryBackup: () =>
+        createRuntimeBackup(store, dataDirectory, { backupRoot, purpose: 'sync-safety-recovery' })
     });
     // AI 功能开关保存在本机数据目录，与钥匙串里的模型凭据分开；每个提炼回合开始时读取当前值，切换无需重启。
     const aiFeatures = createAiFeatureSettings({ filePath: path.join(dataDirectory, 'ai-features.json') });

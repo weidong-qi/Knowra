@@ -26,7 +26,8 @@ test('CI partitions every npm test entry exactly once and keeps Chromium in addi
   assert.deepEqual(suites.chromium, [
     'test:e2e -w @study-accelerator/desktop-runtime',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts'
+    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
+    'test:e2e -w @study-accelerator/web -- sync-safety-recovery.spec.ts --workers=1'
   ]);
   const matrix = workflow
     .match(/suite: \[([^\]]+)\]/)[1]
@@ -81,7 +82,7 @@ test('Chromium gate collects Knowra copy/save/reload scenarios and propagates th
   );
   assert.deepEqual(
     calls,
-    suites.chromium.map(command => ['run', ...command.split(' ')])
+    suites.chromium.slice(0, 3).map(command => ['run', ...command.split(' ')])
   );
   const result = spawnSync(
     process.platform === 'win32' ? 'npm.cmd' : 'npm',
@@ -95,6 +96,37 @@ test('Chromium gate collects Knowra copy/save/reload scenarios and propagates th
   assert.equal(specs.length, 6);
   for (const spec of specs) {
     assert.equal(spec.file, 'editor-knowra-marks.spec.ts');
+    assert.equal(spec.tests.length, 1);
+    assert.equal(spec.tests[0].expectedStatus, 'passed');
+  }
+});
+
+test('Chromium gate collects explicit sync recovery and propagates its failure', () => {
+  const calls = [];
+  assert.throws(
+    () =>
+      runSuite('chromium', (_command, args) => {
+        calls.push(args);
+        return { status: calls.length === 4 ? 1 : 0 };
+      }),
+    /sync-safety-recovery\.spec\.ts/
+  );
+  assert.deepEqual(
+    calls,
+    suites.chromium.map(command => ['run', ...command.split(' ')])
+  );
+  const result = spawnSync(
+    process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    ['run', ...suites.chromium[3].split(' '), '--list', '--reporter=json'],
+    { cwd: new URL('../../', import.meta.url), encoding: 'utf8', env: process.env }
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const report = JSON.parse(result.stdout.slice(result.stdout.indexOf('{')));
+  assert.deepEqual(report.errors, []);
+  const specs = report.suites.flatMap(suite => suite.specs);
+  assert.equal(specs.length, 3);
+  for (const spec of specs) {
+    assert.equal(spec.file, 'sync-safety-recovery.spec.ts');
     assert.equal(spec.tests.length, 1);
     assert.equal(spec.tests[0].expectedStatus, 'passed');
   }
