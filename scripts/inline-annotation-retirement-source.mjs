@@ -37,8 +37,9 @@ async function readSource(driver, source, includePrivate) {
     return includePrivate ? inspectJsonPrivateSource(parsed, state) : state;
   }
   if (driver !== 'sqlite') throw new Error('driver 只支持 local-json 或 sqlite。');
-  const { DatabaseSync } = await import('node:sqlite');
-  const database = new DatabaseSync(source, { readOnly: true });
+  const { openReadonlySqliteSnapshot } = await import('../apps/desktop-runtime/src/sqlite-readonly-snapshot.mjs');
+  const snapshot = openReadonlySqliteSnapshot(source);
+  const database = snapshot.database;
   try {
     database.exec('BEGIN');
     const version = database.prepare('PRAGMA user_version').get().user_version;
@@ -63,7 +64,7 @@ async function readSource(driver, source, includePrivate) {
     }
     return includePrivate ? { state, ...inspectSqlitePrivateSource(database, version) } : state;
   } finally {
-    database.close();
+    snapshot.close();
   }
 }
 
