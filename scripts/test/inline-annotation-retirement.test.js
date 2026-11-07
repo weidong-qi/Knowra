@@ -163,12 +163,21 @@ for (const [field, target] of [
         }
       ]
     };
-    assert.equal(planHistoryRetention(state, { now }).removedAnnotations.has('old-deleted'), true);
+    assert.equal(planHistoryRetention(state, { now }).removedAnnotations.has('old-deleted'), false);
+    assert.equal(
+      planHistoryRetention(state, { now, allowDeletedAnnotationPrune: true }).removedAnnotations.has('old-deleted'),
+      true
+    );
     const references = [{ [field]: target }, { payload: JSON.stringify({ [field]: target }) }];
     if (!target.includes('/')) references.push({ text: target });
     for (const reference of references) {
       const referenced = { ...state, analysisScopeSnapshots: [{ segments: [reference] }] };
-      assert.equal(planHistoryRetention(referenced, { now }).removedAnnotations.has('old-deleted'), false);
+      assert.equal(
+        planHistoryRetention(referenced, { now, allowDeletedAnnotationPrune: true }).removedAnnotations.has(
+          'old-deleted'
+        ),
+        false
+      );
       const report = inspectAnnotationRetirement(referenced, now);
       assert.equal(report.legacy.referencesByCollection.analysisScopeSnapshots, 1);
       assert.equal(JSON.stringify(report).includes(target), false);

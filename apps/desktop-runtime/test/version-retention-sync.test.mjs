@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { anchorForBlock, calculateContentHash, projectMarkdown } from '@study-accelerator/content-anchor';
+import {
+  anchorForBlock,
+  anchorForSection,
+  calculateContentHash,
+  projectMarkdown
+} from '@study-accelerator/content-anchor';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
@@ -76,6 +81,153 @@ async function fixture(t, postgres) {
     versions: noteId => context.modules.knowledge.noteVersionService.listVersions({ noteId })
   };
 }
+
+for (const postgres of [false, true])
+  test(
+    `${postgres ? 'PostgreSQL' : 'JSON'}：普通云端保存和同步上传不回收到期的 v1/v2 旧重点`,
+    {
+      skip: postgres && !process.env.KNOWRA_SYNC_TEST_DATABASE_URL,
+      timeout: 60000
+    },
+    async t => {
+      const f = await fixture(t, postgres);
+      const note = await f.knowledge.noteService.createNote({
+        spaceId: f.space.id,
+        title: '到期同步保全',
+        rawMarkdown: '# 标题\n\n当前正文'
+      });
+      const version = (await f.versions(note.id))[0];
+      const anchor = { ...anchorForSection(projectMarkdown(note.rawMarkdown), 0), noteVersionId: version.id };
+      let oldVersion = new NoteVersion({
+        id: 'retained-history-only-version',
+        noteId: note.id,
+        content: '# 旧标题\n\n仅供旧修订引用的原文',
+        createdAt: '2026-01-01T00:00:00.000Z'
+      });
+      const historyAnchor = {
+        ...anchorForSection(projectMarkdown(oldVersion.content), 0),
+        noteVersionId: oldVersion.id
+      };
+      const legacy = [],
+        revisions = [],
+        exclusions = [];
+      for (const schemaVersion of [1, 2]) {
+        const annotation = new ContentAnnotation({
+          id: `retained-legacy-${schemaVersion}`,
+          noteId: note.id,
+          spaceId: f.space.id,
+          noteVersionId: version.id,
+          schemaVersion,
+          scopeType: 'section',
+          anchor,
+          originSnapshot: {
+            noteVersionId: version.id,
+            contentHash: version.contentHash,
+            scopeType: 'section',
+            segments: anchor.segments,
+            quoteText: anchor.quoteText,
+            headingPath: []
+          },
+          quoteText: anchor.quoteText,
+          fromPosition: anchor.sourceStart,
+          toPosition: anchor.sourceEnd,
+          anchorFingerprint: `legacy-${schemaVersion}`,
+          noteContentHash: version.contentHash,
+          idempotencyKey: `legacy-${schemaVersion}`,
+          revision: 13,
+          lifecycleStatus: 'deleted',
+          deletedAt: '2026-01-02T00:00:00.000Z'
+        });
+        legacy.push(structuredClone(await f.knowledge.repositories.contentAnnotationRepository.save(annotation)));
+        exclusions.push(
+          structuredClone(
+            await f.knowledge.repositories.annotationExclusionRepository.save({
+              id: `retained-exclusion-${schemaVersion}`,
+              parentAnnotationId: annotation.id,
+              noteVersionId: version.id,
+              anchor,
+              status: 'active',
+              revision: 1,
+              createdAt: '2026-01-02T00:00:00.000Z',
+              updatedAt: '2026-01-02T00:00:00.000Z'
+            })
+          )
+        );
+        if (schemaVersion === 1)
+          oldVersion = structuredClone(await f.knowledge.repositories.noteVersionRepository.save(oldVersion));
+        for (let revision = 1; revision <= 13; revision++)
+          revisions.push(
+            structuredClone(
+              await f.knowledge.repositories.annotationRevisionRepository.save({
+                id: `retained-revision-${schemaVersion}-${revision}`,
+                annotationId: annotation.id,
+                revision,
+                operation: 'metadataUpdated',
+                oldAnchor: null,
+                newAnchor: historyAnchor,
+                rangeSummary: { scopeType: 'section', quoteText: historyAnchor.quoteText },
+                reason: null,
+                createdAt: '2026-01-02T00:00:00.000Z'
+              })
+            )
+          );
+      }
+      await f.knowledge.noteService.updateNote(note.id, {
+        title: '云端普通保存',
+        updatedAt: new Date(Date.now() + 1000).toISOString()
+      });
+      const writer = f.device('retention-writer');
+      const reader = f.device('retention-reader');
+      await writer.connect();
+      assert.equal(writer.engine.status().error, null, JSON.stringify(writer.engine.status()));
+      writer.knowledge.noteService.updateNote(note.id, {
+        title: '离线普通保存并同步',
+        updatedAt: new Date(Date.now() + 2000).toISOString()
+      });
+      await writer.engine.sync();
+      assert.equal(writer.engine.status().error, null, JSON.stringify(writer.engine.status()));
+      await reader.connect();
+      assert.equal(reader.engine.status().error, null, JSON.stringify(reader.engine.status()));
+      for (const annotation of legacy) {
+        assert.deepEqual(
+          await f.knowledge.repositories.contentAnnotationRepository.findById(annotation.id),
+          annotation
+        );
+        for (const device of [writer, reader]) {
+          assert.deepEqual(
+            device.store.state.contentAnnotations.find(item => item.id === annotation.id),
+            annotation
+          );
+          assert.equal(device.store.deletionFacts.has('contentAnnotations', annotation.id), false);
+        }
+      }
+      assert.deepEqual(
+        structuredClone((await f.versions(note.id)).find(item => item.id === oldVersion.id)),
+        oldVersion
+      );
+      for (const [collection, records, repository] of [
+        ['annotationRevisions', revisions, f.knowledge.repositories.annotationRevisionRepository],
+        ['annotationExclusions', exclusions, f.knowledge.repositories.annotationExclusionRepository]
+      ])
+        for (const record of records) {
+          assert.deepEqual(await repository.findById(record.id), record);
+          for (const device of [writer, reader]) {
+            assert.deepEqual(
+              device.store.state[collection].find(item => item.id === record.id),
+              record
+            );
+            assert.equal(device.store.deletionFacts.has(collection, record.id), false);
+          }
+        }
+      for (const device of [writer, reader]) {
+        assert.deepEqual(
+          device.store.state.noteVersions.find(item => item.id === oldVersion.id),
+          oldVersion
+        );
+        assert.equal(device.store.deletionFacts.has('noteVersions', oldVersion.id), false);
+      }
+    }
+  );
 
 test(
   '真实 PostgreSQL：重点来源降级及旧格式待同步请求保护',
