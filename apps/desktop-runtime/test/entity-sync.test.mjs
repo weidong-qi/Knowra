@@ -241,7 +241,7 @@ test('附件文件先确认再发布引用；另一设备下载并按哈希读�
   assert.equal(b.engine.status().generation, repairedGeneration);
 });
 
-test('完整事务丢响应重试保持原 ID，继续编辑不会被旧确认覆盖', async t => {
+test('完整事务丢响应后暂停，继续编辑不会被旧确认覆盖', async t => {
   const cloud = await fixture(t);
   let lose = true;
   const ids = [];
@@ -262,9 +262,10 @@ test('完整事务丢响应重试保持原 ID，继续编辑不会被旧确认�
   assert(a.engine.status().error);
   a.knowledge.noteService.updateNote(cloud.note.id, { rawMarkdown: '后续版本' });
   await a.engine.sync();
-  clean(a);
-  assert.equal(ids[0], ids[1]);
-  assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '后续版本');
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(ids.length, 1);
+  assert.equal(a.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '后续版本');
+  assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '第一版');
 });
 
 test('目录并发修改保留关联事务，采用云端前保留完整恢复副本', async t => {
