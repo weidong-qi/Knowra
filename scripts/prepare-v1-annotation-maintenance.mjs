@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { DatabaseSync, backup } from 'node:sqlite';
+import { backup } from 'node:sqlite';
+import { openReadonlySqliteSnapshot } from '../apps/desktop-runtime/src/sqlite-readonly-snapshot.mjs';
 import { projectMarkdown } from '@study-accelerator/content-anchor';
 import { calculateContentHash } from '../apps/api/src/modules/knowledge/domain/note-version.ts';
 import {
@@ -198,7 +199,7 @@ export function planV1AnnotationMaintenance(cloud, local, now = Date.now()) {
   return { report, request: blockers.size ? null : request };
 }
 
-/** 云端文件须由操作者从活动路径取回；SQLite 用在线备份 API 捕获 WAL，不复制主文件。 */
+/** 云端文件须由操作者从活动路径取回；SQLite 先复制 DB/WAL/SHM，再从临时副本生成独立备份。 */
 export async function prepareV1AnnotationMaintenance({ cloudSource, localRoot, outputDirectory }) {
   const cloudFile = fs.realpathSync(cloudSource);
   const root = fs.realpathSync(localRoot);
@@ -213,11 +214,11 @@ export async function prepareV1AnnotationMaintenance({ cloudSource, localRoot, o
   fs.writeFileSync(cloudBackup, cloudBytes, { mode: 0o600, flag: 'wx' });
   // 预建私有文件，避免 SQLite 新建文件受宽松 umask 影响。
   fs.closeSync(fs.openSync(localBackup, 'wx', 0o600));
-  const db = new DatabaseSync(localFile, { readOnly: true });
+  const snapshot = openReadonlySqliteSnapshot(localFile);
   try {
-    await backup(db, localBackup);
+    await backup(snapshot.database, localBackup);
   } finally {
-    db.close();
+    snapshot.close();
   }
   if (!fs.readFileSync(cloudFile).equals(cloudBytes) || fs.realpathSync(readActiveDirectory(root)) !== active)
     throw new Error('取快照期间来源已变化，文件已保留但未生成维护计划；请重新核对。');
