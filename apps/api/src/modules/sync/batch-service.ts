@@ -17,6 +17,7 @@ import type {
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertSyncContract } from './protocol-contract.ts';
 import { assertSyncDeviceEnabled } from './rollout-policy.ts';
+import { assertSyncDeviceNotRetired } from './device-retirement.ts';
 import { WRITABLE_COLLECTIONS, changeReferencesFor, sameEntity } from './entity-contract.ts';
 import type { SyncReferenceChange } from './entity-contract.ts';
 import { prepareBatchState } from './batch-domain.ts';
@@ -70,13 +71,19 @@ export function createBatchSyncService<Backend extends SyncBackend = 'local'>(
       assertSyncContract(body);
       assertSyncDeviceEnabled(body?.deviceId);
       if (!transfer?.putStream) throw syncError('SYNC_UNAVAILABLE', '此服务未配置 PDF 传输。', 503);
-      return transfer.putStream(body);
+      return thenResult(
+        provider.read((_state, journal) => assertSyncDeviceNotRetired(journal, body.deviceId)),
+        () => transfer.putStream!(body)
+      );
     },
     uploadBlob: (body: SyncBlobInput) => {
       assertSyncContract(body);
       assertSyncDeviceEnabled(body?.deviceId);
       if (!transfer) throw syncError('SYNC_UNAVAILABLE', '此服务未配置附件传输。', 503);
-      return transfer.put(body);
+      return thenResult(
+        provider.read((_state, journal) => assertSyncDeviceNotRetired(journal, body.deviceId)),
+        () => transfer.put(body)
+      );
     },
     async pushBatch(op: SyncBatchOperation): Promise<SyncBatchResult> {
       validate(op);
@@ -85,6 +92,7 @@ export function createBatchSyncService<Backend extends SyncBackend = 'local'>(
       // 幂等回执优先，即使附件后来被删除也能确认已提交操作。
       const saved = await provider.read((_state, journal) => {
         if (journal.epoch !== op.datasetEpoch) throw syncError('DATASET_CHANGED', '云端资料库已变化。');
+        if (!journal.receipts[key]) assertSyncDeviceNotRetired(journal, op.deviceId);
         if (!journal.receipts[key] && (journal.deviceSequences?.[op.deviceId] ?? 0) >= op.sequence) {
           const error: AppError & { details?: { lastSequence: number } } = syncError(
             'SYNC_OPERATION_EXPIRED',
@@ -112,6 +120,7 @@ export function createBatchSyncService<Backend extends SyncBackend = 'local'>(
             throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
           return journal.receipts[key].result;
         }
+        assertSyncDeviceNotRetired(journal, op.deviceId);
         if ((journal.deviceSequences?.[op.deviceId] ?? 0) >= op.sequence)
           throw syncError('SYNC_OPERATION_EXPIRED', '设备操作序号已使用，请重新核对基线。');
         assertSyncDeviceEnabled(op.deviceId);

@@ -9,7 +9,6 @@ import {
   syncContract,
   syncContractQuery
 } from '../../api/src/modules/sync/protocol-contract.ts';
-import { requestHash } from '../../api/src/modules/sync/journal.ts';
 import { KNOWLEDGE_SYNC_CAPABILITY, KNOWLEDGE_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.ts';
 import {
   applyEntityRemote,
@@ -33,13 +32,36 @@ import { clearExamFocusReviewUpload } from './exam-focus-review-boundaries.mjs';
 import { createSyncExecutionGate } from './sync-execution-gate.mjs';
 import { createSyncTransport } from './sync-transport.mjs';
 import { createAuthoritativePurge } from './authoritative-purge.mjs';
+import { createSyncRecovery } from './sync-recovery.mjs';
+import { readRecoverySession } from './sync-recovery-state.mjs';
+import {
+  assertStoreSyncNotPaused,
+  persistUnconfirmedSending,
+  beginUpload,
+  clearUploadSafety,
+  isPreparedUpload,
+  pauseUncertainSync,
+  readSyncSafetyPause,
+  syncSafetyError,
+  syncSenderDeviceId
+} from './sync-safety.mjs';
 
 export function createSyncEngine(
   store,
-  { fetcher = fetch, intervalMs = 15000, noteService, autoSync = true, entityTransfer = null, clock } = {}
+  {
+    fetcher = fetch,
+    intervalMs = 15000,
+    noteService,
+    autoSync = true,
+    entityTransfer = null,
+    clock,
+    createRecoveryBackup
+  } = {}
 ) {
+  persistUnconfirmedSending(store);
   const execution = createSyncExecutionGate();
   let authorization = '';
+  let recoveryAuthorization = '';
   const full = Boolean(entityTransfer);
   let closed = false;
   let phase = 'not-configured';
@@ -65,6 +87,18 @@ export function createSyncEngine(
     fetcher,
     getServerUrl: () => meta('serverUrl'),
     getAuthorization: () => authorization
+  });
+  const recoveryTransport = createSyncTransport({
+    fetcher,
+    getServerUrl: () => meta('serverUrl'),
+    getAuthorization: () => recoveryAuthorization
+  });
+  const safetyRecovery = createSyncRecovery({
+    store,
+    request: recoveryTransport.request,
+    createBackup: createRecoveryBackup,
+    noteService,
+    entityTransfer
   });
   async function receive(entries, cursor, epoch, reset = false) {
     if (!full) {
@@ -239,31 +273,19 @@ export function createSyncEngine(
   }
   async function sendOperation(operation) {
     assertNotHistoryOperation(operation);
+    const blocked = store.metadataTransaction(db => beginUpload(db, operation));
+    if (blocked) throw blocked;
     try {
       acknowledge(store, operation, await request('push', operation));
     } catch (failure) {
-      if (
-        ['DEPENDENCY_MISSING', 'NOTE_DELETED', 'SIBLING_NAME_CONFLICT'].includes(failure.code) ||
-        [400, 413, 415, 422].includes(failure.status)
-      ) {
-        store.metadataTransaction(db => {
-          const blocked = meta('blocked') ?? {};
-          blocked[operation.noteId] = {
-            noteId: operation.noteId,
-            title: operation.value.title,
-            value: JSON.stringify(operation.value),
-            message: failure.message
-          };
-          writeMeta(db, 'blocked', blocked);
-          db.prepare('DELETE FROM sync_uploads WHERE note_id = ?').run(operation.noteId);
-        });
-      } else throw failure;
+      const pause = store.metadataTransaction(db => pauseUncertainSync(db, operation, failure.code ?? 'upload-failed'));
+      throw syncSafetyError(pause);
     }
   }
   // 设备序号仅在本机即将生成新操作时向云端校准；序号只由本设备推进，进程内核对一次即可。
   async function verifyDeviceSequence() {
     if (sequenceVerified || meta('entityUpload') || !getEntitySyncState(store).pendingEntities) return;
-    const device = await request(`device?deviceId=${encodeURIComponent(store.getStatus().deviceId)}`);
+    const device = await request(`device?deviceId=${encodeURIComponent(syncSenderDeviceId(store))}`);
     store.metadataTransaction(db =>
       writeMeta(db, 'entitySequence', Math.max(meta('entitySequence') ?? 0, device.sequence))
     );
@@ -338,21 +360,36 @@ export function createSyncEngine(
           });
         }
       let result;
+      const blocked = store.metadataTransaction(db => beginUpload(db, operation));
+      if (blocked) throw blocked;
       try {
         result = await request('batch', operation);
       } catch (failure) {
+        if (meta('safetyPause')) throw syncSafetyError(meta('safetyPause'));
+        // 只处理本轮首次发送的明确拒绝；过期/复用 ID 不证明原请求从未执行。
+        const uncertain = ['OPERATION_REUSED', 'SYNC_OPERATION_EXPIRED', 'DATASET_CHANGED'].includes(failure.code);
         if (
-          failure.code !== 'SYNC_CLIENT_UPGRADE_REQUIRED' &&
-          ([400, 413, 415, 422].includes(failure.status) ||
-            ['DEPENDENCY_MISSING', 'ENTITY_DELETED', 'SYNC_OPERATION_EXPIRED', 'SIBLING_NAME_CONFLICT'].includes(
-              failure.code
-            ))
+          !uncertain &&
+          ['AUTH_REQUIRED', 'SYNC_CLIENT_UPGRADE_REQUIRED', 'SYNC_DEVICE_NOT_ENABLED', 'SYNC_PUSH_PAUSED'].includes(
+            failure.code
+          )
+        ) {
+          store.metadataTransaction(db => writeMeta(db, 'sendingUpload', null));
+        } else if (
+          !uncertain &&
+          ['DEPENDENCY_MISSING', 'ENTITY_DELETED', 'SIBLING_NAME_CONFLICT'].includes(failure.code)
         ) {
           store.metadataTransaction(db => {
             writeMeta(db, 'entityUpload', null);
+            clearUploadSafety(db);
             clearKnowledgeLifecycleUpload(db);
             clearExamFocusReviewUpload(db);
           });
+        } else {
+          const pause = store.metadataTransaction(db =>
+            pauseUncertainSync(db, operation, failure.code ?? 'upload-failed')
+          );
+          throw syncSafetyError(pause);
         }
         throw failure;
       }
@@ -390,76 +427,24 @@ export function createSyncEngine(
       state.attachments.some(item => ['missing', 'corrupt', 'failed'].includes(item.status))
     );
   }
-  async function reconcileLegacyUploads() {
-    const notes = store.readSync(db =>
-      db
+  function checkPendingUpload() {
+    const existing = meta('safetyPause');
+    if (existing) throw syncSafetyError(existing);
+    const uncertain = store.readSync(db => {
+      const notes = db
         .prepare('SELECT request FROM sync_uploads')
         .all()
-        .map(row => JSON.parse(row.request))
-    );
-    const batch = meta('entityUpload');
-    assertNotHistoryOperation(batch);
-    let currentBatch = true;
-    if (batch) {
-      try {
-        assertSyncContract(batch);
-      } catch {
-        currentBatch = false;
-      }
-    }
-    for (const operation of [...notes, ...(!currentBatch && batch ? [batch] : [])]) {
-      assertNotHistoryOperation(operation);
-      if (operation.datasetEpoch !== meta('serverEpoch')) {
-        const failure = new Error('资料库世代已变化，升级前的未确认操作无法核对；原请求和本地修改已保留。');
-        failure.code = 'SYNC_LEGACY_OPERATION_UNRESOLVED';
-        throw failure;
-      }
-      const receipt = await request(
-        contractedRoute(
-          `operation-receipt?deviceId=${encodeURIComponent(operation.deviceId)}&operationId=${encodeURIComponent(operation.operationId)}&datasetEpoch=${encodeURIComponent(operation.datasetEpoch)}&requestHash=${requestHash(operation)}`
-        )
-      );
-      assertSyncContract(receipt);
-      if (receipt.datasetEpoch !== operation.datasetEpoch || !['found', 'missing'].includes(receipt.status)) {
-        const failure = new Error('无法核对升级前的同步提交，原队列已保留。');
-        failure.code = 'SYNC_LEGACY_OPERATION_UNRESOLVED';
-        throw failure;
-      }
-      if (receipt.status === 'found') {
-        if (operation.protocolVersion === 2) acknowledgeEntityUpload(store, operation, receipt.result);
-        else {
-          if (!receipt.result?.current || !['accepted', 'conflict'].includes(receipt.result.status)) {
-            const failure = new Error('旧笔记同步回执格式不可识别，队列已保留。');
-            failure.code = 'SYNC_LEGACY_OPERATION_UNRESOLVED';
-            throw failure;
-          }
-          acknowledgeEntityUpload(
-            store,
-            { ...operation, changes: [{ collection: 'notes', id: operation.noteId, value: operation.value }] },
-            { ...receipt.result, entries: [receipt.result.current] }
-          );
-          store.metadataTransaction(db =>
-            db.prepare('DELETE FROM sync_uploads WHERE note_id = ?').run(operation.noteId)
-          );
-        }
-      } else {
-        if (
-          operation.protocolVersion === 2 &&
-          (!Number.isSafeInteger(receipt.lastSequence) || receipt.lastSequence >= operation.sequence)
-        ) {
-          const failure = new Error('升级前的同步回执已不可查，请保留恢复记录并核对云端基线。');
-          failure.code = 'SYNC_LEGACY_OPERATION_UNRESOLVED';
-          throw failure;
-        }
-        // 同一 epoch 的原子回执证明该请求未接纳；只解除旧传输封装，领域数据/outbox 保持待传。
-        store.metadataTransaction(db => {
-          if (operation.protocolVersion === 2) {
-            writeMeta(db, 'entityUpload', null);
-            clearKnowledgeLifecycleUpload(db);
-            clearExamFocusReviewUpload(db);
-          } else db.prepare('DELETE FROM sync_uploads WHERE note_id = ?').run(operation.noteId);
-        });
-      }
+        .map(row => JSON.parse(row.request));
+      const batch = readMeta(db, 'entityUpload');
+      for (const operation of [...notes, ...(batch ? [batch] : [])]) assertNotHistoryOperation(operation);
+      // v1 没有设备序号屏障；missing 既可能是回执已淘汰，也可能是请求尚在途中。
+      if (notes.length) return { operation: notes[0], reason: 'legacy-v1-upload' };
+      if (batch && !isPreparedUpload(db, batch)) return { operation: batch, reason: 'unconfirmed-or-legacy-upload' };
+      return null;
+    });
+    if (uncertain) {
+      const pause = store.metadataTransaction(db => pauseUncertainSync(db, uncertain.operation, uncertain.reason));
+      throw syncSafetyError(pause);
     }
   }
   async function cycle() {
@@ -475,10 +460,12 @@ export function createSyncEngine(
     const startKey = store.getSyncCacheKey();
     const hadPending = full ? getEntitySyncState(store).pendingEntities : getSyncState(store).pendingNotes;
     try {
+      checkPendingUpload();
       const info = await request('status');
       requireServer(info);
       if (meta('ownerId') && info.ownerId !== meta('ownerId'))
         throw new Error('云端所属资料库已改变，请使用独立本地资料目录。');
+      await safetyRecovery.verifyBarriers(info, request);
       store.metadataTransaction(db => {
         writeMeta(db, 'ownerId', info.ownerId);
         writeMeta(db, 'capabilities', info.capabilities ?? []);
@@ -490,7 +477,6 @@ export function createSyncEngine(
         failure.code = 'LOCAL_PURGE_RESULT_PENDING';
         throw failure;
       }
-      await reconcileLegacyUploads();
       if (meta('epoch') && meta('epoch') !== info.datasetEpoch && !(await bootstrap())) {
         phase = 'conflict';
         return;
@@ -542,15 +528,28 @@ export function createSyncEngine(
             ? 'pending'
             : 'synced';
     } catch (failure) {
-      error = { code: failure.code ?? 'NETWORK_ERROR', message: failure.message };
-      if (failure.code === 'SYNC_OPERATION_EXPIRED') sequenceVerified = false;
-      if (['CURSOR_EXPIRED', 'DATASET_CHANGED'].includes(failure.code)) {
+      let reportedFailure = failure;
+      if (failure.code === 'SYNC_RECOVERY_BARRIER_LOST' && !meta('safetyPause')) {
+        const pause = store.metadataTransaction(db =>
+          pauseUncertainSync(db, readMeta(db, 'entityUpload'), failure.code)
+        );
+        reportedFailure = syncSafetyError(pause);
+      }
+      if (meta('sendingUpload') && !meta('safetyPause')) {
+        const pause = store.metadataTransaction(db =>
+          pauseUncertainSync(db, readMeta(db, 'entityUpload'), failure.code ?? 'acknowledgement-failed')
+        );
+        reportedFailure = syncSafetyError(pause);
+      }
+      error = { code: reportedFailure.code ?? 'NETWORK_ERROR', message: reportedFailure.message };
+      if (reportedFailure.code === 'SYNC_OPERATION_EXPIRED') sequenceVerified = false;
+      if (['CURSOR_EXPIRED', 'DATASET_CHANGED'].includes(reportedFailure.code)) {
         store.metadataTransaction(db => {
           writeMeta(db, 'cursor', null);
           writeMeta(db, 'bootstrap', null);
         });
       }
-      phase = failure.code === 'AUTH_REQUIRED' ? 'auth-required' : 'paused';
+      phase = reportedFailure.code === 'AUTH_REQUIRED' ? 'auth-required' : 'paused';
       failures++;
       retryAt =
         (clock?.now() ?? Date.now()) +
@@ -567,6 +566,7 @@ export function createSyncEngine(
       return operation();
     });
   async function pullPurgeFacts() {
+    checkPendingUpload();
     // 核对命令只读恢复过期基线；快照内带修订号的墓碑才是事实，主体缺席不是。
     if (!meta('cursor')) return bootstrap();
     try {
@@ -585,6 +585,7 @@ export function createSyncEngine(
     exclusive,
     connection: () => full,
     synchronize: async () => {
+      checkPendingUpload();
       await cycle();
       if (error) throw Object.assign(new Error(error.message), { code: error.code });
     },
@@ -601,6 +602,7 @@ export function createSyncEngine(
         closed ||
         !meta('serverUrl') ||
         meta('clientPaused') ||
+        meta('safetyPause') ||
         phase === 'auth-required' ||
         [
           'PROTOCOL_UNSUPPORTED',
@@ -649,15 +651,19 @@ export function createSyncEngine(
       lastCheckedAt,
       knowledgeSyncSupported: meta('capabilities')?.includes(KNOWLEDGE_SYNC_CAPABILITY) ?? null,
       attachmentPending: meta('attachmentPending'),
-      deviceId: store.getStatus().deviceId,
-      phase,
-      error,
+      deviceId: syncSenderDeviceId(store),
+      localDeviceId: store.getStatus().deviceId,
+      phase: meta('safetyPause') ? 'paused' : phase,
+      error: meta('safetyPause') ?? error,
+      safetyPaused: Boolean(meta('safetyPause')),
+      recoverySession: safetyRecovery.summary(),
       authoritativePurge: purge.status()
     }),
     purgePreview: purge.preview,
     purge: purge.execute,
     async configure({ serverUrl, username = '', password = '' }) {
       return exclusive(async () => {
+        assertStoreSyncNotPaused(store);
         const url = new URL(serverUrl);
         if (url.username || url.password || url.search || url.hash || url.pathname !== '/')
           throw new Error('请输入不含账号、路径或参数的云端服务地址。');
@@ -694,6 +700,7 @@ export function createSyncEngine(
       scheduler.pause();
       return exclusive(async () => {
         authorization = '';
+        recoveryAuthorization = '';
         store.metadataTransaction(db => writeMeta(db, 'clientPaused', true));
         scheduler.pause();
         phase = 'disconnected';
@@ -712,7 +719,18 @@ export function createSyncEngine(
                 exportedAt: new Date().toISOString(),
                 snapshot: structuredClone(state),
                 conflict: readMeta(db, 'entityConflict'),
-                upload: readMeta(db, 'entityUpload')
+                upload: readMeta(db, 'entityUpload'),
+                safetyPause: readSyncSafetyPause(db),
+                recoverySession: readRecoverySession(db),
+                base: db.prepare('SELECT * FROM sync_base').all(),
+                localRevisions: db.prepare('SELECT * FROM local_revisions').all(),
+                deletionFacts: db.prepare('SELECT * FROM deletion_facts').all(),
+                syncMetadata: db.prepare("SELECT key,value FROM metadata WHERE key LIKE 'sync:%'").all(),
+                legacyUploads: db
+                  .prepare('SELECT request FROM sync_uploads')
+                  .all()
+                  .map(row => JSON.parse(row.request)),
+                outbox: db.prepare('SELECT * FROM sync_outbox ORDER BY sequence').all()
               }
             ]
           : []),
@@ -721,8 +739,36 @@ export function createSyncEngine(
           .all()
           .map(row => readSyncHistory(row.payload))
       ]),
+    async recover(input = {}) {
+      return exclusive(async () => {
+        if (!full)
+          throw Object.assign(new Error('完整来源同步尚未可用，不能恢复。'), { code: 'SYNC_RECOVERY_UNAVAILABLE' });
+        if (
+          (typeof input.username !== 'string' && input.username !== undefined) ||
+          (typeof input.password !== 'string' && input.password !== undefined)
+        )
+          throw Object.assign(new Error('登录字段无效。'), { code: 'SYNC_RECOVERY_INVALID' });
+        recoveryAuthorization = input.username
+          ? `Basic ${Buffer.from(`${input.username}:${input.password ?? ''}`).toString('base64')}`
+          : authorization;
+        await safetyRecovery.prepare(input);
+        return this.status();
+      });
+    },
+    recoveryPreview: input => safetyRecovery.preview(input),
+    async recoverResolve(input) {
+      return exclusive(async () => {
+        await safetyRecovery.resolve(input);
+        authorization = recoveryAuthorization;
+        sequenceVerified = false;
+        await cycle();
+        return this.status();
+      });
+    },
     async retry() {
       return exclusive(async () => {
+        if (meta('safetyPause')) return this.status();
+        checkPendingUpload();
         store.metadataTransaction(db => writeMeta(db, 'blocked', {}));
         await cycle();
         return this.status();
@@ -730,6 +776,8 @@ export function createSyncEngine(
     },
     async resolve(input) {
       return exclusive(async () => {
+        checkPendingUpload();
+        assertStoreSyncNotPaused(store);
         if (full && input.conflictId) resolveEntityConflict(store, input, noteService, entityTransfer);
         else resolveConflict(store, input, noteService);
         await cycle();
@@ -738,6 +786,8 @@ export function createSyncEngine(
     },
     async close() {
       closed = true;
+      authorization = '';
+      recoveryAuthorization = '';
       unsubscribe();
       await scheduler.close();
       await execution.drain();

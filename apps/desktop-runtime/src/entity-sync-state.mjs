@@ -1,4 +1,15 @@
 import { encodeSyncHistory } from './sync-history.mjs';
+import {
+  archiveRecoveryEvidence,
+  readRecoverySession,
+  recoveryEntries,
+  recoveryRevision,
+  recoveryError,
+  writeRecoverySession,
+  verifyRetirementProof,
+  frozenRecoveryHash
+} from './sync-recovery-state.mjs';
+import { acknowledgementFailure, assertStoreSyncNotPaused, clearUploadSafety, prepareUpload } from './sync-safety.mjs';
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
@@ -95,7 +106,29 @@ function retiredNoteVersionIds(db) {
     )
   );
 }
-function dirtyEntries(db, state, base, boundaries = [], reviews = []) {
+function recoveryPendingKeys(db) {
+  const keys = readMeta(db, 'recoveryPendingKeys') ?? [];
+  if (
+    !Array.isArray(keys) ||
+    keys.some(key => {
+      try {
+        const value = JSON.parse(key);
+        return (
+          !Array.isArray(value) ||
+          value.length !== 2 ||
+          !WRITABLE_COLLECTIONS.includes(value[0]) ||
+          typeof value[1] !== 'string'
+        );
+      } catch {
+        return true;
+      }
+    })
+  )
+    throw recoveryError('SYNC_RECOVERY_INVALID', '恢复后的待确认意图记录损坏，已停止同步。');
+  return keys;
+}
+function dirtyEntries(db, state, base, boundaries = [], reviews = [], forceKeys = new Set()) {
+  forceKeys = new Set([...forceKeys, ...recoveryPendingKeys(db)]);
   const changes = [];
   const retiredVersions = retiredNoteVersionIds(db);
   const retiredRevisions = new Set(
@@ -113,7 +146,11 @@ function dirtyEntries(db, state, base, boundaries = [], reviews = []) {
     const current = new Map(state[collection].map(item => [item.id, item]));
     const ids = new Set([
       ...current.keys(),
-      ...[...base.values()].filter(entry => entry.collection === collection).map(entry => entry.id)
+      ...[...base.values()].filter(entry => entry.collection === collection).map(entry => entry.id),
+      ...[...forceKeys]
+        .map(key => JSON.parse(key))
+        .filter(([name]) => name === collection)
+        .map(([, id]) => id)
     ]);
     for (const id of ids) {
       const previous = base.get(syncKey(collection, id));
@@ -124,7 +161,7 @@ function dirtyEntries(db, state, base, boundaries = [], reviews = []) {
       if (collection === 'noteVersions' && value && (previous?.value === null || retiredVersions.has(id))) continue;
       if (collection === 'annotationRevisions' && value && (previous?.value === null || retiredRevisions.has(id)))
         continue;
-      if (!sameEntity(collection, value, previous?.value)) {
+      if (forceKeys.has(syncKey(collection, id)) || !sameEntity(collection, value, previous?.value)) {
         const old = previous?.value;
         const lifecycleAction =
           [
@@ -276,6 +313,7 @@ function canonicalizeVersions(state, base) {
 }
 
 export function applyEntityRemote(store, entries, cursor, epoch, { reset = false } = {}) {
+  assertStoreSyncNotPaused(store);
   const cached = snapshot(store);
   const { epoch: previousEpoch, conflict: previousConflict } = cached;
   const unchanged = entries.every(entry => {
@@ -451,6 +489,7 @@ function settle(db, state) {
 }
 
 export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
+  assertStoreSyncNotPaused(store);
   const frozen = store.readSync(db => {
     readKnowledgeLifecycleBoundaries(db);
     readExamFocusReviewBoundaries(db);
@@ -656,7 +695,7 @@ export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
     protocolVersion: 2,
     ...syncContract(),
     datasetEpoch: readMeta(db, 'epoch'),
-    deviceId: store.getStatus().deviceId,
+    deviceId: readMeta(db, 'senderDeviceId') ?? store.getStatus().deviceId,
     operationId: randomUUID(),
     sequence: (readMeta(db, 'entitySequence') ?? 0) + 1
   }));
@@ -711,6 +750,7 @@ export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
     const operation = makeOperation(changes);
     writeMeta(db, 'entitySequence', operation.sequence);
     writeMeta(db, 'entityUpload', operation);
+    prepareUpload(db, operation);
     bindKnowledgeLifecycleUpload(
       db,
       operation.operationId,
@@ -731,7 +771,9 @@ export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
 }
 
 export function acknowledgeEntityUpload(store, operation, result) {
-  store.syncTransaction((db, state) => {
+  const failure = store.syncTransaction((db, state) => {
+    const invalid = acknowledgementFailure(db, operation, readMeta(db, 'entityUpload'), result);
+    if (invalid) return invalid;
     observeRemoteDeletionFacts(
       db,
       [...(result.entries ?? []), ...(result.conflicts ?? []), ...(result.current ? [result.current] : [])],
@@ -749,7 +791,8 @@ export function acknowledgeEntityUpload(store, operation, result) {
       for (const entry of result.entries) {
         const submitted = operation.changes.find(
           item =>
-            item.collection === entry.collection && (item.id === entry.id || result.aliases?.[item.id] === entry.id)
+            item.collection === entry.collection &&
+            (item.id === entry.id || (item.collection === 'noteVersions' && result.aliases?.[item.id] === entry.id))
         );
         const local = state[entry.collection].find(item => item.id === (submitted?.id ?? entry.id)) ?? null;
         if (
@@ -778,8 +821,21 @@ export function acknowledgeEntityUpload(store, operation, result) {
     acknowledgeExamFocusReviewUpload(db, operation, result);
     // 冲突结果先解除冻结，下一次拉取会保存包含完整远端事务的冲突。
     writeMeta(db, 'entityUpload', null);
+    clearUploadSafety(db);
+    if (result.status === 'accepted') {
+      const accepted = new Set(operation.changes.map(entry => syncKey(entry.collection, entry.id)));
+      const pending = recoveryPendingKeys(db);
+      if (pending.length)
+        writeMeta(
+          db,
+          'recoveryPendingKeys',
+          pending.filter(key => !accepted.has(key))
+        );
+    }
     settle(db, state);
+    return null;
   });
+  if (failure) throw failure;
 }
 
 export function getEntitySyncState(store) {
@@ -818,13 +874,25 @@ export function getEntitySyncState(store) {
 }
 
 export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }, noteService, entityTransfer) {
+  assertStoreSyncNotPaused(store);
+  return resolveEntityConflictInternal(store, { conflictId, choice, rawMarkdown }, noteService, entityTransfer);
+}
+
+function resolveEntityConflictInternal(
+  store,
+  { conflictId, choice, rawMarkdown },
+  noteService,
+  entityTransfer,
+  recovery = null
+) {
   const preparedCopies = [];
   const resolve = (db, state) => {
+    recovery?.prepare(db, state);
     const conflict = readMeta(db, 'entityConflict');
     if (!conflict || conflict.id !== conflictId) throw new Error('冲突已变化，请重新查看。');
     if (!['remote', 'local', 'manual', 'copy'].includes(choice)) throw new Error('请选择有效的冲突处理方式。');
     const boundaries = readKnowledgeLifecycleBoundaries(db);
-    const allDirty = dirtyEntries(db, state, bases(db), boundaries, readExamFocusReviewBoundaries(db));
+    const allDirty = dirtyEntries(db, state, bases(db), boundaries, readExamFocusReviewBoundaries(db), recovery?.keys);
     const blocked = new Set(conflict.blocked ?? allDirty.map(entry => syncKey(entry.collection, entry.id)));
     const dirty = allDirty.filter(entry => blocked.has(syncKey(entry.collection, entry.id)));
     if (
@@ -867,19 +935,73 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
       merged.noteVersions = merged.noteVersions.filter(version => noteIds.has(version.noteId));
     }
     if (choice !== 'remote' && choice !== 'copy') {
-      const reviewPlan = prepareExamFocusReviewChanges(
-        readExamFocusReviewBoundaries(db).filter(review => blocked.has(syncKey('examFocuses', review.focusId))),
-        dirty,
-        state,
-        remote,
-        conflict.epoch
+      let reviews = readExamFocusReviewBoundaries(db).filter(review =>
+        blocked.has(syncKey('examFocuses', review.focusId))
       );
+      let reviewBase = remote;
+      if (recovery) {
+        reviewBase = new Map(remote);
+        for (const entry of dirty)
+          reviewBase.set(syncKey(entry.collection, entry.id), {
+            ...entry,
+            revision: remote.get(syncKey(entry.collection, entry.id))?.revision ?? null
+          });
+        reviews = [...new Map(reviews.map(review => [review.focusId, review])).values()].map(review => {
+          const focus = state.examFocuses.find(item => item.id === review.focusId);
+          if (focus?.reviewStatus !== 'confirmed' || focus.deletedAt) return review;
+          if (
+            review.parents.some(
+              parent =>
+                !sameEntity(
+                  parent.collection,
+                  reviewBase.get(syncKey(parent.collection, parent.id))?.value,
+                  parent.value
+                )
+            )
+          )
+            throw recoveryError(
+              'SYNC_RECOVERY_REVIEW_REQUIRED',
+              '本机审阅对应的依赖已改变，请依据恢复记录重新审阅，不能自动确认新依赖。'
+            );
+          return {
+            ...review,
+            datasetEpoch: conflict.epoch,
+            parents: review.parents.map(parent => ({
+              ...parent,
+              baseRevision: reviewBase.get(syncKey(parent.collection, parent.id))?.revision ?? null
+            }))
+          };
+        });
+      }
+      const reviewPlan = prepareExamFocusReviewChanges(reviews, dirty, state, reviewBase, conflict.epoch);
       if (reviewPlan.conflict)
         throw Object.assign(new Error('考点审阅依赖已变化，请采用云端后重新核对学习目标和考试配置。'), {
           code: 'SYNC_REVIEW_REQUIRED'
         });
+      if (
+        recovery &&
+        reviewPlan.changes.some(
+          entry =>
+            !sameEntity(
+              entry.collection,
+              entry.value,
+              state[entry.collection].find(item => item.id === entry.id) ?? null
+            )
+        )
+      )
+        throw recoveryError(
+          'SYNC_RECOVERY_REVIEW_REQUIRED',
+          '本机审阅依赖需要历史前像才能成立；请采用云端后依据恢复记录重新审阅，不能自动重演历史操作。'
+        );
       for (const entry of dirty) {
         const current = remote.get(syncKey(entry.collection, entry.id));
+        if (recovery && current?.value && entry.value && Object.hasOwn(entry.value, 'deletedAt'))
+          entry.lifecycleAction =
+            current.value.deletedAt && !entry.value.deletedAt
+              ? 'restore'
+              : !current.value.deletedAt && entry.value.deletedAt
+                ? 'trash'
+                : undefined;
         if (entry.value && !current?.value && (entry.baseRevision !== null || conflict.changedEpoch))
           throw new Error('云端已永久删除相关对象。请先导出恢复记录，再采用云端版本；原内容保存在恢复记录中。');
         // 旧编辑不能因冲突选择变成恢复；共同基线已在回收站的显式恢复仍可继续。
@@ -942,6 +1064,7 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
         )
     );
     preserveAttachmentHealth(merged, state);
+    if (recovery) preserveLocalHistoryCopies(db, state, merged, remote);
     assertNoKnowledgeArtifactProvenanceDowngrade(state, merged);
     setState(state, reconcileSyncedSourceStates(merged));
     if (choice === 'copy') {
@@ -977,6 +1100,59 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
     writeMeta(db, 'entityUpload', null);
     clearKnowledgeLifecycleUpload(db);
     clearExamFocusReviewUpload(db);
+    if (recovery) {
+      const session = readRecoverySession(db);
+      if (session?.id !== recovery.id || session.stage !== 'preview' || !readMeta(db, 'safetyPause'))
+        throw recoveryError('SYNC_RECOVERY_CHANGED', '恢复会话已变化，不能解除暂停。');
+      observeRemoteDeletionFacts(db, conflict.remote, { epoch: conflict.epoch, versions: state.noteVersions });
+      // 用户明确选择的是当前快照；旧生命周期/审阅前像已完整封存，不换新身份重演旧操作。
+      discardKnowledgeLifecycleBoundaries(db, new Set(recovery.keys));
+      discardExamFocusReviewBoundaries(
+        db,
+        new Set(dirty.filter(entry => entry.collection === 'examFocuses').map(entry => entry.id))
+      );
+      for (const attachment of state.attachments) {
+        try {
+          entityTransfer.verify(attachment);
+        } catch {
+          attachment.status = 'missing';
+          attachment.verifiedAt = null;
+        }
+      }
+      db.prepare('DELETE FROM sync_uploads').run();
+      db.prepare('DELETE FROM sync_conflicts').run();
+      clearUploadSafety(db);
+      writeMeta(db, 'safetyPause', null);
+      writeMeta(db, 'senderDeviceId', session.newDeviceId);
+      writeMeta(db, 'entitySequence', 0);
+      writeMeta(db, 'serverEpoch', conflict.epoch);
+      writeMeta(db, 'clientPaused', false);
+      writeMeta(db, 'blocked', {});
+      writeMeta(
+        db,
+        'recoveryPendingKeys',
+        choice === 'local' ? dirty.map(entry => syncKey(entry.collection, entry.id)) : []
+      );
+      writeMeta(db, 'recoveryBarriers', [
+        ...(readMeta(db, 'recoveryBarriers') ?? []),
+        {
+          id: session.id,
+          ownerId: session.ownerId,
+          serverUrl: session.serverUrl,
+          oldDeviceId: session.oldDeviceId,
+          newDeviceId: session.newDeviceId,
+          command: session.command,
+          proof: session.proof
+        }
+      ]);
+      writeRecoverySession(db, { ...session, stage: 'completed', choice, completedAt: new Date().toISOString() });
+    } else if (choice === 'remote' || choice === 'copy') {
+      writeMeta(
+        db,
+        'recoveryPendingKeys',
+        recoveryPendingKeys(db).filter(key => !blocked.has(key))
+      );
+    }
     settle(db, state);
   };
   try {
@@ -992,6 +1168,103 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
     }
     throw error;
   }
+}
+
+export function recoveryIntentKeys(store, entries) {
+  return store.readSync((db, state) => {
+    const base = bases(db);
+    const remote = new Map(entries.map(entry => [syncKey(entry.collection, entry.id), entry]));
+    const keys = new Set(
+      dirtyEntries(db, state, base, readKnowledgeLifecycleBoundaries(db), readExamFocusReviewBoundaries(db)).map(
+        entry => syncKey(entry.collection, entry.id)
+      )
+    );
+    const add = (collection, id) => {
+      if (!WRITABLE_COLLECTIONS.includes(collection) || typeof id !== 'string')
+        throw recoveryError('SYNC_RECOVERY_INVALID', '原待同步意图含未知实体，已停止恢复。');
+      keys.add(syncKey(collection, id));
+    };
+    for (const row of db.prepare("SELECT changes FROM sync_outbox WHERE state != 'acknowledged'").all())
+      for (const change of JSON.parse(row.changes)) add(change.collection, change.entityId);
+    const upload = readMeta(db, 'entityUpload');
+    for (const change of [...(upload?.changes ?? []), ...(upload?.dependencies ?? [])])
+      add(change.collection, change.id);
+    for (const row of db.prepare('SELECT request FROM sync_uploads').all())
+      add('notes', JSON.parse(row.request).noteId);
+    const remoteState = stateFromBase(remote);
+    let expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (const key of [...keys]) {
+        const [collection, id] = JSON.parse(key);
+        for (const source of [state, remoteState]) {
+          const value = source[collection].find(item => item.id === id) ?? null;
+          for (const ref of syncReferencesFor(collection, value, source)) {
+            const reference = syncKey(ref.collection, ref.id);
+            const local = state[ref.collection].find(item => item.id === ref.id) ?? null;
+            const incoming = remote.get(reference)?.value ?? null;
+            if (!keys.has(reference) && !sameEntity(ref.collection, local, incoming)) {
+              add(ref.collection, ref.id);
+              expanded = true;
+            }
+          }
+        }
+      }
+    }
+    return [...keys];
+  });
+}
+
+export function resolveEntityRecovery(
+  store,
+  { recoveryId, revision, choice, backupDirectory },
+  noteService,
+  entityTransfer
+) {
+  if (!['local', 'remote'].includes(choice) || revision !== recoveryRevision(store))
+    throw recoveryError('SYNC_RECOVERY_PREVIEW_CHANGED', '本机资料已变化或选择无效，请重新查看恢复对照。');
+  const session = store.readSync(db => readRecoverySession(db));
+  if (!session || session.id !== recoveryId || session.stage !== 'preview' || !session.proof)
+    throw recoveryError('SYNC_RECOVERY_NOT_READY', '屏障和固定快照尚未核对完成，仍保持暂停。');
+  verifyRetirementProof(
+    session,
+    {
+      status: 'retired',
+      ownerId: session.ownerId,
+      journalVersion: 2,
+      datasetEpoch: session.download.binding.datasetEpoch,
+      retirement: session.proof
+    },
+    session.download.binding.datasetEpoch
+  );
+  const entries = store.readSync(db => recoveryEntries(db, session));
+  const keys = recoveryIntentKeys(store, entries);
+  // 同一事务中保存最新后继意图、固定云端快照、冲突选择及身份切换；失败整体回滚。
+  return resolveEntityConflictInternal(store, { conflictId: session.id, choice }, noteService, entityTransfer, {
+    id: session.id,
+    keys: new Set(keys),
+    prepare(db, state) {
+      if (readRecoverySession(db)?.id !== session.id || frozenRecoveryHash(db) !== session.sourceHash)
+        throw recoveryError('SYNC_RECOVERY_CHANGED', '原请求或暂停事实已变化，请保留备份重新核对。');
+      if (session.localDatasetId !== store.getStatus().datasetId)
+        throw recoveryError('SYNC_RECOVERY_DIFFERENT_WORKSPACE', '旧恢复会话不能用于另一份资料库。');
+      archiveRecoveryEvidence(
+        db,
+        state,
+        { ...session, latestBackupDirectory: backupDirectory },
+        { remote: entries, choice }
+      );
+      writeMeta(db, 'entityConflict', {
+        id: session.id,
+        epoch: session.download.binding.datasetEpoch,
+        cursor: session.download.binding.cursor,
+        remote: entries,
+        blocked: keys,
+        changedEpoch: readMeta(db, 'epoch') !== session.download.binding.datasetEpoch,
+        recoverySessionId: session.id
+      });
+    }
+  });
 }
 
 function preserveRemoteNotePrivacy(state, remote) {

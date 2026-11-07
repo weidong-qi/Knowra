@@ -113,7 +113,7 @@ test('真实PostgreSQL05B：Mock摘要通过优化分页与增量到SQLite，sch
   assertMinimalProvenanceTransport(exported, record);
 });
 
-test('真实PostgreSQL05B：SQLite摘要原子上行alias与丢确认重试，另一SQLite保留不可变scope/hash', options, async t => {
+test('真实PostgreSQL05B：SQLite摘要原子上行alias与丢确认暂停，另一SQLite保留不可变scope/hash', options, async t => {
   const cloud = await fixture(t);
   let lose = true;
   const operations = [],
@@ -156,7 +156,7 @@ test('真实PostgreSQL05B：SQLite摘要原子上行alias与丢确认重试，�
   assert.equal(results[0].status, 200);
   assert.equal(results[0].body.data.status, 'accepted');
   assert.equal(lose, false);
-  assert.equal(author.engine.status().error?.code, 'SYNC_NETWORK_UNAVAILABLE');
+  assert.equal(author.engine.status().error?.code, 'SYNC_RESULT_UNCERTAIN');
   assert.deepEqual(
     author.store.readSync(db => readMeta(db, 'entityUpload')),
     operations[0]
@@ -177,19 +177,16 @@ test('真实PostgreSQL05B：SQLite摘要原子上行alias与丢确认重试，�
   assert.equal(accepted.status, 'found');
   assert.deepEqual(accepted.result, results[0].body.data);
   await author.engine.sync();
-  clean(author);
-  assert.equal(operations.length, 2);
-  assert.deepEqual(operations[1], operations[0]);
-  assert.equal(operations[0].operationId, operations[1].operationId);
-  assert.equal(requestHash(operations[1]), receiptInput.requestHash);
-  assert.deepEqual(results[1], results[0]);
-  assert.equal(
+  assert.equal(author.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(operations.length, 1);
+  assert.equal(requestHash(operations[0]), receiptInput.requestHash);
+  assert.deepEqual(
     author.store.readSync(db => readMeta(db, 'entityUpload')),
-    null
+    operations[0]
   );
-  assert.equal(author.engine.status().pendingEntities, 0);
+  assert(author.engine.status().pendingEntities > 0);
   assert.equal(author.engine.status().entityConflict, null);
-  assert.equal(author.store.getStatus().pendingOperations, 0);
+  assert(author.store.getStatus().pendingOperations > 0);
   assertMinimalProvenanceTransport(operations[0].changes, record);
   assert.equal(await cloud.app.prisma.knowledgeArtifactProvenance.count(), 1);
   const reader = cloud.device('reader');

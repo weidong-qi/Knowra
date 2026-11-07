@@ -1,4 +1,5 @@
 import { encodeSyncHistory } from './sync-history.mjs';
+import { acknowledgementFailure, assertStoreSyncNotPaused, clearUploadSafety } from './sync-safety.mjs';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { randomUUID } from 'node:crypto';
@@ -80,6 +81,7 @@ function settleOutbox(db, state) {
 }
 
 export function applyRemote(store, entries, cursor, epoch, { reset = false } = {}) {
+  assertStoreSyncNotPaused(store);
   store.syncTransaction((db, state) => {
     observeRemoteDeletionFacts(db, entries, { epoch });
     const previousEpoch = readMeta(db, 'epoch');
@@ -178,6 +180,7 @@ export function applyRemote(store, entries, cursor, epoch, { reset = false } = {
 }
 
 export function nextUpload(store) {
+  assertStoreSyncNotPaused(store);
   return store.syncTransaction((db, state) => {
     const frozen = db.prepare('SELECT request FROM sync_uploads LIMIT 1').get();
     if (frozen) return JSON.parse(frozen.request);
@@ -190,7 +193,7 @@ export function nextUpload(store) {
       const request = {
         protocolVersion: 1,
         datasetEpoch: epoch,
-        deviceId: store.getStatus().deviceId,
+        deviceId: readMeta(db, 'senderDeviceId') ?? store.getStatus().deviceId,
         operationId: randomUUID(),
         noteId: note.id,
         baseRevision: base.revision,
@@ -208,7 +211,12 @@ export function nextUpload(store) {
 }
 
 export function acknowledge(store, operation, result) {
-  store.syncTransaction((db, state) => {
+  const failure = store.syncTransaction((db, state) => {
+    const frozen = db.prepare('SELECT request FROM sync_uploads WHERE note_id = ?').get(operation.noteId);
+    const invalid = acknowledgementFailure(db, operation, frozen ? JSON.parse(frozen.request) : null, result, {
+      legacy: true
+    });
+    if (invalid) return invalid;
     const entry = result.current;
     observeRemoteDeletionFacts(db, [entry], { epoch: operation.datasetEpoch });
     const local = state.notes.find(note => note.id === operation.noteId);
@@ -245,8 +253,11 @@ export function acknowledge(store, operation, result) {
     delete blocked[operation.noteId];
     writeMeta(db, 'blocked', blocked);
     db.prepare('DELETE FROM sync_uploads WHERE note_id = ?').run(operation.noteId);
+    clearUploadSafety(db);
     settleOutbox(db, state);
+    return null;
   });
+  if (failure) throw failure;
 }
 
 const statusCache = new WeakMap();
@@ -288,6 +299,7 @@ export function getSyncState(store) {
 }
 
 export function resolveConflict(store, { noteId, choice, rawMarkdown, remoteRevision, datasetEpoch }, noteService) {
+  assertStoreSyncNotPaused(store);
   store.syncTransaction(
     (db, state) => {
       const conflict = conflictFor(db, noteId);

@@ -11,7 +11,7 @@ import { syncContract, syncContractQuery } from '../../api/src/modules/sync/prot
 import { requestHash } from '../../api/src/modules/sync/journal.ts';
 import { syntheticProvenanceFixture } from '../../api/test/fixtures/knowledge-artifact-provenance.fixture.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';
-import { applyEntityRemote, nextEntityUpload } from '../src/entity-sync-state.mjs';
+import { applyEntityRemote, nextEntityUpload, acknowledgeEntityUpload } from '../src/entity-sync-state.mjs';
 import { applyRemote, acknowledge, nextUpload, readMeta, writeMeta } from '../src/sync-state.mjs';
 import { temporaryDirectory, openWorkspace } from './helpers.mjs';
 
@@ -293,10 +293,12 @@ test('C1 旧批次 accepted entries 经真实回执查询记账，不依赖后�
     db.exec("DROP TABLE deletion_facts; DELETE FROM metadata WHERE key LIKE 'deletionFacts%';")
   );
   assert.deepEqual(device.store.deletionFacts.list(), []);
-  await device.engine.sync();
-  assert.equal(probe.pulls, 1);
-  assert(device.engine.status().error);
-  assert.equal(probe.received[0].status, 'found');
+  const receipt = await cloud.request(
+    `operation-receipt?deviceId=${old.deviceId}&operationId=${old.operationId}&datasetEpoch=${old.datasetEpoch}&requestHash=${requestHash(old)}&${syncContractQuery()}`
+  );
+  assert.equal(receipt.status, 'found');
+  acknowledgeEntityUpload(device.store, old, receipt.result);
+  assert.equal(probe.pulls, 0);
   assert.equal(meta(device, 'entityUpload'), null);
   assertRemoteFact(device, cloud, 'tags', tag.id);
 });
@@ -327,15 +329,18 @@ test('C1 旧 notes current 回执与 legacy acknowledge 均保存远端事实，
       result
     };
   });
-  await device.engine.sync();
-  assert.equal(probe.pulls, 1);
-  assert.equal(probe.received[0].status, 'found');
+  const receipt = await cloud.request(
+    `operation-receipt?deviceId=${old.deviceId}&operationId=${old.operationId}&datasetEpoch=${old.datasetEpoch}&requestHash=${requestHash(old)}&${syncContractQuery()}`
+  );
+  assert.equal(receipt.status, 'found');
+  acknowledge(device.store, old, receipt.result);
+  assert.equal(probe.pulls, 0);
   const first = assertRemoteFact(device, cloud, 'notes', cloud.note.id);
   assert.equal(
     device.store.readSync(db => db.prepare('SELECT COUNT(*) AS n FROM sync_uploads').get().n),
     0
   );
-  acknowledge(device.store, old, result);
+  assert.throws(() => acknowledge(device.store, old, result), { code: 'SYNC_RESULT_UNCERTAIN' });
   assert.deepEqual(fact(device, 'notes', cloud.note.id), first);
   assert.equal(device.engine.status().conflicts[0].remote, null);
 });
@@ -428,12 +433,12 @@ test('C1 旧冻结请求遇新 epoch 先暂停，保留已知事实且不把未�
   cloud.store.commitImport(cloud.store.exportSnapshot());
   watch = true;
   await device.engine.sync();
-  assert.equal(device.engine.status().error.code, 'SYNC_LEGACY_OPERATION_UNRESOLVED');
+  assert.equal(device.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
   assert(!routes.some(url => /\/(operation-receipt|bootstrap|changes)[?]?/.test(url)));
   assert.deepEqual(meta(device, 'entityUpload'), old);
   assert.equal(meta(device, 'cursor'), cursor);
   assert.equal(meta(device, 'epoch'), epoch);
-  assert.notEqual(meta(device, 'serverEpoch'), epoch);
+  assert.equal(meta(device, 'serverEpoch'), epoch, '结果不确定时不先读新世代或替换基线');
   assert.deepEqual(device.store.exportSnapshot().data, state);
   assert.deepEqual(device.store.readOutbox(), outbox);
   assert.deepEqual(device.store.deletionFacts.list(), known);

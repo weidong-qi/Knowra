@@ -16,6 +16,12 @@ import {
   REQUIRED_SYNC_CAPABILITIES
 } from './protocol-contract.ts';
 import { assertSyncDeviceEnabled } from './rollout-policy.ts';
+import {
+  assertSyncDeviceNotRetired,
+  parseDeviceRetirement,
+  retirementFor,
+  retireSyncDevice
+} from './device-retirement.ts';
 import { randomUUID } from 'node:crypto';
 import {
   cursorFor,
@@ -40,11 +46,15 @@ export function createSyncService<Backend extends SyncBackend = 'local'>(
     ownerId,
     scope: 'notes',
     pushEnabled: process.env.KNOWRA_SYNC_PUSH_ENABLED !== 'false',
+    recovery: { version: 1, journalVersion: journal.version, deviceRetirementSupported: true },
     cursor: cursorFor(journal, ownerId)
   });
   return {
     device: ({ deviceId }: SyncPageQuery) =>
-      provider.read((_state, journal) => ({ sequence: journal.deviceSequences?.[String(deviceId)] ?? 0 })),
+      provider.read((_state, journal) => ({
+        sequence: journal.deviceSequences?.[String(deviceId)] ?? 0,
+        retired: Boolean(retirementFor(journal, String(deviceId)))
+      })),
     status: () => provider.read((_state, journal) => describe(journal)),
     bootstrap: (input: unknown) => {
       const contract = assertSyncContract(input);
@@ -139,6 +149,10 @@ export function createSyncService<Backend extends SyncBackend = 'local'>(
           throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
         return {
           ...syncContract(),
+          ownerId,
+          deviceId: input.deviceId,
+          operationId: input.operationId,
+          requestHash: input.requestHash,
           datasetEpoch: journal.epoch,
           status: saved ? 'found' : 'missing',
           lastSequence: journal.deviceSequences?.[input.deviceId!] ?? 0,
@@ -146,56 +160,113 @@ export function createSyncService<Backend extends SyncBackend = 'local'>(
         };
       });
     },
+    deviceRetirement: (input: SyncPageQuery) => {
+      assertSyncContract(input, { query: true });
+      if (
+        ![input.deviceId, input.recoveryId].every(
+          value => typeof value === 'string' && value.length > 0 && value.length <= 200
+        )
+      )
+        throw syncError('SYNC_RECOVERY_INVALID', '恢复记录查询身份无效。', 422);
+      return provider.read((_state, journal) => {
+        const retirement = retirementFor(journal, input.deviceId!);
+        if (retirement && (retirement.recoveryId !== input.recoveryId || retirement.ownerId !== ownerId))
+          throw syncError('SYNC_RECOVERY_MISMATCH', '旧编号对应其他恢复记录，请保留原记录核对。');
+        return {
+          ...syncContract(),
+          ownerId,
+          datasetEpoch: journal.epoch,
+          journalVersion: journal.version,
+          deviceId: input.deviceId,
+          recoveryId: input.recoveryId,
+          status: retirement ? 'retired' : 'missing',
+          ...(retirement ? { retirement: structuredClone(retirement) } : {})
+        };
+      });
+    },
+    retireDevice: (input: unknown) => {
+      assertSyncContract(input);
+      const command = parseDeviceRetirement(input, ownerId);
+      return (provider.mutateJournal ?? provider.mutate)((_state, journal) => {
+        // 新身份须已经被现有准入规则允许；恢复不会添加白名单或扩大持久访问。
+        if (!retirementFor(journal, command.deviceId)) {
+          assertSyncDeviceEnabled(command.deviceId);
+          assertSyncDeviceEnabled(command.successorDeviceId);
+        }
+        const retirement = retireSyncDevice(journal, command);
+        return {
+          ...syncContract(),
+          ownerId,
+          datasetEpoch: journal.epoch,
+          journalVersion: journal.version,
+          status: 'retired',
+          retirement
+        };
+      });
+    },
     push: ((operation: SyncRawPushRequest) => {
       assertSyncContract(operation);
-      return provider.mutate((state, journal) => {
-        validateOperation(operation);
-        if (operation.datasetEpoch !== journal.epoch) throw syncError('DATASET_CHANGED', '云端资料库基线已变化。');
-        const key = JSON.stringify([operation.deviceId, operation.operationId]);
-        const hash = requestHash(operation);
-        const receipt = journal.receipts[key];
-        if (receipt) {
-          if (receipt.hash !== hash) throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
-          return receipt.result;
+      validateOperation(operation);
+      const key = JSON.stringify([operation.deviceId, operation.operationId]);
+      const hash = requestHash(operation);
+      return thenResult(
+        provider.read((_state, journal) => {
+          if (operation.datasetEpoch !== journal.epoch) throw syncError('DATASET_CHANGED', '云端资料库基线已变化。');
+          const receipt = journal.receipts[key];
+          if (receipt && receipt.hash !== hash)
+            throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
+          return receipt;
+        }),
+        saved => {
+          if (saved) return saved.result;
+          return provider.mutate((state, journal) => {
+            if (operation.datasetEpoch !== journal.epoch) throw syncError('DATASET_CHANGED', '云端资料库基线已变化。');
+            const receipt = journal.receipts[key];
+            if (receipt) {
+              if (receipt.hash !== hash) throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
+              return receipt.result;
+            }
+            assertSyncDeviceNotRetired(journal, operation.deviceId);
+            assertSyncDeviceEnabled(operation.deviceId);
+            const entityKey = syncKey('notes', operation.noteId);
+            const revision = journal.revisions[entityKey] ?? null;
+            const current = state.notes.find(note => note.id === operation.noteId) ?? null;
+            if (revision !== operation.baseRevision) {
+              const result = {
+                status: 'conflict',
+                current: { collection: 'notes', id: operation.noteId, revision, value: structuredClone(current) }
+              };
+              journal.receipts[key] = { hash, result };
+              return result;
+            }
+            if (!current && revision !== null) throw syncError('NOTE_DELETED', '笔记已永久删除，请保留为新副本。');
+            const value = operation.value;
+            if (!value.spaceId || !state.spaces.some(space => space.id === value.spaceId && space.userId === ownerId))
+              throw syncError('DEPENDENCY_MISSING', '目标空间不存在。');
+            if (
+              (value.folderId &&
+                !state.folders.some(folder => folder.id === value.folderId && folder.spaceId === value.spaceId)) ||
+              value.tagIds.some(id => !state.tags.some(tag => tag.id === id && tag.spaceId === value.spaceId))
+            )
+              throw syncError('DEPENDENCY_MISSING', '目录或标签尚未同步，请调整笔记归属后重试。');
+            return thenResult(provider.applyNote(operation, current), () =>
+              thenResult(provider.preview(), ({ state: next, journal: preview }) => {
+                const result = {
+                  status: 'accepted',
+                  current: {
+                    collection: 'notes',
+                    id: operation.noteId,
+                    revision: preview.revisions[entityKey],
+                    value: structuredClone(next.notes.find(note => note.id === operation.noteId))
+                  }
+                };
+                journal.receipts[key] = { hash, result };
+                return result;
+              })
+            );
+          });
         }
-        assertSyncDeviceEnabled(operation.deviceId);
-        const entityKey = syncKey('notes', operation.noteId);
-        const revision = journal.revisions[entityKey] ?? null;
-        const current = state.notes.find(note => note.id === operation.noteId) ?? null;
-        if (revision !== operation.baseRevision) {
-          const result = {
-            status: 'conflict',
-            current: { collection: 'notes', id: operation.noteId, revision, value: structuredClone(current) }
-          };
-          journal.receipts[key] = { hash, result };
-          return result;
-        }
-        if (!current && revision !== null) throw syncError('NOTE_DELETED', '笔记已永久删除，请保留为新副本。');
-        const value = operation.value;
-        if (!value.spaceId || !state.spaces.some(space => space.id === value.spaceId && space.userId === ownerId))
-          throw syncError('DEPENDENCY_MISSING', '目标空间不存在。');
-        if (
-          (value.folderId &&
-            !state.folders.some(folder => folder.id === value.folderId && folder.spaceId === value.spaceId)) ||
-          value.tagIds.some(id => !state.tags.some(tag => tag.id === id && tag.spaceId === value.spaceId))
-        )
-          throw syncError('DEPENDENCY_MISSING', '目录或标签尚未同步，请调整笔记归属后重试。');
-        return thenResult(provider.applyNote(operation, current), () =>
-          thenResult(provider.preview(), ({ state: next, journal: preview }) => {
-            const result = {
-              status: 'accepted',
-              current: {
-                collection: 'notes',
-                id: operation.noteId,
-                revision: preview.revisions[entityKey],
-                value: structuredClone(next.notes.find(note => note.id === operation.noteId))
-              }
-            };
-            journal.receipts[key] = { hash, result };
-            return result;
-          })
-        );
-      });
+      );
     }) as SyncPushHandler
   };
 }
