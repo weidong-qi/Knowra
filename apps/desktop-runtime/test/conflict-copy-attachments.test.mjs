@@ -297,7 +297,7 @@ test('保留两篇遇到附件元数据缺失时保留冲突与本地内容', as
   assert.deepEqual(managedFiles(f.a), files);
 });
 
-test('保留两篇后上传丢响应，重试复用副本和附件 ID 并收敛', async t => {
+test('保留两篇后上传丢响应保持暂停，不再发送且保留副本和附件 ID', async t => {
   let lose = false;
   const operations = [];
   const f = await conflictWithFiles(t, {
@@ -326,9 +326,12 @@ test('保留两篇后上传丢响应，重试复用副本和附件 ID 并收敛'
   assert.equal(ids.length, 2);
   assert.deepEqual(attachmentIdsInText(copy.rawMarkdown).sort(), ids);
   for (const id of ids) assert(f.a.context.http.storage.getAttachmentContent({ id }).content.length);
+  const count = operations.length;
+  const frozen = f.a.engine.recovery()[0].upload;
   await f.a.engine.sync();
-  clean(f.a);
-  assert.equal(operations.at(-1), operations.at(-2));
+  assert.equal(f.a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(operations.length, count);
+  assert.deepEqual(f.a.engine.recovery()[0].upload, frozen);
   assert.deepEqual(
     f.a.store.state.attachments
       .filter(item => item.noteId === copy.id)
@@ -336,7 +339,7 @@ test('保留两篇后上传丢响应，重试复用副本和附件 ID 并收敛'
       .sort(),
     ids
   );
-  assert.equal(f.a.engine.status().pendingEntities, 0);
+  assert(f.a.engine.status().pendingEntities > 0);
   assert.equal(f.cloud.modules.knowledge.noteService.getNote(copy.id).rawMarkdown, copy.rawMarkdown);
   const b = f.device('b');
   await b.connect();
