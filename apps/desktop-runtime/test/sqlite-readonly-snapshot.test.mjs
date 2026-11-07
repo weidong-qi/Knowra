@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
@@ -81,7 +82,7 @@ test('只有 DB/WAL 的离线副本也能读取 WAL，检查失败不写回源�
   assert.deepEqual(directoryState(directory), before);
 });
 
-test('损坏数据库查询失败仍可清理副本，拒绝符号链接、硬链接及特殊副文件', t => {
+test('损坏数据库在受控初始化读取失败仍清理副本，拒绝符号链接、硬链接及特殊副文件', t => {
   const source = createSource(t);
   source.db.close();
   fs.writeFileSync(source.file, 'invalid sqlite');
@@ -93,12 +94,7 @@ test('损坏数据库查询失败仍可清理副本，拒绝符号链接、硬�
     created.push(directory);
     return directory;
   });
-  const snapshot = openReadonlySqliteSnapshot(source.file);
-  try {
-    assert.throws(() => snapshot.database.prepare('SELECT * FROM sqlite_master').all(), /not a database/);
-  } finally {
-    snapshot.close();
-  }
+  assert.throws(() => openReadonlySqliteSnapshot(source.file), /not a database/);
   assert.equal(created.length, 1);
   assert.equal(fs.existsSync(created[0]), false);
   assert.deepEqual(directoryState(source.directory), before);
@@ -328,5 +324,29 @@ test('journal 检查必须夹在文件身份稳定区间内：检查后 spill、
     if (inTransaction) writer.exec('ROLLBACK');
     writer.close();
     t.diagnostic(JSON.stringify({ journalChecks: checks, leakedUncommittedRows: leaked }));
+  }
+});
+
+test('通用检查在临时目录等于或位于来源目录内时创建副本前拒绝，包含大小写别名', t => {
+  const source = createSource(t);
+  source.db.close();
+  const nested = path.join(source.directory, 'nested-tmp');
+  fs.mkdirSync(nested);
+  const sourceState = () => [
+    fs.statSync(source.directory, { bigint: true }).mtimeNs,
+    fs.statSync(nested, { bigint: true }).mtimeNs,
+    fs.readdirSync(source.directory).sort(),
+    fs.readdirSync(nested).sort(),
+    fs.readFileSync(source.file)
+  ];
+  const before = sourceState();
+  const alias = path.join(path.dirname(source.directory), path.basename(source.directory).toUpperCase());
+  const candidates = [source.directory, nested];
+  if (fs.existsSync(alias)) candidates.push(alias);
+  for (const directory of candidates) {
+    const mock = t.mock.method(os, 'tmpdir', () => directory);
+    assert.throws(() => openReadonlySqliteSnapshot(source.file), /临时目录.*来源目录之外/);
+    mock.mock.restore();
+    assert.deepEqual(sourceState(), before);
   }
 });

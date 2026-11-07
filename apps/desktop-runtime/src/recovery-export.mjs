@@ -1,29 +1,52 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { backup } from 'node:sqlite';
 import { openReadonlySqliteSnapshot } from './sqlite-readonly-snapshot.mjs';
-import { lockDataDirectory } from './data-directory.mjs';
+import { lockDataDirectoryForRecovery } from './data-directory.mjs';
 import { readActiveDirectory } from './restore-directory.mjs';
-import { copyRecoveryDraftFiles } from './recovery-draft-files.mjs';
+import { listArchivedDraftFiles } from './recovery-draft-files.mjs';
+import { captureBackupDirectory, createOwnedBackupDirectory } from './backup-transfer-files.mjs';
+import {
+  captureRecoveryDestination,
+  captureRecoverySource,
+  requireExternalRecoveryTemporaryDirectory
+} from './recovery-export-files.mjs';
+import { createOwnedTemporaryDirectory } from './owned-temporary-directory.mjs';
 
-/** 不依赖应用 schema 的救援导出；SQLite 仅打开临时快照，根目录互斥仍使用锁文件。必须先关闭运行服务。 */
+/** 离线救援三阶段：准备协调锁 → 源目录零写入的检查/导出 → 释放协调锁。不得启动运行服务。 */
 export async function exportLocalRecovery(dataDirectory, destination) {
   if (!path.isAbsolute(dataDirectory) || !path.isAbsolute(destination))
     throw new Error('数据目录和导出目录必须是绝对路径。');
-  if (fs.existsSync(destination)) throw new Error('导出目录已存在，禁止覆盖。');
-  const release = lockDataDirectory(dataDirectory);
-  let snapshot;
-  let created = false;
+  const origin = captureBackupDirectory(dataDirectory);
+  dataDirectory = origin.directory;
+  const target = captureRecoveryDestination(destination, dataDirectory);
+  const temporaryParent = requireExternalRecoveryTemporaryDirectory(os.tmpdir(), dataDirectory);
+  origin.check();
+  // 准备阶段允许创建/恢复协调锁；持续持有 startup gate，旧版失败启动也不会写源根目录。
+  const release = lockDataDirectoryForRecovery(dataDirectory);
+  let snapshot, temporary, output;
   try {
+    const source = captureRecoverySource(dataDirectory);
+    origin.check();
     const activeDirectory = readActiveDirectory(dataDirectory);
     if (!fs.existsSync(path.join(activeDirectory, 'local.sqlite'))) throw new Error('本地数据库不存在。');
     snapshot = openReadonlySqliteSnapshot(path.join(activeDirectory, 'local.sqlite'));
     const db = snapshot.database;
-    fs.mkdirSync(path.dirname(destination), { recursive: true });
-    fs.mkdirSync(destination, { mode: 0o700 });
-    created = true;
-    await backup(db, path.join(destination, 'local.sqlite'));
+    temporaryParent.check();
+    temporary = createOwnedTemporaryDirectory('knowra-recovery-export-', temporaryParent.directory, {
+      outside: dataDirectory
+    });
+    const databaseFile = path.join(temporary.directory, 'local.sqlite');
+    const fd = fs.openSync(databaseFile, 'wx', 0o600);
+    try {
+      temporary.record('local.sqlite', fs.fstatSync(fd));
+    } finally {
+      fs.closeSync(fd);
+    }
+    await backup(db, databaseFile);
+    temporary.check();
     const tables = new Set(
       db
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -37,41 +60,69 @@ export async function exportLocalRecovery(dataDirectory, destination) {
     };
     for (const table of ['metadata', 'entities', 'sync_outbox', 'sync_uploads', 'sync_conflicts', 'sync_recovery'])
       if (tables.has(table)) payload.tables[table] = db.prepare(`SELECT * FROM ${table}`).all();
-    fs.writeFileSync(path.join(destination, 'recovery.json'), JSON.stringify(payload, null, 2), { mode: 0o600 });
-    const uploads = path.join(activeDirectory, 'uploads');
-    if (fs.existsSync(uploads))
-      fs.cpSync(uploads, path.join(destination, 'uploads'), { recursive: true, dereference: false });
-    // 同时保留当前原生草稿和恢复来源的草稿；救援复制不要求草稿可解析。
-    copyRecoveryDraftFiles(activeDirectory, destination, dataDirectory);
-    function inventory(relative = '') {
-      return fs.readdirSync(path.join(destination, relative), { withFileTypes: true }).flatMap(entry => {
-        if (entry.isSymbolicLink()) throw new Error('救援导出不接受符号链接。');
-        const name = path.join(relative, entry.name);
-        if (entry.isDirectory()) return inventory(name);
-        const file = path.join(destination, name);
-        fs.chmodSync(file, 0o600);
-        return [
-          {
-            path: name.split(path.sep).join('/'),
-            sha256: createHash('sha256').update(fs.readFileSync(file)).digest('hex')
-          }
-        ];
-      });
+    source.check();
+    origin.check();
+    output = createOwnedBackupDirectory(target.parent, target.name);
+    const files = [];
+    const write = (name, bytes) => {
+      output.write(name, bytes);
+      files.push({ path: name, sha256: createHash('sha256').update(bytes).digest('hex') });
+    };
+    write('local.sqlite', temporary.read('local.sqlite'));
+    write('recovery.json', Buffer.from(JSON.stringify(payload, null, 2)));
+    const relative = file => path.relative(dataDirectory, file).split(path.sep).join('/');
+    const uploads = `${relative(path.join(activeDirectory, 'uploads'))}/`;
+    // 损坏的 uploads 若是普通文件，仍保留旧救援入口的原字节，不静默丢弃。
+    const uploadsEntry = uploads.slice(0, -1);
+    if (source.entries.get(uploadsEntry)?.isFile()) write('uploads', source.read(uploadsEntry));
+    for (const [name, stat] of source.entries)
+      if (name.startsWith(uploads) && stat.isFile()) write(`uploads/${name.slice(uploads.length)}`, source.read(name));
+    // 根目录草稿与活动资料集归档均保留原字节；损坏 JSON 也能救援，不加载应用 schema。
+    const primary = 'recovery-drafts.json';
+    let primaryDigest;
+    if (source.entries.has(primary)) {
+      const bytes = source.read(primary);
+      primaryDigest = createHash('sha256').update(bytes).digest('hex');
+      write(primary, bytes);
     }
-    const files = inventory();
-    fs.writeFileSync(
-      path.join(destination, 'manifest.json'),
-      JSON.stringify({ version: 1, createdAt: payload.exportedAt, files }, null, 2),
-      { mode: 0o600 }
+    const archives = [...new Set([dataDirectory, activeDirectory])].flatMap(directory =>
+      listArchivedDraftFiles(directory, { verify: false }).map(item => item.file)
     );
-    return { directory: destination, schemaVersion: payload.schemaVersion, files: files.length };
+    if (activeDirectory !== dataDirectory && source.entries.has(relative(path.join(activeDirectory, primary))))
+      archives.push(path.join(activeDirectory, primary));
+    const copied = new Set();
+    for (const file of archives) {
+      const bytes = source.read(relative(file));
+      const digest = createHash('sha256').update(bytes).digest('hex');
+      if (digest === primaryDigest || copied.has(digest)) continue;
+      copied.add(digest);
+      write(`recovery-draft-archives/${digest}.json`, bytes);
+    }
+    source.check();
+    origin.check();
+    output.check();
+    // 完整清单是发布标志；失败只清理仍属于本次操作的目录和文件。
+    output.write(
+      'manifest.json',
+      Buffer.from(JSON.stringify({ version: 1, createdAt: payload.exportedAt, files }, null, 2))
+    );
+    source.check();
+    origin.check();
+    output.check();
+    return { directory: output.root, schemaVersion: payload.schemaVersion, files: files.length };
   } catch (error) {
-    if (created) fs.rmSync(destination, { recursive: true, force: true });
+    output?.remove('manifest.json');
+    output?.cleanup();
     throw error;
   } finally {
     try {
-      snapshot?.close();
+      try {
+        snapshot?.close();
+      } finally {
+        temporary?.cleanup();
+      }
     } finally {
+      // 检查阶段到此结束。收尾阶段真实删除协调锁，不伪造任何时间。
       release();
     }
   }
