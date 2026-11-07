@@ -416,6 +416,54 @@ describe('NotesContextSidebar', () => {
     expect(screen.getByRole('button', { name: /回收站1/ }).closest('footer')).not.toBeNull();
   });
 
+  it.each([
+    ['文件夹', '{Enter}'],
+    ['文件夹', ' '],
+    ['标签', '{Enter}'],
+    ['标签', ' ']
+  ])('分区折叠保留 Tab、焦点状态和 %s %s 键盘操作', async (name, key) => {
+    const user = userEvent.setup();
+    renderSidebar();
+    const toggle = screen.getByRole('button', { name });
+    for (let index = 0; index < 30 && document.activeElement !== toggle; index += 1) await user.tab();
+    expect(toggle).toHaveFocus();
+    expect(toggle).toHaveAttribute('data-focus-visible', 'true');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard(key);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveFocus();
+    await user.keyboard(key);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveFocus();
+  });
+
+  it.each(['{Enter}', ' '])('文件夹展开保留 Tab、焦点状态和 %s 键盘操作', async key => {
+    const user = userEvent.setup();
+    const { store } = renderSidebar();
+    const toggle = screen.getByRole('button', { name: '展开产品设计' });
+    for (let index = 0; index < 30 && document.activeElement !== toggle; index += 1) await user.tab();
+    expect(toggle).toHaveFocus();
+    expect(toggle).toHaveAttribute('data-focus-visible', 'true');
+    await user.keyboard(key);
+    expect(store.getState().navigation.openFolders['folder-1']).toBe(true);
+    expect(toggle).toHaveAccessibleName('收起产品设计');
+    expect(screen.getByRole('button', { name: '规划草案' })).toBeInTheDocument();
+    expect(toggle).toHaveFocus();
+    await user.keyboard(key);
+    expect(store.getState().navigation.openFolders['folder-1']).toBe(false);
+    expect(screen.queryByRole('button', { name: '规划草案' })).not.toBeInTheDocument();
+    expect(toggle).toHaveFocus();
+  });
+
+  it('空文件夹展开按钮仍禁用且不响应按压', async () => {
+    const user = userEvent.setup();
+    const { store } = renderSidebar({ notes: [] });
+    const toggle = screen.getByRole('button', { name: '展开产品设计' });
+    expect(toggle).toBeDisabled();
+    await user.click(toggle);
+    expect(store.getState().navigation.openFolders['folder-1']).toBeFalsy();
+  });
+
   it('renames and confirms deletion for notes without native browser dialogs', async () => {
     const { api } = renderSidebar();
     await userEvent.click(screen.getByRole('button', { name: '展开产品设计' }));

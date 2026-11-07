@@ -18,7 +18,16 @@ import {
   SearchIcon,
   StarIcon
 } from '../../components/icons/knowra';
-import { IconButton, SideNavItem, Menu, MenuItem, MenuPopover, MenuTrigger, PointMenu } from '../../components/ui';
+import {
+  IconButton,
+  SideNavItem,
+  Menu,
+  MenuItem,
+  MenuPopover,
+  MenuTrigger,
+  PointMenu,
+  PressableButton
+} from '../../components/ui';
 import { Button, Dialog, DialogBody, DialogClose, DialogFooter, TextField } from '../../components/ui';
 import { useAppStore } from '../../store/AppStoreProvider';
 import { useLocation, useNavigate } from '../../app/router';
@@ -470,19 +479,19 @@ function SidebarSection({
         <div className={styles.sectionHeader}>
           <h2 id={`sidebar-${id}`} className={styles.sectionTitle}>
             {collapsible ? (
-              <button
+              <PressableButton
                 type="button"
                 className={styles.sectionToggle}
                 aria-label={id === 'tags' ? '标签' : undefined}
                 aria-expanded={expanded}
                 aria-controls={bodyId}
-                onClick={() => setExpanded(!expanded)}
+                onPress={() => setExpanded(!expanded)}
               >
                 <span className={styles.sectionChevron} data-expanded={expanded || undefined} aria-hidden="true">
                   <ChevronRightIcon size={15} />
                 </span>
                 <span>{title}</span>
-              </button>
+              </PressableButton>
             ) : (
               title
             )}
