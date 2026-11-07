@@ -4,6 +4,7 @@ export interface SyncIssue {
 }
 
 export interface SyncStatusSnapshot {
+  safetyPaused?: boolean;
   serverUrl?: string | null;
   phase?: string;
   error?: SyncIssue | null;
@@ -28,7 +29,7 @@ export function describeLocalSyncStatus(
   if (connectionError?.code?.startsWith('LOCAL_RUNTIME_')) {
     return { tone: 'warning', main: '本地资料状态待确认', detail: '本地服务连接失败' };
   }
-  if (status?.error?.code === 'SYNC_RESULT_UNCERTAIN') {
+  if (status?.safetyPaused || status?.error?.code === 'SYNC_RESULT_UNCERTAIN') {
     return { tone: 'danger', main: '云端同步已暂停', detail: '提交结果待人工核对，本地修改已保留' };
   }
   if (!status?.serverUrl) {

@@ -84,3 +84,18 @@ it('提交结果未知时明确提示人工核对，不显示等待自动重试'
     detail: '提交结果待人工核对，本地修改已保留'
   });
 });
+
+it('安全暂停优先于已同步、断开和错误文案', () => {
+  expect(describeLocalSyncStatus({ ...connected, safetyPaused: true })).toEqual({
+    tone: 'danger',
+    main: '云端同步已暂停',
+    detail: '提交结果待人工核对，本地修改已保留'
+  });
+  expect(
+    describeLocalSyncStatus({
+      ...connected,
+      phase: 'disconnected',
+      error: { code: 'SYNC_RESULT_UNCERTAIN', message: '待确认' }
+    }).main
+  ).toBe('云端同步已暂停');
+});
