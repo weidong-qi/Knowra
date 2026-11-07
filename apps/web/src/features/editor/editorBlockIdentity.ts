@@ -1,3 +1,4 @@
+import { randomId } from '../../browser/randomId';
 import { extendListItemSchemaForTask } from '@milkdown/kit/preset/gfm';
 import type { Mark, MarkType, Node as ProseNode, NodeSpec, ParseRule } from '@milkdown/kit/prose/model';
 import { Plugin, PluginKey, type Transaction } from '@milkdown/kit/prose/state';
@@ -77,7 +78,7 @@ export function configureBlockIdentitySchema(ctx: Ctx) {
 }
 
 export function createBlockId() {
-  return `b${crypto.randomUUID().replace(/-/g, '').slice(0, 15)}`;
+  return `b${randomId().replace(/-/g, '').slice(0, 15)}`;
 }
 
 function insertedRanges(transactions: readonly Transaction[]) {
