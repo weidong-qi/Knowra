@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Button, Checkbox } from '../../../components/ui';
+import { Button, Checkbox, PressableButton } from '../../../components/ui';
 import { KnowledgeIcon } from '../../../components/icons/knowra';
 import { WorkspacePanel, WorkspacePanelBody, WorkspacePanelFooter, WorkspacePanelHeader } from '../../../components/workspace/WorkspacePanel';
 import { PathTrail } from '../../../shell/PathTrail';
@@ -233,16 +233,16 @@ function ConceptDetail({ data, conceptId, onSelectItem, onSelectConcept }: { dat
     <p className={styles.statusLine}><span className={`${styles.swatch} ${LEVEL_CLASS[status.level]}`} />{MASTERY_LABELS[status.level]}<span className={styles.muted}>已评估 {status.assessed}/{status.total} 条已确认知识</span></p>
     <h3>知识条目 <span className={styles.count}>{items.length}</span></h3>
     {items.length === 0 ? <p className={styles.muted}>还没有内容。概念可以先于笔记存在，之后再补。</p> : <ul className={styles.itemList}>
-      {items.map(item => <li key={item.id}><button type="button" onClick={() => onSelectItem(item)}>
+      {items.map(item => <li key={item.id}><PressableButton type="button" onPress={() => onSelectItem(item)}>
         <span className={`${styles.swatch} ${styles.swatchSquare} ${LEVEL_CLASS[item.mastery]} ${item.verification !== 'confirmed' ? styles.unconfirmed : ''}`} />
         <span className={styles.itemText}><strong>{item.title}</strong><small>{KIND_LABELS[item.kind]} · {VERIFICATION_LABELS[item.verification]} · {MASTERY_LABELS[item.mastery]}</small></span>
-      </button></li>)}
+      </PressableButton></li>)}
     </ul>}
     <h3>相邻概念 <span className={styles.count}>{neighbors.size}</span></h3>
     <ul className={styles.chips}>{relationsOf(data, conceptId).map(relation => {
       const otherId = relation.from === conceptId ? relation.to : relation.from;
       const other = data.concepts.find(entry => entry.id === otherId);
-      return other ? <li key={relation.id}><button type="button" title={relation.reason} onClick={() => onSelectConcept(other.id)}>{relation.from === conceptId ? `${relationLabel(relation)} → ${other.name}` : `${other.name} → ${relationLabel(relation)}`}{relation.verification === 'candidate' ? '（候选）' : ''}</button></li> : null;
+      return other ? <li key={relation.id}><PressableButton type="button" title={relation.reason} onPress={() => onSelectConcept(other.id)}>{relation.from === conceptId ? `${relationLabel(relation)} → ${other.name}` : `${other.name} → ${relationLabel(relation)}`}{relation.verification === 'candidate' ? '（候选）' : ''}</PressableButton></li> : null;
     })}</ul>
   </div>;
 }
@@ -274,7 +274,7 @@ function ItemDetail({ data, item, onSelectConcept }: { data: ConceptGraphData; i
     <h3>涉及概念</h3>
     <ul className={styles.chips}>{item.conceptIds.map(id => {
       const concept = data.concepts.find(entry => entry.id === id);
-      return concept ? <li key={id}><button type="button" onClick={() => onSelectConcept(id)}>{concept.name}</button></li> : null;
+      return concept ? <li key={id}><PressableButton type="button" onPress={() => onSelectConcept(id)}>{concept.name}</PressableButton></li> : null;
     })}</ul>
   </div>;
 }
