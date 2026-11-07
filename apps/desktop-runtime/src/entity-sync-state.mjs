@@ -755,7 +755,8 @@ export function acknowledgeEntityUpload(store, operation, result) {
       for (const entry of result.entries) {
         const submitted = operation.changes.find(
           item =>
-            item.collection === entry.collection && (item.id === entry.id || result.aliases?.[item.id] === entry.id)
+            item.collection === entry.collection &&
+            (item.id === entry.id || (item.collection === 'noteVersions' && result.aliases?.[item.id] === entry.id))
         );
         const local = state[entry.collection].find(item => item.id === (submitted?.id ?? entry.id)) ?? null;
         if (

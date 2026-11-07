@@ -361,7 +361,9 @@ for (const malformed of [
       if (malformed === 'partial-accepted') result.entries = entries.slice(1);
       if (malformed === 'duplicate-accepted') result.entries[1] = entries[0];
       if (malformed === 'wrong-alias')
-        result.aliases = { [operation.changes.find(entry => entry.collection === 'notes').id]: 'synthetic-alias' };
+        result.aliases = {
+          [operation.changes.find(entry => entry.collection === 'noteVersions').id]: 'synthetic-alias'
+        };
       if (malformed === 'bad-revision') result.entries[0].revision = 0;
       if (malformed === 'wrong-value-id') result.entries[0].value = { ...result.entries[0].value, id: 'mismatched' };
       if (malformed === 'unexpected-tombstone') result.entries[0].value = null;
@@ -436,4 +438,20 @@ test('崩溃重开后首次直接解决无关冲突，也不能清除待确认�
   assert.deepEqual(engine.recovery()[0].upload, frozen);
   assert.equal(engine.status().entityConflict.id, conflict.id);
   assert.equal(workspace.knowledge.noteService.getNote(other.id).rawMarkdown, '本地分支');
+});
+
+test('真实服务附带本批未修改的历史去重 alias 时，正常收藏同步不误暂停', async t => {
+  const cloud = await fixture(t);
+  const original = cloud.dataStore.state.noteVersions.find(version => version.noteId === cloud.note.id);
+  assert(original);
+  cloud.dataStore.runTransaction(() => {
+    cloud.dataStore.state.noteVersions.push({ ...structuredClone(original), id: 'synthetic-duplicate-history' });
+  });
+  await cloud.engine.sync();
+  cloud.a.knowledge.noteService.updateNote(cloud.note.id, { favorite: true });
+  await cloud.engine.sync();
+  assert.equal(cloud.engine.status().error, null);
+  assert.equal(cloud.engine.status().phase, 'synced');
+  assert.equal(cloud.a.knowledge.noteService.getNote(cloud.note.id).favorite, true);
+  assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).favorite, true);
 });

@@ -119,8 +119,10 @@ function validBatchResult(operation, result) {
   if (typeof aliases !== 'object' || Array.isArray(aliases)) return false;
   for (const [sourceId, targetId] of Object.entries(aliases)) {
     const source = operation.changes.find(entry => entry.collection === 'noteVersions' && entry.id === sourceId);
+    // 服务端会附带整库历史去重别名；未用于本批输入的映射不影响本批记账。
+    if (!source) continue;
     if (
-      !source?.value ||
+      !source.value ||
       typeof targetId !== 'string' ||
       !targetId ||
       targetId.length > 200 ||
