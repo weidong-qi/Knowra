@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { PathSegment } from './path';
+import { PressableButton } from '../components/ui/button/PressableButton';
 import styles from './PathTrail.module.css';
 
 export interface PathTrailProps {
@@ -59,14 +60,14 @@ function TrailSegment({
   const isLink = !isCurrent && typeof segment.onNavigate === 'function';
   if (isLink) {
     return (
-      <button
+      <PressableButton
         type="button"
         className={styles.link}
-        onClick={segment.onNavigate}
+        onPress={segment.onNavigate}
         aria-label={`跳转到「${segment.label}」`}
       >
         {segment.label}
-      </button>
+      </PressableButton>
     );
   }
   return (
