@@ -269,8 +269,14 @@
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 4px 8px;
+  gap: 10px 8px;
+  padding: 2px 6px 12px;
+}
+/* 仅侧栏内放宽胶囊尺寸，不影响检查器等其他位置的 TagChip。 */
+.tags .tagChip {
+  height: 24px;
+  gap: 7px;
+  padding: 0 11px;
 }
 .tagHeaderActions {
   display: flex;
