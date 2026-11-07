@@ -1,7 +1,7 @@
 import type { CSSProperties, RefObject } from 'react';
 import { MathText } from '../../../components/math/MathText';
 import type { Tag } from '@study-accelerator/web-core';
-import { Button } from '../../../components/ui';
+import { Button, PressableButton } from '../../../components/ui';
 import { NoteStatusControl } from './NoteStatusControl';
 import { NoteIcon, TagIcon, LinkIcon, PaperclipIcon } from '../../../components/icons/knowra';
 import { buildFolderPath, getSourceLabel, formatInspectorDay, formatInspectorMoment, type getDocumentStats, type InspectorHeading, type InspectorRelations } from '../editorInspectorModel';
@@ -83,22 +83,30 @@ export function OutlinePanel({ outline, onNavigate }: {
   const depths = outlineDepths(outline);
   return (
     <section className={`${styles.simplePanel} ${styles.outlinePanel}`} aria-label="文档大纲">
-      {outline.length > 0 ? <nav className={styles.outline} aria-label="文档大纲">
-        {outline.map((heading, index) => (
-          <button
-            key={heading.id}
-            type="button"
-            data-level={heading.level}
-            data-depth={depths[index]}
-            style={{ '--outline-depth': depths[index] } as CSSProperties}
-            aria-label={`跳转到「${heading.text}」，H${heading.level}`}
-            onClick={() => onNavigate(heading, index)}
-          >
-            <span className={styles.outlineText}><MathText text={heading.text} inlineOnly /></span>
-            <span className={styles.outlineLevel} aria-hidden="true">H{heading.level}</span>
-          </button>
-        ))}
-      </nav> : <p className={styles.emptyPanel}>添加一至四级标题后，大纲会自动生成。</p>}
+      {outline.length > 0 ? (
+        <nav className={styles.outline} aria-label="文档大纲">
+          {outline.map((heading, index) => (
+            <PressableButton
+              key={heading.id}
+              type="button"
+              data-level={heading.level}
+              data-depth={depths[index]}
+              style={{ '--outline-depth': depths[index] } as CSSProperties}
+              aria-label={`跳转到「${heading.text}」，H${heading.level}`}
+              onPress={() => onNavigate(heading, index)}
+            >
+              <span className={styles.outlineText}>
+                <MathText text={heading.text} inlineOnly />
+              </span>
+              <span className={styles.outlineLevel} aria-hidden="true">
+                H{heading.level}
+              </span>
+            </PressableButton>
+          ))}
+        </nav>
+      ) : (
+        <p className={styles.emptyPanel}>添加一至四级标题后，大纲会自动生成。</p>
+      )}
     </section>
   );
 }
