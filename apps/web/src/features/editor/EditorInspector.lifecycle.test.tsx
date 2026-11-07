@@ -247,11 +247,47 @@ describe('EditorInspector 详情写入保护与恢复', () => {
     expect(await screen.findByText('恢复排除失败，请重试')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: '重点详情' })).toBeVisible();
     await waitFor(() => expect(restore).toBeEnabled());
+    // 在 jsdom 中移动指针，结束禁用期间未产生 click 的指针序列。真实浏览器另测原地重试。
+    await user.hover(dialog);
     await user.click(restore);
-    expect(onDeleteAnnotationExclusion).toHaveBeenNthCalledWith(2, annotationA.id, 'exclusion', 3);
+    await waitFor(() => expect(onDeleteAnnotationExclusion).toHaveBeenNthCalledWith(2, annotationA.id, 'exclusion', 3));
     expect(restore).toBeDisabled();
     await resolveRequest(retry, undefined);
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '重点详情' })).not.toBeInTheDocument());
     expect(screen.queryByText('恢复排除失败，请重试')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('EditorInspector 详情普通按钮键盘回归', () => {
+  it.each(['{Enter}', ' '])('通过 Tab 和 %s 跳转知识并恢复准确的排除范围', async key => {
+    const onOpenKnowledgeItem = vi.fn();
+    const onDeleteAnnotationExclusion = vi.fn().mockResolvedValue(undefined);
+    const { user } = setup({ onOpenKnowledgeItem, onDeleteAnnotationExclusion });
+    await user.click(screen.getByRole('tab', { name: '标注' }));
+    await requestDetail(user);
+    const dialog = await screen.findByRole('dialog', { name: '重点详情' });
+    const knowledge = within(dialog).getByRole('button', { name: `${annotationA.id} 候选` });
+    for (let index = 0; index < 16 && document.activeElement !== knowledge; index += 1) await user.tab();
+    expect(knowledge).toHaveFocus();
+    await user.keyboard(key);
+    expect(onOpenKnowledgeItem).toHaveBeenCalledExactlyOnceWith(`candidate-${annotationA.id}`);
+    const restore = within(dialog).getByRole('button', { name: '恢复排除范围：已排除的片段' });
+    await user.tab();
+    expect(restore).toHaveFocus();
+    await user.keyboard(key);
+    expect(onDeleteAnnotationExclusion).toHaveBeenCalledExactlyOnceWith(annotationA.id, 'exclusion', 3);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '重点详情' })).not.toBeInTheDocument());
+  });
+
+  it('缺少恢复回调时禁用恢复按钮，关联知识仍可查看', async () => {
+    const onOpenKnowledgeItem = vi.fn();
+    const { user } = setup({ onDeleteAnnotationExclusion: undefined, onOpenKnowledgeItem });
+    await user.click(screen.getByRole('tab', { name: '标注' }));
+    await requestDetail(user);
+    const dialog = await screen.findByRole('dialog', { name: '重点详情' });
+    expect(within(dialog).getByRole('button', { name: '恢复排除范围：已排除的片段' })).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: `${annotationA.id} 候选` }));
+    expect(onOpenKnowledgeItem).toHaveBeenCalledExactlyOnceWith(`candidate-${annotationA.id}`);
   });
 });
