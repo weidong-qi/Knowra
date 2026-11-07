@@ -314,7 +314,13 @@ export async function startLocalRuntime({
           try {
             let result;
             if (request.method === 'GET' && url.pathname.endsWith('/sync')) result = sync.status();
+            else if (request.method === 'GET' && url.pathname.endsWith('/recovery-preview'))
+              result = sync.recoveryPreview(Object.fromEntries(url.searchParams));
             else if (request.method === 'GET' && url.pathname.endsWith('/recovery')) result = sync.recovery();
+            else if (request.method === 'POST' && url.pathname.endsWith('/recover'))
+              result = await sync.recover(await parseBody(request));
+            else if (request.method === 'POST' && url.pathname.endsWith('/recover-resolve'))
+              result = await sync.recoverResolve(await parseBody(request));
             else if (request.method === 'POST' && url.pathname.endsWith('/configure'))
               result = await sync.configure(await parseBody(request));
             else if (request.method === 'POST' && url.pathname.endsWith('/disconnect'))

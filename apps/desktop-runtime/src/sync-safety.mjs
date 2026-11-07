@@ -16,6 +16,10 @@ export const uploadIdentity = operation => ({
 });
 const matches = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 
+export function syncSenderDeviceId(store) {
+  return store.readSync(db => read(db, 'senderDeviceId')) ?? store.getStatus().deviceId;
+}
+
 export function readSyncSafetyPause(db) {
   return read(db, 'safetyPause');
 }

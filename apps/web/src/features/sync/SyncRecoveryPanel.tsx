@@ -160,6 +160,9 @@ export function SyncRecoveryPanel({
             待恢复关联组共 {preview?.total ?? session.totalItems}{' '}
             项。以下选择将覆盖整个关联组，包括其他分页和未展开的项目，不是只处理当前页。
           </p>
+          <p className={styles.hint}>
+            决定针对当前对照值。旧回收、恢复和审阅前像会完整保存在恢复记录中，不会换编号重演历史操作；依赖已改变的审阅仍需重新核对。
+          </p>
           {(session.epochChanged || preview?.epochChanged) && (
             <p className={styles.hint}>
               云端资料批次已改变，请特别核对删除和关联关系；不支持的组合会继续暂停，不会强行覆盖。
@@ -169,7 +172,7 @@ export function SyncRecoveryPanel({
             <p role="alert" className={styles.error}>
               {invalidated === 'retry'
                 ? '恢复尚未完成，同步仍暂停。请刷新整组预览并重新核对后再决定。'
-                : '本机资料已改变，旧预览不可用于决定。请先保存编辑，再刷新整组预览并重新核对。'}
+                : '本机资料已改变或固定云端快照已更新，旧预览不可用于决定。请先保存编辑，再刷新整组预览并重新核对。'}
             </p>
           )}
           <div className={styles.actions}>

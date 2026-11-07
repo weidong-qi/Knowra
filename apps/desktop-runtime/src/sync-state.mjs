@@ -193,7 +193,7 @@ export function nextUpload(store) {
       const request = {
         protocolVersion: 1,
         datasetEpoch: epoch,
-        deviceId: store.getStatus().deviceId,
+        deviceId: readMeta(db, 'senderDeviceId') ?? store.getStatus().deviceId,
         operationId: randomUUID(),
         noteId: note.id,
         baseRevision: base.revision,

@@ -32,6 +32,8 @@ import { clearExamFocusReviewUpload } from './exam-focus-review-boundaries.mjs';
 import { createSyncExecutionGate } from './sync-execution-gate.mjs';
 import { createSyncTransport } from './sync-transport.mjs';
 import { createAuthoritativePurge } from './authoritative-purge.mjs';
+import { createSyncRecovery } from './sync-recovery.mjs';
+import { readRecoverySession } from './sync-recovery-state.mjs';
 import {
   assertStoreSyncNotPaused,
   persistUnconfirmedSending,
@@ -40,16 +42,26 @@ import {
   isPreparedUpload,
   pauseUncertainSync,
   readSyncSafetyPause,
-  syncSafetyError
+  syncSafetyError,
+  syncSenderDeviceId
 } from './sync-safety.mjs';
 
 export function createSyncEngine(
   store,
-  { fetcher = fetch, intervalMs = 15000, noteService, autoSync = true, entityTransfer = null, clock } = {}
+  {
+    fetcher = fetch,
+    intervalMs = 15000,
+    noteService,
+    autoSync = true,
+    entityTransfer = null,
+    clock,
+    createRecoveryBackup
+  } = {}
 ) {
   persistUnconfirmedSending(store);
   const execution = createSyncExecutionGate();
   let authorization = '';
+  let recoveryAuthorization = '';
   const full = Boolean(entityTransfer);
   let closed = false;
   let phase = 'not-configured';
@@ -75,6 +87,18 @@ export function createSyncEngine(
     fetcher,
     getServerUrl: () => meta('serverUrl'),
     getAuthorization: () => authorization
+  });
+  const recoveryTransport = createSyncTransport({
+    fetcher,
+    getServerUrl: () => meta('serverUrl'),
+    getAuthorization: () => recoveryAuthorization
+  });
+  const safetyRecovery = createSyncRecovery({
+    store,
+    request: recoveryTransport.request,
+    createBackup: createRecoveryBackup,
+    noteService,
+    entityTransfer
   });
   async function receive(entries, cursor, epoch, reset = false) {
     if (!full) {
@@ -261,7 +285,7 @@ export function createSyncEngine(
   // 设备序号仅在本机即将生成新操作时向云端校准；序号只由本设备推进，进程内核对一次即可。
   async function verifyDeviceSequence() {
     if (sequenceVerified || meta('entityUpload') || !getEntitySyncState(store).pendingEntities) return;
-    const device = await request(`device?deviceId=${encodeURIComponent(store.getStatus().deviceId)}`);
+    const device = await request(`device?deviceId=${encodeURIComponent(syncSenderDeviceId(store))}`);
     store.metadataTransaction(db =>
       writeMeta(db, 'entitySequence', Math.max(meta('entitySequence') ?? 0, device.sequence))
     );
@@ -441,6 +465,7 @@ export function createSyncEngine(
       requireServer(info);
       if (meta('ownerId') && info.ownerId !== meta('ownerId'))
         throw new Error('云端所属资料库已改变，请使用独立本地资料目录。');
+      await safetyRecovery.verifyBarriers(info, request);
       store.metadataTransaction(db => {
         writeMeta(db, 'ownerId', info.ownerId);
         writeMeta(db, 'capabilities', info.capabilities ?? []);
@@ -504,6 +529,12 @@ export function createSyncEngine(
             : 'synced';
     } catch (failure) {
       let reportedFailure = failure;
+      if (failure.code === 'SYNC_RECOVERY_BARRIER_LOST' && !meta('safetyPause')) {
+        const pause = store.metadataTransaction(db =>
+          pauseUncertainSync(db, readMeta(db, 'entityUpload'), failure.code)
+        );
+        reportedFailure = syncSafetyError(pause);
+      }
       if (meta('sendingUpload') && !meta('safetyPause')) {
         const pause = store.metadataTransaction(db =>
           pauseUncertainSync(db, readMeta(db, 'entityUpload'), failure.code ?? 'acknowledgement-failed')
@@ -620,10 +651,12 @@ export function createSyncEngine(
       lastCheckedAt,
       knowledgeSyncSupported: meta('capabilities')?.includes(KNOWLEDGE_SYNC_CAPABILITY) ?? null,
       attachmentPending: meta('attachmentPending'),
-      deviceId: store.getStatus().deviceId,
+      deviceId: syncSenderDeviceId(store),
+      localDeviceId: store.getStatus().deviceId,
       phase: meta('safetyPause') ? 'paused' : phase,
       error: meta('safetyPause') ?? error,
       safetyPaused: Boolean(meta('safetyPause')),
+      recoverySession: safetyRecovery.summary(),
       authoritativePurge: purge.status()
     }),
     purgePreview: purge.preview,
@@ -667,6 +700,7 @@ export function createSyncEngine(
       scheduler.pause();
       return exclusive(async () => {
         authorization = '';
+        recoveryAuthorization = '';
         store.metadataTransaction(db => writeMeta(db, 'clientPaused', true));
         scheduler.pause();
         phase = 'disconnected';
@@ -687,6 +721,11 @@ export function createSyncEngine(
                 conflict: readMeta(db, 'entityConflict'),
                 upload: readMeta(db, 'entityUpload'),
                 safetyPause: readSyncSafetyPause(db),
+                recoverySession: readRecoverySession(db),
+                base: db.prepare('SELECT * FROM sync_base').all(),
+                localRevisions: db.prepare('SELECT * FROM local_revisions').all(),
+                deletionFacts: db.prepare('SELECT * FROM deletion_facts').all(),
+                syncMetadata: db.prepare("SELECT key,value FROM metadata WHERE key LIKE 'sync:%'").all(),
                 legacyUploads: db
                   .prepare('SELECT request FROM sync_uploads')
                   .all()
@@ -700,6 +739,32 @@ export function createSyncEngine(
           .all()
           .map(row => readSyncHistory(row.payload))
       ]),
+    async recover(input = {}) {
+      return exclusive(async () => {
+        if (!full)
+          throw Object.assign(new Error('完整来源同步尚未可用，不能恢复。'), { code: 'SYNC_RECOVERY_UNAVAILABLE' });
+        if (
+          (typeof input.username !== 'string' && input.username !== undefined) ||
+          (typeof input.password !== 'string' && input.password !== undefined)
+        )
+          throw Object.assign(new Error('登录字段无效。'), { code: 'SYNC_RECOVERY_INVALID' });
+        recoveryAuthorization = input.username
+          ? `Basic ${Buffer.from(`${input.username}:${input.password ?? ''}`).toString('base64')}`
+          : authorization;
+        await safetyRecovery.prepare(input);
+        return this.status();
+      });
+    },
+    recoveryPreview: input => safetyRecovery.preview(input),
+    async recoverResolve(input) {
+      return exclusive(async () => {
+        await safetyRecovery.resolve(input);
+        authorization = recoveryAuthorization;
+        sequenceVerified = false;
+        await cycle();
+        return this.status();
+      });
+    },
     async retry() {
       return exclusive(async () => {
         if (meta('safetyPause')) return this.status();
@@ -721,6 +786,8 @@ export function createSyncEngine(
     },
     async close() {
       closed = true;
+      authorization = '';
+      recoveryAuthorization = '';
       unsubscribe();
       await scheduler.close();
       await execution.drain();

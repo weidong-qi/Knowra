@@ -7,6 +7,7 @@ import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createSqliteDataStore } from './sqlite-data-store.mjs';
 import { createSyncEngine } from './sync-engine.mjs';
+import { createRuntimeBackup } from './backup.mjs';
 import { createNoteVersionDiscardGate } from './note-version-discard-gate.mjs';
 import { createOptionalAiRuntime, createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
 import { aiRuntimeLifecycle } from '../../api/src/modules/ai/runtime-lifecycle.ts';
@@ -88,7 +89,12 @@ export function createRuntimeServices({
         store.flush();
         return { ...attachment, cleanup: 'retained-local' };
       });
-    const sync = createSyncEngine(store, { ...syncOptions, noteService, entityTransfer });
+    const sync = createSyncEngine(store, {
+      ...syncOptions,
+      noteService,
+      entityTransfer,
+      createRecoveryBackup: () => createRuntimeBackup(store, dataDirectory, { purpose: 'sync-safety-recovery' })
+    });
     // AI 功能开关保存在本机数据目录，与钥匙串里的模型凭据分开；每个提炼回合开始时读取当前值，切换无需重启。
     const aiFeatures = createAiFeatureSettings({ filePath: path.join(dataDirectory, 'ai-features.json') });
     context.http.aiFeatures = aiFeatures;
