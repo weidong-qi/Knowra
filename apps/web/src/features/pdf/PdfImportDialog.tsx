@@ -38,6 +38,7 @@ export function PdfImportDialog({ onClose, onImported }: { onClose(): void; onIm
       );
       if (currentSpace.current !== captured || controller.signal.aborted) return;
       await loadWorkspace();
+      if (currentSpace.current !== captured || controller.signal.aborted) return;
       onImported(note.id);
       onClose();
     } catch (reason) {
