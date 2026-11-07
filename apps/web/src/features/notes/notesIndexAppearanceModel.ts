@@ -8,12 +8,7 @@ export interface NotesIndexAppearance {
   buttonStyle: ButtonStyle;
   defaultButtonStyle: DefaultButtonStyle;
   dialogStyle: DialogStyle;
-  folderArt: FolderArt;
 }
-
-/** 卡片视图文件夹插画：手绘线稿（默认）、山间、纸片拼贴、发芽、夜空。 */
-export const FOLDER_ARTS = ['sketch', 'mountain', 'sticky', 'sprout', 'night'] as const;
-export type FolderArt = (typeof FOLDER_ARTS)[number];
 
 /** 主按钮（Button primary）外观：纸感、白玻璃。 */
 export const BUTTON_STYLES = ['paper', 'frost'] as const;
@@ -35,8 +30,7 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   overlayMaterial: 'glass',
   buttonStyle: 'paper',
   defaultButtonStyle: 'soft',
-  dialogStyle: 'float',
-  folderArt: 'sketch'
+  dialogStyle: 'float'
 };
 const listeners = new Set<() => void>();
 let snapshot = readAppearance();
@@ -58,8 +52,7 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
       : 'soft',
     dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle)
       ? (candidate.dialogStyle as DialogStyle)
-      : 'float',
-    folderArt: FOLDER_ARTS.includes(candidate.folderArt as FolderArt) ? (candidate.folderArt as FolderArt) : 'sketch'
+      : 'float'
   };
 }
 

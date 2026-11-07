@@ -491,12 +491,11 @@
   margin-top: auto;
   padding-top: 8px;
 }
-/* 文件夹卡片底部的类型统计（方案 D）：笔记数与 PDF 数用小 chip 并列。 */
+/* 文件夹卡片底栏的类型统计：笔记数与 PDF 数用小 chip 并列，与文件卡片的状态、标签同一行。 */
 .folderChips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
 }
 .folderChip {
   display: inline-flex;
@@ -516,58 +515,6 @@
   font-weight: 600;
 }
 
-/* 文件夹卡片插画（设置 → 外观 → 文件夹卡片插画）：左侧保留色彩渐变，右侧插画从左侧渐隐进底色。 */
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art] {
-  position: relative;
-  isolation: isolate;
-  color: #f5f5f7;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art] .tileCopy strong,
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art] .tileCopy small {
-  color: #f5f5f7;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art] .tileCopy small {
-  color: #c9ccd4;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art] .tileCopy {
-  position: relative;
-  z-index: 1;
-  max-width: 58%;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art] .tileArt {
-  position: relative;
-  z-index: 1;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art] .tileArt svg {
-  color: #f26b1d;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art='sketch'] {
-  background: linear-gradient(90deg, #4a3a30 0%, #6b4a33 35%, #9a5a2e 65%, #f4a261 100%);
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art='mountain'] {
-  background: linear-gradient(90deg, #2c4450 0%, #355a64 35%, #4f7d80 65%, #f2b26b 100%);
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art='sticky'] {
-  background: linear-gradient(90deg, #3a3b52 0%, #4d4a72 35%, #6a5694 65%, #c86bb0 100%);
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art='sprout'] {
-  background: linear-gradient(90deg, #2c4a3c 0%, #3a6650 35%, #4f8a64 65%, #a7d88b 100%);
-}
-.tileShell[data-view='card'][data-kind='folder'] .tile[data-folder-art='night'] {
-  background: linear-gradient(90deg, #2c3862 0%, #34488a 35%, #4a5fb0 65%, #8e9be8 100%);
-}
-.folderArt {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 62%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 38%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 38%);
-}
 .tileShell[data-view='card'] .tileDate {
   margin-left: auto;
 }
@@ -577,39 +524,6 @@
 }
 .tileShell[data-view='card'] .tile[data-drop-active] {
   box-shadow: 0 0 0 2px var(--ni-accent, var(--accent));
-}
-/* 文件夹卡片（方案 D 收紧版）：图标在上、名称与数量居中偏上、类型统计贴底，卡片高度随内容收紧，不留大块空白。 */
-.tileShell[data-view='card'][data-kind='folder'] .tile {
-  min-height: 128px;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 10px;
-  padding: 16px 16px 14px;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tileArt {
-  display: grid;
-  width: 40px;
-  margin-right: 0;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tileCopy {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tileCopy strong {
-  font-size: 15px;
-  padding-right: 30px;
-}
-.tileShell[data-view='card'][data-kind='folder'] .tileCopy small {
-  margin-top: 0;
-  padding-top: 0;
-}
-.tileShell[data-view='card'][data-kind='folder'] .folderChips {
-  margin-top: auto;
-  padding-top: 10px;
 }
 .cardSummary {
   display: -webkit-box;

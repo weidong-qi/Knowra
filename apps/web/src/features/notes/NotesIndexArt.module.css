@@ -84,15 +84,61 @@
   stroke-width: 1.3;
   stroke-linecap: round;
 }
-/* 卡片文件夹（方案 D）：无瓦片，大号实心文件夹作为视觉中心。 */
-.folderBadge {
-  --knowra-icon-accent: currentColor;
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 40px;
+/* 卡片文件夹（纸质文件夹）：与文件卡片的 .sheet 同描边、同投影、同倾斜，只多一个标签耳。 */
+.folderSheet {
+  position: absolute;
+  top: 15px;
+  left: 24px;
+  width: 62%;
+  height: 86px;
+  transform: rotate(-2deg);
+  transition: transform 160ms ease;
+}
+.folderSheet svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 5px 6px #18203030);
+}
+.folderSheet path {
+  fill: var(--ni-surf, var(--surface-page));
+  stroke: var(--ni-line-2, var(--border-subtle));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.folderSheetLines {
+  position: absolute;
+  top: 28px;
+  right: 14px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.folderSheetLines i {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ni-fill-2, var(--surface-hover));
+}
+.folderSheetLines i:first-child {
+  width: 48%;
+  height: 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--art-color) 65%, var(--ni-surf, var(--surface-page)));
+}
+.folderPeek {
+  position: absolute;
+  top: 6px;
+  left: 44px;
+  width: 52%;
   height: 40px;
-  color: var(--ni-accent, var(--accent));
+  border-radius: 6px 6px 0 0;
+  background: var(--ni-surf, var(--surface-page));
+  box-shadow: 0 0 0 1px var(--ni-line, var(--border-subtle));
+  transform: rotate(3deg);
 }
 .cover {
   width: calc(100% + 32px);
@@ -165,7 +211,8 @@
   :global([data-entry-item]:hover) .art .folder {
     transform: translateY(-2px);
   }
-  :global([data-entry-item]:hover) .art .sheet {
+  :global([data-entry-item]:hover) .art .sheet,
+  :global([data-entry-item]:hover) .art .folderSheet {
     transform: rotate(-2deg) translateY(-2px);
   }
 }
@@ -173,7 +220,8 @@
 :global([data-entry-item]:focus-within) .art .folder {
   transform: translateY(-2px);
 }
-:global([data-entry-item]:focus-within) .art .sheet {
+:global([data-entry-item]:focus-within) .art .sheet,
+:global([data-entry-item]:focus-within) .art .folderSheet {
   transform: rotate(-2deg) translateY(-2px);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -182,14 +230,16 @@
   }
   .art .document,
   .art .folder,
-  .art .sheet {
+  .art .sheet,
+  .art .folderSheet {
     transition: none;
   }
   :global([data-entry-item]) .art[data-art-kind] .document,
   :global([data-entry-item]) .art[data-art-kind] .folder {
     transform: none;
   }
-  :global([data-entry-item]) .art[data-art-kind] .sheet {
+  :global([data-entry-item]) .art[data-art-kind] .sheet,
+  :global([data-entry-item]) .art[data-art-kind] .folderSheet {
     transform: rotate(-2deg);
   }
 }

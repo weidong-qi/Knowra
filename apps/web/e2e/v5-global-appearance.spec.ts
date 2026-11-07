@@ -138,20 +138,17 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   await heading.click();
   await page.screenshot({ path: info.outputPath('folder-icons.png'), animations: 'disabled' });
   await toolbar.getByRole('button', { name: '卡片视图' }).click();
-  const badge = index.locator('[data-folder-style="badge"]');
-  await expect(badge).toHaveCount(4);
-  await expect(badge.first()).toHaveCSS('width', '40px');
-  await expect(badge.first()).toHaveCSS('border-radius', '0px');
-  await expect(index.locator('button[data-folder-art="sketch"]')).toHaveCount(4);
+  const paper = index.locator('[data-folder-style="paper"]');
+  await expect(paper).toHaveCount(4);
+  await expect(paper.first()).toHaveCSS('height', '74px');
   await page.screenshot({ path: info.outputPath('folder-cards.png'), animations: 'disabled' });
   await page.getByRole('button', { name: '切换深色模式' }).click();
-  await expect(badge.first()).toHaveCSS('color', 'rgb(242, 107, 29)');
   await page.screenshot({ path: info.outputPath('folder-cards-dark.png'), animations: 'disabled' });
   await page.setViewportSize({ width: 390, height: 844 });
   // 窄屏：标题与工具合为一行，类型筛选与布局切换收进“显示选项”。
   const displayOptions = toolbar.getByRole('button', { name: /^显示选项/ });
   await expect(displayOptions).toHaveCSS('min-height', '44px');
-  await expect(badge.first()).toBeInViewport();
+  await expect(paper.first()).toBeInViewport();
   await page.screenshot({ path: info.outputPath('folder-cards-mobile.png'), animations: 'disabled' });
   await page.reload();
   await toolbar.getByRole('button', { name: /^显示选项/ }).click();
@@ -163,20 +160,6 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
     'aria-pressed',
     'true'
   );
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/#/settings');
-  const folderArt = page.getByRole('group', { name: '文件夹卡片插画' });
-  await expect(folderArt.getByRole('button', { name: '手绘线稿', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
-  await folderArt.getByRole('button', { name: '夜空', exact: true }).click();
-  await page.reload();
-  await expect(folderArt.getByRole('button', { name: '夜空', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.goto('/#/materials');
-  await toolbar.getByRole('button', { name: '卡片视图' }).click();
-  await expect(index.locator('button[data-folder-art="night"]')).toHaveCount(4);
-  await page.screenshot({ path: info.outputPath('folder-cards-night.png'), animations: 'disabled' });
 });
 
 test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {

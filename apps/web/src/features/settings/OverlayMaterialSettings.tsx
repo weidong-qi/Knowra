@@ -8,13 +8,11 @@ import {
   BUTTON_STYLES,
   DEFAULT_BUTTON_STYLES,
   DIALOG_STYLES,
-  FOLDER_ARTS,
   setNotesIndexAppearance,
   useNotesIndexAppearance,
   type ButtonStyle,
   type DefaultButtonStyle,
-  type DialogStyle,
-  type FolderArt
+  type DialogStyle
 } from '../notes/notesIndexAppearanceModel';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
@@ -22,16 +20,9 @@ import styles from './SettingsView.module.css';
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
 const DEFAULT_BUTTON_STYLE_LABELS: Record<DefaultButtonStyle, string> = { soft: '无边软影', glass: '乳白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
-const FOLDER_ART_LABELS: Record<FolderArt, string> = {
-  sketch: '手绘线稿',
-  mountain: '山间',
-  sticky: '纸片拼贴',
-  sprout: '发芽',
-  night: '夜空'
-};
 
 export function OverlayMaterialSettings() {
-  const { overlayMaterial, buttonStyle, defaultButtonStyle, dialogStyle, folderArt } = useNotesIndexAppearance();
+  const { overlayMaterial, buttonStyle, defaultButtonStyle, dialogStyle } = useNotesIndexAppearance();
   const compact = useCompactLayout();
   return (
     <section className={styles.group} aria-labelledby="settings-appearance-heading">
@@ -162,25 +153,6 @@ export function OverlayMaterialSettings() {
                 </DialogFooter>
               </Dialog>
             </DialogTrigger>
-          </div>
-        </div>
-        <div className={`${styles.settingRow} ${styles.materialRow}`}>
-          <div className={styles.settingCopy}>
-            <h4>文件夹卡片插画</h4>
-            <p>影响卡片视图中文件夹卡片右侧的插画。默认手绘线稿，可随时手动切换，切换后即时保存。</p>
-          </div>
-          <div className={`${styles.settingControl} ${styles.materialControl}`}>
-            <SegmentedControl aria-label="文件夹卡片插画">
-              {FOLDER_ARTS.map(art => (
-                <SegmentedButton
-                  key={art}
-                  aria-pressed={folderArt === art}
-                  onPress={() => setNotesIndexAppearance({ folderArt: art })}
-                >
-                  {FOLDER_ART_LABELS[art]}
-                </SegmentedButton>
-              ))}
-            </SegmentedControl>
           </div>
         </div>
       </div>

@@ -123,6 +123,30 @@ describe('Notes index item views', () => {
     expect(container.querySelectorAll('[data-folder-paper]')).toHaveLength(1 + 3 + 0);
   });
 
+  it('卡片视图的文件夹用纸质文件夹、类型胶囊和最近内容摘要，不再显示“n 项”', () => {
+    const folder = { id: 'folder', name: '论文', parentId: null, children: [], updatedAt: '2026-11-01T00:00:00.000Z' };
+    const inside = [
+      { ...note, id: 'a', title: '较早笔记', folderId: 'folder', updatedAt: '2026-11-02T08:00:00.000Z' },
+      { ...note, id: 'b', title: '最新 PDF', folderId: 'folder', contentKind: 'pdf' as const, updatedAt: '2026-11-04T08:00:00.000Z' }
+    ];
+    const { container } = mount(<IndexTile {...tileProps({ item: { kind: 'folder', folder }, notes: inside })} />);
+    expect(container.querySelector('[data-folder-style="paper"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelectorAll('[data-folder-style="paper"] > span').length).toBeGreaterThan(0);
+    expect(screen.getByText('最近：最新 PDF、较早笔记')).toBeInTheDocument();
+    expect(screen.getByText('笔记', { selector: 'span' }).textContent).toBe('1笔记');
+    expect(screen.getByText('PDF', { selector: 'span' }).textContent).toBe('1PDF');
+    expect(container.textContent).not.toContain('2 项');
+    expect(container.textContent).toContain(formatUpdatedAt('2026-11-04T08:00:00.000Z'));
+  });
+
+  it('空文件夹没有叠放的纸，并提示还没有内容', () => {
+    const folder = { id: 'folder', name: '待整理', parentId: null, children: [], updatedAt: '2026-11-06T01:12:00.000Z' };
+    const { container } = mount(<IndexTile {...tileProps({ item: { kind: 'folder', folder }, notes: [] })} />);
+    expect(screen.getByText('还没有内容')).toBeInTheDocument();
+    expect(screen.getByText('空文件夹')).toBeInTheDocument();
+    expect(container.querySelector('[data-folder-style="paper"]')?.children).toHaveLength(1);
+  });
+
   it('always renders the favorite emphasis', () => {
     render(<ItemFavorite />);
     expect(screen.getByLabelText('已收藏')).toBeInTheDocument();
