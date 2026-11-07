@@ -417,13 +417,20 @@ test('真实 PostgreSQL：回收后恢复并重新确认训练关联组，按当
   assert.ok((await f.cloud.prisma.knowledgeItem.findUnique({ where: { id: item.id } })).deletedAt);
   local.knowledgeItemService.restoreDeleted(item.id);
   local.learningObjectiveService.confirmObjective(objective.id);
+  // 知识回收不会归档考点；confirmed 再次 confirm 不登记审阅边界，须走正式重新审阅流程。
+  assert.equal(local.examFocusService.get(focus.id).reviewStatus, 'confirmed');
+  local.examFocusService.archive(focus.id);
+  local.examFocusService.restore(focus.id);
+  assert.equal(local.examFocusService.get(focus.id).reviewStatus, 'candidate');
   local.examFocusService.confirm(focus.id);
+  assert.equal(local.examFocusService.get(focus.id).reviewStatus, 'confirmed');
   local.questionService.validateQuestion(question.id);
   local.questionService.confirmQuestion(question.id);
   const lifecycle = f.meta('knowledgeLifecycleQueue');
   const reviews = f.meta('examFocusReviewQueue');
   assert(lifecycle.length >= 2, '原回收及后继恢复都仍在本机证据中');
-  assert(reviews.length > 0, '必须存在后继人工重新确认的依赖记录');
+  assert(Array.isArray(reviews) && reviews.length > 0, 'candidate→confirmed 必须登记非空的后继人工审阅依赖记录');
+  assert(reviews.some(review => review.focusId === focus.id && review.parents.length > 0));
   const { before, preview } = await prepareRecovery(f);
   const status = await chooseLocal(f, preview);
   const { history, newWrites } = assertRecovered(f, before, preview, status);
