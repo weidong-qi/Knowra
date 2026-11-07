@@ -119,6 +119,46 @@ describe('ConceptGraphView', () => {
     expect(screen.getByText('还没有内容。概念可以先于笔记存在，之后再补。')).toBeInTheDocument();
   });
 
+  it.each(['{Enter}', ' '])('详情三类列表保留%s激活，原画布手势不变', async key => {
+    const user = userEvent.setup();
+    render(<ConceptGraphView />);
+    await user.click(screen.getByRole('button', { name: /^向量，/ }));
+    const panel = screen.getByRole('region', { name: '详情' });
+    const item = itemsOf(data, 'vector')[0];
+    const itemButton = within(panel).getByRole('button', { name: name => name.includes(item.title) });
+    itemButton.focus();
+    await user.keyboard(key);
+    expect(within(panel).getByRole('heading', { name: item.title, level: 2 })).toBeInTheDocument();
+    const vector = within(panel).getByRole('button', { name: '向量' });
+    vector.focus();
+    await user.keyboard(key);
+    expect(within(panel).getByRole('heading', { name: '向量', level: 2 })).toBeInTheDocument();
+    const relation = data.relations.find(entry => entry.from === 'vector' || entry.to === 'vector')!;
+    const other = data.concepts.find(entry => entry.id === (relation.from === 'vector' ? relation.to : relation.from))!;
+    const neighbor = within(within(panel).getAllByRole('list')[1]).getByRole('button', {
+      name: name => name.includes(other.name)
+    });
+    neighbor.focus();
+    await user.keyboard(key);
+    expect(within(panel).getByRole('heading', { name: other.name, level: 2 })).toBeInTheDocument();
+  });
+
+  it.each(['item', 'neighbor', 'concept'])('焦点停在%s详情列表时Escape仍交给原窗口监听收起', async target => {
+    const user = userEvent.setup();
+    render(<ConceptGraphView />);
+    await user.click(screen.getByRole('button', { name: /^向量，/ }));
+    const panel = screen.getByRole('region', { name: '详情' });
+    if (target === 'concept')
+      await user.click(
+        within(panel).getByRole('button', { name: name => name.includes(itemsOf(data, 'vector')[0].title) })
+      );
+    const lists = within(panel).getAllByRole('list');
+    const list = target === 'neighbor' ? lists[1] : lists[0];
+    within(list).getAllByRole('button')[0].focus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('heading', { name: '怎么看这张图' })).toBeInTheDocument();
+  });
+
   it('连线上的关系方块与概念下的条目是同一份数据', async () => {
     const user = userEvent.setup();
     render(<ConceptGraphView />);

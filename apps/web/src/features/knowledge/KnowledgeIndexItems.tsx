@@ -1,5 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react';
 import type { KnowledgeItem } from '@study-accelerator/web-core';
+import { PressableButton } from '../../components/ui/button/PressableButton';
 import { MathText } from '../../components/math/MathText';
 import { ChevronDownIcon, KnowledgeIcon } from '../../components/icons/knowra';
 import { formatUpdatedAt } from '../notes/notesIndexModel';
@@ -21,7 +22,7 @@ function StatusTag({ item }: { item: KnowledgeItem }) {
   return <span className={styles.status} data-status={statusKey(item)}><i aria-hidden="true" />{item.deletedAt ? '回收站' : knowledgeStatusLabel(item.reviewStatus)}</span>;
 }
 
-function openMenuFromKey(event: KeyboardEvent<HTMLElement>, item: KnowledgeItem, handlers: KnowledgeIndexItemHandlers) {
+function openMenuFromKey(event: Pick<KeyboardEvent<HTMLElement>, 'key' | 'shiftKey' | 'preventDefault' | 'currentTarget'>, item: KnowledgeItem, handlers: KnowledgeIndexItemHandlers) {
   if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
   event.preventDefault();
   const rect = event.currentTarget.getBoundingClientRect();
@@ -34,8 +35,11 @@ function KnowledgeEntry({ item, view, ...handlers }: { item: KnowledgeItem; view
   const statement = item.canonicalStatement ? <MathText text={item.canonicalStatement} inlineOnly /> : '尚未填写核心陈述';
   const onContextMenu = (event: MouseEvent) => { event.preventDefault(); handlers.onOpenMenu(item, { x: event.clientX, y: event.clientY }); };
   return <li className={view === 'card' ? styles.cardItem : styles.rowItem} data-entry-item data-entry-key={item.id}>
-    <button type="button" className={view === 'card' ? styles.card : styles.row} aria-current={handlers.selectedItemId === item.id ? 'true' : undefined}
-      disabled={handlers.disabled} onClick={() => handlers.onSelect(item.id)} onContextMenu={onContextMenu} onKeyDown={event => openMenuFromKey(event, item, handlers)}>
+    <PressableButton type="button" className={view === 'card' ? styles.card : styles.row} aria-current={handlers.selectedItemId === item.id ? 'true' : undefined}
+      isDisabled={handlers.disabled} onPress={() => handlers.onSelect(item.id)} onContextMenu={onContextMenu} onKeyDown={event => {
+        openMenuFromKey(event, item, handlers);
+        event.continuePropagation();
+      }}>
       {view === 'card' ? <>
         <span className={styles.cardTop}>{properties.status ? <StatusTag item={item} /> : <span />}{properties.type ? <span className={styles.type}>{knowledgeTypeLabel(item.knowledgeType)}</span> : null}</span>
         <strong className={styles.cardTitle}>{title}</strong>
@@ -48,7 +52,7 @@ function KnowledgeEntry({ item, view, ...handlers }: { item: KnowledgeItem; view
         {properties.status ? <StatusTag item={item} /> : null}
         {properties.updated ? <small className={styles.updated}>{formatUpdatedAt(item.updatedAt)}</small> : null}
       </>}
-    </button>
+    </PressableButton>
   </li>;
 }
 
@@ -56,9 +60,9 @@ export function KnowledgeIndexSections({ sections, view, showHeadings, collapsed
   sections: KnowledgeSection[]; view: KnowledgeView; showHeadings: boolean; collapsed: ReadonlySet<string>; onToggle(id: string): void;
 } & KnowledgeIndexItemHandlers) {
   return <>{sections.map(section => <section key={section.id} aria-label={section.label}>
-    {showHeadings ? <button type="button" className={styles.groupHeading} aria-expanded={!collapsed.has(section.id)} onClick={() => onToggle(section.id)}>
+    {showHeadings ? <PressableButton type="button" className={styles.groupHeading} aria-expanded={!collapsed.has(section.id)} onPress={() => onToggle(section.id)}>
       <ChevronDownIcon size={13} /><strong>{section.label}</strong><span>{section.items.length}</span>
-    </button> : null}
+    </PressableButton> : null}
     {!collapsed.has(section.id) ? <ul className={view === 'card' ? styles.cardGrid : styles.rows} aria-label={view === 'card' ? '知识卡片视图' : '知识列表视图'}>
       {section.items.map(item => <KnowledgeEntry key={item.id} item={item} view={view} {...handlers} />)}
     </ul> : null}
