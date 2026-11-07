@@ -49,6 +49,7 @@ import {
 import { createPostgresAdvisoryLock } from '../postgres-advisory-lock.ts';
 import { findInsecureImageUrls } from '../../modules/knowledge/application/note-content-policy.js';
 import { createJournal, loadJournal, syncKey } from '../../modules/sync/journal.ts';
+import { preserveDeviceRetirements } from '../../modules/sync/device-retirement.ts';
 import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts
@@ -392,6 +393,8 @@ export async function applyJsonMigration({
         )
       : {};
     const normalizedJournals = previousJournals.map(old => ({ ...old, payload: loadJournal(old.payload, presentIds) }));
+    if (normalizedJournals.some(old => old.payload.version === 2 && old.ownerId !== (plan.users[0]?.id ?? 'demo')))
+      throw createAppError('SYNC_PROTECTED_OWNER_MISMATCH', '目标存在其他所属资料库的作废记录，不能删除后重建。', 409);
     for (const old of normalizedJournals) {
       for (const [collection, planCollection] of Object.entries(syncPlanCollections)) {
         for (const item of plan[planCollection] ?? []) {
@@ -480,6 +483,7 @@ export async function applyJsonMigration({
       );
       const previous = normalizedJournals.find(row => row.ownerId === plan.users[0]?.id);
       const journal = createJournal(state);
+      if (previous) preserveDeviceRetirements(previous.payload, journal);
       journal.tombstones = structuredClone(previous?.payload?.tombstones ?? {});
       for (const [key, tombstone] of Object.entries(journal.tombstones)) journal.revisions[key] = tombstone.revision;
       await tx.syncJournal.create({ data: { ownerId: plan.users[0]?.id ?? 'demo', payload: journal } });

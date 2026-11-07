@@ -16,6 +16,12 @@ import {
   REQUIRED_SYNC_CAPABILITIES
 } from './protocol-contract.ts';
 import { assertSyncDeviceEnabled } from './rollout-policy.ts';
+import {
+  assertSyncDeviceNotRetired,
+  parseDeviceRetirement,
+  retirementFor,
+  retireSyncDevice
+} from './device-retirement.ts';
 import { randomUUID } from 'node:crypto';
 import {
   cursorFor,
@@ -40,11 +46,15 @@ export function createSyncService<Backend extends SyncBackend = 'local'>(
     ownerId,
     scope: 'notes',
     pushEnabled: process.env.KNOWRA_SYNC_PUSH_ENABLED !== 'false',
+    recovery: { version: 1, journalVersion: journal.version, deviceRetirementSupported: true },
     cursor: cursorFor(journal, ownerId)
   });
   return {
     device: ({ deviceId }: SyncPageQuery) =>
-      provider.read((_state, journal) => ({ sequence: journal.deviceSequences?.[String(deviceId)] ?? 0 })),
+      provider.read((_state, journal) => ({
+        sequence: journal.deviceSequences?.[String(deviceId)] ?? 0,
+        retired: Boolean(retirementFor(journal, String(deviceId)))
+      })),
     status: () => provider.read((_state, journal) => describe(journal)),
     bootstrap: (input: unknown) => {
       const contract = assertSyncContract(input);
@@ -139,10 +149,58 @@ export function createSyncService<Backend extends SyncBackend = 'local'>(
           throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
         return {
           ...syncContract(),
+          ownerId,
+          deviceId: input.deviceId,
+          operationId: input.operationId,
+          requestHash: input.requestHash,
           datasetEpoch: journal.epoch,
           status: saved ? 'found' : 'missing',
           lastSequence: journal.deviceSequences?.[input.deviceId!] ?? 0,
           ...(saved ? { result: structuredClone(saved.result) } : {})
+        };
+      });
+    },
+    deviceRetirement: (input: SyncPageQuery) => {
+      assertSyncContract(input, { query: true });
+      if (
+        ![input.deviceId, input.recoveryId].every(
+          value => typeof value === 'string' && value.length > 0 && value.length <= 200
+        )
+      )
+        throw syncError('SYNC_RECOVERY_INVALID', '恢复记录查询身份无效。', 422);
+      return provider.read((_state, journal) => {
+        const retirement = retirementFor(journal, input.deviceId!);
+        if (retirement && (retirement.recoveryId !== input.recoveryId || retirement.ownerId !== ownerId))
+          throw syncError('SYNC_RECOVERY_MISMATCH', '旧编号对应其他恢复记录，请保留原记录核对。');
+        return {
+          ...syncContract(),
+          ownerId,
+          datasetEpoch: journal.epoch,
+          journalVersion: journal.version,
+          deviceId: input.deviceId,
+          recoveryId: input.recoveryId,
+          status: retirement ? 'retired' : 'missing',
+          ...(retirement ? { retirement: structuredClone(retirement) } : {})
+        };
+      });
+    },
+    retireDevice: (input: unknown) => {
+      assertSyncContract(input);
+      const command = parseDeviceRetirement(input, ownerId);
+      return (provider.mutateJournal ?? provider.mutate)((_state, journal) => {
+        // 新身份须已经被现有准入规则允许；恢复不会添加白名单或扩大持久访问。
+        if (!retirementFor(journal, command.deviceId)) {
+          assertSyncDeviceEnabled(command.deviceId);
+          assertSyncDeviceEnabled(command.successorDeviceId);
+        }
+        const retirement = retireSyncDevice(journal, command);
+        return {
+          ...syncContract(),
+          ownerId,
+          datasetEpoch: journal.epoch,
+          journalVersion: journal.version,
+          status: 'retired',
+          retirement
         };
       });
     },
@@ -158,6 +216,7 @@ export function createSyncService<Backend extends SyncBackend = 'local'>(
           if (receipt.hash !== hash) throw syncError('OPERATION_REUSED', '同一操作 ID 的内容不能改变。', 422);
           return receipt.result;
         }
+        assertSyncDeviceNotRetired(journal, operation.deviceId);
         assertSyncDeviceEnabled(operation.deviceId);
         const entityKey = syncKey('notes', operation.noteId);
         const revision = journal.revisions[entityKey] ?? null;
