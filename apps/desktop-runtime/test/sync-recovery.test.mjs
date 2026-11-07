@@ -440,7 +440,11 @@ for (const delayed of [false, true]) {
     assert.equal(f.a.engine.status().safetyPaused, true);
     local.knowledgeItemService.restoreDeleted(item.id);
     local.learningObjectiveService.confirmObjective(objective.id);
+    local.examFocusService.archive(focus.id);
+    local.examFocusService.restore(focus.id);
+    assert.equal(local.examFocusService.get(focus.id).reviewStatus, 'candidate');
     local.examFocusService.confirm(focus.id);
+    assert(f.meta('examFocusReviewQueue').length > 0, '正式 candidate→confirmed 必须生成后继私有审阅边界');
     local.questionService.validateQuestion(question.id);
     local.questionService.confirmQuestion(question.id);
     const beforeRecovery = f.writes.length;
