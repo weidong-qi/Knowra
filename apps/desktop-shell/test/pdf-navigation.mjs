@@ -30,15 +30,16 @@ export function capturePdfNavigation(page, label, events, { limit = 160 } = {}) 
   const safeUrl = value => {
     try {
       const url = new URL(value);
+      if (!['http:', 'https:'].includes(url.protocol)) return `${url.protocol}[omitted]`;
       if (url.pathname.startsWith('/local-session/')) url.pathname = '/local-session/[redacted]';
-      return `${url.origin}${url.pathname}${url.hash}`;
+      return `${url.origin}${url.pathname}${url.hash}`.slice(0, 600);
     } catch {
-      return String(value);
+      return '[invalid-url]';
     }
   };
   const safeText = value =>
     String(value)
-      .replace(/https?:\/\/[^\s)"']+/g, safeUrl)
+      .replace(/(?:https?:\/\/|(?:data|blob|file):)[^\s)"']+/g, safeUrl)
       .slice(0, 1000);
   const record = event => {
     if (events.length >= limit) events.shift();
@@ -56,7 +57,11 @@ export function capturePdfNavigation(page, label, events, { limit = 160 } = {}) 
     },
     pageerror: error => record({ type: 'page-error', message: safeText(error.message) }),
     requestfailed: request =>
-      record({ type: 'request-failed', url: safeUrl(request.url()), error: request.failure()?.errorText })
+      record({
+        type: 'request-failed',
+        url: safeUrl(request.url()),
+        error: safeText(request.failure()?.errorText || '')
+      })
   };
   for (const [event, listener] of Object.entries(listeners)) page.on(event, listener);
   return {

@@ -157,3 +157,36 @@ test('诊断有界且删除 URL 查询及启动凭据，不采集请求内容', 
   assert(json.includes('/local-session/[redacted]'));
   capture.dispose();
 });
+
+test('诊断省略内嵌资源及文件 URL，所有 URL 和错误文本有长度上限', () => {
+  const page = syntheticPage();
+  const events = [];
+  const capture = capturePdfNavigation(page, 'initial-import', events);
+  for (const url of [
+    'data:application/pdf;base64,synthetic-pdf-content',
+    'blob:http://127.0.0.1/synthetic-blob',
+    'file:///synthetic-private-path',
+    'invalid-synthetic-content'
+  ]) {
+    page.emit('requestfailed', { url: () => url, failure: () => ({ errorText: 'net::ERR_FAILED' }) });
+    page.emit('console', { type: () => 'error', text: () => `failed ${url}` });
+  }
+  page.emit('requestfailed', {
+    url: () => `http://127.0.0.1/${'a'.repeat(5000)}`,
+    failure: () => ({ errorText: 'b'.repeat(5000) })
+  });
+  const requests = events.filter(({ type }) => type === 'request-failed');
+  assert.deepEqual(
+    requests.slice(0, 4).map(({ url }) => url),
+    ['data:[omitted]', 'blob:[omitted]', 'file:[omitted]', '[invalid-url]']
+  );
+  for (const { url, error } of requests) {
+    assert(url.length <= 600);
+    assert(error.length <= 1000);
+  }
+  const json = JSON.stringify(events);
+  assert(!json.includes('synthetic-pdf-content'));
+  assert(!json.includes('synthetic-blob'));
+  assert(!json.includes('synthetic-private-path'));
+  capture.dispose();
+});
