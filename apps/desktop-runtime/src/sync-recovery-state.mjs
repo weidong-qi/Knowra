@@ -27,6 +27,7 @@ export function readRecoverySession(db) {
     ) ||
     session.oldDeviceId === session.newDeviceId ||
     !/^[a-f0-9]{64}$/.test(session.backupHash ?? '') ||
+    (session.backupHashVersion !== undefined && session.backupHashVersion !== 2) ||
     typeof session.backupDirectory !== 'string' ||
     !session.backupDirectory ||
     !['prepared', 'retiring', 'downloading', 'preview', 'completed'].includes(session.stage) ||
@@ -59,8 +60,13 @@ export function frozenRecoveryHash(db) {
 
 /** 恢复备份须覆盖同一份本机的全部持久记录，不能用错库或同库旧备份替代。 */
 export function recoveryBackupHash(db) {
-  return requestHash(
-    db
+  return requestHash({
+    format: 'knowra-sync-recovery-backup-v2',
+    userVersion: db.prepare('PRAGMA user_version').get().user_version,
+    schema: db
+      .prepare("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name")
+      .all(),
+    tables: db
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
       .all()
       .map(({ name }) => ({
@@ -71,7 +77,16 @@ export function recoveryBackupHash(db) {
           .map(row => JSON.stringify(row))
           .sort()
       }))
-  );
+  });
+}
+
+/** 未版本化会话仅保留证据；不能猜测旧 hash 的格式绑定或原地改写以便继续。 */
+export function assertRecoveryBackupFormat(session) {
+  if (session && session.stage !== 'completed' && session.backupHashVersion !== 2)
+    throw recoveryError(
+      'SYNC_RECOVERY_UPGRADE_REQUIRED',
+      '这份旧恢复会话尚未具备 v8 备份格式证明，已保留原身份、请求和备份并继续暂停；请先导出完整救援资料，人工核对后恢复。'
+    );
 }
 
 export function writeRecoverySession(db, session) {

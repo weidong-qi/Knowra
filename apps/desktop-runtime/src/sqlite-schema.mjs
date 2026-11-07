@@ -1,21 +1,19 @@
 import fs from 'node:fs';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { AI_SQLITE_DDL, AI_ACCESS_SQLITE_DDL, AI_CONVERSATION_SQLITE_DDL } from './ai-sqlite-schema.mjs';
 
-export const LOCAL_DATABASE_VERSION = 7;
+export const LOCAL_DATABASE_VERSION = 8;
 export const SYNC_PROTOCOL_VERSION = 1;
 
 export function initializeDatabase(db, filePath) {
   const version = db.prepare('PRAGMA user_version').get().user_version;
-  if (version === LOCAL_DATABASE_VERSION) return;
-  if (version === 6) return tryAiUpgrade(() => upgradeAiConversationSchema(db, filePath));
-  if (version === 5) return tryAiUpgrade(() => upgradeAiAccessSchema(db, filePath));
-  if (version === 4)
-    return tryAiUpgrade(() => {
-      upgradeAiAnswerSchema(db, filePath);
-      upgradeAiAccessSchema(db, filePath);
-    });
-  if (version === 3) return tryAiUpgrade(() => upgradeAiSchema(db, filePath));
+  if (version === LOCAL_DATABASE_VERSION) return upgradeOptionalAi(db, filePath);
+  if (version >= 3 && version <= 7) {
+    upgradeSyncSafetyGate(db, filePath, version);
+    return upgradeOptionalAi(db, filePath);
+  }
   if (version === 2) {
     const backup = `${filePath}.before-v3-${Date.now()}.bak`;
     db.prepare('VACUUM INTO ?').run(backup);
@@ -75,17 +73,90 @@ export function initializeDatabase(db, filePath) {
     if (db.isTransaction) db.exec('ROLLBACK');
     throw error;
   }
-  return tryAiUpgrade(() => upgradeAiSchema(db, filePath, { backup: false }));
+  upgradeSyncSafetyGate(db, filePath, 3, { backup: false });
+  return upgradeOptionalAi(db, filePath, { backup: false });
 }
 
-function tryAiUpgrade(operation) {
+/** v8 起 user_version 是强制兼容门禁，可选 AI 的进度独立保存。旧库只读检查仍用原版本。 */
+export function readAiSchemaVersion(db, version = db.prepare('PRAGMA user_version').get().user_version) {
+  if (version >= 1 && version <= 7) return version;
+  if (version !== LOCAL_DATABASE_VERSION) throw new Error('本地数据库版本不受支持，请升级应用。');
+  const value = db.prepare("SELECT value FROM metadata WHERE key='aiSchemaVersion'").get()?.value;
+  if (!/^[3-7]$/.test(value ?? '')) throw new Error('本地 AI schema 版本缺失或不受支持；原资料已保留。');
+  return Number(value);
+}
+
+function upgradeSyncSafetyGate(db, filePath, version, { backup = true } = {}) {
+  const dataVersion = db.prepare('PRAGMA data_version').get().data_version;
+  if (backup) createGateBackup(db, filePath, version);
+  db.exec('BEGIN IMMEDIATE');
   try {
-    operation();
+    if (
+      db.prepare('PRAGMA data_version').get().data_version !== dataVersion ||
+      db.prepare('PRAGMA user_version').get().user_version !== version
+    )
+      throw new Error('SQLite 来源在升级前备份期间已变化，已停止升级；原资料与备份均保留。');
+    // 不读取/重写任何 sync:* 事实、队列、恢复会话或设备身份。
+    db.prepare('INSERT OR REPLACE INTO metadata VALUES (?,?)').run('aiSchemaVersion', String(version));
+    db.exec('PRAGMA user_version = 8; COMMIT;');
+  } catch (error) {
+    if (db.isTransaction) db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
+function createGateBackup(db, filePath, version) {
+  const destination = `${filePath}.before-v8-${randomUUID()}.bak`;
+  let backup;
+  try {
+    db.prepare('VACUUM INTO ?').run(destination);
+    fs.chmodSync(destination, 0o600);
+    backup = new DatabaseSync(destination, { readOnly: true });
+    if (
+      backup.prepare('PRAGMA user_version').get().user_version !== version ||
+      backup
+        .prepare('PRAGMA integrity_check')
+        .all()
+        .some(row => row.integrity_check !== 'ok')
+    )
+      throw new Error('v8 升级前 SQLite 备份校验失败；原数据库未升级。');
+    backup.close();
+    backup = undefined;
+    for (const file of process.platform === 'win32' ? [destination] : [destination, path.dirname(destination)]) {
+      const fd = fs.openSync(file, file === destination ? fs.constants.O_RDWR : fs.constants.O_RDONLY);
+      try {
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
+    }
+  } catch (error) {
+    backup?.close();
+    // 只移除本次唯一命名的未通过校验副本；原库与其他备份不动。
+    fs.rmSync(destination, { force: true });
+    throw error;
+  }
+}
+
+function upgradeOptionalAi(db, filePath, { backup = true } = {}) {
+  // v8 描述符损坏不能猜测进度或覆盖，即使核心仍然可读也要停止启动。
+  const version = readAiSchemaVersion(db);
+  try {
+    if (version === 3) upgradeAiSchema(db, filePath, { backup });
+    else if (version === 4) {
+      upgradeAiAnswerSchema(db, filePath, { backup });
+      upgradeAiAccessSchema(db, filePath, { backup: false });
+    } else if (version === 5) upgradeAiAccessSchema(db, filePath, { backup });
+    else if (version === 6) upgradeAiConversationSchema(db, filePath, { backup });
     return null;
   } catch (error) {
-    // 这里只捕获独立 AI schema 的升级；核心表版本/完整性故障继续向上抛出。
+    // 失败只关闭 AI；强制 v8 门禁保留，不自动降回可被旧版打开的 v3–v7。
     return { aiError: error };
   }
+}
+
+function setAiSchemaVersion(db, version) {
+  db.prepare('INSERT OR REPLACE INTO metadata VALUES (?,?)').run('aiSchemaVersion', String(version));
 }
 
 function upgradeAiAnswerSchema(db, filePath, { backup = true } = {}) {
@@ -104,7 +175,8 @@ function upgradeAiAnswerSchema(db, filePath, { backup = true } = {}) {
     );
     if (!columns.has('question')) db.exec('ALTER TABLE ai_jobs ADD COLUMN question TEXT');
     if (!columns.has('result_json')) db.exec('ALTER TABLE ai_jobs ADD COLUMN result_json TEXT');
-    db.exec('PRAGMA user_version = 5; COMMIT;');
+    setAiSchemaVersion(db, 5);
+    db.exec('COMMIT');
   } catch (error) {
     if (db.isTransaction) db.exec('ROLLBACK');
     throw error;
@@ -121,7 +193,8 @@ function upgradeAiSchema(db, filePath, { backup = true } = {}) {
   try {
     db.exec(AI_SQLITE_DDL);
     db.prepare('INSERT OR REPLACE INTO metadata VALUES (?, ?)').run('aiRuntimeEpoch', randomUUID());
-    db.exec('PRAGMA user_version = 4; COMMIT;');
+    setAiSchemaVersion(db, 4);
+    db.exec('COMMIT');
   } catch (error) {
     if (db.isTransaction) db.exec('ROLLBACK');
     throw error;
@@ -139,7 +212,7 @@ function upgradeAiAccessSchema(db, filePath, { backup = true } = {}) {
   db.exec('BEGIN IMMEDIATE');
   try {
     db.exec(AI_ACCESS_SQLITE_DDL);
-    db.exec('PRAGMA user_version = 6');
+    setAiSchemaVersion(db, 6);
     db.exec('COMMIT');
   } catch (error) {
     if (db.isTransaction) db.exec('ROLLBACK');
@@ -157,7 +230,7 @@ function upgradeAiConversationSchema(db, filePath, { backup = true } = {}) {
   db.exec('BEGIN IMMEDIATE');
   try {
     db.exec(AI_CONVERSATION_SQLITE_DDL);
-    db.exec('PRAGMA user_version = 7');
+    setAiSchemaVersion(db, 7);
     db.exec('COMMIT');
   } catch (error) {
     if (db.isTransaction) db.exec('ROLLBACK');

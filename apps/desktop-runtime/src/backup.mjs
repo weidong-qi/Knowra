@@ -14,7 +14,7 @@ import {
   createPersistedLocalDocument,
   validatePersistedLocalState
 } from '../../api/src/infrastructure/local-data-schema.js';
-import { LOCAL_DATABASE_VERSION } from './sqlite-schema.mjs';
+import { LOCAL_DATABASE_VERSION, readAiSchemaVersion } from './sqlite-schema.mjs';
 import { validateSqliteCoreOperationRows } from './core-operation-store.mjs';
 import { createSqliteAiRepository } from './ai-sqlite-repository.mjs';
 import { validateSqliteAccessRows } from './ai-sqlite-access-store.mjs';
@@ -93,7 +93,7 @@ function verifyNewConversationAttachmentBackup(databaseFile, files) {
     }
     // 保留既有旧备份/损坏AI原始资料救援语义，仅新增附件的成功发布前检查。
     if (
-      db.prepare('PRAGMA user_version').get().user_version >= 7 &&
+      db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ai_conversation_records'").get() &&
       db.prepare("SELECT 1 FROM ai_conversation_records WHERE kind = 'aiConversationAttachment' LIMIT 1").get()
     ) {
       verifyConversationAttachmentFiles(validateSqliteConversationRows(db).conversationAttachments, files);
@@ -350,15 +350,18 @@ export function inspectRuntimeBackup(backupDirectory, { restoreContext } = {}) {
     validateSqliteActionRows(db);
     let aiJobs = [],
       conversationAttachments = [];
-    if (version >= 4) {
+    const aiVersion = readAiSchemaVersion(db, version);
+    if (aiVersion >= 4) {
       if (db.prepare('PRAGMA foreign_key_check').all().length) throw new Error('备份 AI 私有记录引用不完整。');
       const ai = createSqliteAiRepository(db);
       for (const kind of Object.keys(AI_RECORD_KINDS)) ai.list(kind).forEach(record => validateAiRecord(kind, record));
       aiJobs = ai.list('aiJob');
       for (const job of aiJobs) ai.listEvents(job.jobId).forEach(validateAiEvent);
-      if (version >= 6) validateSqliteAccessRows(db);
-      if (version >= 7) conversationAttachments = validateSqliteConversationRows(db).conversationAttachments;
+      if (aiVersion >= 6) validateSqliteAccessRows(db);
     }
+    // 进度描述符不能降低已存在私有资料的校验强度。
+    if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ai_conversation_records'").get())
+      conversationAttachments = validateSqliteConversationRows(db).conversationAttachments;
     validateSqliteKnowledgeExtractionBackup(db, aiJobs);
     const privateTables = new Set(
       db

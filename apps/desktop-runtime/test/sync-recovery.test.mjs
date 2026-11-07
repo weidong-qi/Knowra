@@ -817,3 +817,113 @@ test('官方恢复目录中的真实 runtime 恢复备份可在根列表找到�
     await runtime.close();
   }
 });
+
+for (const mutation of ['version', 'schema']) {
+  test(`v8 恢复完整备份绑定格式：同记录的不同 ${mutation} 不能替代当前副本`, async t => {
+    const f = await fixture(t);
+    await f.pause();
+    const localRoot = path.join(f.root, 'synthetic-local');
+    const directory = createRuntimeBackup(f.a.store, localRoot, { purpose: 'sync-safety-recovery' });
+    const { DatabaseSync } = await import('node:sqlite');
+    const { createHash } = await import('node:crypto');
+    const db = new DatabaseSync(path.join(directory, 'local.sqlite'));
+    db.exec(
+      mutation === 'version' ? 'PRAGMA user_version=7' : 'CREATE INDEX synthetic_format_binding ON metadata(value)'
+    );
+    db.close();
+    const manifestPath = path.join(directory, 'manifest.json'),
+      manifest = JSON.parse(fs.readFileSync(manifestPath));
+    for (const entry of manifest.files) {
+      const bytes = fs.readFileSync(path.join(directory, entry.path));
+      entry.size = bytes.length;
+      entry.sha256 = createHash('sha256').update(bytes).digest('hex');
+    }
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    assert.equal(inspectRuntimeBackup(directory).valid, true, '格式仍可单独校验，不能冒充当前同格式完整快照');
+    f.overrideBackup(() => directory);
+    await assert.rejects(f.a.engine.recover(confirm), { code: 'SYNC_RECOVERY_BACKUP_FAILED' });
+    assert.equal(f.retirements(), 0);
+    assert.equal(f.meta('recoverySession'), null);
+    assert.deepEqual(f.meta('entityUpload'), f.original());
+    assert.equal(f.a.engine.status().safetyPaused, true);
+  });
+}
+
+for (const stage of ['retiring', 'preview']) {
+  test(`v7 未版本化 ${stage} 会话升级后只保留并暂停，不换号改写或沿用旧格式证明`, async t => {
+    const f = await fixture(t, { loseRetirement: stage === 'retiring' });
+    await f.pause();
+    if (stage === 'retiring') await assert.rejects(f.a.engine.recover(confirm));
+    else await f.a.engine.recover(confirm);
+    const oldSession = structuredClone(f.meta('recoverySession'));
+    assert.equal(oldSession.backupHashVersion, 2);
+    delete oldSession.backupHashVersion;
+    // 原旧算法仅含表名/行；无新的格式证明，不允许给它补写新 hash 来迁就。
+    const { DatabaseSync } = await import('node:sqlite');
+    const { requestHash } = await import('../../api/src/modules/sync/journal.ts');
+    const backup = new DatabaseSync(path.join(oldSession.backupDirectory, 'local.sqlite'));
+    backup.exec("PRAGMA user_version=7; DELETE FROM metadata WHERE key='aiSchemaVersion'");
+    oldSession.backupHash = requestHash(
+      backup
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        .all()
+        .map(({ name }) => ({
+          name,
+          rows: backup
+            .prepare(`SELECT * FROM "${name.replaceAll('"', '""')}"`)
+            .all()
+            .map(row => JSON.stringify(row))
+            .sort()
+        }))
+    );
+    backup.close();
+    const { createHash } = await import('node:crypto');
+    const manifestPath = path.join(oldSession.backupDirectory, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath));
+    for (const entry of manifest.files) {
+      const bytes = fs.readFileSync(path.join(oldSession.backupDirectory, entry.path));
+      entry.size = bytes.length;
+      entry.sha256 = createHash('sha256').update(bytes).digest('hex');
+    }
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    assert.equal(inspectRuntimeBackup(oldSession.backupDirectory).valid, true);
+    f.a.store.metadataTransaction(db => {
+      db.prepare("UPDATE metadata SET value=? WHERE key='sync:recoverySession'").run(JSON.stringify(oldSession));
+      db.exec("DELETE FROM metadata WHERE key='aiSchemaVersion'; PRAGMA user_version=7");
+    });
+    const queue = f.a.store.readOutbox(),
+      pause = f.meta('safetyPause'),
+      upload = f.meta('entityUpload');
+    const globalDevice = f.a.store.getStatus().deviceId,
+      retirements = f.retirements(),
+      writes = f.writes.length;
+    await f.a.close();
+    const reopened = f.open();
+    assert.equal(
+      reopened.store.readSync(db => db.prepare('PRAGMA user_version').get().user_version),
+      8
+    );
+    assert.deepEqual(f.meta('recoverySession', reopened), oldSession);
+    await assert.rejects(reopened.engine.recover(confirm), { code: 'SYNC_RECOVERY_UPGRADE_REQUIRED' });
+    if (stage === 'preview') {
+      const preview = reopened.engine.recoveryPreview();
+      await assert.rejects(
+        reopened.engine.recoverResolve({
+          recoveryId: preview.recoveryId,
+          revision: preview.revision,
+          choice: 'remote'
+        }),
+        { code: 'SYNC_RECOVERY_UPGRADE_REQUIRED' }
+      );
+    }
+    assert.deepEqual(f.meta('recoverySession', reopened), oldSession);
+    assert.deepEqual(f.meta('entityUpload', reopened), upload);
+    assert.deepEqual(f.meta('safetyPause', reopened), pause);
+    assert.deepEqual(reopened.store.readOutbox(), queue);
+    assert.equal(reopened.store.getStatus().deviceId, globalDevice);
+    assert.equal(reopened.engine.status().safetyPaused, true);
+    assert.equal(f.retirements(), retirements);
+    assert.equal(f.writes.length, writes);
+    assert(fs.existsSync(oldSession.backupDirectory));
+  });
+}

@@ -21,6 +21,7 @@ import { syncSenderDeviceId } from './sync-safety.mjs';
 import { recoveryIntentKeys, resolveEntityRecovery } from './entity-sync-state.mjs';
 import {
   archiveRecoveryEvidence,
+  assertRecoveryBackupFormat,
   frozenRecoveryHash,
   readRecoverySession,
   recoveryEntries,
@@ -169,6 +170,7 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
   return {
     async prepare(input) {
       let current = session();
+      assertRecoveryBackupFormat(current);
       try {
         if (!meta('safetyPause'))
           throw recoveryError('SYNC_RECOVERY_NOT_PAUSED', '当前没有结果待确认的安全暂停，无需作废编号。');
@@ -210,6 +212,7 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
               newDeviceId,
               backupDirectory: protectedBackup.directory,
               backupHash: protectedBackup.hash,
+              backupHashVersion: 2,
               baselineEpoch: readMeta(db, 'epoch'),
               localDatasetId: store.getStatus().datasetId,
               sourceHash,
@@ -405,6 +408,7 @@ export function createSyncRecovery({ store, request, createBackup, noteService, 
       const current = session();
       if (current?.id !== input.recoveryId || current.stage !== 'preview')
         throw recoveryError('SYNC_RECOVERY_NOT_READY', '恢复会话尚未准备好。');
+      assertRecoveryBackupFormat(current);
       const info = await boundServer();
       const proof = await request(
         contracted(
