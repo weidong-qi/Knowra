@@ -38,10 +38,9 @@ for (const mode of ['light', 'dark'] as const) {
             await page.screenshot({ path: info.outputPath('path-focus.png'), animations: 'disabled' });
           await page.keyboard.press(key);
           await expect(page).toHaveURL(/#\/materials\?scope=root$/);
-          // 导航会移除活动祖先按钮；基线也不能从游离焦点直接 Escape。
-          // 此处只验证弹层内的关闭契约，不冒称修复全局焦点恢复缺口。
-          await status.press('Escape');
+          // 路由变化由状态弹层自身关闭，不能靠测试手工聚焦/按 Escape 清理。
           await expect(status).toBeHidden();
+          await expect(trigger).toBeFocused();
         }
         if (mobile) {
           await page.goto('/#/materials?folder=folder-1');
