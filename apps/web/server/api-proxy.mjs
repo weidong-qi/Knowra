@@ -49,12 +49,7 @@ export async function proxyApiRequest({
         headers: buildProxyHeaders(request.headers, decision?.sameOrigin ? new URL(apiOrigin).origin : null),
         ...(shouldSendBody(request.method) ? { body: Readable.from(boundedBody()), duplex: 'half' } : {})
       });
-      response.writeHead(
-        upstream.status,
-        Object.fromEntries(
-          [...upstream.headers.entries()].filter(([key]) => !['connection', 'transfer-encoding'].includes(key))
-        )
-      );
+      response.writeHead(upstream.status, buildProxyResponseHeaders(upstream));
       if (request.method === 'HEAD' || !upstream.body) response.end();
       else await pipeline(Readable.fromWeb(upstream.body), response);
     } catch (error) {
@@ -71,10 +66,29 @@ export async function proxyApiRequest({
     headers: buildProxyHeaders(request.headers, decision?.sameOrigin ? new URL(apiOrigin).origin : null),
     body: shouldSendBody(request.method) ? requestBody : undefined
   });
+  const headers = buildProxyResponseHeaders(upstreamResponse);
   const responseBody = Buffer.from(await upstreamResponse.arrayBuffer());
-  const headers = Object.fromEntries(upstreamResponse.headers.entries());
   response.writeHead(upstreamResponse.status, headers);
   response.end(responseBody);
+}
+
+function buildProxyResponseHeaders(upstream) {
+  const codings = upstream.headers
+    .get('content-encoding')
+    ?.toLowerCase()
+    .split(',')
+    .map(coding => coding.trim());
+  // fetch 已解压支持的编码，原来的编码和压缩长度不能再用于下游正文。
+  // HEAD / 304 没有正文，仍需保留所描述表示的元数据；未知编码由 fetch 原样保留。
+  const decoded =
+    upstream.body && codings?.length && codings.every(coding => ['gzip', 'x-gzip', 'deflate', 'br'].includes(coding));
+  return Object.fromEntries(
+    [...upstream.headers.entries()].filter(
+      ([key]) =>
+        !['connection', 'transfer-encoding'].includes(key) &&
+        !(decoded && ['content-encoding', 'content-length'].includes(key))
+    )
+  );
 }
 
 function shouldSendBody(method) {
