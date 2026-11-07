@@ -455,3 +455,25 @@ test('真实服务附带本批未修改的历史去重 alias 时，正常收藏�
   assert.equal(cloud.a.knowledge.noteService.getNote(cloud.note.id).favorite, true);
   assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).favorite, true);
 });
+
+test('无法识别的 422 不能作为未执行证明，不清理原请求', async t => {
+  let writes = 0;
+  const cloud = await fixture(t, async (url, init) => {
+    const response = await fetch(url, init);
+    if (url.endsWith('/batch')) {
+      writes++;
+      return new Response(JSON.stringify({ error: { message: '合成无法识别的错误封装' } }), { status: 422 });
+    }
+    return response;
+  });
+  cloud.a.knowledge.noteService.updateNote(cloud.note.id, { favorite: true });
+  await cloud.engine.sync();
+  const frozen = cloud.meta('entityUpload');
+  assert(frozen);
+  cloud.a.knowledge.noteService.updateNote(cloud.note.id, { favorite: false });
+  await cloud.engine.retry();
+  assert.equal(writes, 1);
+  assert.equal(cloud.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.deepEqual(cloud.meta('entityUpload'), frozen);
+  assert.equal(cloud.a.knowledge.noteService.getNote(cloud.note.id).favorite, false);
+});

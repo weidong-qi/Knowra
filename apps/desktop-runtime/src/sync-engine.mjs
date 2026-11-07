@@ -353,8 +353,7 @@ export function createSyncEngine(
           store.metadataTransaction(db => writeMeta(db, 'sendingUpload', null));
         } else if (
           !uncertain &&
-          ([400, 413, 415, 422].includes(failure.status) ||
-            ['DEPENDENCY_MISSING', 'ENTITY_DELETED', 'SIBLING_NAME_CONFLICT'].includes(failure.code))
+          ['DEPENDENCY_MISSING', 'ENTITY_DELETED', 'SIBLING_NAME_CONFLICT'].includes(failure.code)
         ) {
           store.metadataTransaction(db => {
             writeMeta(db, 'entityUpload', null);
