@@ -239,12 +239,20 @@ test('原请求先提交再退役可只读确认，回执淘汰后也不能重�
 });
 
 test('v1 原请求先提交后只读确认，清除回执后退役编号仍不可写入', t => {
-  const f = fixture(t);
+  let writes = 0;
+  const f = fixture(t, {
+    writeJson(...args) {
+      writes++;
+      writeJsonFileAtomically(...args);
+    }
+  });
   const operation = f.legacy();
   const accepted = f.service.push(operation);
   f.service.retireDevice(f.command(operation));
   const head = f.store.getSyncJournal().head;
+  const beforeWrites = writes;
   assert.deepEqual(f.service.push(operation), accepted);
+  assert.equal(writes, beforeWrites);
   assert.equal(f.store.getSyncJournal().head, head);
   f.store.runSyncJournalTransaction(() => {
     delete f.store.getSyncJournal().receipts[JSON.stringify([operation.deviceId, operation.operationId])];
@@ -371,4 +379,20 @@ test('HTTP仅明确POST才建立屏障，响应查询绑定owner及恢复身份'
   assert.equal(response.retirement.ownerId, 'demo');
   const queried = await fetch(`${route}?deviceId=old-device&recoveryId=explicit-recovery&${syncContractQuery()}`);
   assert.deepEqual((await queried.json()).data.retirement, response.retirement);
+});
+
+test('另一JSON进程已缓存旧journal时，屏障落盘后仍不能覆盖新保护记录', async t => {
+  const f = fixture(t);
+  const stale = createFileDataStore(f.file);
+  const staleContext = createAppContext({
+    dataStore: stale,
+    uploadsDir: path.join(f.root, 'uploads'),
+    storageRootDir: f.root
+  });
+  const delayed = f.batch();
+  f.service.retireDevice(f.command(delayed));
+  const protectedBytes = fs.readFileSync(f.file);
+  await assert.rejects(staleContext.http.sync.pushBatch(delayed), { code: 'STORAGE_WRITE_FAILED' });
+  assert.deepEqual(fs.readFileSync(f.file), protectedBytes);
+  assert.equal(createFileDataStore(f.file).getSyncJournal().version, 2);
 });
