@@ -1,4 +1,5 @@
 import { encodeSyncHistory } from './sync-history.mjs';
+import { acknowledgementFailure, assertStoreSyncNotPaused, clearUploadSafety, prepareUpload } from './sync-safety.mjs';
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
@@ -276,6 +277,7 @@ function canonicalizeVersions(state, base) {
 }
 
 export function applyEntityRemote(store, entries, cursor, epoch, { reset = false } = {}) {
+  assertStoreSyncNotPaused(store);
   const cached = snapshot(store);
   const { epoch: previousEpoch, conflict: previousConflict } = cached;
   const unchanged = entries.every(entry => {
@@ -451,6 +453,7 @@ function settle(db, state) {
 }
 
 export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
+  assertStoreSyncNotPaused(store);
   const frozen = store.readSync(db => {
     readKnowledgeLifecycleBoundaries(db);
     readExamFocusReviewBoundaries(db);
@@ -711,6 +714,7 @@ export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
     const operation = makeOperation(changes);
     writeMeta(db, 'entitySequence', operation.sequence);
     writeMeta(db, 'entityUpload', operation);
+    prepareUpload(db, operation);
     bindKnowledgeLifecycleUpload(
       db,
       operation.operationId,
@@ -731,7 +735,9 @@ export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
 }
 
 export function acknowledgeEntityUpload(store, operation, result) {
-  store.syncTransaction((db, state) => {
+  const failure = store.syncTransaction((db, state) => {
+    const invalid = acknowledgementFailure(db, operation, readMeta(db, 'entityUpload'), result);
+    if (invalid) return invalid;
     observeRemoteDeletionFacts(
       db,
       [...(result.entries ?? []), ...(result.conflicts ?? []), ...(result.current ? [result.current] : [])],
@@ -778,8 +784,11 @@ export function acknowledgeEntityUpload(store, operation, result) {
     acknowledgeExamFocusReviewUpload(db, operation, result);
     // 冲突结果先解除冻结，下一次拉取会保存包含完整远端事务的冲突。
     writeMeta(db, 'entityUpload', null);
+    clearUploadSafety(db);
     settle(db, state);
+    return null;
   });
+  if (failure) throw failure;
 }
 
 export function getEntitySyncState(store) {
@@ -818,6 +827,7 @@ export function getEntitySyncState(store) {
 }
 
 export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }, noteService, entityTransfer) {
+  assertStoreSyncNotPaused(store);
   const preparedCopies = [];
   const resolve = (db, state) => {
     const conflict = readMeta(db, 'entityConflict');
