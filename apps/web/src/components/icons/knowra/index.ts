@@ -6,3 +6,4 @@ export * from "./icons/navigation";
 export * from "./icons/editor";
 export * from "./icons/states";
 export * from "./icons/future";
+export * from "./icons/rail";
