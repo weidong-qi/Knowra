@@ -51,3 +51,19 @@
   color: var(--text-secondary);
   font-size: var(--font-size-meta);
 }
+.wide {
+  width: min(440px, calc(100vw - 24px));
+}
+.source {
+  max-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
