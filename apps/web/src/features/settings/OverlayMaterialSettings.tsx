@@ -6,23 +6,20 @@ import { TextField } from '../../components/ui/input';
 import { Menu, MenuItem, MenuPopover, MenuTrigger, SubmenuTrigger } from '../../components/ui/overlay/Menu';
 import {
   BUTTON_STYLES,
-  DEFAULT_BUTTON_STYLES,
   DIALOG_STYLES,
   setNotesIndexAppearance,
   useNotesIndexAppearance,
   type ButtonStyle,
-  type DefaultButtonStyle,
   type DialogStyle
 } from '../notes/notesIndexAppearanceModel';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
 
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
-const DEFAULT_BUTTON_STYLE_LABELS: Record<DefaultButtonStyle, string> = { soft: '无边软影', glass: '乳白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
 
 export function OverlayMaterialSettings() {
-  const { overlayMaterial, buttonStyle, defaultButtonStyle, dialogStyle } = useNotesIndexAppearance();
+  const { overlayMaterial, buttonStyle, dialogStyle } = useNotesIndexAppearance();
   const compact = useCompactLayout();
   return (
     <section className={styles.group} aria-labelledby="settings-appearance-heading">
@@ -98,28 +95,6 @@ export function OverlayMaterialSettings() {
             <Button variant="primary" size="compact">
               主要按钮预览
             </Button>
-          </div>
-        </div>
-        <div className={`${styles.settingRow} ${styles.materialRow}`}>
-          <div className={styles.settingCopy}>
-            <h4>默认按钮样式</h4>
-            <p>
-              影响白色的普通按钮（如「搜索」「日程」）。无边软影靠柔和投影托起，乳白玻璃半透明通透，切换后即时保存。
-            </p>
-          </div>
-          <div className={`${styles.settingControl} ${styles.materialControl}`}>
-            <SegmentedControl aria-label="默认按钮样式">
-              {DEFAULT_BUTTON_STYLES.map(style => (
-                <SegmentedButton
-                  key={style}
-                  aria-pressed={defaultButtonStyle === style}
-                  onPress={() => setNotesIndexAppearance({ defaultButtonStyle: style })}
-                >
-                  {DEFAULT_BUTTON_STYLE_LABELS[style]}
-                </SegmentedButton>
-              ))}
-            </SegmentedControl>
-            <Button size="compact">默认按钮预览</Button>
           </div>
         </div>
         <div className={`${styles.settingRow} ${styles.materialRow}`}>

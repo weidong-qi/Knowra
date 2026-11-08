@@ -285,22 +285,18 @@ test('强制色保留页签和表单焦点，错误字段继续报告校验错�
 });
 
 for (const mode of ['light', 'dark']) {
-  for (const [buttonStyle, defaultButtonStyle] of [
-    ['paper', 'soft'],
-    ['frost', 'glass']
-  ]) {
-    test(`${mode} ${buttonStyle}/${defaultButtonStyle}：按钮材质不覆盖禁用反馈`, async ({ page }) => {
+  for (const buttonStyle of ['paper', 'frost']) {
+    test(`${mode} ${buttonStyle}：按钮材质不覆盖禁用反馈`, async ({ page }) => {
       await mockEditorWorkspace(page, []);
       await page.addInitScript(
         appearance => {
           localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify(appearance));
         },
-        { mode, buttonStyle, defaultButtonStyle }
+        { mode, buttonStyle }
       );
       await page.goto('/#/showcase');
       const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
       await expect(shell).toHaveAttribute('data-button-style', buttonStyle);
-      await expect(shell).toHaveAttribute('data-default-button-style', defaultButtonStyle);
       for (const name of ['默认', '保存']) {
         const button = page.getByRole('button', { name, exact: true, disabled: true });
         await expect(button).toBeDisabled();
@@ -323,8 +319,11 @@ for (const mode of ['light', 'dark']) {
         });
         expect(colors.actual).toEqual(colors.expected);
       }
-      // 同一外观下启用按钮仍保留材质投影，防止用全局移除样式掩盖问题。
-      await expect(page.getByRole('button', { name: '默认胶囊', exact: true })).not.toHaveCSS('box-shadow', 'none');
+      // 默认按钮是细线样式：透明底和 1px 描边，没有投影；主按钮仍保留材质投影，防止用全局移除样式掩盖问题。
+      const outline = page.getByRole('button', { name: '默认胶囊', exact: true });
+      await expect(outline).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(outline).toHaveCSS('border-top-width', '1px');
+      await expect(outline).toHaveCSS('box-shadow', 'none');
       await expect(page.getByRole('button', { name: '发布', exact: true })).not.toHaveCSS('box-shadow', 'none');
     });
   }

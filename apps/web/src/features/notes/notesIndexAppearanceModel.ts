@@ -6,17 +6,12 @@ export interface NotesIndexAppearance {
   shape: 'pill';
   overlayMaterial: 'glass' | 'acrylic';
   buttonStyle: ButtonStyle;
-  defaultButtonStyle: DefaultButtonStyle;
   dialogStyle: DialogStyle;
 }
 
 /** 主按钮（Button primary）外观：纸感、白玻璃。 */
 export const BUTTON_STYLES = ['paper', 'frost'] as const;
 export type ButtonStyle = (typeof BUTTON_STYLES)[number];
-
-/** 默认按钮（Button default）外观：无边软影、乳白玻璃。 */
-export const DEFAULT_BUTTON_STYLES = ['soft', 'glass'] as const;
-export type DefaultButtonStyle = (typeof DEFAULT_BUTTON_STYLES)[number];
 
 /** 对话框面板外观：浮起卡片、内嵌托盘。 */
 export const DIALOG_STYLES = ['float', 'tray'] as const;
@@ -29,7 +24,6 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   shape: 'pill',
   overlayMaterial: 'glass',
   buttonStyle: 'paper',
-  defaultButtonStyle: 'soft',
   dialogStyle: 'float'
 };
 const listeners = new Set<() => void>();
@@ -47,9 +41,6 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     buttonStyle: BUTTON_STYLES.includes(candidate.buttonStyle as ButtonStyle)
       ? (candidate.buttonStyle as ButtonStyle)
       : 'paper',
-    defaultButtonStyle: DEFAULT_BUTTON_STYLES.includes(candidate.defaultButtonStyle as DefaultButtonStyle)
-      ? (candidate.defaultButtonStyle as DefaultButtonStyle)
-      : 'soft',
     dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle)
       ? (candidate.dialogStyle as DialogStyle)
       : 'float'

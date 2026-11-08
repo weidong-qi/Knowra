@@ -11,11 +11,11 @@ describe('按钮外观的禁用反馈', () => {
     return properties.map(property => style.getPropertyValue(property));
   };
   for (const mode of ['light', 'dark']) {
-    for (const [attribute, appearance, variant] of [
-      ['data-button-style', 'paper', 'primary'],
-      ['data-button-style', 'frost', 'primary'],
-      ['data-default-button-style', 'soft', ''],
-      ['data-default-button-style', 'glass', '']
+    for (const [attribute, appearance, variant, hasShadow] of [
+      ['data-button-style', 'paper', 'primary', true],
+      ['data-button-style', 'frost', 'primary', true],
+      // 默认按钮是细线样式：没有投影，启用时是透明底。
+      ['data-ni-mode', mode, '', false]
     ]) {
       for (const disabled of ['disabled', 'data-disabled']) {
         it(`${mode} ${appearance} 保留 ${disabled} 的中性反馈`, () => {
@@ -40,7 +40,8 @@ describe('按钮外观的禁用反馈', () => {
               button.removeAttribute(state);
             }
             button.removeAttribute(disabled);
-            expect(getComputedStyle(button).boxShadow).not.toBe('none');
+            if (hasShadow) expect(getComputedStyle(button).boxShadow).not.toBe('none');
+            else expect(getComputedStyle(button).backgroundColor).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
           } finally {
             scope.remove();
             style.remove();
