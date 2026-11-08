@@ -18,6 +18,7 @@ import { aiAgentRequestContextTests } from './ai-agent-request-context.test.js';
 import { noteLinkTests, noteLinkPostgresTests } from './note-links.test.js';
 import { aiAssistantAutonomyTests } from './ai-assistant-autonomy.test.js';
 import { aiAnnotationsListTests } from './ai-annotations-list.test.js';
+import { aiTranslationTests } from './ai-translation.test.js';
 import { aiProposalProgressTests } from './ai-proposal-progress.test.js';
 import { aiKnowledgePropose } from './ai-knowledge-propose.test.js';
 import { aiFeatureSettingsTests } from './ai-feature-settings.test.js';
@@ -152,6 +153,7 @@ const tests = [
   ...noteLinkPostgresTests,
   ...aiAssistantAutonomyTests,
   ...aiAnnotationsListTests,
+  ...aiTranslationTests,
   ...aiKnowledgePropose,
   ...aiProposalProgressTests,
   ...aiFeatureSettingsTests,

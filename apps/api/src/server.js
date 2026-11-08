@@ -19,6 +19,7 @@ import { handleAiAccessRoute } from './modules/ai/access-routes.js';
 import { handleConversationRoute } from './modules/ai/conversation-routes.js';
 import { handleConversationAttachmentRoute } from './modules/ai/conversation-attachment-routes.js';
 import { handleAiJobRoute } from './modules/ai/job-routes.ts';
+import { handleAiTranslationRoute } from './modules/ai/translation-routes.ts';
 import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-extraction-http-service.ts';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { isWriteMethod, writeOriginDecision } from '@study-accelerator/shared/http-origin';
@@ -117,6 +118,16 @@ export function createServer({ appContext, cors = /** @type {{allowedOrigins?: s
       )
         return;
       if (await handleAiJobRoute({ request, response, url, extraction })) return;
+      if (
+        await handleAiTranslationRoute({
+          request,
+          response,
+          url,
+          translation: appContext.ai?.translation ?? null,
+          unavailableReason: appContext.ai?.unavailableReason ?? null
+        })
+      )
+        return;
       if (await handleAiAccessRoute({ request, response, url, access: appContext.ai?.access })) return;
       if (await handleActionRoute({ request, response, url, actions: appContext.ai?.actions })) return;
       if (url.pathname.startsWith('/api/ai/conversations/') && url.pathname.split('/')[5] === 'attachments')
