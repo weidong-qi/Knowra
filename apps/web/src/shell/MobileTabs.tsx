@@ -6,7 +6,7 @@
 import { forwardRef, type CSSProperties } from 'react';
 import { PressableButton } from '../components/ui/button/PressableButton';
 import { PRIMARY_DOMAINS, UTILITY_ITEMS, type RailItem } from './ModuleRail';
-import { SearchIcon, SettingsIcon, SparkIcon } from '../components/icons/knowra';
+import { RailAssistantIcon, RailSearchIcon, SettingsIcon } from '../components/icons/knowra';
 import type { WorkDomain } from '../store/types';
 import styles from './MobileTabs.module.css';
 
@@ -63,7 +63,7 @@ export const MobileTabs = forwardRef<HTMLElement, MobileTabsProps>(function Mobi
       })}
       <PressableButton type="button" className={styles.mobileTab} aria-label="AI 助手"
         aria-current={isAssistantActive ? 'page' : undefined} onPress={onOpenAssistant} isDisabled={!onOpenAssistant}>
-        <span className={styles.mobileIcon}><SparkIcon size={19} /></span>
+        <span className={styles.mobileIcon}><RailAssistantIcon size={19} /></span>
         <span className={styles.mobileLabel}>助手</span>
       </PressableButton>
       <PressableButton
@@ -85,7 +85,7 @@ export const MobileTabs = forwardRef<HTMLElement, MobileTabsProps>(function Mobi
         isDisabled={!onOpenSearch}
       >
         <span className={styles.mobileIcon}>
-          <SearchIcon size={19} />
+          <RailSearchIcon size={19} />
         </span>
         <span className={styles.mobileLabel}>搜索</span>
       </PressableButton>

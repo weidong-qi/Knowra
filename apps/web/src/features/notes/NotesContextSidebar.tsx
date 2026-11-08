@@ -307,6 +307,7 @@ export function NotesContextSidebar({
                 tag ? (
                   <TagChip
                     key={tag.id}
+                    className={styles.tagChip}
                     tag={tag}
                     selected={activeTagIds.includes(tag.id)}
                     aria-pressed={activeTagIds.includes(tag.id)}

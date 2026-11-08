@@ -2,7 +2,7 @@ import type { Folder, Note, Tag } from '@study-accelerator/web-core';
 import { Checkbox } from '../../components/ui';
 import { NoteIcon, PdfFileIcon, SolidFolderIcon } from '../../components/icons/knowra';
 import type { SidebarTreeAction } from './SidebarFolderTree';
-import { countFolderNotes, folderTypeCounts, formatUpdatedAt } from './notesIndexModel';
+import { countFolderNotes, folderRecentActivity, folderTypeCounts, formatUpdatedAt } from './notesIndexModel';
 import { folderLocation, displayNoteStatus } from './notesIndexNavigation';
 import {
   itemKey,
@@ -13,8 +13,6 @@ import {
 import { IndexItemActions, RecycleNoteActions, openIndexItemMenu } from './IndexItemActions';
 import { useEntryDragDrop, useEntryDropTarget } from './EntryDragDrop';
 import { NotesIndexArt } from './NotesIndexArt';
-import { FolderCardArt } from './NotesIndexFolderArt';
-import { useNotesIndexAppearance } from './notesIndexAppearanceModel';
 import { MathText } from '../../components/math/MathText';
 import { ItemTags, ItemStatus, ItemFavorite, itemTags, notePreview } from './NotesIndexItemMeta';
 import styles from './NotesIndexItems.module.css';
@@ -177,7 +175,7 @@ function IndexTableRow({
         >
           <span className={styles.entryIcon} data-art-kind={isFolder ? 'folder' : 'document'} aria-hidden="true">
             {isFolder ? (
-              <SolidFolderIcon size={18} />
+              <SolidFolderIcon size={16} />
             ) : item.kind === 'note' && item.note.contentKind === 'pdf' ? (
               <span className={styles.pdfIcon}>
                 <PdfFileIcon size={18} />
@@ -262,7 +260,7 @@ export function IndexTile({
   const status = isFolder ? '文件夹' : item.note.deleted ? '回收站' : displayNoteStatus(item.note.status);
   const noteTags = isFolder ? [] : itemTags(item.note, tags);
   const dragDrop = useEntryDragDrop();
-  const { folderArt } = useNotesIndexAppearance();
+  const recent = isFolder && view === 'card' ? folderRecentActivity(item.folder, notes) : null;
   const folderDrop = useEntryDropTarget(isFolder && !isRecycleView && !selectionMode ? entity.id : undefined);
   return (
     <div
@@ -294,7 +292,6 @@ export function IndexTile({
       <button
         type="button"
         className={styles.tile}
-        data-folder-art={isFolder && view === 'card' ? folderArt : undefined}
         data-index-primary
         aria-label={isFolder ? item.folder.name : item.note.title || '未命名笔记'}
         aria-description={
@@ -325,13 +322,12 @@ export function IndexTile({
           else onSelectNote(entity.id);
         }}
       >
-        {isFolder && view === 'card' ? <FolderCardArt style={folderArt} /> : null}
         <span className={styles.tileArt}>
           <NotesIndexArt
             item={item}
             tags={noteTags}
             cover={view === 'card' && !isFolder}
-            folderStyle={view === 'card' ? 'badge' : 'illustrated'}
+            folderStyle={view === 'card' ? 'paper' : 'illustrated'}
             noteCount={count}
           />
           {view === 'grid' && !isFolder && item.note.favorite ? (
@@ -352,28 +348,37 @@ export function IndexTile({
               <MathText text={notePreview(item.note)} inlineOnly />
             </span>
           ) : null}
+          {recent && properties.summary ? (
+            <span className={styles.cardSummary}>
+              {recent.titles.length ? `最近：${recent.titles.join('、')}` : '还没有内容'}
+            </span>
+          ) : null}
           <small>
             {!isFolder && properties.status ? <ItemStatus status={status} compact /> : null}
-            {isFolder ? <span>{count} 项</span> : null}
+            {isFolder && view !== 'card' ? <span>{count} 项</span> : null}
+            {recent && typeCounts ? (
+              <span className={styles.folderChips}>
+                {typeCounts.notes > 0 ? (
+                  <span className={styles.folderChip}>
+                    <b>{typeCounts.notes}</b>笔记
+                  </span>
+                ) : null}
+                {typeCounts.pdfs > 0 ? (
+                  <span className={styles.folderChip}>
+                    <b>{typeCounts.pdfs}</b>PDF
+                  </span>
+                ) : null}
+                {count === 0 ? <span className={styles.folderChip}>空文件夹</span> : null}
+              </span>
+            ) : null}
             {view === 'card' && properties.tags ? <ItemTags tags={noteTags} limit={1} /> : null}
             {properties.updated && !isFolder ? (
               <span className={styles.tileDate}>{formatUpdatedAt(entity.updatedAt)}</span>
             ) : null}
+            {properties.updated && recent ? (
+              <span className={styles.tileDate}>{formatUpdatedAt(recent.updatedAt)}</span>
+            ) : null}
           </small>
-          {view === 'card' && isFolder && typeCounts ? (
-            <span className={styles.folderChips}>
-              {typeCounts.notes > 0 ? (
-                <span className={styles.folderChip}>
-                  <b>{typeCounts.notes}</b>笔记
-                </span>
-              ) : null}
-              {typeCounts.pdfs > 0 ? (
-                <span className={styles.folderChip}>
-                  <b>{typeCounts.pdfs}</b>PDF
-                </span>
-              ) : null}
-            </span>
-          ) : null}
           {view === 'grid' && properties.tags ? <ItemTags tags={noteTags} dots /> : null}
         </span>
       </button>

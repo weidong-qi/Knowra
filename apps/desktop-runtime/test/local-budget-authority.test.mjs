@@ -377,6 +377,8 @@ test('桌面翻译预留后进程退出：SQLite 重启恢复为结果未知，�
     { encoding: 'utf8', timeout: 10000 }
   );
   assert.equal(child.status, 0, child.stderr);
+  // 崩溃后租约仍有效；推进到租约过期后验证宿主启动恢复。
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 6 * 60_000 });
   const recovered = Promise.withResolvers();
   let calls = 0,
     authority;

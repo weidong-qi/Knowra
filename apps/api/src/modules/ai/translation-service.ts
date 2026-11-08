@@ -98,6 +98,35 @@ export function createAiTranslationService({
   const active = new Set<string>();
   const controllers = new Set<AbortController>();
   let recovering: Promise<number> | undefined;
+  let recoveryTimer: ReturnType<typeof setTimeout> | undefined;
+  let recoveryAt = Infinity;
+
+  function deferRecovery(expiresAt: number) {
+    if (scope.closed || expiresAt >= recoveryAt) return;
+    clearTimeout(recoveryTimer);
+    recoveryAt = expiresAt;
+    recoveryTimer = setTimeout(
+      () => {
+        recoveryTimer = undefined;
+        recoveryAt = Infinity;
+        void recover().catch(error => {
+          logger.warn?.('Translation recovery deferred', { code: (error as AppError)?.code });
+        });
+      },
+      Math.max(1, expiresAt - now().getTime())
+    );
+    recoveryTimer.unref?.();
+  }
+
+  function recover() {
+    if (!recovering)
+      recovering = scope
+        .run(() => tasks.recover(active, recoverBudget, deferRecovery))
+        .finally(() => {
+          recovering = undefined;
+        });
+    return recovering;
+  }
 
   async function recoverBudget(attemptId: string, modelId: string) {
     try {
@@ -132,6 +161,10 @@ export function createAiTranslationService({
     const attemptId = randomUUID();
     const jobId = `pdf-translation-${attemptId}`;
     const day = beijingDay(now());
+    const assertBeforeSend = () => {
+      if (signal?.aborted) fail('AI_CANCELLED', '翻译已取消。');
+      if (beijingDay(now()) !== day) fail('AI_BUDGET_DAY_CHANGED', '预算日期已切换，请重新翻译。');
+    };
     let reserving = false,
       sent = false,
       settled = false;
@@ -159,17 +192,34 @@ export function createAiTranslationService({
         reservation.jobId !== jobId ||
         reservation.attemptId !== attemptId ||
         reservation.priceVersion !== priceProfile.version ||
-        reservation.reservedMicrounits !== quote.reservedMicrounits
+        reservation.reservedMicrounits !== quote.reservedMicrounits ||
+        reservation.day !== day
       )
         fail('AI_BUDGET_INVALID', '预算回执与翻译请求不一致。');
-      if (signal?.aborted) fail('AI_CANCELLED', '翻译已取消。');
+      assertBeforeSend();
       // 快照之后到发送之间用户可能暂停了 AI：发送前再复核一次（抛错会释放预留）。
       if (policy) await policy.assertRunnable();
-      if (signal?.aborted) fail('AI_CANCELLED', '翻译已取消。');
-      await tasks.sent(attemptId);
-      sent = true;
+      assertBeforeSend();
+      const attempt = await tasks.sent(attemptId);
+      assertBeforeSend();
       authorizeAttempt(attemptId);
-      const result = await gateway.complete({ ...request, signal, budgetAttemptId: attemptId });
+      const result = await gateway.complete({
+        ...request,
+        signal,
+        budgetAttemptId: attemptId,
+        expiresAt: Date.parse(attempt.leaseExpiresAt),
+        // 凭据解析和供应商排队都可能跨日；出队后、真正发送前复核。
+        verifyBeforeSend: async () => {
+          assertBeforeSend();
+          if (policy) await policy.assertRunnable();
+          await tasks.assertLive(attemptId);
+          assertBeforeSend();
+        },
+        onSend: () => {
+          sent = true;
+        }
+      });
+      await tasks.assertLive(attemptId);
       const usage = result.usage;
       const known =
         usage?.unknown === false &&
@@ -227,6 +277,10 @@ export function createAiTranslationService({
       throw error;
     } finally {
       revokeAttempt(attemptId);
+      // 正常退出即可让未完成结算被恢复；只有进程崩溃才需要等持久化租约到期。
+      await tasks.endLease(attemptId).catch(error => {
+        logger.warn?.('Translation lease finalization deferred', { code: (error as AppError)?.code });
+      });
       active.delete(attemptId);
     }
   }
@@ -245,17 +299,10 @@ export function createAiTranslationService({
         }
       });
     },
-    recover() {
-      if (!recovering)
-        recovering = scope
-          .run(() => tasks.recover(active, recoverBudget))
-          .finally(() => {
-            recovering = undefined;
-          });
-      return recovering;
-    },
+    recover,
     close: () =>
       scope.close(() => {
+        clearTimeout(recoveryTimer);
         for (const controller of controllers) controller.abort();
       })
   };

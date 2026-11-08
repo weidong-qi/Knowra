@@ -78,6 +78,23 @@ export function folderTypeCounts(folder: Folder, notes: Note[]): { notes: number
   return { notes: others, pdfs };
 }
 
+/** 文件夹卡片摘要：内部最近更新的几份内容标题，以及最近一次内容更新时间（没有内容时回退到文件夹自身）。 */
+export function folderRecentActivity(
+  folder: Folder,
+  notes: Note[],
+  limit = 3
+): { titles: string[]; updatedAt?: string } {
+  const folderIds = new Set<string>();
+  collectFolderIds(folder, folderIds);
+  const inside = notes
+    .filter(note => !note.deleted && note.folderId && folderIds.has(note.folderId))
+    .sort((a, b) => (Date.parse(b.updatedAt ?? '') || 0) - (Date.parse(a.updatedAt ?? '') || 0));
+  return {
+    titles: inside.slice(0, limit).map(note => note.title.trim() || '未命名笔记'),
+    updatedAt: inside[0]?.updatedAt ?? folder.updatedAt
+  };
+}
+
 export function folderMatchesQuery(folder: Folder, notes: Note[], query: string): boolean {
   const normalizedQuery = query.trim().toLocaleLowerCase();
   if (!normalizedQuery) return true;

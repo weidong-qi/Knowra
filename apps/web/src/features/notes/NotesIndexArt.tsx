@@ -1,7 +1,7 @@
 import { useId, type CSSProperties } from 'react';
 import type { Tag } from '@study-accelerator/web-core';
 import { tagColorStyle } from '../tags';
-import { SolidFolderIcon } from '../../components/icons/knowra';
+import { normalizeTagColor } from '../tags/tagColor';
 import type { IndexItem } from './notesIndexPresentation';
 import { notePreview } from './NotesIndexItemMeta';
 import styles from './NotesIndexArt.module.css';
@@ -17,24 +17,78 @@ export function NotesIndexArt({
   item: IndexItem;
   tags?: Tag[];
   cover?: boolean;
-  folderStyle?: 'illustrated' | 'badge';
+  folderStyle?: 'illustrated' | 'paper';
   noteCount?: number;
 }) {
   const gradientId = `ni-folder-${useId()}`;
   const folder = item.kind === 'folder';
   const pdf = item.kind === 'note' && item.note.contentKind === 'pdf';
   const text = folder ? '' : notePreview(item.note);
-  const color = folder ? 'folder' : tags[0]?.color || 'neutral';
+  const tagColor = tags[0]?.color;
+  const hasTagColor = !folder && Boolean(tagColor) && normalizeTagColor(tagColor) !== 'neutral';
+  const color = folder ? 'folder' : hasTagColor ? tagColor : 'neutral';
   const lengths = text
     ? text
         .match(/.{1,28}/g)
         ?.slice(0, 5)
         .map(line => 12 + line.length) || []
     : [34, 28, 38, 25];
-  if (folder && folderStyle === 'badge')
+  if (folder && folderStyle === 'paper')
     return (
-      <span className={styles.folderBadge} data-art-kind="folder" data-folder-style="badge" aria-hidden="true">
-        <SolidFolderIcon size={40} />
+      <span
+        className={`${styles.art} ${styles.cover}`}
+        data-color="folder"
+        data-art-kind="folder"
+        data-folder-style="paper"
+        aria-hidden="true"
+      >
+        {noteCount > 0 ? <span className={styles.folderPeek} /> : null}
+        <span className={styles.folderSheet}>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+            <path d="M0 10a8 8 0 0 1 8-8h30l8 10h46a8 8 0 0 1 8 8V100H0Z" />
+          </svg>
+          <span className={styles.folderSheetLines}>
+            <i />
+            <i style={{ width: '90%' }} />
+            <i style={{ width: '70%' }} />
+          </span>
+        </span>
+      </span>
+    );
+  if (pdf && cover)
+    return (
+      <span
+        className={`${styles.art} ${styles.cover}`}
+        data-color="pdf"
+        data-art-kind="pdf"
+        data-pdf-style="stack"
+        aria-hidden="true"
+      >
+        <span className={styles.pdfMark}>PDF</span>
+        <span className={styles.pdfPages}>
+          {[false, true, false].map((front, index) => (
+            <span key={index} className={styles.pdfPageShadow}>
+              <span className={styles.pdfPage}>
+                {front ? (
+                  <>
+                    <em>PDF</em>
+                    <i style={{ width: '88%' }} />
+                    <i style={{ width: '70%' }} />
+                    <b />
+                    <i style={{ width: '80%' }} />
+                  </>
+                ) : (
+                  <>
+                    <i style={{ width: '60%' }} />
+                    <i style={{ width: '88%' }} />
+                    <i style={{ width: '74%' }} />
+                    <b />
+                  </>
+                )}
+              </span>
+            </span>
+          ))}
+        </span>
       </span>
     );
   const paperCount = !noteCount ? 0 : noteCount < 3 ? 1 : noteCount < 8 ? 2 : 3;
@@ -42,7 +96,7 @@ export function NotesIndexArt({
     <span
       className={`${styles.art} ${cover && !pdf ? styles.cover : ''}`}
       data-color={color}
-      style={folder ? undefined : tagColorStyle(tags[0]?.color, '--art-color')}
+      style={hasTagColor || (!folder && !cover) ? tagColorStyle(tagColor, '--art-color') : undefined}
       data-art-kind={folder ? 'folder' : pdf ? 'pdf' : 'document'}
       data-folder-style={folder ? 'illustrated' : undefined}
       aria-hidden="true"
