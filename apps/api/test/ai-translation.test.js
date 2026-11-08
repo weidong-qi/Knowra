@@ -4,11 +4,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { mock } from 'node:test';
 import { aiRuntimeLifecycle } from '../src/modules/ai/runtime-lifecycle.ts';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createServer } from '../src/server.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
-import { normalizeTranslationText, translationTarget } from '../src/modules/ai/translation-service.ts';
+import {
+  createAiTranslationService,
+  normalizeTranslationText,
+  translationTarget
+} from '../src/modules/ai/translation-service.ts';
+import { createAiGateway } from '../src/modules/ai/gateway.js';
+import { hashRecord } from '../src/modules/ai/record-contract.ts';
 
 const priceProfile = {
   version: 'translation-synthetic-v1',
@@ -21,6 +28,40 @@ const reply = content => ({
   choices: [{ finish_reason: 'stop', message: { content } }],
   usage: { prompt_tokens: 40, completion_tokens: 20 }
 });
+
+function translationService(app, { respond = () => reply('译文'), gateway, ...overrides } = {}) {
+  return createAiTranslationService({
+    repository: app.dataStore.aiRepository,
+    ownerId: 'test',
+    modelSettings: {
+      credentialReference: async () => ({ modelId: 'deepseek-flash', credentialRef: 'synthetic' })
+    },
+    gateway:
+      gateway ??
+      createAiGateway({
+        adapter: {
+          provider: 'mock',
+          capabilities: () => ({ provider: 'mock' }),
+          async *stream() {},
+          complete: respond
+        }
+      }),
+    budget: app.dataStore.aiBudgetAuthority,
+    priceProfile,
+    ...overrides
+  });
+}
+
+async function expireTranslationLeases(repository) {
+  for (const job of await repository.list('aiJob', { jobKind: 'translation', status: 'running' })) {
+    const attempt = await repository.get('aiJobAttempt', job.requestId);
+    await repository.replace(
+      'aiJobAttempt',
+      { ...attempt, leaseExpiresAt: new Date().toISOString() },
+      hashRecord(attempt)
+    );
+  }
+}
 
 function syntheticRuntime(app, { requests = [], respond = () => reply('译文'), ...overrides } = {}) {
   return createOptionalAiRuntime({
@@ -75,6 +116,56 @@ async function withServer(context, run) {
 export const aiTranslationTests = [
   ...(process.env.KNOWRA_SYNC_TEST_DATABASE_URL
     ? [
+        {
+          name: 'PDF 翻译 PostgreSQL：独立连接的恢复器保留另一实例的活跃租约与预算',
+          async run() {
+            const { PrismaClient } = await import('@prisma/client');
+            const { createPostgresTestDatabase } =
+              await import('../../../scripts/test-support/postgres-test-database.mjs');
+            const { createPostgresAiRepository } = await import('../src/modules/ai/postgres-record-repository.ts');
+            const { createPostgresBudgetAuthority } = await import('../src/modules/ai/postgres-budget-authority.js');
+            const database = await createPostgresTestDatabase();
+            const clients = [0, 1].map(
+              () => new PrismaClient({ datasources: { db: { url: database.databaseUrl } }, log: [] })
+            );
+            const entered = Promise.withResolvers();
+            const resume = Promise.withResolvers();
+            const apps = clients.map(client => ({
+              dataStore: {
+                aiRepository: createPostgresAiRepository({ client, ownerId: 'test' }),
+                aiBudgetAuthority: createPostgresBudgetAuthority(client)
+              }
+            }));
+            const service = translationService(apps[0], {
+              async respond() {
+                entered.resolve();
+                await resume.promise;
+                return reply('译文');
+              }
+            });
+            const peer = translationService(apps[1]);
+            const translating = service.translate({ text: 'Hello.' });
+            try {
+              await entered.promise;
+              assert.equal(await peer.recover(), 0);
+              const repository = apps[1].dataStore.aiRepository;
+              const authority = apps[1].dataStore.aiBudgetAuthority;
+              assert.equal((await repository.list('aiJob'))[0].status, 'running');
+              assert.equal((await authority.usage('deepseek-primary')).total.unknownRequests, 0);
+              assert.ok((await authority.status('deepseek-primary')).heldMicrounits > 0);
+              resume.resolve();
+              assert.equal((await translating).translation, '译文');
+              assert.equal((await repository.list('aiJob'))[0].status, 'succeeded');
+              assert.equal((await authority.status('deepseek-primary')).heldMicrounits, 0);
+              assert.ok((await authority.status('deepseek-primary')).spentMicrounits > 0);
+            } finally {
+              resume.resolve();
+              await Promise.allSettled([translating, service.close(), peer.close()]);
+              await Promise.all(clients.map(client => client.$disconnect()));
+              await database.close();
+            }
+          }
+        },
         {
           name: 'PDF 翻译 PostgreSQL：持久化中断调用，重新连接后启动恢复为结果未知',
           async run() {
@@ -153,6 +244,8 @@ export const aiTranslationTests = [
         assert.equal(app.dataStore.aiRepository.list('aiJob', { jobKind: 'translation', status: 'running' }).length, 1);
         const requests = [];
         app.ai = syntheticRuntime(app, { requests });
+        assert.equal(await app.ai.translation.recover(), 0, '崩溃后的租约到期前保留预算');
+        await expireTranslationLeases(app.dataStore.aiRepository);
         app.aiOwnerId = 'test';
         await withServer(app, async origin => {
           const response = await fetch(`${origin}/api/ai/assistant/usage`);
@@ -187,6 +280,238 @@ export const aiTranslationTests = [
       }
     }
   })),
+  ...[false, true].map(closeBeforeExpiry => ({
+    name: `PDF 翻译：跳过活跃租约后${closeBeforeExpiry ? '关闭取消延后恢复' : '在到期时自动恢复，无需重启'}`,
+    async run() {
+      await fixture(async ({ app }) => {
+        mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+        const entered = Promise.withResolvers();
+        const resume = Promise.withResolvers();
+        const service = translationService(app, {
+          async respond() {
+            entered.resolve();
+            await resume.promise;
+            return reply('迟到译文');
+          }
+        });
+        const peer = translationService(app);
+        const translating = service.translate({ text: 'Hello.' });
+        const late = assert.rejects(translating, { code: 'AI_LATE_RESULT' });
+        try {
+          await entered.promise;
+          assert.equal(await peer.recover(), 0);
+          if (closeBeforeExpiry) await peer.close();
+          mock.timers.tick(5 * 60_000);
+          await new Promise(resolve => setImmediate(resolve));
+          const authority = app.dataStore.aiBudgetAuthority;
+          assert.equal((await authority.usage('deepseek-primary')).total.unknownRequests, closeBeforeExpiry ? 0 : 1);
+          assert.equal(app.dataStore.aiRepository.list('aiJob')[0].status, closeBeforeExpiry ? 'running' : 'failed');
+          resume.resolve();
+          await late;
+        } finally {
+          resume.resolve();
+          await Promise.allSettled([translating, service.close(), peer.close()]);
+          mock.timers.reset();
+        }
+      });
+    }
+  })),
+  ...['reserve', 'policy', 'sent', 'credential'].map(phase => ({
+    name: `PDF 翻译：${phase} 异步等待跨北京时间月初零点，停止外发并释放旧日预算`,
+    async run() {
+      await fixture(async ({ app }) => {
+        let instant = new Date('2026-10-31T15:59:59.000Z');
+        let calls = 0;
+        const crossDay = () => (instant = new Date('2026-10-31T16:00:00.000Z'));
+        const authority = app.dataStore.aiBudgetAuthority;
+        const repository = app.dataStore.aiRepository;
+        const service = translationService(app, {
+          now: () => instant,
+          budget: {
+            ...authority,
+            async reserve(input) {
+              const result = await authority.reserve(input);
+              if (phase === 'reserve') crossDay();
+              return result;
+            }
+          },
+          policy: {
+            snapshot: async () => null,
+            async assertRunnable() {
+              if (phase === 'policy') crossDay();
+            }
+          },
+          repository: {
+            ...repository,
+            async replace(kind, record, expected) {
+              const result = await repository.replace(kind, record, expected);
+              if (phase === 'sent' && kind === 'aiJobAttempt' && record.status === 'sent') crossDay();
+              return result;
+            }
+          },
+          allowExternal: true,
+          gateway: createAiGateway({
+            adapter: {
+              provider: 'deepseek',
+              capabilities: () => ({ provider: 'deepseek' }),
+              async *stream() {},
+              async complete() {
+                calls++;
+                return reply('译文');
+              }
+            },
+            authorizePaidCall: async () => true,
+            async resolveCredential() {
+              if (phase === 'credential') crossDay();
+              return { apiKey: 'synthetic-key', modelId: 'deepseek-flash' };
+            }
+          })
+        });
+        app.ai = { translation: service };
+        await withServer(app, async origin => {
+          const response = await fetch(`${origin}/api/ai/translate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Knowra-AI-Translate': '1' },
+            body: JSON.stringify({ text: 'Hello.' })
+          });
+          assert.equal(response.status, 409);
+          assert.equal((await response.json()).error.code, 'AI_BUDGET_DAY_CHANGED');
+        });
+        assert.equal(calls, 0);
+        for (const day of ['2026-10-31', '2026-11-01']) {
+          const status = await authority.status('deepseek-primary', day);
+          assert.equal(status.heldMicrounits, 0);
+          assert.equal(status.spentMicrounits, 0);
+        }
+        assert.equal((await authority.usage('deepseek-primary')).total.unknownRequests, 0);
+        assert.equal(repository.list('aiJob')[0].status, 'failed');
+      });
+    }
+  })),
+  {
+    name: 'PDF 翻译：预算回执日期不匹配时阻止模型调用并释放预留',
+    async run() {
+      await fixture(async ({ app, budget }) => {
+        let calls = 0;
+        const authority = app.dataStore.aiBudgetAuthority;
+        const service = translationService(app, {
+          budget: {
+            ...authority,
+            reserve: async input => ({ ...(await authority.reserve(input)), day: '2020-01-01' })
+          },
+          respond: () => {
+            calls++;
+            return reply('译文');
+          }
+        });
+        app.ai = { translation: service };
+        await assert.rejects(service.translate({ text: 'Hello.' }), { code: 'AI_BUDGET_INVALID' });
+        assert.equal(calls, 0);
+        assert.equal((await budget()).heldMicrounits, 0);
+      });
+    }
+  },
+  ...['preparing', 'reserved', 'sent'].map(phase => ({
+    name: `PDF 翻译：双实例共享 repository，恢复跳过 ${phase} 阶段未过期租约，原请求正常结算`,
+    async run() {
+      await fixture(async ({ app, budget }) => {
+        const entered = Promise.withResolvers();
+        const resume = Promise.withResolvers();
+        const repository = app.dataStore.aiRepository;
+        const authority = app.dataStore.aiBudgetAuthority;
+        const service = translationService(app, {
+          repository: {
+            ...repository,
+            async insert(kind, record) {
+              if (phase === 'preparing' && kind === 'aiJobAttempt') {
+                entered.resolve();
+                await resume.promise;
+              }
+              return repository.insert(kind, record);
+            }
+          },
+          budget: {
+            ...authority,
+            async reserve(input) {
+              const result = await authority.reserve(input);
+              if (phase === 'reserved') {
+                entered.resolve();
+                await resume.promise;
+              }
+              return result;
+            }
+          },
+          async respond() {
+            if (phase === 'sent') {
+              entered.resolve();
+              await resume.promise;
+            }
+            return reply('译文');
+          }
+        });
+        const peer = translationService(app);
+        const translating = service.translate({ text: 'Hello.' });
+        try {
+          await entered.promise;
+          assert.equal(await peer.recover(), 0);
+          assert.equal(repository.list('aiJob')[0].status, 'running');
+          assert.equal((await authority.usage('deepseek-primary')).total.unknownRequests, 0);
+          resume.resolve();
+          assert.equal((await translating).translation, '译文');
+          assert.equal(repository.list('aiJob')[0].status, 'succeeded');
+          assert.equal((await budget()).heldMicrounits, 0);
+          assert.ok((await budget()).spentMicrounits > 0);
+        } finally {
+          resume.resolve();
+          await Promise.allSettled([translating, service.close(), peer.close()]);
+        }
+      });
+    }
+  })),
+  {
+    name: 'PDF 翻译：租约到期后恢复为未知，人工释放后迟到响应不改写账目',
+    async run() {
+      await fixture(async ({ app }) => {
+        let instant = new Date();
+        const entered = Promise.withResolvers();
+        const resume = Promise.withResolvers();
+        const service = translationService(app, {
+          now: () => instant,
+          async respond() {
+            entered.resolve();
+            await resume.promise;
+            return reply('迟到译文');
+          }
+        });
+        const peer = translationService(app, { now: () => instant });
+        const translating = service.translate({ text: 'Hello.' });
+        const late = assert.rejects(translating, { code: 'AI_LATE_RESULT' });
+        try {
+          await entered.promise;
+          const attempt = app.dataStore.aiRepository.list('aiJobAttempt')[0];
+          instant = new Date(attempt.leaseExpiresAt);
+          assert.equal(await peer.recover(), 1);
+          const authority = app.dataStore.aiBudgetAuthority;
+          assert.equal((await authority.usage('deepseek-primary')).total.unknownRequests, 1);
+          await authority.settle({
+            accountRef: 'deepseek-primary',
+            attemptId: attempt.attemptId,
+            disposition: 'released'
+          });
+          resume.resolve();
+          await late;
+          const status = await authority.status('deepseek-primary');
+          assert.equal(status.heldMicrounits, 0);
+          assert.equal(status.spentMicrounits, 0);
+          assert.equal(app.dataStore.aiRepository.list('aiJob')[0].status, 'failed');
+          assert.equal(await peer.recover(), 0);
+        } finally {
+          resume.resolve();
+          await Promise.allSettled([translating, service.close(), peer.close()]);
+        }
+      });
+    }
+  },
   {
     name: 'PDF 翻译：运行中的调用不会被重复恢复；关闭等待中止和预算收尾',
     async run() {

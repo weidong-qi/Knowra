@@ -3,6 +3,8 @@ import { hashRecord, scopeHash } from './record-contract.ts';
 import type { AiRecordRepositoryPort, AiScopeSnapshot } from './record-types.ts';
 import { createAppError } from '../../errors/app-error.ts';
 
+const LEASE_MS = 5 * 60_000;
+
 interface TranslationTaskOptions {
   repository: Pick<AiRecordRepositoryPort, 'identity' | 'get' | 'list' | 'insert' | 'replace'>;
   ownerId: string;
@@ -65,7 +67,7 @@ export function createTranslationTasks({ repository, ownerId, now }: Translation
       actionKinds: [],
       maxTargets: 0,
       issuedAt: createdAt,
-      expiresAt: new Date(now().getTime() + 5 * 60_000).toISOString(),
+      expiresAt: new Date(now().getTime() + LEASE_MS).toISOString(),
       revokedAt: null
     });
     const jobId = `pdf-translation-${input.attemptId}`;
@@ -112,10 +114,28 @@ export function createTranslationTasks({ repository, ownerId, now }: Translation
     return jobId;
   }
 
-  async function sent(attemptId: string) {
+  async function assertLive(attemptId: string) {
     const attempt = await repository.get('aiJobAttempt', attemptId);
     if (!attempt) throw createAppError('AI_RECORD_NOT_FOUND', '翻译调用记录不存在。');
+    const job = await repository.get('aiJob', attempt.jobId);
+    if (
+      job?.status !== 'running' ||
+      !['leased', 'sent'].includes(attempt.status) ||
+      Date.parse(attempt.leaseExpiresAt) <= now().getTime()
+    )
+      throw createAppError('AI_LATE_RESULT', '翻译任务已结束或租约失效，请重试。');
+    return attempt;
+  }
+
+  async function sent(attemptId: string) {
+    const attempt = await assertLive(attemptId);
     await repository.replace('aiJobAttempt', { ...attempt, status: 'sent' }, hashRecord(attempt));
+  }
+
+  async function endLease(attemptId: string) {
+    const attempt = await repository.get('aiJobAttempt', attemptId);
+    if (!attempt || Date.parse(attempt.leaseExpiresAt) <= now().getTime()) return;
+    await repository.replace('aiJobAttempt', { ...attempt, leaseExpiresAt: now().toISOString() }, hashRecord(attempt));
   }
 
   async function finish(jobId: string, succeeded: boolean, uncertain: boolean) {
@@ -145,7 +165,11 @@ export function createTranslationTasks({ repository, ownerId, now }: Translation
     );
   }
 
-  async function recover(active: Set<string>, settle: (attemptId: string, modelId: string) => Promise<void>) {
+  async function recover(
+    active: Set<string>,
+    settle: (attemptId: string, modelId: string) => Promise<void>,
+    defer: (expiresAt: number) => void
+  ) {
     const identity = await repository.identity();
     const jobs = await repository.list('aiJob', { jobKind: 'translation', status: 'running' });
     let changed = 0;
@@ -156,6 +180,14 @@ export function createTranslationTasks({ repository, ownerId, now }: Translation
         active.has(job.requestId)
       )
         continue;
+      const attempt = await repository.get('aiJobAttempt', job.requestId);
+      // begin 先写 job 再写 attempt；准备中的任务同样要等待授权窗口，避免另一实例抢先收尾。
+      const grant = attempt ? null : await repository.get('aiGrant', job.grantId);
+      const expiresAt = Date.parse(attempt?.leaseExpiresAt ?? grant?.expiresAt ?? job.updatedAt);
+      if (expiresAt > now().getTime()) {
+        defer(expiresAt);
+        continue;
+      }
       // 先结算再结束任务；结算失败保留 running，下次恢复仍可重试。
       await settle(job.requestId, job.modelId);
       await finish(job.jobId, false, true);
@@ -164,5 +196,5 @@ export function createTranslationTasks({ repository, ownerId, now }: Translation
     return changed;
   }
 
-  return { begin, sent, finish, recover };
+  return { begin, assertLive, sent, endLease, finish, recover };
 }
