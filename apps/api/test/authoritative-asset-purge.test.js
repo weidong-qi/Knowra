@@ -6,9 +6,13 @@ import { once } from 'node:events';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { createSqliteDataStore } from '../../desktop-runtime/src/sqlite-data-store.mjs';
+import { createLocalBudgetAuthority } from '../../desktop-runtime/src/local-budget-authority.mjs';
 import { createServer } from '../src/server.js';
 import { scopeHash, manifestHash } from '../src/modules/ai/record-contract.ts';
 import { aiRecords } from './ai-record-fixtures.js';
+import { createAiTranslationService } from '../src/modules/ai/translation-service.ts';
+import { createLocalPurgeTaskReader } from '../src/infrastructure/asset-purge-task-state.ts';
+import { AI_SQL_DEFINITIONS, encodeAiRow } from '../src/modules/ai/record-sql-map.ts';
 import {
   createExtractionTaskSources,
   extractionTaskGateway,
@@ -18,9 +22,13 @@ import {
 async function fixture(driver, run) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-authority-purge-api-'));
   const file = path.join(root, driver === 'JSON' ? 'synthetic.json' : 'synthetic.sqlite');
-  let store, server;
+  let store, server, budget;
   const open = () => {
     store = driver === 'JSON' ? createFileDataStore(file) : createSqliteDataStore(file);
+    budget =
+      driver === 'JSON'
+        ? store.aiBudgetAuthority
+        : createLocalBudgetAuthority({ filePath: path.join(root, 'ai-budget.json') });
     return createAppContext({
       dataStore: store,
       ownerId: 'demo',
@@ -52,6 +60,9 @@ async function fixture(driver, run) {
         return store;
       },
       deleted,
+      get budget() {
+        return budget;
+      },
       reopen,
       async http() {
         server = createServer({ appContext: app, logger: { error() {} } });
@@ -97,6 +108,35 @@ function insertJob(store, { unknownScope = false } = {}) {
   return records;
 }
 
+export async function storedTranslation(repository, budget, ownerId = 'demo', failed = false) {
+  const translation = createAiTranslationService({
+    repository,
+    budget,
+    ownerId,
+    modelSettings: { credentialReference: async () => ({ modelId: 'deepseek-flash', credentialRef: 'synthetic' }) },
+    gateway: {
+      capabilities: () => ({ provider: 'mock' }),
+      async complete() {
+        if (failed) throw Object.assign(new Error('合成供应商失败'), { code: 'AI_PROVIDER_UNAVAILABLE' });
+        return { content: '合成译文', usage: { unknown: false, inputTokens: 40, outputTokens: 20 } };
+      }
+    },
+    priceProfile: {
+      version: 'translation-purge-synthetic-v1',
+      expiresAt: '2030-01-01T00:00:00Z',
+      inputMicrounitsPerMillion: 2000000,
+      outputMicrounitsPerMillion: 8000000
+    }
+  });
+  try {
+    const result = translation.translate({ text: 'Synthetic PDF selection.' });
+    if (failed) await assert.rejects(result, { code: 'AI_PROVIDER_UNAVAILABLE' });
+    else assert.equal((await result).translation, '合成译文');
+  } finally {
+    await translation.close();
+  }
+}
+
 export async function trainingAssets(knowledge) {
   const item = (
     await knowledge.knowledgeItemService.createCandidate({
@@ -137,6 +177,97 @@ export async function trainingAssets(knowledge) {
 }
 
 export const authoritativeAssetPurgeTests = [
+  ...['JSON', 'SQLite'].flatMap(driver =>
+    [false, true].map(failed => ({
+      name: `权威清理 ${driver}：真实翻译${failed ? '失败' : '成功'}并重启后，无关知识及四类训练资产可永久删除`,
+      async run() {
+        await fixture(driver, async f => {
+          await storedTranslation(f.store.aiRepository, f.budget, 'demo', failed);
+          const k = f.reopen().modules.knowledge;
+          const records = await trainingAssets(k);
+          const before = structuredClone(createLocalPurgeTaskReader(f.store)());
+          const budget = await f.budget.usage('deepseek-primary');
+          assert.equal(before.ai.jobs[0].jobKind, 'translation');
+          assert.equal(before.ai.jobs[0].status, failed ? 'failed' : 'succeeded');
+          const request = await f.http();
+          const route = `knowledge/items/${f.deleted.id}`;
+          const preview = (await request(`${route}/purge-preview`)).body.data;
+          assert.equal(preview.coverage.runningTasks, 'verified');
+          assert.equal(preview.decision, 'can-purge-no-history');
+          const purged = await request(`${route}/permanent`, 'DELETE', {
+            expectedUpdatedAt: preview.expectedUpdatedAt,
+            expectedDatasetEpoch: preview.expectedDatasetEpoch
+          });
+          assert.equal(purged.status, 200, JSON.stringify(purged.body));
+          assert.equal(purged.body.data.status, 'subject-purged');
+          for (const [type, , asset] of records) {
+            k.trainingAssetLifecycle.trash(type, asset.id);
+            const assetPreview = k.trainingAssetLifecycle.inspect(type, asset.id);
+            assert.equal(assetPreview.coverage.runningTasks, 'verified');
+            assert.equal(assetPreview.decision, 'can-purge-no-history');
+            assert.equal(
+              k.trainingAssetLifecycle.purge(type, asset.id, assetPreview.expectedUpdatedAt).status,
+              'subject-purged'
+            );
+          }
+          assert.deepEqual(createLocalPurgeTaskReader(f.store)(), before);
+          assert.deepEqual(await f.budget.usage('deepseek-primary'), budget);
+        });
+      }
+    }))
+  ),
+  ...['JSON', 'SQLite'].map(driver => ({
+    name: `权威清理 ${driver}：翻译任务的损坏绑定、非空来源及工具授权仍阻断删除`,
+    async run() {
+      for (const corruption of ['manifestBinding', 'nonEmptyScope', 'toolGrant'])
+        await fixture(driver, async f => {
+          await storedTranslation(f.store.aiRepository, f.budget);
+          const state = structuredClone(createLocalPurgeTaskReader(f.store)());
+          const job = state.ai.jobs[0],
+            manifest = state.ai.contextManifests[0],
+            scope = state.ai.scopeSnapshots[0],
+            grant = state.ai.grants[0];
+          if (corruption === 'manifestBinding') job.manifestHash = '0'.repeat(64);
+          else if (corruption === 'toolGrant') grant.allowedTools = ['notes_read'];
+          else {
+            scope.scopeKind = manifest.scopeKind = 'note';
+            scope.scopeHash = scopeHash(scope);
+            manifest.scopeHash = grant.scopeHash = scope.scopeHash;
+            job.manifestHash = manifestHash(manifest);
+          }
+          if (driver === 'JSON') {
+            const raw = JSON.parse(fs.readFileSync(f.file, 'utf8'));
+            Object.assign(raw.aiRuntime, state.ai);
+            fs.writeFileSync(f.file, JSON.stringify(raw));
+          } else
+            f.store.readSync(db => {
+              for (const [kind, record] of [
+                ['scopeSnapshot', scope],
+                ['contextManifest', manifest],
+                ['aiGrant', grant],
+                ['aiJob', job]
+              ]) {
+                const row = encodeAiRow(kind, record),
+                  definition = AI_SQL_DEFINITIONS[kind];
+                const fields = Object.keys(row).filter(field => field !== definition.id);
+                db.prepare(
+                  `UPDATE ${definition.table} SET ${fields.map(field => `${field} = ?`).join(', ')} WHERE ${definition.id} = ?`
+                ).run(...fields.map(field => row[field]), row[definition.id]);
+              }
+            });
+          const k = f.reopen().modules.knowledge,
+            before = snapshot(f);
+          const preview = k.inspectKnowledgePurge(f.deleted.id);
+          assert.equal(preview.coverage.runningTasks, 'unverified', corruption);
+          assert(preview.references.some(ref => ref.reasonCode === 'TASK_REFERENCE_COVERAGE_UNAVAILABLE'));
+          assert.throws(
+            () => k.permanentlyDeleteKnowledgeItem(f.deleted.id, { expectedUpdatedAt: f.deleted.updatedAt }),
+            { code: 'KNOWLEDGE_ITEM_PURGE_BLOCKED' }
+          );
+          assert.deepEqual(snapshot(f), before);
+        });
+    }
+  })),
   ...['JSON', 'SQLite'].map(driver => ({
     name: `权威清理 ${driver}：持久化任务存储不可读时预检和执行均阻断`,
     async run() {
