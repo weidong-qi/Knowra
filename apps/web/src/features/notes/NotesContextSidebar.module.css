@@ -131,7 +131,7 @@
   padding: 4px 8px;
 }
 .folderRow > svg {
-  color: var(--accent);
+  color: var(--text-primary);
 }
 .documentRow > svg {
   color: var(--text-muted);
@@ -160,7 +160,8 @@
 .documentRow[aria-current='page'] {
   color: var(--text-primary);
   background: var(--surface-selected);
-  font-weight: 550;
+  /* 选中靠底色和深色文字区分；中文字体没有 550 这一档会落到粗体，所以用中等字重。 */
+  font-weight: 500;
 }
 
 .documentRow[aria-current='page'] > svg {

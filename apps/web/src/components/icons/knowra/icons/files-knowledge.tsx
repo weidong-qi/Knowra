@@ -1,11 +1,12 @@
-import { ACCENT } from "../IconBase";
 import { createIcon } from "../createIcon";
+import { Fit, OWN_STROKE } from "./fit";
 
+/** 笔记：折角纸页加两道线，单色。 */
 export const NoteIcon = createIcon("NoteIcon", (
-  <>
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>
-  </>
-));
+  <Fit>
+    <path d="M7.2 4.4h6.2l4.4 4.4v10.2a1.7 1.7 0 0 1-1.7 1.7H7.2a1.7 1.7 0 0 1-1.7-1.7V6.1a1.7 1.7 0 0 1 1.7-1.7Z"/><path d="M13.4 4.4v4.4h4.4"/><path d="M8.8 13.4h6"/><path d="M8.8 16.8h3.4"/>
+  </Fit>
+), OWN_STROKE);
 
 export const BookIcon = createIcon("BookIcon", (
   <>
@@ -13,11 +14,12 @@ export const BookIcon = createIcon("BookIcon", (
   </>
 ));
 
+/** 知识：向右上错位叠放的三张卡片，单色。 */
 export const KnowledgeIcon = createIcon("KnowledgeIcon", (
-  <>
-    <path d="m12 3 10 5-10 5L2 8Z"/><path d="m2 12 10 5 10-5M2 16l10 5 10-5"/>
-  </>
-));
+  <Fit>
+    <rect x="3.8" y="9" width="12.8" height="11.2" rx="2.2"/><path d="M7.2 6.2h10.2a2.1 2.1 0 0 1 2.1 2.1v9.6" opacity=".6"/><path d="M10.6 3.6h7.6a2.1 2.1 0 0 1 2.1 2.1v4" opacity=".35"/><path d="M7 14.6h6.2"/>
+  </Fit>
+), OWN_STROKE);
 
 export const QuestionIcon = createIcon("QuestionIcon", (
   <>
@@ -25,34 +27,32 @@ export const QuestionIcon = createIcon("QuestionIcon", (
   </>
 ));
 
+/** 文件夹：圆角线框，单色。 */
 export const FolderIcon = createIcon("FolderIcon", (
-  <>
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z"/>
-  </>
-));
+  <Fit>
+    <path d="M4 7.4A1.8 1.8 0 0 1 5.8 5.6h3.8l1.9 2.1h6.7A1.8 1.8 0 0 1 20 9.5v8.1a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.6Z"/>
+  </Fit>
+), OWN_STROKE);
 
 /** 文件夹方案 05：实心前盖与半透明背板，用于侧栏文件夹树。 */
+/** 侧栏树与列表里的文件夹：黑色线框（不再是橙色实心）。 */
 export const SolidFolderIcon = createIcon("SolidFolderIcon", (
-  <>
-    <path d="M3.5 7.3V6a2 2 0 0 1 2-2h4.1l2 2.3h6.9a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z" fill={ACCENT} stroke="none" opacity=".48"/>
-    <path d="M3.5 9a1 1 0 0 1 1-1h15a1 1 0 0 1 1 1v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z" fill={ACCENT} stroke="none"/>
-    <path d="M6 10h12" stroke="var(--surface-page, #fff)" opacity=".46" strokeWidth="1.1"/>
-  </>
-));
+  <Fit>
+    <path d="M4 7.4A1.8 1.8 0 0 1 5.8 5.6h3.8l1.9 2.1h6.7A1.8 1.8 0 0 1 20 9.5v8.1a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.6Z"/>
+  </Fit>
+), OWN_STROKE);
 
 export const SolidExpandedFolderIcon = createIcon("SolidExpandedFolderIcon", (
-  <>
-    <path d="M3.5 7.3V6a2 2 0 0 1 2-2h4.1l2 2.3h6.9a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z" fill={ACCENT} stroke="none" opacity=".48"/>
-    <path d="M5.1 10h15.4a1 1 0 0 1 1 1.3l-2.1 6.8a2 2 0 0 1-1.9 1.4H6.4a1.7 1.7 0 0 1-1.7-1.4L3.4 11.8A1.5 1.5 0 0 1 5.1 10Z" fill={ACCENT} stroke="var(--surface-page, #fff)" strokeWidth=".8"/>
-    <path d="M7 12h11" stroke="var(--surface-page, #fff)" opacity=".55" strokeWidth="1.1"/>
-  </>
-));
+  <Fit>
+    <path d="M4 17.6V7.4A1.8 1.8 0 0 1 5.8 5.6h3.8l1.9 2.1h6.7A1.8 1.8 0 0 1 20 9.5v1.4" opacity=".55"/><path d="M4 17.6l2-5.9A1.8 1.8 0 0 1 7.7 10.5h12.9a1.1 1.1 0 0 1 1.04 1.46l-1.9 5.5a1.8 1.8 0 0 1-1.7 1.2H5.8A1.8 1.8 0 0 1 4 17.6Z"/>
+  </Fit>
+), OWN_STROKE);
 
 export const TagIcon = createIcon("TagIcon", (
-  <>
-    <path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8Z"/><path d="M7 7h.01" strokeWidth="2.2"/>
-  </>
-));
+  <Fit>
+    <path d="M4.2 6A1.8 1.8 0 0 1 6 4.2h5.4a1.8 1.8 0 0 1 1.27.53l7 7a1.8 1.8 0 0 1 0 2.54l-5.4 5.4a1.8 1.8 0 0 1-2.54 0l-7-7A1.8 1.8 0 0 1 4.2 11.4Z"/><circle cx="8.3" cy="8.3" r="1.4" fill="currentColor" stroke="none"/>
+  </Fit>
+), OWN_STROKE);
 
 export const LinkIcon = createIcon("LinkIcon", (
   <>
@@ -72,11 +72,12 @@ export const StarIcon = createIcon("StarIcon", (
   </>
 ));
 
+/** AI 助手：带两只眼睛和微笑的对话框，替代原来的四角星。 */
 export const SparkIcon = createIcon("SparkIcon", (
-  <>
-    <path d="m11 3 1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9Z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7Z" fill={ACCENT} stroke={ACCENT} strokeWidth="1"/>
-  </>
-));
+  <Fit>
+    <path d="M6 4.4h12a2.4 2.4 0 0 1 2.4 2.4v8.2a2.4 2.4 0 0 1-2.4 2.4h-6.6L7 21.2v-3.8H6A2.4 2.4 0 0 1 3.6 15V6.8A2.4 2.4 0 0 1 6 4.4Z"/><circle cx="9.2" cy="10" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.8" cy="10" r="1.05" fill="currentColor" stroke="none"/><path d="M10 12.9q2 1.7 4 0"/>
+  </Fit>
+), OWN_STROKE);
 
 export const NodesIcon = createIcon("NodesIcon", (
   <>

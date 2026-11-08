@@ -194,7 +194,7 @@
 }
 /* 列表文件夹：实心橙色（方案 E），文件保持线性墨色。 */
 .entryIcon[data-art-kind='folder'] {
-  color: var(--ni-accent, var(--accent));
+  color: var(--ni-ink, var(--text-primary));
 }
 .status {
   --status-color: var(--ni-ink-3, var(--text-muted));

@@ -175,7 +175,7 @@ function IndexTableRow({
         >
           <span className={styles.entryIcon} data-art-kind={isFolder ? 'folder' : 'document'} aria-hidden="true">
             {isFolder ? (
-              <SolidFolderIcon size={18} />
+              <SolidFolderIcon size={16} />
             ) : item.kind === 'note' && item.note.contentKind === 'pdf' ? (
               <span className={styles.pdfIcon}>
                 <PdfFileIcon size={18} />

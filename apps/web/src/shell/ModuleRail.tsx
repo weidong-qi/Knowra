@@ -6,9 +6,9 @@ import { forwardRef, type ReactNode } from 'react';
 import { PressableButton } from '../components/ui/button/PressableButton';
 import {
   BellIcon,
-  KnowledgeIcon,
   RailAssistantIcon,
   RailHomeIcon,
+  RailKnowledgeIcon,
   RailNoteIcon,
   RailQuestionIcon,
   RailSearchIcon,
@@ -42,7 +42,7 @@ export const PRIMARY_DOMAINS: readonly RailItem[] = [
     id: 'knowledge',
     label: '知识',
     description: '知识候选、人工确认与来源追溯。',
-    Icon: KnowledgeIcon,
+    Icon: RailKnowledgeIcon,
     available: true
   },
   {

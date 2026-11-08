@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { createIcon } from '../createIcon';
+import { Fit, OWN_STROKE } from './fit';
 
 /**
  * 左侧导航栏与手机底栏专用的图标。
@@ -8,11 +8,7 @@ import { createIcon } from '../createIcon';
  * 通用图标（NoteIcon、SearchIcon 等）仍用于列表、树和检查器，不在此替换。
  */
 const SIGN = 'var(--accent, #f26b1d)';
-const ROOT_STROKE = 1.45;
-
-function Fit({ children }: { children: ReactNode }) {
-  return <g transform="translate(12 12) scale(1.12) translate(-12 -12)">{children}</g>;
-}
+const ROOT_STROKE = OWN_STROKE;
 
 /** 首页：小橙。 */
 export const RailHomeIcon = createIcon(
@@ -44,6 +40,22 @@ export const RailNoteIcon = createIcon(
     <path d="M13.2 6.2V11H18" />
     <path d="M8.6 14.6h6.2" />
     <path d="M8.6 17.6h3.4" stroke={SIGN} />
+  </Fit>,
+  ROOT_STROKE
+);
+
+/** 知识：四颗相连的星加两颗散点，末端一颗是橙色。 */
+export const RailKnowledgeIcon = createIcon(
+  'RailKnowledgeIcon',
+  <Fit>
+    <path d="M5.2 16.6 9.6 10.2 14.8 13.4" opacity=".55" />
+    <path d="M14.8 13.4 18.8 5.6" stroke={SIGN} />
+    <circle cx="5.2" cy="16.8" r="2" />
+    <circle cx="9.6" cy="10" r="2.5" />
+    <circle cx="14.8" cy="13.6" r="1.9" />
+    <circle cx="18.8" cy="5.4" r="2.1" fill={SIGN} stroke="none" />
+    <circle cx="6.2" cy="6.4" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="19.6" cy="18.6" r="1" fill="currentColor" stroke="none" />
   </Fit>,
   ROOT_STROKE
 );
