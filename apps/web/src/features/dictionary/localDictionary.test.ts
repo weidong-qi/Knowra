@@ -57,3 +57,59 @@ it('没有中文时明确返回英文释义，损坏条目不当作有效查询�
   expect(await lookup('word')).toMatchObject({ meanings: ['A unit of language.'], language: 'en' });
   await expect(lookup('broken')).rejects.toThrow('条目无效');
 });
+
+it('损坏条目不留在缓存，修复分片后同一个查询可重试', async () => {
+  const read = vi
+    .fn()
+    .mockResolvedValueOnce({ gradient: ['', 'n. 梯度'] })
+    .mockResolvedValue({ gradient: ['', 'n. 梯度', '', ''] });
+  const lookup = createDictionaryLookup(read);
+  await expect(lookup('gradient')).rejects.toThrow('条目无效');
+  expect(await lookup('gradient')).toMatchObject({ word: 'gradient', meanings: ['n. 梯度'] });
+  expect(await lookup('gradient')).toMatchObject({ word: 'gradient' });
+  expect(read).toHaveBeenCalledTimes(2);
+});
+
+it.each([null, [], 'invalid'])('损坏分片 %s 不留在缓存，修复后允许重试', async invalid => {
+  const read = vi
+    .fn()
+    .mockResolvedValueOnce(invalid)
+    .mockResolvedValue({ gradient: ['', 'n. 梯度', '', ''] });
+  const lookup = createDictionaryLookup(read);
+  await expect(lookup('gradient')).rejects.toThrow('分片无效');
+  expect(await lookup('gradient')).toMatchObject({ word: 'gradient' });
+  expect(read).toHaveBeenCalledTimes(2);
+});
+
+it('词形原形条目损坏时也清除对应缓存，重试能恢复原形释义', async () => {
+  const read = vi
+    .fn()
+    .mockResolvedValueOnce({ gradients: ['', '复数', '', 'gradient'], gradient: [] })
+    .mockResolvedValue({ gradients: ['', '复数', '', 'gradient'], gradient: ['', 'n. 梯度', '', ''] });
+  const lookup = createDictionaryLookup(read);
+  await expect(lookup('gradients')).rejects.toThrow('条目无效');
+  expect(await lookup('gradients')).toMatchObject({ query: 'gradients', word: 'gradient', meanings: ['n. 梯度'] });
+  expect(read).toHaveBeenCalledTimes(2);
+});
+
+it('并发查询共享失败请求，之后重试只读取一次新分片', async () => {
+  let fail!: (reason: Error) => void;
+  const read = vi
+    .fn()
+    .mockReturnValueOnce(
+      new Promise<DictionaryShard>((_resolve, reject) => {
+        fail = reject;
+      })
+    )
+    .mockResolvedValue({ gradient: ['', 'n. 梯度', '', ''] });
+  const lookup = createDictionaryLookup(read);
+  const first = lookup('gradient');
+  const second = lookup('gradient');
+  const firstResult = expect(first).rejects.toThrow('旧请求失败');
+  const secondResult = expect(second).rejects.toThrow('旧请求失败');
+  fail(new Error('旧请求失败'));
+  await Promise.all([firstResult, secondResult]);
+  expect(await lookup('gradient')).toMatchObject({ word: 'gradient' });
+  expect(await lookup('gradient')).toMatchObject({ word: 'gradient' });
+  expect(read).toHaveBeenCalledTimes(2);
+});

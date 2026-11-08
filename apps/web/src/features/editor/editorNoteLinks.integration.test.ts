@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest';
+import { it, expect, vi } from 'vitest';
 import {
   Editor,
   rootCtx,
@@ -143,4 +143,24 @@ it('同源同文字逐处定位、前文移动与格式拆分，重复位置失�
     ).toBe(false);
     expect(view.state.selection).toBe(selection);
   });
+});
+
+it('LAN 缺少 randomUUID 时新增笔记链接使用合法安全 UUID，修改目标保留身份', async () => {
+  vi.stubGlobal('crypto', { getRandomValues: crypto.getRandomValues.bind(crypto) });
+  try {
+    await withEditor('合成链接正文', editor => {
+      const view = editor.ctx.get(editorViewCtx);
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, 5)));
+      const session = captureNoteLinkEdit(view)!;
+      expect(applyNoteLinkEdit(view, session, 'lan-target', session.label)).toBe(true);
+      const first = noteLinkRanges(view)[0];
+      expect(first.targetNoteId).toBe('lan-target');
+      expect(first.occurrenceId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+      const update = captureNoteLinkEdit(view)!;
+      expect(applyNoteLinkEdit(view, update, 'lan-other', update.label)).toBe(true);
+      expect(noteLinkRanges(view)[0].occurrenceId).toBe(first.occurrenceId);
+    });
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

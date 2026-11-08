@@ -25,7 +25,9 @@ export function createV4WebServer({ distRoot, getApiOrigin, allowedOrigins = [],
       }
       if (
         (error?.statusCode === 413 && error?.code === 'PAYLOAD_TOO_LARGE') ||
-        (error?.statusCode === 403 && error?.code === 'REQUEST_ORIGIN_FORBIDDEN')
+        (error?.statusCode === 403 && error?.code === 'REQUEST_ORIGIN_FORBIDDEN') ||
+        (error?.statusCode === 502 &&
+          ['UPSTREAM_ENCODING_UNSUPPORTED', 'UPSTREAM_RANGE_ENCODING_UNSUPPORTED'].includes(error?.code))
       ) {
         response.writeHead(error.statusCode, {
           'Content-Type': 'application/json; charset=utf-8',

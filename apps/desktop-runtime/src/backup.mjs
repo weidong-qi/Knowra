@@ -5,9 +5,8 @@ import { validateSqliteDeletionFacts } from './sqlite-deletion-facts-contract.mj
 import { validateSqliteActionRows } from './ai-sqlite-action-store.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
-import { DatabaseSync } from 'node:sqlite';
+import { openReadonlySqliteSnapshot } from './sqlite-readonly-snapshot.mjs';
 import {
   LOCAL_DATA_COLLECTIONS,
   LOCAL_DATA_SCHEMA_VERSION,
@@ -83,7 +82,8 @@ function verifyConversationAttachmentFiles(attachments, inventoryFiles) {
 }
 
 function verifyNewConversationAttachmentBackup(databaseFile, files) {
-  const db = new DatabaseSync(databaseFile, { readOnly: true });
+  const snapshot = openReadonlySqliteSnapshot(databaseFile, { allowSidecars: false });
+  const db = snapshot.database;
   try {
     let taskWorkspace;
     try {
@@ -100,7 +100,7 @@ function verifyNewConversationAttachmentBackup(databaseFile, files) {
     }
     return taskWorkspace;
   } finally {
-    db.close();
+    snapshot.close();
   }
 }
 
@@ -327,17 +327,11 @@ export function inspectRuntimeBackup(backupDirectory, { restoreContext } = {}) {
   const { manifest, actual } = verifyBackupFiles(backupDirectory);
   if (manifest.taskWorkspace?.status === 'rescue-only')
     throw new Error('任务工作区不可校验，此备份仅供原始资料救援，不能直接恢复。');
-  // 旧 CLI 导出保留 WAL 模式；直接只读打开也可能在来源生成 sidecar。
-  // 在私有临时副本检查，既不修改原文件，也不污染其清单。
-  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-backup-inspect-'));
-  let db;
+  const snapshot = openReadonlySqliteSnapshot(path.join(backupDirectory, 'local.sqlite'), { allowSidecars: false });
+  const db = snapshot.database;
   try {
-    const bytes = readBackupFile(path.join(backupDirectory, 'local.sqlite'));
-    if (createHash('sha256').update(bytes).digest('hex') !== actual.find(file => file.path === 'local.sqlite').sha256)
+    if (digest(snapshot.databasePath) !== actual.find(file => file.path === 'local.sqlite').sha256)
       throw new Error('备份文件完整性校验失败，未恢复任何内容。');
-    const databasePath = path.join(temporary, 'local.sqlite');
-    fs.writeFileSync(databasePath, bytes, { flag: 'wx', mode: 0o600 });
-    db = new DatabaseSync(databasePath, { readOnly: true });
     if (
       db
         .prepare('PRAGMA integrity_check')
@@ -422,11 +416,7 @@ export function inspectRuntimeBackup(backupDirectory, { restoreContext } = {}) {
       draftCount
     };
   } finally {
-    try {
-      db?.close();
-    } finally {
-      fs.rmSync(temporary, { recursive: true, force: true });
-    }
+    snapshot.close();
   }
 }
 

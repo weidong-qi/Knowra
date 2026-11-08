@@ -83,6 +83,8 @@ export interface HistoryRetentionOptions {
   notePolicy?: Readonly<NoteVersionRetentionPolicy>;
   annotationPolicy?: Readonly<AnnotationRevisionRetentionPolicy>;
   deletedAnnotationRetentionMs?: number;
+  /** 仅显式维护预演可选；到期不代表普通保存或同步获得删除授权。 */
+  allowDeletedAnnotationPrune?: boolean;
 }
 export interface HistoryRetentionPlan {
   removedRevisions: Set<string>;

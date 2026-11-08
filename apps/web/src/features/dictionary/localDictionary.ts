@@ -54,18 +54,19 @@ export function createDictionaryLookup(readShard = loadShard) {
       cache.delete(prefix);
       cache.set(prefix, request);
     }
-    let shard: DictionaryShard;
     try {
-      shard = await request;
+      const shard = await request;
+      if (!shard || typeof shard !== 'object' || Array.isArray(shard))
+        throw new Error('本地词库分片无效，请更新应用。');
+      if (!Object.hasOwn(shard, word)) return null;
+      const row = shard[word];
+      if (!Array.isArray(row) || row.length !== 4 || !row.every(value => typeof value === 'string'))
+        throw new Error('本地词库条目无效，请更新应用。');
+      return row;
     } catch (error) {
       if (cache.get(prefix) === request) cache.delete(prefix);
       throw error;
     }
-    if (!Object.hasOwn(shard, word)) return null;
-    const row = shard[word];
-    if (!Array.isArray(row) || row.length !== 4 || !row.every(value => typeof value === 'string'))
-      throw new Error('本地词库条目无效，请更新应用。');
-    return row;
   }
   return async (text: string): Promise<DictionaryEntry | null> => {
     const query = normalizeDictionaryWord(text);

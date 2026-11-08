@@ -5,6 +5,39 @@ import { pdfFileUrl, pdfHeaders } from './pdfApi';
 import { readRuntimeConfig } from '../../app/runtimeConfig';
 import { attachPdfPinchZoom } from './pdfPinchZoom';
 
+interface PdfReadingPosition {
+  page?: number;
+  scale?: string | number;
+  rotation?: number;
+  top?: number;
+  left?: number;
+}
+
+function readPosition(key: string): PdfReadingPosition {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(key) ?? '{}');
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    const position = value as PdfReadingPosition;
+    if (position.page !== undefined && (!Number.isSafeInteger(position.page) || position.page < 1)) return {};
+    if (position.scale !== undefined) {
+      const scale = position.scale;
+      const preset = typeof scale === 'string' && ['auto', 'page-actual', 'page-width', 'page-fit'].includes(scale);
+      const numeric =
+        (typeof scale === 'number' || (typeof scale === 'string' && Number.parseFloat(scale) === Number(scale))) &&
+        Number.isFinite(Number(scale)) &&
+        Number(scale) > 0;
+      if (!preset && !numeric) return {};
+    }
+    if (position.rotation !== undefined && ![0, 90, 180, 270].includes(position.rotation)) return {};
+    for (const coordinate of [position.top, position.left]) {
+      if (coordinate !== undefined && (typeof coordinate !== 'number' || !Number.isFinite(coordinate))) return {};
+    }
+    return position;
+  } catch {
+    return {};
+  }
+}
+
 export function usePdfViewer(attachmentId: string, noteId: string, sha256: string) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<PDFViewer | null>(null);
@@ -22,12 +55,7 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
     const container = containerRef.current!;
     const runtime = readRuntimeConfig();
     const key = `knowra:pdf-view:v1:${runtime.cacheSuffix}:${noteId}:${attachmentId}:${sha256}`;
-    let position: { page?: number; scale?: string | number; rotation?: number; top?: number; left?: number } = {};
-    try {
-      position = JSON.parse(localStorage.getItem(key) ?? '{}');
-    } catch {
-      /* 使用默认阅读位置。 */
-    }
+    let position = readPosition(key);
     let location = { top: position.top, left: position.left };
     let active = true,
       timer: ReturnType<typeof setTimeout> | undefined;
@@ -70,6 +98,10 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
     }
     bus.on('pagesinit', () => {
       if (!active) return;
+      if (position.page !== undefined && position.page > viewer.pagesCount) {
+        position = {};
+        location = { top: undefined, left: undefined };
+      }
       if ([0, 90, 180, 270].includes(position.rotation ?? -1)) viewer.pagesRotation = position.rotation!;
       viewer.currentScaleValue = position.scale ? String(position.scale) : 'page-width';
       if (position.page && position.page <= viewer.pagesCount) viewer.currentPageNumber = position.page;

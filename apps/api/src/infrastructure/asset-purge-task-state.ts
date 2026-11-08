@@ -33,7 +33,7 @@ const same = <Left extends PurgeComparable>(
   right: PurgeComparable | null | undefined,
   fields: readonly PurgeComparisonField[] = boundary
 ): left is Left => !!left && !!right && fields.every(key => left[key] === right[key]);
-const invalid = (): never => {
+const invalid: () => never = () => {
   throw new Error('持久化任务引用或历史绑定无法核实。');
 };
 const empty = (): PurgeTaskState => ({
@@ -157,7 +157,7 @@ export function createPostgresPurgeTaskReader(client: QuerySqlPort, ownerId: str
   };
 }
 
-/** v1 supports note sources only. Unsupported asset scopes/jobs cannot establish absence of references. */
+/** 识别笔记来源和无知识库来源的翻译；未支持的资产范围或任务仍无法证明不存在引用。 */
 export function verifyPurgeTaskState({ ai, tasks, receipts }: PurgeTaskState) {
   const maps = {} as { [C in PurgeAiCollection]: Map<string, PurgeAiCollections[C][number]> };
   for (const [kind, { collection, id }] of Object.entries(AI_RECORD_KINDS) as [
@@ -196,7 +196,7 @@ export function verifyPurgeTaskState({ ai, tasks, receipts }: PurgeTaskState) {
     const manifest = maps.contextManifests.get(job.manifestId),
       grant = maps.grants.get(job.grantId);
     if (
-      !['answer', 'knowledgeExtraction', 'noteActionPlan'].includes(job.jobKind) ||
+      !['answer', 'translation', 'knowledgeExtraction', 'noteActionPlan'].includes(job.jobKind) ||
       !same(manifest, job) ||
       !same(grant, job) ||
       manifest.scopeSnapshotId !== grant.scopeSnapshotId ||
@@ -205,6 +205,23 @@ export function verifyPurgeTaskState({ ai, tasks, receipts }: PurgeTaskState) {
       (job.parentJobId && !same(maps.jobs.get(job.parentJobId), job))
     )
       invalid();
+    if (job.jobKind === 'translation') {
+      const scope = maps.scopeSnapshots.get(manifest.scopeSnapshotId);
+      // 翻译只保存选区摘要，不能把携带知识库范围或工具授权的记录当作无资产引用。
+      if (
+        !scope ||
+        scope.scopeKind !== 'empty' ||
+        scope.allowedSources.length ||
+        scope.allowedFolderIds.length ||
+        scope.excludedSourceIds.length ||
+        manifest.sources.length ||
+        manifest.excludedSourceIds.length ||
+        grant.allowedTools.length ||
+        grant.actionKinds.length ||
+        grant.maxTargets !== 0
+      )
+        invalid();
+    }
     if (job.acceptedAttemptId) {
       const attempt = maps.attempts.get(job.acceptedAttemptId);
       if (!attempt || attempt.jobId !== job.jobId) invalid();

@@ -119,16 +119,16 @@ function FolderBranch({
   return (
     <div role="treeitem" aria-level={level} aria-expanded={canExpand ? expanded : undefined}>
       <div className={styles.folderLine}>
-        <button
+        <PressableButton
           type="button"
           className={styles.folderToggle}
           aria-label={`${expanded ? '收起' : '展开'}${folder.name}`}
-          disabled={!canExpand}
+          isDisabled={!canExpand}
           data-folder-toggle={folder.id}
-          onClick={() => toggleFolder(folder.id)}
+          onPress={() => toggleFolder(folder.id)}
         >
           <ChevronRightIcon size={15} data-open={expanded || undefined} />
-        </button>
+        </PressableButton>
         <div
           className={styles.entryDragArea}
           draggable={canWrite}

@@ -7,7 +7,8 @@ import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-repository.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { aiRecords } from './ai-record-fixtures.js';
-import { trainingAssets } from './authoritative-asset-purge.test.js';
+import { trainingAssets, storedTranslation } from './authoritative-asset-purge.test.js';
+import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.js';
 import { createKnowledgeExtractionJobFixture } from './fixtures/knowledge-extraction-job.fixture.js';
 
 async function fixture(run) {
@@ -91,6 +92,44 @@ async function rejectUnverified(f) {
 // CI owns a migrated, isolated real PostgreSQL schema; an unset URL means zero executed PG tests.
 export const authoritativeAssetPurgePostgresTests = process.env.KNOWRA_SYNC_TEST_DATABASE_URL
   ? [
+      {
+        name: '权威清理真实PG：翻译完成并重连后，无关知识及四类训练资产可永久删除',
+        async run() {
+          await fixture(async f => {
+            const budget = createPostgresBudgetAuthority(f.app.prisma);
+            await storedTranslation(f.ai, budget, f.ownerId);
+            const jobs = await f.ai.list('aiJob', { jobKind: 'translation' });
+            assert.equal(jobs[0].status, 'succeeded');
+            const usage = await budget.usage('deepseek-primary');
+            const k = (await f.start()).modules.knowledge;
+            const assets = await trainingAssets(k);
+            const preview = await k.inspectKnowledgePurge(f.deleted.id);
+            assert.equal(preview.coverage.runningTasks, 'verified');
+            assert.equal(preview.decision, 'can-purge-no-history');
+            assert.equal(
+              (
+                await k.permanentlyDeleteKnowledgeItem(f.deleted.id, {
+                  expectedUpdatedAt: preview.expectedUpdatedAt,
+                  expectedDatasetEpoch: preview.expectedDatasetEpoch
+                })
+              ).status,
+              'subject-purged'
+            );
+            for (const [type, , asset] of assets) {
+              await k.trainingAssetLifecycle.trash(type, asset.id);
+              const assetPreview = await k.trainingAssetLifecycle.inspect(type, asset.id);
+              assert.equal(assetPreview.coverage.runningTasks, 'verified');
+              assert.equal(assetPreview.decision, 'can-purge-no-history');
+              assert.equal(
+                (await k.trainingAssetLifecycle.purge(type, asset.id, assetPreview.expectedUpdatedAt)).status,
+                'subject-purged'
+              );
+            }
+            assert.deepEqual(await f.ai.list('aiJob', { jobKind: 'translation' }), jobs);
+            assert.deepEqual(await budget.usage('deepseek-primary'), usage);
+          });
+        }
+      },
       {
         name: '权威清理真实PG：AI关闭仍核查实际任务，损坏manifest/旧dataset描述及缺表阻断',
         async run() {

@@ -16,19 +16,53 @@ function assertNotParsed(row) {
   assert.deepEqual(row.segments, []);
 }
 async function fixture(run) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-conversation-files-')), uploadsDir = path.join(root, 'uploads');
+  // macOS 的 /var、/tmp 是系统软链；测试根规范化后，仍由服务拒绝上传路径内的软链。
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-conversation-files-')));
+  const uploadsDir = path.join(root, 'uploads');
   let data, service;
   const restart = async () => {
-    await service?.close(); data = createFileDataStore(path.join(root, 'data.json'));
-    service = createConversationAttachmentService({ conversationStore: data.aiConversationStore, uploadsDir, ownerId: 'test' });
+    await service?.close();
+    data = createFileDataStore(path.join(root, 'data.json'));
+    service = createConversationAttachmentService({
+      conversationStore: data.aiConversationStore,
+      uploadsDir,
+      ownerId: 'test'
+    });
   };
   try {
     await restart();
-    const conversation = await data.aiConversationStore.createConversation({ ownerId: 'test', actorId: 'test', spaceId: 'space-one' });
-    await run({ root, uploadsDir, conversation, restart, get service() { return service; }, get store() { return data.aiConversationStore; }, rotate: () => data.aiRepository.rotateEpoch(),
-      upload: (bytes = Buffer.from('合成附件'), extra = {}) => service.upload({ conversationId: conversation.conversationId, uploadKey: randomUUID(), fileName: '附件.txt', mimeType: 'text/plain', bytes, ...extra }),
-      file: record => path.join(uploadsDir, 'ai-conversations', `${record.attachmentId}.bin`) });
-  } finally { await service?.close(); fs.rmSync(root, { recursive: true, force: true }); }
+    const conversation = await data.aiConversationStore.createConversation({
+      ownerId: 'test',
+      actorId: 'test',
+      spaceId: 'space-one'
+    });
+    await run({
+      root,
+      uploadsDir,
+      conversation,
+      restart,
+      get service() {
+        return service;
+      },
+      get store() {
+        return data.aiConversationStore;
+      },
+      rotate: () => data.aiRepository.rotateEpoch(),
+      upload: (bytes = Buffer.from('合成附件'), extra = {}) =>
+        service.upload({
+          conversationId: conversation.conversationId,
+          uploadKey: randomUUID(),
+          fileName: '附件.txt',
+          mimeType: 'text/plain',
+          bytes,
+          ...extra
+        }),
+      file: record => path.join(uploadsDir, 'ai-conversations', `${record.attachmentId}.bin`)
+    });
+  } finally {
+    await service?.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 }
 
 export const aiConversationAttachmentTests = [

@@ -41,8 +41,24 @@ export function AnnotationDetailDialog({ props, details, pendingIds, run }: Deta
           </> : null}
           {detail.links.evidenceStatus.some(item => item.status !== 'valid') ? <p role="status">关联内容待检查：原文更新不会改写已有知识或历史依据。</p> : null}
           <p>关联候选 {detail.links.candidates.length} · 已确认知识 {detail.links.confirmed.length} · 局部排除 {detail.preview.exclusions.filter((item) => item.status === 'active').length}</p>
-          {props.onOpenKnowledgeItem ? <div className={styles.noteLinks}>{[...detail.links.candidates, ...detail.links.confirmed].map(({ knowledgeItem }) => <button type="button" key={knowledgeItem.id} onClick={() => props.onOpenKnowledgeItem?.(knowledgeItem.id)}>{knowledgeItem.title}</button>)}</div> : null}
-          {detail.preview.exclusions.filter((item) => item.status === 'active').map((exclusion) => <button key={exclusion.id} type="button" disabled={!props.canWrite || pendingIds.has(detail.annotation.id) || !props.onDeleteAnnotationExclusion} onClick={() => void restoreExclusion(exclusion.id)}>恢复排除范围：{exclusion.anchor.quoteText.slice(0, 32)}</button>)}
+          {props.onOpenKnowledgeItem ? (
+            <div className={styles.noteLinks}>
+              {[...detail.links.candidates, ...detail.links.confirmed].map(({ knowledgeItem }) => (
+                <Button variant="ghost" size="compact" key={knowledgeItem.id} onPress={() => props.onOpenKnowledgeItem?.(knowledgeItem.id)}>
+                  {knowledgeItem.title}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {detail.preview.exclusions.filter(item => item.status === 'active').map(exclusion => (
+            <Button
+              key={exclusion.id}
+              isDisabled={!props.canWrite || pendingIds.has(detail.annotation.id) || !props.onDeleteAnnotationExclusion}
+              onPress={() => void restoreExclusion(exclusion.id)}
+            >
+              恢复排除范围：{exclusion.anchor.quoteText.slice(0, 32)}
+            </Button>
+          ))}
         </div></DialogBody>
         <DialogFooter><DialogClose variant="ghost">关闭</DialogClose><Button variant="primary" isDisabled={!props.canWrite || !props.onUpdateAnnotation || pendingIds.has(detail.annotation.id)} onPress={() => void saveMetadata()}>保存信息</Button></DialogFooter>
       </Dialog> : null;

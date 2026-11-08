@@ -12,7 +12,8 @@ const png = () =>
   );
 
 async function withServer(run) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-conversation-attachment-http-'));
+  // 保留附件目录拒绝软链的安全边界，只规范化系统临时目录的别名。
+  const directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-conversation-attachment-http-')));
   const context = createPersistentAppContext({
     storageRootDir: directory,
     uploadsDir: path.join(directory, 'uploads'),
