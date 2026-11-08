@@ -35,27 +35,38 @@ export function createIsolatedDeepSeekAdapter({
     verified: false
   });
 
-  function enter(signal) {
+  const queueTimeout = () => new AiGatewayError('AI_QUEUE_TIMEOUT', 'AI 请求排队超时，请重试。', { retryable: true });
+
+  function enter(signal, expiresAt) {
     if (signal?.aborted) return Promise.reject(new AiGatewayError('AI_CANCELLED', '模型请求已取消。'));
+    const remaining = expiresAt === undefined ? limits.wallMs : Math.min(limits.wallMs, expiresAt - Date.now());
+    if (!Number.isFinite(remaining) || remaining <= 0) return Promise.reject(queueTimeout());
     if (active < limits.concurrency) {
       active++;
       return Promise.resolve();
     }
     if (waiting.length >= limits.queue) return Promise.reject(new AiGatewayError('AI_QUEUE_FULL', 'AI 请求队列已满。'));
     return new Promise((resolve, reject) => {
-      const item = { resolve, reject, signal, abort: null };
-      item.abort = () => {
+      const item = { resolve, reject, signal, abort: null, timer: null };
+      const cancel = error => {
         const index = waiting.indexOf(item);
-        if (index >= 0) waiting.splice(index, 1);
-        reject(new AiGatewayError('AI_CANCELLED', '模型请求已取消。'));
+        if (index < 0) return;
+        waiting.splice(index, 1);
+        clearTimeout(item.timer);
+        signal?.removeEventListener('abort', item.abort);
+        reject(error);
       };
+      item.abort = () => cancel(new AiGatewayError('AI_CANCELLED', '模型请求已取消。'));
       signal?.addEventListener('abort', item.abort, { once: true });
       waiting.push(item);
+      item.timer = setTimeout(() => cancel(queueTimeout()), remaining);
+      item.timer.unref?.();
     });
   }
   function leave() {
     const item = waiting.shift();
     if (item) {
+      clearTimeout(item.timer);
       item.signal?.removeEventListener('abort', item.abort);
       item.resolve();
     } else active--;
@@ -63,15 +74,21 @@ export function createIsolatedDeepSeekAdapter({
 
   return {
     provider: 'deepseek',
+    deferredSendValidation: true,
     capabilities,
-    async complete(request) {
+    async complete(request, { verifyBeforeSend, onSend, expiresAt } = {}) {
       // 信号不可通过 IPC 克隆；其余字段必须有上限，防止子进程内存积压。
       const { signal, ...payload } = request;
       const size = Buffer.byteLength(JSON.stringify(payload));
       if (size > limits.requestBytes) throw new AiGatewayError('AI_REQUEST_LIMIT', '模型请求超过进程传输上限。');
-      await enter(signal);
+      const deadline = Math.min(Date.now() + limits.wallMs, expiresAt ?? Infinity);
+      await enter(signal, deadline);
       try {
         if (signal?.aborted) throw new AiGatewayError('AI_CANCELLED', '模型请求已取消。');
+        if (typeof verifyBeforeSend === 'function') await verifyBeforeSend();
+        if (signal?.aborted) throw new AiGatewayError('AI_CANCELLED', '模型请求已取消。');
+        if (deadline <= Date.now()) throw queueTimeout();
+        onSend?.();
         return await new Promise((resolve, reject) => {
           const child = spawn(childUrl, [], {
             execArgv: [`--max-old-space-size=${limits.heapMb}`],

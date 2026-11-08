@@ -129,7 +129,7 @@ export function createTranslationTasks({ repository, ownerId, now }: Translation
 
   async function sent(attemptId: string) {
     const attempt = await assertLive(attemptId);
-    await repository.replace('aiJobAttempt', { ...attempt, status: 'sent' }, hashRecord(attempt));
+    return repository.replace('aiJobAttempt', { ...attempt, status: 'sent' }, hashRecord(attempt));
   }
 
   async function endLease(attemptId: string) {

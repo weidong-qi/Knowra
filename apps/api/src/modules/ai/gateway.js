@@ -38,8 +38,17 @@ export function createAiGateway({ adapter, resolveCredential, authorizePaidCall 
     capabilities: () => adapter.capabilities(),
     async complete(request) {
       const prepared = await prepare(request);
-      if (typeof request.verifyBeforeSend === 'function') await request.verifyBeforeSend();
-      return normalize(await adapter.complete(prepared), prepared, adapter.provider);
+      const control = {
+        verifyBeforeSend: request.verifyBeforeSend,
+        onSend: request.onSend,
+        expiresAt: request.expiresAt
+      };
+      // 有队列的适配器在出队后复核；控制回调只留在宿主，不进入供应商载荷或 IPC。
+      if (adapter.deferredSendValidation !== true) {
+        if (typeof control.verifyBeforeSend === 'function') await control.verifyBeforeSend();
+        control.onSend?.();
+      }
+      return normalize(await adapter.complete(prepared, control), prepared, adapter.provider);
     },
     async *stream(request) {
       const prepared = await prepare(request);

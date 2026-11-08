@@ -200,24 +200,22 @@ export function createAiTranslationService({
       // 快照之后到发送之间用户可能暂停了 AI：发送前再复核一次（抛错会释放预留）。
       if (policy) await policy.assertRunnable();
       assertBeforeSend();
-      await tasks.sent(attemptId);
+      const attempt = await tasks.sent(attemptId);
       assertBeforeSend();
-      sent = true;
       authorizeAttempt(attemptId);
       const result = await gateway.complete({
         ...request,
         signal,
         budgetAttemptId: attemptId,
-        // 凭据解析也可能异步跨日；在供应商适配器调用前做最后一次检查。
+        expiresAt: Date.parse(attempt.leaseExpiresAt),
+        // 凭据解析和供应商排队都可能跨日；出队后、真正发送前复核。
         verifyBeforeSend: async () => {
-          try {
-            assertBeforeSend();
-            await tasks.assertLive(attemptId);
-            assertBeforeSend();
-          } catch (error) {
-            sent = false;
-            throw error;
-          }
+          assertBeforeSend();
+          await tasks.assertLive(attemptId);
+          assertBeforeSend();
+        },
+        onSend: () => {
+          sent = true;
         }
       });
       await tasks.assertLive(attemptId);

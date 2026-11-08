@@ -189,7 +189,16 @@ export interface ToolOutcome {
   hint?: string;
 }
 export interface GatewayOptions {
-  adapter: ReturnType<typeof import('./infrastructure/providers/deepseek-adapter.ts').createDeepSeekAdapter>;
+  adapter: Omit<
+    ReturnType<typeof import('./infrastructure/providers/deepseek-adapter.ts').createDeepSeekAdapter>,
+    'complete'
+  > & {
+    deferredSendValidation?: boolean;
+    complete(
+      request: import('./infrastructure/providers/deepseek-adapter.ts').ProviderRequest,
+      control?: { verifyBeforeSend?: () => unknown; onSend?: () => void; expiresAt?: number }
+    ): Promise<unknown>;
+  };
   resolveCredential?: (reference: string) => Promise<{ apiKey: string; modelId: string }>;
   authorizePaidCall?: (request: { budgetAttemptId?: string }) => boolean | Promise<boolean>;
 }
