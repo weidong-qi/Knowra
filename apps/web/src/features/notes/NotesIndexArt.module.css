@@ -84,6 +84,83 @@
   stroke-width: 1.3;
   stroke-linecap: round;
 }
+/* 卡片 PDF（叠页）：三页竖版纸扇形叠放，红色 PDF 角标，左侧一个大号水印；颜色沿用封面的 --art-color。 */
+.art.cover[data-color='pdf'] {
+  --art-color: #e0594b;
+}
+.pdfMark {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  color: color-mix(in srgb, var(--art-color) 34%, transparent);
+  font: 800 26px/1 var(--font-ui);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.pdfPages {
+  position: absolute;
+  inset: 0;
+  transition: transform 160ms ease;
+}
+.pdfPageShadow {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 5px 6px #18203030);
+}
+.pdfPage {
+  position: absolute;
+  top: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 58px;
+  height: 84px;
+  padding: 8px 7px;
+  border-radius: 3px 3px 0 0;
+  background: var(--ni-surf, var(--surface-page));
+  clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 0 100%);
+}
+.pdfPage::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 11px;
+  height: 11px;
+  background: linear-gradient(225deg, transparent 50%, var(--ni-fill-2, var(--surface-hover)) 50%);
+}
+.pdfPage i {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--art-color) 26%, var(--ni-surf, var(--surface-page)));
+}
+.pdfPage b {
+  height: 15px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--art-color) 24%, var(--ni-surf, var(--surface-page)));
+}
+.pdfPage em {
+  align-self: flex-start;
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: var(--art-color);
+  color: #fff;
+  font: normal 800 8px/1 var(--font-ui);
+  letter-spacing: 0.04em;
+}
+.pdfPageShadow:nth-child(1) .pdfPage {
+  left: calc(50% - 74px);
+  transform: rotate(-9deg);
+}
+.pdfPageShadow:nth-child(2) .pdfPage {
+  top: 7px;
+  left: calc(50% - 28px);
+}
+.pdfPageShadow:nth-child(3) .pdfPage {
+  left: calc(50% + 18px);
+  transform: rotate(8deg);
+}
 /* 卡片文件夹（纸质文件夹）：与文件卡片的 .sheet 同描边、同投影、同倾斜，只多一个标签耳。 */
 .folderSheet {
   position: absolute;
@@ -121,13 +198,13 @@
   display: block;
   height: 3px;
   border-radius: 2px;
-  background: var(--ni-fill-2, var(--surface-hover));
+  background: color-mix(in srgb, var(--art-color) 26%, var(--ni-surf, var(--surface-page)));
 }
 .folderSheetLines i:first-child {
   width: 48%;
-  height: 5px;
+  height: 6px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--art-color) 65%, var(--ni-surf, var(--surface-page)));
+  background: var(--art-color);
 }
 .folderPeek {
   position: absolute;
@@ -146,10 +223,19 @@
   margin: -14px -16px 2px;
   overflow: hidden;
   border-bottom: 1px solid var(--ni-line, var(--border-subtle));
+  /* 加浓封面：底色 30% 到 12% 的斜向渐变，点阵取 42%，让没有标签与有标签的卡片都鲜明可辨。 */
   background:
-    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--art-color) 20%, transparent) 0.8px, transparent 1.2px) 0
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--art-color) 42%, transparent) 0.8px, transparent 1.2px) 0
       0 / 10px 10px,
-    color-mix(in srgb, var(--art-color) 8%, var(--ni-surf, var(--surface-page)));
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--art-color) 30%, var(--ni-surf, var(--surface-page))),
+      color-mix(in srgb, var(--art-color) 12%, var(--ni-surf, var(--surface-page)))
+    );
+}
+/* 没有标签的笔记在卡片封面上用青色，不再回落成灰色；图标视图的纸张仍保持中性。 */
+.art.cover[data-color='neutral'] {
+  --art-color: var(--ni-note-default, #1fb0c4);
 }
 .cover .document {
   display: none;
@@ -177,17 +263,27 @@
   transform: rotate(-2deg);
   transition: transform 160ms ease;
 }
+.sheet::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 14px;
+  width: 10px;
+  height: 17px;
+  background: var(--art-color);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+}
 .sheetTitle {
-  width: 61%;
-  height: 5px;
+  width: 58%;
+  height: 6px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--art-color) 65%, var(--ni-surf, var(--surface-page)));
+  background: var(--art-color);
 }
 .sheetLine {
   width: min(var(--line-width), 96%);
   height: 3px;
   border-radius: 2px;
-  background: var(--ni-fill-2, var(--surface-hover));
+  background: color-mix(in srgb, var(--art-color) 26%, var(--ni-surf, var(--surface-page)));
 }
 /* 悬停聚光：深色下图标背后淡入一团白光，离开后淡出；浅色模式没有该令牌，不显示。 */
 .art::before {
@@ -211,6 +307,9 @@
   :global([data-entry-item]:hover) .art .folder {
     transform: translateY(-2px);
   }
+  :global([data-entry-item]:hover) .art .pdfPages {
+    transform: translateY(-2px);
+  }
   :global([data-entry-item]:hover) .art .sheet,
   :global([data-entry-item]:hover) .art .folderSheet {
     transform: rotate(-2deg) translateY(-2px);
@@ -218,6 +317,9 @@
 }
 :global([data-entry-item]:focus-within) .art .document,
 :global([data-entry-item]:focus-within) .art .folder {
+  transform: translateY(-2px);
+}
+:global([data-entry-item]:focus-within) .art .pdfPages {
   transform: translateY(-2px);
 }
 :global([data-entry-item]:focus-within) .art .sheet,
@@ -231,8 +333,12 @@
   .art .document,
   .art .folder,
   .art .sheet,
+  .art .pdfPages,
   .art .folderSheet {
     transition: none;
+  }
+  :global([data-entry-item]) .art[data-art-kind] .pdfPages {
+    transform: none;
   }
   :global([data-entry-item]) .art[data-art-kind] .document,
   :global([data-entry-item]) .art[data-art-kind] .folder {
