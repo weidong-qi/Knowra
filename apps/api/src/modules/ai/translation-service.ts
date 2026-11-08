@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { beijingDay } from './budget-ledger.js';
 import { actualCostMicrounits, quoteWorstCase } from './worker.js';
+import type { BudgetLimits, PriceProfile } from './boundary-types.ts';
 
 /** 单次翻译的原文上限：覆盖一两段学术正文，超出时请用户分段，避免一次请求占用过多预算。 */
 export const MAX_TRANSLATION_CHARS = 3000;
@@ -14,7 +15,6 @@ const PROMPT = [
 
 type TranslationLanguage = 'zh' | 'en';
 type Usage = { unknown?: boolean; inputTokens?: number; outputTokens?: number; cacheHitTokens?: number | null };
-type PriceProfile = { version: string; modelId?: string; expiresAt: string } & Record<string, unknown>;
 interface TranslationOptions {
   modelSettings: { credentialReference(): Promise<{ modelId: string; credentialRef: string } | null> };
   gateway: {
@@ -27,7 +27,7 @@ interface TranslationOptions {
   };
   priceProfile: PriceProfile;
   policy?: {
-    snapshot(): Promise<{ profile?: PriceProfile; limits: Record<string, unknown> } | null>;
+    snapshot(): Promise<{ profile?: PriceProfile; limits: BudgetLimits } | null>;
     assertRunnable(): Promise<void>;
   } | null;
   allowExternal?: boolean;
