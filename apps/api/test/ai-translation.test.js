@@ -181,106 +181,117 @@ export const aiTranslationTests = [
       }
     }
   },
-  ...['same-day', 'cross-day', 'lease-expired', 'queue-timeout', 'validated-then-expired', 'cancelled'].map(phase => ({
-    name: `PDF 翻译隔离适配器：${phase} 排队请求出队前复核，过期或取消不外发`,
-    async run() {
-      await fixture(async ({ app }) => {
-        const instant = Date.parse(phase === 'cross-day' ? '2026-11-08T15:59:59Z' : '2026-11-08T02:00:00Z');
-        mock.timers.enable({ apis: ['Date'], now: instant });
-        try {
-          await withQueuedProvider(async ({ adapter, sent, release }) => {
-            const prepared = Promise.withResolvers();
-            const repository = app.dataStore.aiRepository;
-            const authority = app.dataStore.aiBudgetAuthority;
-            const controller = new AbortController();
-            const gateway = createAiGateway({
-              adapter,
-              authorizePaidCall: async () => true,
-              async resolveCredential() {
-                prepared.resolve();
-                return { apiKey: 'synthetic-key', modelId: 'deepseek-flash' };
-              }
-            });
-            const service = translationService(app, {
-              allowExternal: true,
-              repository: {
-                ...repository,
-                replace(kind, record, expected) {
-                  // 用短租约验证真正排队期间的截止时间；其余情形保留生产五分钟租约。
-                  if (phase === 'queue-timeout' && kind === 'aiJobAttempt' && record.status === 'sent')
-                    record = { ...record, leaseExpiresAt: new Date(Date.now() + 200).toISOString() };
-                  return repository.replace(kind, record, expected);
+  ...['same-day', 'cross-day', 'lease-expired', 'queue-timeout', 'validated-then-expired', 'cancelled', 'paused'].map(
+    phase => ({
+      name: `PDF 翻译隔离适配器：${phase} 排队请求出队前复核，过期或取消不外发`,
+      async run() {
+        await fixture(async ({ app }) => {
+          const instant = Date.parse(phase === 'cross-day' ? '2026-11-08T15:59:59Z' : '2026-11-08T02:00:00Z');
+          mock.timers.enable({ apis: ['Date'], now: instant });
+          try {
+            await withQueuedProvider(async ({ adapter, sent, release }) => {
+              const prepared = Promise.withResolvers();
+              const repository = app.dataStore.aiRepository;
+              const authority = app.dataStore.aiBudgetAuthority;
+              const controller = new AbortController();
+              let paused = false;
+              const gateway = createAiGateway({
+                adapter,
+                authorizePaidCall: async () => true,
+                async resolveCredential() {
+                  prepared.resolve();
+                  return { apiKey: 'synthetic-key', modelId: 'deepseek-flash' };
                 }
-              },
-              gateway: {
-                ...gateway,
-                complete(request) {
-                  if (phase !== 'validated-then-expired') return gateway.complete(request);
-                  return gateway.complete({
-                    ...request,
-                    async verifyBeforeSend() {
-                      await request.verifyBeforeSend();
-                      mock.timers.setTime(request.expiresAt);
-                    }
+              });
+              const service = translationService(app, {
+                allowExternal: true,
+                policy: {
+                  snapshot: async () => null,
+                  async assertRunnable() {
+                    if (paused) throw Object.assign(new Error('AI 已暂停'), { code: 'AI_PAUSED_BY_USER' });
+                  }
+                },
+                repository: {
+                  ...repository,
+                  replace(kind, record, expected) {
+                    // 用短租约验证真正排队期间的截止时间；其余情形保留生产五分钟租约。
+                    if (phase === 'queue-timeout' && kind === 'aiJobAttempt' && record.status === 'sent')
+                      record = { ...record, leaseExpiresAt: new Date(Date.now() + 200).toISOString() };
+                    return repository.replace(kind, record, expected);
+                  }
+                },
+                gateway: {
+                  ...gateway,
+                  complete(request) {
+                    if (phase !== 'validated-then-expired') return gateway.complete(request);
+                    return gateway.complete({
+                      ...request,
+                      async verifyBeforeSend() {
+                        await request.verifyBeforeSend();
+                        mock.timers.setTime(request.expiresAt);
+                      }
+                    });
+                  }
+                }
+              });
+              const peer = translationService(app);
+              const translating = service.translate({ text: 'Hello.' }, { signal: controller.signal });
+              const expected = {
+                'cross-day': 'AI_BUDGET_DAY_CHANGED',
+                'lease-expired': 'AI_LATE_RESULT',
+                'queue-timeout': 'AI_QUEUE_TIMEOUT',
+                'validated-then-expired': 'AI_QUEUE_TIMEOUT',
+                paused: 'AI_PAUSED_BY_USER',
+                cancelled: 'AI_CANCELLED'
+              }[phase];
+              const result = expected ? assert.rejects(translating, { code: expected }) : translating;
+              try {
+                await prepared.promise;
+                await new Promise(resolve => setImmediate(resolve));
+                assert.equal(sent.length, 1, '只有占位请求进入子进程，翻译仍在排队');
+                if (phase === 'cross-day') mock.timers.setTime(Date.parse('2026-11-08T16:00:00Z'));
+                if (phase === 'paused') paused = true;
+                if (phase === 'lease-expired') {
+                  const attempt = repository.list('aiJobAttempt')[0];
+                  mock.timers.setTime(Date.parse(attempt.leaseExpiresAt));
+                  assert.equal(await peer.recover(), 1);
+                  await authority.settle({
+                    accountRef: 'deepseek-primary',
+                    attemptId: attempt.attemptId,
+                    disposition: 'released'
                   });
                 }
+                if (phase === 'cancelled') controller.abort();
+                if (['cancelled', 'queue-timeout'].includes(phase)) {
+                  await result;
+                  assert.equal(sent.length, 1, '等待槽位时已拒绝，无需等占位请求结束');
+                }
+                await release();
+                await result;
+                assert.equal(sent.filter(message => message.request?.messages).length, phase === 'same-day' ? 1 : 0);
+                const status = await authority.status('deepseek-primary', '2026-11-08');
+                assert.equal(status.heldMicrounits, 0);
+                assert.equal(status.spentMicrounits > 0, phase === 'same-day');
+                assert.equal((await authority.usage('deepseek-primary')).total.unknownRequests, 0);
+                assert.equal(repository.list('aiJob')[0].status, phase === 'same-day' ? 'succeeded' : 'failed');
+                for (const message of sent) {
+                  assert.equal(message.request?.verifyBeforeSend, undefined);
+                  assert.equal(message.request?.onSend, undefined);
+                  assert.equal(message.request?.expiresAt, undefined);
+                }
+                assert.deepEqual(await adapter.complete({ mode: 'ok' }), { ok: true }, '被拒绝请求释放并发槽位');
+              } finally {
+                controller.abort();
+                await Promise.allSettled([translating, service.close(), peer.close()]);
               }
             });
-            const peer = translationService(app);
-            const translating = service.translate({ text: 'Hello.' }, { signal: controller.signal });
-            const expected = {
-              'cross-day': 'AI_BUDGET_DAY_CHANGED',
-              'lease-expired': 'AI_LATE_RESULT',
-              'queue-timeout': 'AI_QUEUE_TIMEOUT',
-              'validated-then-expired': 'AI_QUEUE_TIMEOUT',
-              cancelled: 'AI_CANCELLED'
-            }[phase];
-            const result = expected ? assert.rejects(translating, { code: expected }) : translating;
-            try {
-              await prepared.promise;
-              await new Promise(resolve => setImmediate(resolve));
-              assert.equal(sent.length, 1, '只有占位请求进入子进程，翻译仍在排队');
-              if (phase === 'cross-day') mock.timers.setTime(Date.parse('2026-11-08T16:00:00Z'));
-              if (phase === 'lease-expired') {
-                const attempt = repository.list('aiJobAttempt')[0];
-                mock.timers.setTime(Date.parse(attempt.leaseExpiresAt));
-                assert.equal(await peer.recover(), 1);
-                await authority.settle({
-                  accountRef: 'deepseek-primary',
-                  attemptId: attempt.attemptId,
-                  disposition: 'released'
-                });
-              }
-              if (phase === 'cancelled') controller.abort();
-              if (['cancelled', 'queue-timeout'].includes(phase)) {
-                await result;
-                assert.equal(sent.length, 1, '等待槽位时已拒绝，无需等占位请求结束');
-              }
-              await release();
-              await result;
-              assert.equal(sent.filter(message => message.request?.messages).length, phase === 'same-day' ? 1 : 0);
-              const status = await authority.status('deepseek-primary', '2026-11-08');
-              assert.equal(status.heldMicrounits, 0);
-              assert.equal(status.spentMicrounits > 0, phase === 'same-day');
-              assert.equal((await authority.usage('deepseek-primary')).total.unknownRequests, 0);
-              assert.equal(repository.list('aiJob')[0].status, phase === 'same-day' ? 'succeeded' : 'failed');
-              for (const message of sent) {
-                assert.equal(message.request?.verifyBeforeSend, undefined);
-                assert.equal(message.request?.onSend, undefined);
-                assert.equal(message.request?.expiresAt, undefined);
-              }
-              assert.deepEqual(await adapter.complete({ mode: 'ok' }), { ok: true }, '被拒绝请求释放并发槽位');
-            } finally {
-              controller.abort();
-              await Promise.allSettled([translating, service.close(), peer.close()]);
-            }
-          });
-        } finally {
-          mock.timers.reset();
-        }
-      });
-    }
-  })),
+          } finally {
+            mock.timers.reset();
+          }
+        });
+      }
+    })
+  ),
   ...(process.env.KNOWRA_SYNC_TEST_DATABASE_URL
     ? [
         {

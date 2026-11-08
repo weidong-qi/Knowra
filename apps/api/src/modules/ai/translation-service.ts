@@ -211,6 +211,7 @@ export function createAiTranslationService({
         // 凭据解析和供应商排队都可能跨日；出队后、真正发送前复核。
         verifyBeforeSend: async () => {
           assertBeforeSend();
+          if (policy) await policy.assertRunnable();
           await tasks.assertLive(attemptId);
           assertBeforeSend();
         },
