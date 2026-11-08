@@ -162,8 +162,10 @@ export function createAiRuntime({
       : attachmentService;
   // PDF 选区翻译：只发送用户选中的文字，与助手共用预算账本和单次调用授权。
   const translation =
-    budgetAuthority && priceProfile
+    repository && budgetAuthority && priceProfile
       ? createAiTranslationService({
+          repository,
+          ownerId: contextSources?.ownerId,
           modelSettings,
           gateway,
           budget: budgetAuthority,

@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { beijingDay } from './budget-ledger.js';
 import { actualCostMicrounits, quoteWorstCase } from './worker.js';
+import { createAiRecoveryScope } from './recovery-scope.ts';
+import { createTranslationTasks } from './translation-tasks.ts';
+import type { AppError } from '../../errors/app-error.ts';
+import type { AiRecordRepositoryPort } from './record-types.ts';
 import type { BudgetLimits, PriceProfile } from './boundary-types.ts';
 
 /** 单次翻译的原文上限：覆盖一两段学术正文，超出时请用户分段，避免一次请求占用过多预算。 */
@@ -16,6 +20,8 @@ const PROMPT = [
 type TranslationLanguage = 'zh' | 'en';
 type Usage = { unknown?: boolean; inputTokens?: number; outputTokens?: number; cacheHitTokens?: number | null };
 interface TranslationOptions {
+  repository: Pick<AiRecordRepositoryPort, 'identity' | 'get' | 'list' | 'insert' | 'replace'>;
+  ownerId?: string;
   modelSettings: { credentialReference(): Promise<{ modelId: string; credentialRef: string } | null> };
   gateway: {
     capabilities?: () => { provider?: string } | undefined;
@@ -71,6 +77,8 @@ export function translationTarget(text: string): TranslationLanguage {
  * 与助手共用同一预算账本：先预留最坏费用，发送后按实际用量结算，失败时释放或记为未知。
  */
 export function createAiTranslationService({
+  repository,
+  ownerId = 'demo',
   modelSettings,
   gateway,
   budget,
@@ -83,8 +91,22 @@ export function createAiTranslationService({
   now = () => new Date(),
   logger = console
 }: TranslationOptions) {
-  if (!modelSettings || !gateway || !budget || !baseProfile)
-    throw new TypeError('Translation needs model settings, gateway, budget and price profile');
+  if (!repository || !modelSettings || !gateway || !budget || !baseProfile)
+    throw new TypeError('Translation needs repository, model settings, gateway, budget and price profile');
+  const tasks = createTranslationTasks({ repository, ownerId, now });
+  const scope = createAiRecoveryScope();
+  const active = new Set<string>();
+  const controllers = new Set<AbortController>();
+  let recovering: Promise<number> | undefined;
+
+  async function recoverBudget(attemptId: string, modelId: string) {
+    try {
+      await budget.settle({ accountRef, attemptId, disposition: 'unknown', usage: { modelId } });
+    } catch (error) {
+      // 预留前崩溃没有账目；结算成功后、任务收尾前崩溃则账目已终结，均不改写已有费用。
+      if (!['AI_BUDGET_NOT_FOUND', 'AI_BUDGET_CONFLICT'].includes((error as AppError).code)) throw error;
+    }
+  }
 
   async function translate(input: { text?: unknown } | null | undefined, { signal }: { signal?: AbortSignal } = {}) {
     const text = normalizeTranslationText(input?.text);
@@ -110,10 +132,19 @@ export function createAiTranslationService({
     const attemptId = randomUUID();
     const jobId = `pdf-translation-${attemptId}`;
     const day = beijingDay(now());
-    let reserved = false,
+    let reserving = false,
       sent = false,
       settled = false;
+    active.add(attemptId);
     try {
+      // 必须先持久化调用 ID，再预留预算；即使进程在 reserve 返回前退出也能恢复。
+      await tasks.begin({
+        attemptId,
+        ...reference,
+        payloadHash: quote.payloadHash,
+        inputUpperBound: quote.inputUpperBound
+      });
+      reserving = true;
       const reservation = await budget.reserve({
         accountRef,
         jobId,
@@ -123,7 +154,6 @@ export function createAiTranslationService({
         day,
         ...(plan ? { limits: plan.limits } : {})
       });
-      reserved = true;
       if (
         reservation?.accountRef !== accountRef ||
         reservation.jobId !== jobId ||
@@ -135,6 +165,8 @@ export function createAiTranslationService({
       if (signal?.aborted) fail('AI_CANCELLED', '翻译已取消。');
       // 快照之后到发送之间用户可能暂停了 AI：发送前再复核一次（抛错会释放预留）。
       if (policy) await policy.assertRunnable();
+      if (signal?.aborted) fail('AI_CANCELLED', '翻译已取消。');
+      await tasks.sent(attemptId);
       sent = true;
       authorizeAttempt(attemptId);
       const result = await gateway.complete({ ...request, signal, budgetAttemptId: attemptId });
@@ -165,6 +197,7 @@ export function createAiTranslationService({
       settled = true;
       const translation = typeof result.content === 'string' ? result.content.trim() : '';
       if (!translation) fail('AI_TRANSLATION_EMPTY', '模型没有返回译文，请重试。');
+      await tasks.finish(jobId, true, actual === null);
       return {
         translation,
         sourceText: text,
@@ -173,7 +206,7 @@ export function createAiTranslationService({
         truncated: result.finishReason === 'length'
       };
     } catch (error) {
-      if (reserved && !settled) {
+      if (reserving && !settled) {
         try {
           await budget.settle({
             accountRef,
@@ -181,15 +214,49 @@ export function createAiTranslationService({
             disposition: sent ? 'unknown' : 'released',
             ...(sent ? { usage: { modelId: request.modelId } } : {})
           });
+          settled = true;
         } catch (fault) {
-          logger.warn?.('Translation budget settlement deferred', { code: (fault as { code?: string })?.code });
+          if ((fault as AppError).code === 'AI_BUDGET_NOT_FOUND') settled = true;
+          else logger.warn?.('Translation budget settlement deferred', { code: (fault as AppError)?.code });
         }
       }
+      if (!reserving || settled)
+        await tasks.finish(jobId, false, sent).catch(fault => {
+          logger.warn?.('Translation task finalization deferred', { code: (fault as AppError)?.code });
+        });
       throw error;
     } finally {
       revokeAttempt(attemptId);
+      active.delete(attemptId);
     }
   }
 
-  return { translate };
+  return {
+    translate(input: Parameters<typeof translate>[0], { signal }: { signal?: AbortSignal } = {}) {
+      return scope.run(async () => {
+        const controller = new AbortController();
+        controllers.add(controller);
+        try {
+          return await translate(input, {
+            signal: signal ? AbortSignal.any([signal, controller.signal]) : controller.signal
+          });
+        } finally {
+          controllers.delete(controller);
+        }
+      });
+    },
+    recover() {
+      if (!recovering)
+        recovering = scope
+          .run(() => tasks.recover(active, recoverBudget))
+          .finally(() => {
+            recovering = undefined;
+          });
+      return recovering;
+    },
+    close: () =>
+      scope.close(() => {
+        for (const controller of controllers) controller.abort();
+      })
+  };
 }
