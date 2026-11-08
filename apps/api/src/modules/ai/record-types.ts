@@ -76,7 +76,7 @@ export interface AiJob extends AiEnvelope<'aiJob'>, AiRecordBoundary {
   requestId: string;
   parentJobId: string | null;
   grantId: string;
-  jobKind: 'answer' | 'knowledgeExtraction' | 'noteActionPlan' | 'questionDraft' | 'gradingProposal';
+  jobKind: 'answer' | 'translation' | 'knowledgeExtraction' | 'noteActionPlan' | 'questionDraft' | 'gradingProposal';
   idempotencyKey: string;
   inputHash: string;
   manifestId: string;
