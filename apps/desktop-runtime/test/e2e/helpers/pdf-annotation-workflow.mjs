@@ -151,7 +151,10 @@ export async function exercisePdfAnnotationWorkflow(page) {
     } else {
       await dialog.getByRole('group', { name, exact: true }).getByRole('button', { name: option, exact: true }).click();
     }
+    // 选项关闭后将焦点放回筛选弹层，再用 Escape 关闭弹层。
+    await dialog.focus();
     await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
   };
   await choose('标注分类', '疑问');
   await choose('标注页码', '第 2 页');
