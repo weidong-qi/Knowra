@@ -144,3 +144,47 @@ describe('主线', () => {
     expect(await screen.findByText(/请升级服务端后再试/)).toBeInTheDocument();
   });
 });
+
+it('后台刷新不覆盖期间已成功的命令，并合并随后读到的远端数据', async () => {
+  let reads = 0;
+  let finish!: (value: unknown) => void;
+  const fresh = applyTodoCommand(
+    [],
+    { type: 'create', id: 'fresh', parentId: null, title: '新待办' },
+    { now: new Date().toISOString() }
+  ).changed;
+  const store = createTodoStore((async (url: string) => {
+    if (url === '/api/todos') {
+      reads += 1;
+      if (reads === 1) return { data: { todos: [] } };
+      if (reads === 2)
+        return new Promise(resolve => {
+          finish = resolve;
+        });
+      return { data: { todos: fresh } };
+    }
+    return { data: { changed: fresh } };
+  }) as never);
+  await store.load();
+  const refreshing = store.load();
+  await store.execute({ type: 'create', id: 'fresh', parentId: null, title: '新待办' });
+  finish({ data: { todos: [] } });
+  await refreshing;
+  expect(store.getState().todos.map(todo => todo.id)).toEqual(['fresh']);
+  expect(reads).toBe(3);
+});
+
+it('折叠今日安排后保留截止警示，展开后同一事项仍只显示一次', async () => {
+  const server = fakeServer([
+    { type: 'create', id: 'due', parentId: null, title: '今日截止材料', plannedDate: today, dueDate: today }
+  ]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning" store={server.store} />);
+  expect(await screen.findByText('今天截止')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: /今日安排/ }));
+  expect(screen.getByText('今天截止')).toBeInTheDocument();
+  expect(screen.getByText('截止提醒')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: /今日安排/ }));
+  expect(screen.getAllByText('今日截止材料')).toHaveLength(1);
+  expect(screen.queryByText('截止提醒')).not.toBeInTheDocument();
+});

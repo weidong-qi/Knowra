@@ -249,9 +249,7 @@ export function App() {
   const indexAppearance = useNotesIndexAppearance();
   const isTodos = routeDomain === 'learning' && !isShowcaseActive && !isSettingsActive && !isAssistantActive && !isHome;
   const showNotesContextSidebar =
-    (isNotesIndex && editorView.showLeftSidebar) ||
-    (isNoteEditor && effectiveEditorView.showLeftSidebar) ||
-    (isTodos && editorView.showLeftSidebar);
+    (isNotesIndex && editorView.showLeftSidebar) || (isNoteEditor && effectiveEditorView.showLeftSidebar) || isTodos;
 
   return (
     <EntryDragDropProvider>

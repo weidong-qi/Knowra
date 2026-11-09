@@ -31,7 +31,8 @@ function Group({
   actions,
   collapsible = true,
   defaultExpanded = true,
-  tone
+  tone,
+  onExpandedChange
 }: {
   title: string;
   count: number;
@@ -40,6 +41,7 @@ function Group({
   collapsible?: boolean;
   defaultExpanded?: boolean;
   tone?: 'alert';
+  onExpandedChange?(expanded: boolean): void;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const heading = (
@@ -56,7 +58,10 @@ function Group({
           <PressableButton
             className={styles.groupToggle}
             aria-expanded={expanded}
-            onPress={() => setExpanded(value => !value)}
+            onPress={() => {
+              onExpandedChange?.(!expanded);
+              setExpanded(!expanded);
+            }}
           >
             {heading}
           </PressableButton>
@@ -87,12 +92,13 @@ function Empty({ title, children }: { title: string; children: ReactNode }) {
 export function TodayPage({ todos, index, selectedId }: PageProps) {
   const actions = useTodoActions();
   const { today } = actions;
+  const [todayExpanded, setTodayExpanded] = useState(true);
   const view = useMemo(() => {
     const base = todayView(todos, today);
     // 今日安排里的截止信息已在行内显示，提醒区只补充不在今日安排中的事项，避免同一事项出现两次。
-    const scheduled = new Set(base.today.map(todo => todo.id));
+    const scheduled = new Set(todayExpanded ? base.today.map(todo => todo.id) : []);
     return { ...base, dueAlerts: base.dueAlerts.filter(todo => !scheduled.has(todo.id)) };
-  }, [todos, today]);
+  }, [todos, today, todayExpanded]);
   const nothing = !view.today.length && !view.earlier.length && !view.doneToday.length && !view.dueAlerts.length;
   return (
     <div className={styles.page}>
@@ -105,7 +111,7 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
         </Group>
       ) : null}
       {view.today.length ? (
-        <Group title="今日安排" count={view.today.length}>
+        <Group title="今日安排" count={view.today.length} onExpandedChange={setTodayExpanded}>
           {view.today.map(todo => (
             <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext />
           ))}

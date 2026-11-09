@@ -406,3 +406,42 @@ describe('集合不变量', () => {
     expect(todoCollectionErrors(partial).some(error => error.includes('局部归档'))).toBe(true);
   });
 });
+
+describe('排序重平衡', () => {
+  it('连续添加超过旧上限后仍保持合法顺序，归档记录不被重排', () => {
+    const b = bench();
+    b.create('archived', null);
+    b.complete('archived');
+    b.act('archive', 'archived');
+    const archived = structuredClone(b.get('archived'));
+    for (let i = 0; i < 450; i += 1) b.create(`todo-${i}`, null);
+    const list = indexTodos(b.all())
+      .children(null)
+      .filter(todo => !todo.archivedAt);
+    expect(list.map(todo => todo.id)).toEqual(Array.from({ length: 450 }, (_, i) => `todo-${i}`));
+    expect(b.get('archived')).toEqual(archived);
+  });
+
+  it('同步产生同键后，可以在两节点间移动和新建', () => {
+    const a = applyTodoCommand([], { type: 'create', id: 'a', parentId: null, title: 'a' }, { now: T0 }).changed[0]!;
+    const b = { ...a, id: 'b' };
+    let todos = [a, b];
+    const run = (command: TodoCommand) => {
+      todos = mergeTodoChanges(todos, applyTodoCommand(todos, command, { now: T0 }).changed);
+      expect(todoCollectionErrors(todos)).toEqual([]);
+    };
+    run({ type: 'create', id: 'c', parentId: null, title: 'c' });
+    run({ type: 'move', id: 'c', expectedRevision: 1, parentId: null, afterId: 'a' });
+    expect(
+      indexTodos(todos)
+        .children(null)
+        .map(todo => todo.id)
+    ).toEqual(['a', 'c', 'b']);
+    run({ type: 'create', id: 'd', parentId: null, title: 'd', afterId: 'a' });
+    expect(
+      indexTodos(todos)
+        .children(null)
+        .map(todo => todo.id)
+    ).toEqual(['a', 'd', 'c', 'b']);
+  });
+});

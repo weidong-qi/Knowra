@@ -1,3 +1,7 @@
+import {
+  loadPostgresAttachmentReferenceState,
+  inspectAttachmentDeletion
+} from '../src/infrastructure/attachment-deletion-preflight.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -61,6 +65,20 @@ export const personalTodoPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABASE_U
             assert.deepEqual(
               last.map(item => item.value.status),
               ['paused', 'paused']
+            );
+            await a.personalTodos.execute({
+              type: 'update',
+              id: 'c1',
+              expectedRevision: 2,
+              patch: { note: '/api/storage/attachments/todo-attachment/content' }
+            });
+            const references = inspectAttachmentDeletion(
+              'todo-attachment',
+              await loadPostgresAttachmentReferenceState(a.prisma)
+            ).references;
+            assert.deepEqual(
+              references.map(row => [row.collection, row.id]),
+              [['personalTodos', 'c1']]
             );
           });
         }

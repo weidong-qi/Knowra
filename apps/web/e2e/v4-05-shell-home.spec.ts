@@ -486,3 +486,22 @@ async function mockWorkspace(page: Page): Promise<void> {
     });
   });
 }
+
+test('待办在 840px 和笔记侧栏关闭偏好下仍能切换全部视图', async ({ page }) => {
+  await mockWorkspace(page);
+  await page.addInitScript(() => localStorage.setItem('knowra:notes-sidebar-open', 'false'));
+  for (const width of [840, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/#/learning');
+    const tabs = page.getByRole('group', { name: '待办视图' });
+    const sidebar = page.getByRole('navigation', { name: '待办视图' });
+    const navigation = width <= 920 ? tabs : sidebar;
+    await expect(navigation).toBeVisible();
+    await navigation.getByRole('button', { name: /^计划/ }).click();
+    await expect(page).toHaveURL(/#\/learning\/plan$/);
+    await navigation.getByRole('button', { name: /^主线/ }).click();
+    await expect(page).toHaveURL(/#\/learning\/mainlines$/);
+    await navigation.getByRole('button', { name: /^支线/ }).click();
+    await expect(page).toHaveURL(/#\/learning\/sidelines$/);
+  }
+});

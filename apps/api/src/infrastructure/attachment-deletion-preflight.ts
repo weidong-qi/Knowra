@@ -23,13 +23,18 @@ export type AttachmentReferenceState = Partial<{
 interface AttachmentReferenceModel {
   findMany(): Promise<AttachmentReferenceRecord[]>;
 }
+interface TodoReferenceModel {
+  findMany(): Promise<{ data: AttachmentReferenceRecord }[]>;
+}
 interface ProvenanceReferenceModel {
   findMany(): Promise<{ payload: unknown }[]>;
 }
 export type AttachmentReferenceDatabase = Partial<{
   [M in (typeof POSTGRES_MODELS)[ReferenceCollection]]: M extends 'knowledgeArtifactProvenance' | 'pdfAnnotation'
     ? ProvenanceReferenceModel
-    : AttachmentReferenceModel;
+    : M extends 'personalTodo'
+      ? TodoReferenceModel
+      : AttachmentReferenceModel;
 }>;
 
 // Only persisted business records are scanned here. Offline copies, backups and
@@ -58,7 +63,8 @@ const POSTGRES_MODELS = Object.freeze({
   contentAnnotations: 'contentAnnotation',
   annotationExclusions: 'annotationExclusion',
   annotationRevisions: 'annotationRevision',
-  analysisScopeSnapshots: 'analysisScopeSnapshot'
+  analysisScopeSnapshots: 'analysisScopeSnapshot',
+  personalTodos: 'personalTodo'
 });
 
 function referenceCategory(collection: ReferenceCollection) {
@@ -142,7 +148,9 @@ export async function loadPostgresAttachmentReferenceState(
         collection,
         ['knowledgeArtifactProvenance', 'pdfAnnotations'].includes(collection)
           ? (rows as { payload: unknown }[]).map(row => row.payload)
-          : rows
+          : collection === 'personalTodos'
+            ? (rows as { data: AttachmentReferenceRecord }[]).map(row => row.data)
+            : rows
       ];
     })
   );

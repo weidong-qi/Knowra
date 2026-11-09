@@ -1,5 +1,5 @@
 import { isDateOnly, isZonedIso } from './dates.ts';
-import { orderBetween } from './order.ts';
+import { balancedOrderKeys, isOrderKey, orderBetween } from './order.ts';
 import { buildReminder, cancelReminder, missPastReminder, reminderAfterDueChange } from './reminders.ts';
 import { indexTodos } from './tree.ts';
 import type { TodoIndex } from './tree.ts';
@@ -110,12 +110,31 @@ export function applyTodoCommand(
   };
 
   const placement = (parentId: string | null, afterId: string | null | undefined, selfId: string) => {
-    const siblings = index.children(parentId).filter(todo => todo.id !== selfId);
-    if (afterId === undefined) return orderBetween(siblings.at(-1)?.order ?? null, null);
-    if (afterId === null) return orderBetween(null, siblings[0]?.order ?? null);
-    const position = siblings.findIndex(todo => todo.id === afterId);
-    if (position < 0) return fail('TODO_INVALID_MOVE', '放置位置不在目标层级中');
-    return orderBetween(siblings[position]!.order, siblings[position + 1]?.order ?? null);
+    // 已归档记录不可修改，也不参与日常列表的放置区间。
+    let siblings = index.children(parentId).filter(todo => todo.id !== selfId && !todo.archivedAt);
+    const position =
+      afterId === undefined
+        ? siblings.length
+        : afterId === null
+          ? 0
+          : siblings.findIndex(todo => todo.id === afterId) + 1;
+    if (afterId != null && position === 0) return fail('TODO_INVALID_MOVE', '放置位置不在目标层级中');
+    const between = () => {
+      const before = siblings[position - 1]?.order ?? null;
+      const after = siblings[position]?.order ?? null;
+      return before !== null && after !== null && before >= after ? null : orderBetween(before, after);
+    };
+    const key = between();
+    if (key !== null && isOrderKey(key) && key.length <= 32) return key;
+    // 离线并发可能生成同键；空间不足或同键插入时，在本次命令事务内一起重排。
+    const keys = balancedOrderKeys(siblings.length);
+    siblings = siblings.map((todo, index) => {
+      const next = { ...all.get(todo.id)!, order: keys[index]! };
+      write(next);
+      return next;
+    });
+    refresh();
+    return between()!;
   };
 
   switch (command.type) {

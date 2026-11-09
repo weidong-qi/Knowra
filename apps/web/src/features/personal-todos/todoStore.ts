@@ -31,26 +31,39 @@ type Listener = () => void;
 export function createTodoStore(requestJson = createApiClient().requestJson) {
   let state: TodoState = { status: 'idle', todos: [], error: null, unavailable: false, undo: null, notice: null };
   const listeners = new Set<Listener>();
+  let writeVersion = 0;
+  let loading: Promise<void> | null = null;
   let undoSeq = 0;
   let undoTimer: ReturnType<typeof setTimeout> | null = null;
   const set = (patch: Partial<TodoState>) => {
     state = { ...state, ...patch };
     for (const listener of listeners) listener();
   };
-  async function load() {
-    if (state.status === 'loading') return;
+  function load(): Promise<void> {
+    if (loading) return loading;
     set({ status: state.status === 'ready' ? 'ready' : 'loading', error: null });
-    try {
-      const { data } = await requestJson<{ data: { todos: Todo[] } }>('/api/todos');
-      set({ status: 'ready', todos: data.todos, unavailable: false });
-    } catch (error) {
-      const code = error instanceof ApiRequestError ? error.code : null;
-      set({
-        status: 'error',
-        unavailable: code === 'PERSONAL_TODOS_UNAVAILABLE',
-        error: error instanceof Error ? error.message : '待办加载失败'
-      });
-    }
+    loading = (async () => {
+      try {
+        // 命令成功后，进行中的 GET 可能仍是旧快照；重新读取，不覆盖已确认的修改。
+        for (;;) {
+          const version = writeVersion;
+          const { data } = await requestJson<{ data: { todos: Todo[] } }>('/api/todos');
+          if (version !== writeVersion) continue;
+          set({ status: 'ready', todos: data.todos, unavailable: false });
+          return;
+        }
+      } catch (error) {
+        const code = error instanceof ApiRequestError ? error.code : null;
+        set({
+          status: 'error',
+          unavailable: code === 'PERSONAL_TODOS_UNAVAILABLE',
+          error: error instanceof Error ? error.message : '待办加载失败'
+        });
+      }
+    })().finally(() => {
+      loading = null;
+    });
+    return loading;
   }
   function offerUndo(message: string, command: TodoCommand | null) {
     if (undoTimer) clearTimeout(undoTimer);
@@ -70,6 +83,7 @@ export function createTodoStore(requestJson = createApiClient().requestJson) {
         method: 'POST',
         body: JSON.stringify({ command })
       });
+      writeVersion += 1;
       set({ todos: mergeTodoChanges(state.todos, data.changed), notice: null });
       if (options.undo) offerUndo(options.undo.message, options.undo.command(data.changed));
       return data.changed;

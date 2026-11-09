@@ -1,11 +1,11 @@
+import { todoComponents } from './personal-todo-sync.mjs';
 import { SYNC_CLIENT_BATCH_BODY_LIMIT_BYTES } from '@study-accelerator/shared/http-limits';
 import { calculateContentHash } from '../../api/src/modules/knowledge/domain/note-version.ts';
 import { syncKey } from '../../api/src/modules/sync/journal.ts';
 import {
   referencesFor,
   changeReferencesFor,
-  TRAINING_COLLECTIONS,
-  PERSONAL_TODO_COLLECTIONS
+  TRAINING_COLLECTIONS
 } from '../../api/src/modules/sync/entity-contract.ts';
 
 /** 当前笔记及标注保持原子提交；不可变的旧版本、旧修订在所属对象之后分批交付。 */
@@ -38,13 +38,15 @@ export function selectEntityBatch(
   for (const entry of base.values()) if (entry.value) before[entry.collection].push(entry.value);
   for (const entry of base.values())
     if (entry.collection === 'contentAnnotations' && entry.value) annotationNotes.set(entry.id, entry.value.noteId);
-  // 一次待办命令可能同时改动整棵树（暂停继承、连同下级完成）；云端按整棵树校验，因此全部待办变更一起提交。
-  let firstTodoKey = null;
+  // 同一关联树原子提交，独立树可以分批；移动同时考虑旧树与新树。
+  const components = todoComponents(before.personalTodos ?? [], state.personalTodos ?? []);
+  const todoGroups = new Map();
   for (const entry of changes) {
-    if (!PERSONAL_TODO_COLLECTIONS.includes(entry.collection)) continue;
+    if (entry.collection !== 'personalTodos') continue;
+    const component = components.get(entry.id) ?? entry.id;
     const key = syncKey(entry.collection, entry.id);
-    if (firstTodoKey === null) firstTodoKey = key;
-    else join(key, firstTodoKey);
+    if (todoGroups.has(component)) join(key, todoGroups.get(component));
+    else todoGroups.set(component, key);
   }
   for (const entry of changes) {
     const value = entry.value ?? base.get(syncKey(entry.collection, entry.id))?.value;

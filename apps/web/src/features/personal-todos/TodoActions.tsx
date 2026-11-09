@@ -139,7 +139,7 @@ export function TodoActionsProvider({
     },
     move: todo => setDialog({ kind: 'move', todo }),
     shift(todo, delta) {
-      const siblings = index.children(todo.parentId);
+      const siblings = index.children(todo.parentId).filter(node => !node.archivedAt);
       const position = siblings.findIndex(node => node.id === todo.id);
       const target = position + delta;
       if (position < 0 || target < 0 || target >= siblings.length) return;

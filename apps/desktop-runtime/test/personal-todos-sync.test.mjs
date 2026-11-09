@@ -1,3 +1,5 @@
+import { applyTodoCommand } from '../../../packages/web-core/src/personal-todos/commands.ts';
+import { balancedOrderKeys } from '../../../packages/web-core/src/personal-todos/order.ts';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { once } from 'node:events';
@@ -181,4 +183,113 @@ test('待办变更总在同一个同步批次内，避免整棵树被拆开校�
   const state = { contentAnnotations: [], noteVersions: [], personalTodos: changes.map(entry => entry.value) };
   const selected = selectEntityBatch(changes, state, new Map(), { targetEntries: 1, maxEntries: 10 });
   assert.equal(selected.length, 3);
+});
+
+for (const parentAction of ['pause', 'complete'])
+  test(`云端${parentAction}父任务、本机编辑子任务后可采用本地并收敛`, async t => {
+    const cloud = await fixture(t),
+      a = cloud.device('a'),
+      b = cloud.device('b');
+    await a.connect();
+    await b.connect();
+    await a.todos.execute({ type: 'create', id: 'm', parentId: null, kind: 'mainline', title: '主线' });
+    await a.todos.execute({ type: 'create', id: 'c', parentId: 'm', title: '步骤' });
+    await a.engine.sync();
+    await b.engine.sync();
+    await a.todos.execute({ type: parentAction, id: 'm', expectedRevision: 1, includeChildren: true });
+    await b.todos.execute({ type: 'update', id: 'c', expectedRevision: 1, patch: { title: '本地改名' } });
+    await a.engine.sync();
+    await b.engine.sync();
+    const conflict = b.engine.status().entityConflict;
+    assert(conflict);
+    await b.engine.resolve({ conflictId: conflict.id, choice: 'local' });
+    await b.engine.sync();
+    clean(b);
+    await a.engine.sync();
+    clean(a);
+    const result = byId(cloud.cloudTodos());
+    assert.equal(result.c.title, '本地改名');
+    assert(result.c.revision > 2);
+    assert.equal(result.c.status, parentAction === 'pause' ? 'paused' : 'active');
+    assert.equal(result.m.status, parentAction === 'pause' ? 'paused' : 'active');
+    assert.deepEqual(byId(await a.todos.list()), byId(await b.todos.list()));
+  });
+
+test('超过单批容量的独立待办树可以分批，移动连接前后两棵树', () => {
+  const changes = Array.from({ length: 1001 }, (_, i) => ({
+    collection: 'personalTodos',
+    id: `r${i}`,
+    value: { id: `r${i}`, parentId: null }
+  }));
+  const state = { contentAnnotations: [], noteVersions: [], personalTodos: changes.map(entry => entry.value) };
+  const first = selectEntityBatch(changes, state, new Map());
+  assert(first.length > 0 && first.length <= 1000);
+  const rest = changes.slice(first.length);
+  let uploaded = first.length;
+  while (rest.length) {
+    const batch = selectEntityBatch(rest, state, new Map());
+    uploaded += batch.length;
+    rest.splice(0, batch.length);
+  }
+  assert.equal(uploaded, 1001);
+  const before = new Map([
+    ['child', { collection: 'personalTodos', id: 'child', value: { id: 'child', parentId: 'r0' } }]
+  ]);
+  const moving = [
+    ...changes.slice(0, 2),
+    { collection: 'personalTodos', id: 'child', value: { id: 'child', parentId: 'r1' } }
+  ];
+  state.personalTodos.push(moving[2].value);
+  assert.equal(selectEntityBatch(moving, state, before, { targetEntries: 1 }).length, 3);
+});
+
+test('1001 棵独立待办树经真实 HTTP 分批上传并被第二台设备完整读取', async t => {
+  const cloud = await fixture(t),
+    a = cloud.device('a'),
+    b = cloud.device('b');
+  await a.connect();
+  await b.connect();
+  const [template] = applyTodoCommand(
+    [],
+    { type: 'create', id: 'template', parentId: null, title: '合成任务' },
+    { now: new Date().toISOString() }
+  ).changed;
+  const keys = balancedOrderKeys(1001);
+  a.store.runTransaction(() => {
+    a.store.state.personalTodos.push(...keys.map((order, i) => ({ ...template, id: `todo-${i}`, order })));
+    a.store.flush();
+  });
+  await a.engine.sync();
+  clean(a);
+  await b.engine.sync();
+  clean(b);
+  assert.equal(cloud.cloudTodos().length, 1001);
+  assert.deepEqual(byId(await a.todos.list()), byId(await b.todos.list()));
+});
+
+test('采用本地不能改写云端已归档任务，采用云端后可继续同步', async t => {
+  const cloud = await fixture(t),
+    a = cloud.device('a'),
+    b = cloud.device('b');
+  await a.connect();
+  await b.connect();
+  await a.todos.execute({ type: 'create', id: 'm', parentId: null, title: '主线' });
+  await a.todos.execute({ type: 'create', id: 'c', parentId: 'm', title: '步骤' });
+  await a.engine.sync();
+  await b.engine.sync();
+  await b.todos.execute({ type: 'update', id: 'c', expectedRevision: 1, patch: { title: '本地修改' } });
+  await a.todos.execute({ type: 'complete', id: 'm', expectedRevision: 1, includeChildren: true });
+  await a.todos.execute({ type: 'archive', id: 'm', expectedRevision: 2 });
+  await a.engine.sync();
+  await b.engine.sync();
+  const conflict = b.engine.status().entityConflict;
+  await assert.rejects(
+    b.engine.resolve({ conflictId: conflict.id, choice: 'local' }),
+    error => error.code === 'TODO_ARCHIVED'
+  );
+  assert.equal((await b.todos.list()).find(todo => todo.id === 'c').title, '本地修改');
+  await b.engine.resolve({ conflictId: conflict.id, choice: 'remote' });
+  await b.engine.sync();
+  clean(b);
+  assert.equal((await b.todos.list()).find(todo => todo.id === 'c').title, '步骤');
 });

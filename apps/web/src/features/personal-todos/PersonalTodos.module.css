@@ -985,7 +985,7 @@
   gap: 4px;
 }
 
-/* 窄屏时左侧栏不可见，入口改为页头下方的标签。 */
+/* 外壳在 920px 以下隐藏侧栏，入口使用相同断点。 */
 .mobileTabs {
   display: none;
 }
@@ -1060,6 +1060,14 @@
     padding-inline: 12px;
   }
 }
+@media (max-width: 920px), (any-pointer: coarse) {
+  .mobileTabs {
+    display: flex;
+    flex: none;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--ni-line);
+  }
+}
 @media (max-width: 767px), (any-pointer: coarse) {
   .rowActions {
     opacity: 1;
@@ -1068,12 +1076,6 @@
   .progressChip .progressTrack,
   .rowDate {
     display: none;
-  }
-  .mobileTabs {
-    display: flex;
-    flex: none;
-    padding: 0 12px;
-    border-bottom: 1px solid var(--ni-line);
   }
   .content[data-has-peek] {
     padding-right: 0;

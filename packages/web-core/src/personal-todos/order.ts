@@ -23,3 +23,18 @@ export function orderBetween(before: string | null, after: string | null): strin
     if (highDigit - lowDigit === 1) upper = null;
   }
 }
+
+/** 同级重排时均匀分配短键；末尾加中位字符，避免产生被契约禁止的 0 结尾。 */
+export function balancedOrderKeys(count: number): string[] {
+  const width = Math.max(2, Math.ceil(Math.log(count + 1) / Math.log(BASE)) + 1);
+  const capacity = BigInt(BASE) ** BigInt(width);
+  return Array.from({ length: count }, (_, index) => {
+    let value = (capacity * BigInt(index + 1)) / BigInt(count + 1);
+    let key = '';
+    for (let digit = 0; digit < width; digit += 1) {
+      key = DIGITS[Number(value % BigInt(BASE))] + key;
+      value /= BigInt(BASE);
+    }
+    return key + 'V';
+  });
+}
