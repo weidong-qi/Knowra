@@ -1,8 +1,8 @@
-import { isDateOnly, isTimeOfDay, isZonedIso } from './dates.js';
-import { isOrderKey } from './order.js';
-import { indexTodos } from './tree.js';
-import { TODO_MAX_DEPTH, TODO_PAUSE_REASON_MAX, TODO_TEXT_MAX, TODO_TITLE_MAX } from './types.js';
-import type { Todo, TodoReminder } from './types.js';
+import { isDateOnly, isTimeOfDay, isZonedIso } from './dates.ts';
+import { isOrderKey } from './order.ts';
+import { indexTodos } from './tree.ts';
+import { TODO_MAX_DEPTH, TODO_PAUSE_REASON_MAX, TODO_TEXT_MAX, TODO_TITLE_MAX } from './types.ts';
+import type { Todo, TodoReminder } from './types.ts';
 
 const TODO_KEYS = [
   'id',

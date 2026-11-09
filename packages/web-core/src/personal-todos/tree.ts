@@ -1,4 +1,4 @@
-import type { Todo } from './types.js';
+import type { Todo } from './types.ts';
 
 /** 未删除节点的只读索引；所有视图与命令都基于它遍历。 */
 export interface TodoIndex {

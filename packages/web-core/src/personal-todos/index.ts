@@ -1,9 +1,9 @@
-export * from './types.js';
-export * from './dates.js';
-export * from './order.js';
-export * from './tree.js';
-export * from './reminders.js';
-export * from './commands.js';
+export * from './types.ts';
+export * from './dates.ts';
+export * from './order.ts';
+export * from './tree.ts';
+export * from './reminders.ts';
+export * from './commands.ts';
 export {
   nextStep,
   progressOf,
@@ -14,6 +14,6 @@ export {
   todayActionOf,
   dateWarnings,
   topLevelTodos
-} from './views.js';
-export type { NextStep, TodoProgress, TodayView, PlanGroup, DateWarning, TodoListFilter } from './views.js';
-export * from './validation.js';
+} from './views.ts';
+export type { NextStep, TodoProgress, TodayView, PlanGroup, DateWarning, TodoListFilter } from './views.ts';
+export * from './validation.ts';

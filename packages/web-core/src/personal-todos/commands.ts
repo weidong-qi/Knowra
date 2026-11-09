@@ -1,10 +1,10 @@
-import { isDateOnly, isZonedIso } from './dates.js';
-import { orderBetween } from './order.js';
-import { buildReminder, cancelReminder, missPastReminder, reminderAfterDueChange } from './reminders.js';
-import { indexTodos } from './tree.js';
-import type { TodoIndex } from './tree.js';
-import { TODO_MAX_DEPTH, TODO_PAUSE_REASON_MAX, TODO_TEXT_MAX, TODO_TITLE_MAX, TodoRuleError } from './types.js';
-import type { Todo, TodoCommand, TodoEditableFields } from './types.js';
+import { isDateOnly, isZonedIso } from './dates.ts';
+import { orderBetween } from './order.ts';
+import { buildReminder, cancelReminder, missPastReminder, reminderAfterDueChange } from './reminders.ts';
+import { indexTodos } from './tree.ts';
+import type { TodoIndex } from './tree.ts';
+import { TODO_MAX_DEPTH, TODO_PAUSE_REASON_MAX, TODO_TEXT_MAX, TODO_TITLE_MAX, TodoRuleError } from './types.ts';
+import type { Todo, TodoCommand, TodoEditableFields } from './types.ts';
 
 export interface TodoCommandContext {
   /** 本次命令的统一时间（UTC ISO）。 */

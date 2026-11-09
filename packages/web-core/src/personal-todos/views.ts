@@ -1,7 +1,7 @@
-import { localDateOf } from './dates.js';
-import { byOrder } from './tree.js';
-import type { TodoIndex } from './tree.js';
-import type { Todo } from './types.js';
+import { localDateOf } from './dates.ts';
+import { byOrder } from './tree.ts';
+import type { TodoIndex } from './tree.ts';
+import type { Todo } from './types.ts';
 
 export type NextStep = { kind: 'item'; todo: Todo } | { kind: 'confirmParent'; todo: Todo } | { kind: 'none' };
 

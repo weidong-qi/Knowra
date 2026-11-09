@@ -1,6 +1,6 @@
-import { addDays, isDateOnly, isTimeOfDay, isZonedIso, zonedDateTimeToIso } from './dates.js';
-import { REMINDER_GRACE_MS, TodoRuleError } from './types.js';
-import type { ReminderInput, Todo, TodoReminder } from './types.js';
+import { addDays, isDateOnly, isTimeOfDay, isZonedIso, zonedDateTimeToIso } from './dates.ts';
+import { REMINDER_GRACE_MS, TodoRuleError } from './types.ts';
+import type { ReminderInput, Todo, TodoReminder } from './types.ts';
 
 const MAX_DAYS_BEFORE = 30;
 
