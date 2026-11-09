@@ -79,6 +79,31 @@ describe('中文标点旁的行内格式', () => {
       expectStableRoundTrip(doc);
   });
 
+  it('emoji 紧挨英文时加粗、斜体、删除线保存重开后保留', () => {
+    const { schema } = codec.view.state;
+    const { strong, emphasis, strike } = marks();
+    for (const mark of [strong, emphasis, strike]) {
+      for (const [before, text, after] of [
+        ['abc', '😀', 'def'],
+        ['abc', 'x😀', 'def'],
+        ['abc', '😀x', 'def'],
+        ['', '😀', 'abc'],
+        ['abc', '😀', ''],
+        ['abc', '✅', 'def'],
+        ['中', '😀', '文']
+      ]) {
+        const children = [
+          ...(before ? [schema.text(before)] : []),
+          schema.text(text, [mark]),
+          ...(after ? [schema.text(after)] : [])
+        ];
+        const doc = paragraph(...children);
+        const reopened = codec.parse(codec.serialize(doc));
+        expect(reopened.toJSON(), `${mark.type.name} ${before}|${text}|${after}`).toEqual(doc.toJSON());
+      }
+    }
+  });
+
   it('空段落与空标题照常写出', () => {
     const { schema } = codec.view.state;
     const doc = schema.node('doc', null, [

@@ -1,6 +1,7 @@
 import type { RemarkPluginRaw } from '@milkdown/kit/transformer';
 import { $remark } from '@milkdown/kit/utils';
-import remarkCjkFriendly from 'remark-cjk-friendly';
+import { cjkFriendlyEmphasisExtension } from '@study-accelerator/shared/markdown-cjk';
+import remarkCjkFriendlySerialize from 'remark-cjk-friendly/serializeOnly';
 import remarkCjkFriendlyGfmStrikethrough from 'remark-cjk-friendly-gfm-strikethrough';
 
 /**
@@ -10,6 +11,15 @@ import remarkCjkFriendlyGfmStrikethrough from 'remark-cjk-friendly-gfm-strikethr
  * 服务端 content-anchor / shared 解析器接入同一组 micromark 扩展，保持偏移一致。
  * 删除线插件需排在 gfm 之后。
  */
+/**
+ * 解析端用共享的 cjkFriendlyEmphasisExtension（CJK 规则与 CommonMark 规则取并集，emoji 旁的强调不退化），
+ * 写出端用 remark-cjk-friendly 的写出插件。
+ */
+const remarkCjkFriendly: RemarkPluginRaw<unknown> = function () {
+  const data = this.data();
+  (data.micromarkExtensions ??= []).push(cjkFriendlyEmphasisExtension());
+  remarkCjkFriendlySerialize.call(this);
+};
 export const cjkFriendlyRemark = $remark('cjkFriendly', () => remarkCjkFriendly);
 export const cjkFriendlyStrikethroughRemark = $remark(
   'cjkFriendlyStrikethrough',

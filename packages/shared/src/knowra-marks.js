@@ -1,5 +1,5 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
-import { cjkFriendlyExtension } from 'micromark-extension-cjk-friendly';
+import { cjkFriendlyEmphasisExtension } from './markdown-cjk.js';
 import { gfmStrikethroughCjkFriendly } from 'micromark-extension-cjk-friendly-gfm-strikethrough';
 import { gfm } from 'micromark-extension-gfm';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
@@ -50,7 +50,7 @@ function lineTable(markdown) {
 function classifyLines(markdown, lines) {
   const fences = new Map();
   const codeSpans = [];
-  const tree = fromMarkdown(markdown, { extensions: [gfm(), cjkFriendlyExtension(), gfmStrikethroughCjkFriendly(), math({ singleDollarTextMath: true })], mdastExtensions: [gfmFromMarkdown(), mathFromMarkdown()] });
+  const tree = fromMarkdown(markdown, { extensions: [gfm(), cjkFriendlyEmphasisExtension(), gfmStrikethroughCjkFriendly(), math({ singleDollarTextMath: true })], mdastExtensions: [gfmFromMarkdown(), mathFromMarkdown()] });
   function visit(node) {
     if (node.type === 'math') {
       for (let index = node.position.start.line - 1; index < node.position.end.line; index += 1) lines[index].kind = 'math';

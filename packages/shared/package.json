@@ -25,6 +25,10 @@
     "./pdf": {
       "types": "./src/pdf.d.ts",
       "default": "./src/pdf.js"
+    },
+    "./markdown-cjk": {
+      "types": "./src/markdown-cjk.d.ts",
+      "default": "./src/markdown-cjk.js"
     }
   },
   "scripts": {
@@ -37,6 +41,7 @@
     "micromark-extension-cjk-friendly": "2.0.2",
     "micromark-extension-cjk-friendly-gfm-strikethrough": "2.0.1",
     "micromark-extension-gfm": "3.0.0",
-    "micromark-extension-math": "3.1.0"
+    "micromark-extension-math": "3.1.0",
+    "micromark-util-classify-character": "2.0.1"
   }
 }

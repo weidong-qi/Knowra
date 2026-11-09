@@ -74,3 +74,10 @@ test('中文标点旁的强调定界符按编辑器规则投影，不留下字�
   // 编辑器偏移与投影一致：mark 不占位置，定界符不计入文本长度。
   assert.equal(identityBlockModels(markdown)[0].size, projection.text.length);
 });
+
+test('emoji 紧挨英文的强调仍按强调投影', () => {
+  const markdown = 'abc**😀**def 与 *✅*ok 以及 **😀**中文';
+  const projection = projectMarkdown(markdown);
+  assert.equal(projection.text, 'abc😀def 与 ✅ok 以及 😀中文');
+  assert.equal(identityBlockModels(markdown)[0].size, projection.text.length);
+});
