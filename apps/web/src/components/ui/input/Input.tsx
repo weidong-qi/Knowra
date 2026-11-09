@@ -28,9 +28,17 @@ export interface TextFieldProps extends Omit<RATextFieldProps, 'className' | 'ch
   className?: string;
   inputClassName?: string;
   /** `inline`：无底无框的紧凑输入（页码等工具栏内联字段），悬停和聚焦时才出现底色。 */
-  appearance?: 'default' | 'inline';
+  /** `bare`：无框、左对齐、继承所在行字号的输入（快速添加、就地改名），由外层容器提供边界。 */
+  appearance?: 'default' | 'inline' | 'bare';
+  /** 标签仍供读屏使用，但不显示（占位文字已说明用途的单行快速输入）。 */
+  hideLabel?: boolean;
   type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search';
-  children?: (childProps: { input: typeof RAInput; label: typeof Label; description: typeof Text; error: typeof FieldError }) => ReactNode;
+  children?: (childProps: {
+    input: typeof RAInput;
+    label: typeof Label;
+    description: typeof Text;
+    error: typeof FieldError;
+  }) => ReactNode;
 }
 
 export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function TextField(
@@ -45,6 +53,7 @@ export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function Tex
     className,
     inputClassName,
     appearance = 'default',
+    hideLabel = false,
     type = 'text',
     children,
     ...rest
@@ -57,28 +66,55 @@ export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function Tex
       isRequired={isRequired}
       isInvalid={isInvalid}
       isDisabled={isDisabled}
-      className={cx(styles.field, appearance === 'inline' && styles.fieldInline, className)}
+      className={cx(
+        styles.field,
+        appearance === 'inline' && styles.fieldInline,
+        appearance === 'bare' && styles.fieldBare,
+        className
+      )}
       {...rest}
     >
-      <Label className={styles.label}>
+      <Label className={cx(styles.label, hideLabel && styles.labelHidden)}>
         {label}
-        {isRequired ? <span className={styles.required} aria-hidden="true">*</span> : null}
+        {isRequired ? (
+          <span className={styles.required} aria-hidden="true">
+            *
+          </span>
+        ) : null}
       </Label>
       {description ? (
         <Text slot="description" className={styles.description}>
           {description}
         </Text>
       ) : null}
-      {type === 'search' ? <SearchSurface disabled={isDisabled} invalid={isInvalid}>
-        {children ? children({ input: RAInput, label: Label, description: Text, error: FieldError }) :
-          <RAInput type={type} placeholder={placeholder} className={cx(searchBoxStyles.input, inputClassName)} data-input-control="true" />}
-      </SearchSurface> : <div className={styles.inputShell} data-input-shadow-owner="true">
-        {children ? children({ input: RAInput, label: Label, description: Text, error: FieldError }) :
-          <RAInput type={type} placeholder={placeholder} className={cx(styles.input, inputClassName)} data-input-control="true" />}
-      </div>}
-      {errorMessage ? (
-        <FieldError className={styles.error}>{errorMessage}</FieldError>
-      ) : null}
+      {type === 'search' ? (
+        <SearchSurface disabled={isDisabled} invalid={isInvalid}>
+          {children ? (
+            children({ input: RAInput, label: Label, description: Text, error: FieldError })
+          ) : (
+            <RAInput
+              type={type}
+              placeholder={placeholder}
+              className={cx(searchBoxStyles.input, inputClassName)}
+              data-input-control="true"
+            />
+          )}
+        </SearchSurface>
+      ) : (
+        <div className={styles.inputShell} data-input-shadow-owner="true">
+          {children ? (
+            children({ input: RAInput, label: Label, description: Text, error: FieldError })
+          ) : (
+            <RAInput
+              type={type}
+              placeholder={placeholder}
+              className={cx(styles.input, inputClassName)}
+              data-input-control="true"
+            />
+          )}
+        </div>
+      )}
+      {errorMessage ? <FieldError className={styles.error}>{errorMessage}</FieldError> : null}
     </RATextField>
   );
 });

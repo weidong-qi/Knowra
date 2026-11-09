@@ -83,7 +83,14 @@ export type TodoCommand =
       afterId?: string | null;
     }
   | { type: 'update'; id: string; expectedRevision: number; patch: Partial<TodoEditableFields> }
-  | { type: 'move'; id: string; expectedRevision: number; parentId: string | null; afterId: string | null }
+  | {
+      type: 'move';
+      id: string;
+      expectedRevision: number;
+      parentId: string | null;
+      /** 放在该兄弟之后；null 表示最前；缺省放在末尾。 */
+      afterId?: string | null;
+    }
   | { type: 'promote'; id: string; expectedRevision: number }
   | { type: 'pause'; id: string; expectedRevision: number; reason?: string | null }
   | { type: 'resume'; id: string; expectedRevision: number }

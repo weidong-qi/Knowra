@@ -23,6 +23,7 @@ import { deriveStatusPath } from '../shell/statusPath';
 import { SearchCommand } from '../shell/SearchCommand';
 import { useGlobalShortcuts } from '../shell/useGlobalShortcuts';
 import { NotesContextSidebar } from '../features/notes';
+import { TodosContextSidebar } from '../features/personal-todos/TodosContextSidebar';
 import { EntryDragDropProvider } from '../features/notes/EntryDragDrop';
 import { CreateEntryDialog } from '../features/notes';
 import { getEditorNoteId } from '../features/editor/editorRoute';
@@ -45,20 +46,20 @@ export function App() {
   const location = useLocation();
   const routePathname = location.pathname.split('?')[0];
   const navigate = useNavigate();
-  const storeActiveDomain = useAppStore((state) => state.navigation.activeWorkDomain);
-  const setActiveWorkDomain = useAppStore((state) => state.setActiveWorkDomain);
-  const loadWorkspace = useAppStore((state) => state.loadWorkspace);
-  const retryWorkspace = useAppStore((state) => state.retryWorkspace);
-  const canWriteWorkspace = useAppStore((state) => state.canWriteWorkspace);
-  const dataMode = useAppStore((state) => state.dataMode);
-  const saveState = useAppStore((state) => state.saveState);
-  const saveError = useAppStore((state) => state.saveError);
-  const persistenceMode = useAppStore((state) => state.persistenceMode);
-  const editorSaveError = useAppStore((state) => state.editorSaveError);
-  const editorHasLocalChanges = useAppStore((state) => state.editorHasLocalChanges);
-  const workspaceError = useAppStore((state) => state.workspaceError);
-  const notes = useAppStore((state) => state.serverData.notes);
-  const openNoteTabIds = useAppStore((state) => state.navigation.openNoteTabs);
+  const storeActiveDomain = useAppStore(state => state.navigation.activeWorkDomain);
+  const setActiveWorkDomain = useAppStore(state => state.setActiveWorkDomain);
+  const loadWorkspace = useAppStore(state => state.loadWorkspace);
+  const retryWorkspace = useAppStore(state => state.retryWorkspace);
+  const canWriteWorkspace = useAppStore(state => state.canWriteWorkspace);
+  const dataMode = useAppStore(state => state.dataMode);
+  const saveState = useAppStore(state => state.saveState);
+  const saveError = useAppStore(state => state.saveError);
+  const persistenceMode = useAppStore(state => state.persistenceMode);
+  const editorSaveError = useAppStore(state => state.editorSaveError);
+  const editorHasLocalChanges = useAppStore(state => state.editorHasLocalChanges);
+  const workspaceError = useAppStore(state => state.workspaceError);
+  const notes = useAppStore(state => state.serverData.notes);
+  const openNoteTabIds = useAppStore(state => state.navigation.openNoteTabs);
   const storeApi = useAppStoreApi();
   const indexScope = useAppStore(state => state.notesIndex.scope);
   const indexFolderId = useAppStore(state => state.navigation.selectedFolderId);
@@ -97,13 +98,19 @@ export function App() {
 
   // URL 是工作域真源：支持可分享链接、前进后退和未上线模块的真实门禁页。
   useEffect(() => {
-    if (location.pathname.startsWith('/showcase') || location.pathname === '/settings' || location.pathname.startsWith('/assistant')) return;
+    if (
+      location.pathname.startsWith('/showcase') ||
+      location.pathname === '/settings' ||
+      location.pathname.startsWith('/assistant')
+    )
+      return;
     const segment = location.pathname.split('?')[0].replace(/^\//, '').split('/')[0];
-    const routeDomain: WorkDomain = !segment || segment === 'materials'
-      ? 'materials'
-      : WORK_DOMAINS.includes(segment as WorkDomain)
-        ? segment as WorkDomain
-        : 'materials';
+    const routeDomain: WorkDomain =
+      !segment || segment === 'materials'
+        ? 'materials'
+        : WORK_DOMAINS.includes(segment as WorkDomain)
+          ? (segment as WorkDomain)
+          : 'materials';
     if (routeDomain !== storeActiveDomain) setActiveWorkDomain(routeDomain);
   }, [storeActiveDomain, location.pathname, setActiveWorkDomain]);
 
@@ -130,10 +137,10 @@ export function App() {
       navigate('/');
       setLiveAnnouncement('已返回主页');
     },
-    onCycleDomain: (direction) => {
+    onCycleDomain: direction => {
       const availableDomains = [...PRIMARY_DOMAINS, ...UTILITY_ITEMS]
-        .filter((item) => item.available)
-        .map((item) => item.id);
+        .filter(item => item.available)
+        .map(item => item.id);
       const current = storeApi.getState().navigation.activeWorkDomain;
       const currentIndex = Math.max(0, availableDomains.indexOf(current));
       const nextIndex = (currentIndex + direction + availableDomains.length) % availableDomains.length;
@@ -160,7 +167,7 @@ export function App() {
   });
 
   function handleSelectDomain(domain: WorkDomain) {
-    const available = [...PRIMARY_DOMAINS, ...UTILITY_ITEMS].find((item) => item.id === domain)?.available ?? false;
+    const available = [...PRIMARY_DOMAINS, ...UTILITY_ITEMS].find(item => item.id === domain)?.available ?? false;
     if (!available) {
       setLiveAnnouncement(`${DOMAIN_INFO[domain].title} 尚未上线`);
       return;
@@ -192,11 +199,11 @@ export function App() {
   const editorNoteId = getEditorNoteId(location.pathname);
   const isNoteEditor = editorNoteId !== null;
   const effectiveEditorView = useMemo(() => getEffectiveEditorViewState(editorView), [editorView]);
-  const editorNote = editorNoteId ? notes.find((note) => note.id === editorNoteId) ?? null : null;
+  const editorNote = editorNoteId ? (notes.find(note => note.id === editorNoteId) ?? null) : null;
   // PDF 阅读页有自己的工具栏与右侧检查器，外壳的检查器/专注模式开关不适用。
   const isPdfEditor = editorNote?.contentKind === 'pdf';
   const openNoteTabs = openNoteTabIds
-    .map((id) => notes.find((note) => note.id === id && !note.deleted))
+    .map(id => notes.find(note => note.id === id && !note.deleted))
     .filter((note): note is NonNullable<typeof note> => Boolean(note));
   // 主页（/）不属于任何工作域的子页面：左轨不应高亮任何模块入口；
   // 笔记索引页（/materials）才是"资料"工作域的着陆页。
@@ -204,18 +211,22 @@ export function App() {
     isShowcaseActive || isSettingsActive || isAssistantActive || isHome ? null : routeDomain;
 
   // StatusBar 位置路径只描述当前路由 surface，不读取后台 selection。
-  const statusPath = isAssistantActive ? [{ id: 'assistant', label: 'AI 助手', current: true }] : isNotesIndex ? buildIndexPath(indexScope, indexFolderId, indexFolders, navigate) : deriveStatusPath({
-    pathname: location.pathname,
-    routeDomain,
-    onNavigateHome: () => navigate('/'),
-    onNavigateMaterials: () => navigate('/materials'),
-    noteTitle: editorNote?.title
-  });
+  const statusPath = isAssistantActive
+    ? [{ id: 'assistant', label: 'AI 助手', current: true }]
+    : isNotesIndex
+      ? buildIndexPath(indexScope, indexFolderId, indexFolders, navigate)
+      : deriveStatusPath({
+          pathname: location.pathname,
+          routeDomain,
+          onNavigateHome: () => navigate('/'),
+          onNavigateMaterials: () => navigate('/materials'),
+          noteTitle: editorNote?.title
+        });
 
   function openNote(noteId: string) {
     storeApi.getState().selectNote(noteId);
     navigate(`/materials/notes/${encodeURIComponent(noteId)}`);
-    const title = storeApi.getState().serverData.notes.find((note) => note.id === noteId)?.title || '无标题笔记';
+    const title = storeApi.getState().serverData.notes.find(note => note.id === noteId)?.title || '无标题笔记';
     setLiveAnnouncement(`已打开笔记：${title}`);
   }
 
@@ -231,150 +242,217 @@ export function App() {
       return;
     }
     setLiveAnnouncement(describeEditorViewAction(effectiveEditorView, action));
-    setEditorView((current) => applyEditorViewAction(current, action));
+    setEditorView(current => applyEditorViewAction(current, action));
   }
 
   const indexAppearance = useNotesIndexAppearance();
-  const showNotesContextSidebar = (isNotesIndex && editorView.showLeftSidebar) || (isNoteEditor && effectiveEditorView.showLeftSidebar);
+  const isTodos = routeDomain === 'learning' && !isShowcaseActive && !isSettingsActive && !isAssistantActive && !isHome;
+  const showNotesContextSidebar =
+    (isNotesIndex && editorView.showLeftSidebar) ||
+    (isNoteEditor && effectiveEditorView.showLeftSidebar) ||
+    (isTodos && editorView.showLeftSidebar);
 
   return (
-    <EntryDragDropProvider><ScopedAppearanceProvider value={notesIndexAppearanceProps(indexAppearance)}>
-      <AppShell
-      appearance={notesIndexAppearanceProps(indexAppearance)}
-      toolbarAccessories={<NotesIndexAppearanceControls />}
-      navigationKey={location.pathname}
-      activeDomain={activeDomain}
-      contextSidebarOpen={showNotesContextSidebar}
-      contextSidebar={isNotesIndex || isNoteEditor ? (
-        <NotesContextSidebar onOpenNote={openNote} onOpenIndex={openNotesIndex} onOpenSearch={() => setSearchOpen(true)} />
-      ) : undefined}
-      stageMode={isNoteEditor || isNotesIndex || isTagManager || isSettingsActive || isAssistantActive || isKnowledgeWorkspace || routeDomain === 'training' || routeDomain === 'task-workspaces' || isHome ? 'workspace' : 'default'}
-      desktopTitlebarEditor={isNoteEditor && Boolean(editorNote)}
-      desktopTitlebarTabs={openNoteTabs.length > 0 ? <EditorTabs
-        notes={openNoteTabs}
-        activeNoteId=""
-        canWrite={canWrite}
-        windowTitlebar
-        onOpenNote={openNote}
-        onCloseNote={(noteId) => { storeApi.getState().closeNoteTab(noteId); }}
-        onCloseOtherNotes={(noteId) => { storeApi.getState().closeOtherNoteTabs(noteId); }}
-        onReorderNotes={(sourceNoteId, targetNoteId) => { storeApi.getState().reorderNoteTabs(sourceNoteId, targetNoteId); }}
-        onCopyTabPath={(note) => {
-          const folder = note.folderId ? indexFolders[note.folderId] : null;
-          const path = [folder?.name, note.title || '无标题笔记'].filter(Boolean).join(' / ');
-          void navigator.clipboard.writeText(path)
-            .then(() => setLiveAnnouncement(`已复制路径：${path}`))
-            .catch(() => setLiveAnnouncement('复制路径失败，请检查剪贴板权限'));
-        }}
-        onCreateNote={() => setCreateNoteOpen(true)}
-      /> : undefined}
-      focusMode={isNoteEditor && effectiveEditorView.mode === 'focus'}
-      onSelectDomain={handleSelectDomain}
-      onReturnHome={handleReturnHome}
-      onOpenSearch={() => setSearchOpen(true)}
-      onOpenSettings={() => { navigate('/settings'); setLiveAnnouncement('已打开设置'); }}
-      onOpenAssistant={() => { navigate(isNoteEditor && editorNoteId ? `/assistant?noteId=${encodeURIComponent(editorNoteId)}` : '/assistant'); setLiveAnnouncement('已打开 AI 助手'); }}
-      isSettingsActive={isSettingsActive}
-      isAssistantActive={isAssistantActive}
-      statusbar={{
-        path: statusPath,
-        saveState: isSettingsActive || isAssistantActive || isShowcaseActive ? 'idle' : editorSaveError ? 'error' : editorHasLocalChanges && saveState !== 'error' ? 'saving' : saveState,
-        saveError: editorSaveError ?? saveError,
-        persistenceMode,
-        savedAt: editorNote?.updatedAt,
-        dataMode,
-        showDataMode: !isSettingsActive && !isAssistantActive && !isShowcaseActive,
-        dataModeNote: persistenceMode === 'desktop-local' ? <LocalSyncControl compact /> : workspaceError && dataMode !== 'api' ? <span>请稍后重试</span> : undefined,
-        panels: !isNoteEditor && !isNotesIndex ? [] : [
-          {
-            id: 'sidebar' as const,
-            label: '侧栏',
-            active: (isNotesIndex && editorView.showLeftSidebar) || (isNoteEditor && effectiveEditorView.showLeftSidebar),
-            onToggle: () => {
-              if (isNotesIndex) {
-                setLiveAnnouncement(editorView.showLeftSidebar ? '已隐藏左侧目录区' : '已显示左侧目录区');
-                setEditorView((current) => applyEditorViewAction(current, 'toggle-left-sidebar'));
-                return;
-              }
-              if (!isNoteEditor) {
-                setLiveAnnouncement('侧栏仅在笔记索引和编辑页面可切换');
-                return;
-              }
-              handleEditorViewAction('toggle-left-sidebar');
-            }
-          },
-          {
-            id: 'inspector' as const,
-            label: '检查器',
-            active: isNoteEditor && effectiveEditorView.showRightSidebar,
-            onToggle: () => {
-              if (!isNoteEditor) {
-                setLiveAnnouncement('检查器仅在笔记编辑页面可用');
-                return;
-              }
-              handleEditorViewAction('toggle-right-sidebar');
-            }
-          },
-          {
-            id: 'focus' as const,
-            label: '专注模式',
-            active: isNoteEditor && effectiveEditorView.mode === 'focus',
-            onToggle: () => {
-              if (!isNoteEditor) {
-                setLiveAnnouncement('专注模式仅在笔记编辑页面可用');
-                return;
-              }
-              handleEditorViewAction('toggle-focus');
-            }
+    <EntryDragDropProvider>
+      <ScopedAppearanceProvider value={notesIndexAppearanceProps(indexAppearance)}>
+        <AppShell
+          appearance={notesIndexAppearanceProps(indexAppearance)}
+          toolbarAccessories={<NotesIndexAppearanceControls />}
+          navigationKey={location.pathname}
+          activeDomain={activeDomain}
+          contextSidebarOpen={showNotesContextSidebar}
+          contextSidebar={
+            isNotesIndex || isNoteEditor ? (
+              <NotesContextSidebar
+                onOpenNote={openNote}
+                onOpenIndex={openNotesIndex}
+                onOpenSearch={() => setSearchOpen(true)}
+              />
+            ) : isTodos ? (
+              <TodosContextSidebar />
+            ) : undefined
           }
-        ].filter(panel => (isNoteEditor || panel.id === 'sidebar') && !(isPdfEditor && panel.id !== 'sidebar'))
-      }}
-      mobileTabs
-      liveAnnouncement={liveAnnouncement}
-    >
-      <div className={`${styles.route} ${isNoteEditor || isNotesIndex || isTagManager || isSettingsActive || isAssistantActive || isKnowledgeWorkspace || routeDomain === 'training' || routeDomain === 'task-workspaces' ? styles.routeWorkspace : ''}`}>
-        <RecoveryDraftNotice onOpenNote={openNote} />
-        <BudgetAlertBanner />
-        <AppRoutes
-          pathname={location.pathname}
-          routeDomain={routeDomain}
-          onRetry={retryWorkspace}
-          canWrite={canWrite}
-          onOpenMaterials={() => navigate('/materials')}
-          statusPath={statusPath}
-          editorNoteId={editorNoteId}
-          editorView={effectiveEditorView}
-          onEditorViewAction={handleEditorViewAction}
-          onOpenNote={openNote}
+          stageMode={
+            isNoteEditor ||
+            isNotesIndex ||
+            isTagManager ||
+            isSettingsActive ||
+            isAssistantActive ||
+            isKnowledgeWorkspace ||
+            routeDomain === 'training' ||
+            routeDomain === 'task-workspaces' ||
+            isTodos ||
+            isHome
+              ? 'workspace'
+              : 'default'
+          }
+          desktopTitlebarEditor={isNoteEditor && Boolean(editorNote)}
+          desktopTitlebarTabs={
+            openNoteTabs.length > 0 ? (
+              <EditorTabs
+                notes={openNoteTabs}
+                activeNoteId=""
+                canWrite={canWrite}
+                windowTitlebar
+                onOpenNote={openNote}
+                onCloseNote={noteId => {
+                  storeApi.getState().closeNoteTab(noteId);
+                }}
+                onCloseOtherNotes={noteId => {
+                  storeApi.getState().closeOtherNoteTabs(noteId);
+                }}
+                onReorderNotes={(sourceNoteId, targetNoteId) => {
+                  storeApi.getState().reorderNoteTabs(sourceNoteId, targetNoteId);
+                }}
+                onCopyTabPath={note => {
+                  const folder = note.folderId ? indexFolders[note.folderId] : null;
+                  const path = [folder?.name, note.title || '无标题笔记'].filter(Boolean).join(' / ');
+                  void navigator.clipboard
+                    .writeText(path)
+                    .then(() => setLiveAnnouncement(`已复制路径：${path}`))
+                    .catch(() => setLiveAnnouncement('复制路径失败，请检查剪贴板权限'));
+                }}
+                onCreateNote={() => setCreateNoteOpen(true)}
+              />
+            ) : undefined
+          }
+          focusMode={isNoteEditor && effectiveEditorView.mode === 'focus'}
+          onSelectDomain={handleSelectDomain}
+          onReturnHome={handleReturnHome}
           onOpenSearch={() => setSearchOpen(true)}
-          onOpenCreate={canWrite ? () => setCreateNoteOpen(true) : undefined}
-          onOpenSchedule={() => setLiveAnnouncement('日程将在后续版本接入')}
-          preferences={preferences}
-          onPreferencesChange={setPreferences}
-          sidebarOpen={editorView.showLeftSidebar}
-          onSidebarOpenChange={(open) => setEditorView((current) => ({ ...current, showLeftSidebar: open }))}
-          onSelectNote={(noteId) => openNote(noteId)}
-        />
-      </div>
-      <SearchCommand
-        isOpen={searchOpen}
-        onOpenChange={setSearchOpen}
-        hits={searchHits}
-        commandSearch={commandSearch}
-      />
-      <CreateEntryDialog
-        mode={createNoteOpen ? 'note' : null}
-        parentFolderId={isNotesIndex || isNoteEditor ? storeApi.getState().navigation.selectedFolderId : null}
-        onOpenChange={setCreateNoteOpen}
-        onCreateNote={async (folderId, title) => {
-          const createdId = await storeApi.getState().createNote(folderId, title);
-          openNote(createdId);
-          return createdId;
-        }}
-        onCreateFolder={storeApi.getState().createFolder}
-      />
-      </AppShell>
-    </ScopedAppearanceProvider></EntryDragDropProvider>
+          onOpenSettings={() => {
+            navigate('/settings');
+            setLiveAnnouncement('已打开设置');
+          }}
+          onOpenAssistant={() => {
+            navigate(
+              isNoteEditor && editorNoteId ? `/assistant?noteId=${encodeURIComponent(editorNoteId)}` : '/assistant'
+            );
+            setLiveAnnouncement('已打开 AI 助手');
+          }}
+          isSettingsActive={isSettingsActive}
+          isAssistantActive={isAssistantActive}
+          statusbar={{
+            path: statusPath,
+            saveState:
+              isSettingsActive || isAssistantActive || isShowcaseActive
+                ? 'idle'
+                : editorSaveError
+                  ? 'error'
+                  : editorHasLocalChanges && saveState !== 'error'
+                    ? 'saving'
+                    : saveState,
+            saveError: editorSaveError ?? saveError,
+            persistenceMode,
+            savedAt: editorNote?.updatedAt,
+            dataMode,
+            showDataMode: !isSettingsActive && !isAssistantActive && !isShowcaseActive,
+            dataModeNote:
+              persistenceMode === 'desktop-local' ? (
+                <LocalSyncControl compact />
+              ) : workspaceError && dataMode !== 'api' ? (
+                <span>请稍后重试</span>
+              ) : undefined,
+            panels:
+              !isNoteEditor && !isNotesIndex
+                ? []
+                : [
+                    {
+                      id: 'sidebar' as const,
+                      label: '侧栏',
+                      active:
+                        (isNotesIndex && editorView.showLeftSidebar) ||
+                        (isNoteEditor && effectiveEditorView.showLeftSidebar),
+                      onToggle: () => {
+                        if (isNotesIndex) {
+                          setLiveAnnouncement(editorView.showLeftSidebar ? '已隐藏左侧目录区' : '已显示左侧目录区');
+                          setEditorView(current => applyEditorViewAction(current, 'toggle-left-sidebar'));
+                          return;
+                        }
+                        if (!isNoteEditor) {
+                          setLiveAnnouncement('侧栏仅在笔记索引和编辑页面可切换');
+                          return;
+                        }
+                        handleEditorViewAction('toggle-left-sidebar');
+                      }
+                    },
+                    {
+                      id: 'inspector' as const,
+                      label: '检查器',
+                      active: isNoteEditor && effectiveEditorView.showRightSidebar,
+                      onToggle: () => {
+                        if (!isNoteEditor) {
+                          setLiveAnnouncement('检查器仅在笔记编辑页面可用');
+                          return;
+                        }
+                        handleEditorViewAction('toggle-right-sidebar');
+                      }
+                    },
+                    {
+                      id: 'focus' as const,
+                      label: '专注模式',
+                      active: isNoteEditor && effectiveEditorView.mode === 'focus',
+                      onToggle: () => {
+                        if (!isNoteEditor) {
+                          setLiveAnnouncement('专注模式仅在笔记编辑页面可用');
+                          return;
+                        }
+                        handleEditorViewAction('toggle-focus');
+                      }
+                    }
+                  ].filter(
+                    panel => (isNoteEditor || panel.id === 'sidebar') && !(isPdfEditor && panel.id !== 'sidebar')
+                  )
+          }}
+          mobileTabs
+          liveAnnouncement={liveAnnouncement}
+        >
+          <div
+            className={`${styles.route} ${isNoteEditor || isNotesIndex || isTagManager || isSettingsActive || isAssistantActive || isKnowledgeWorkspace || routeDomain === 'training' || routeDomain === 'task-workspaces' || isTodos ? styles.routeWorkspace : ''}`}
+          >
+            <RecoveryDraftNotice onOpenNote={openNote} />
+            <BudgetAlertBanner />
+            <AppRoutes
+              pathname={location.pathname}
+              routeDomain={routeDomain}
+              onRetry={retryWorkspace}
+              canWrite={canWrite}
+              onOpenMaterials={() => navigate('/materials')}
+              statusPath={statusPath}
+              editorNoteId={editorNoteId}
+              editorView={effectiveEditorView}
+              onEditorViewAction={handleEditorViewAction}
+              onOpenNote={openNote}
+              onOpenSearch={() => setSearchOpen(true)}
+              onOpenCreate={canWrite ? () => setCreateNoteOpen(true) : undefined}
+              onOpenSchedule={() => setLiveAnnouncement('日程将在后续版本接入')}
+              preferences={preferences}
+              onPreferencesChange={setPreferences}
+              sidebarOpen={editorView.showLeftSidebar}
+              onSidebarOpenChange={open => setEditorView(current => ({ ...current, showLeftSidebar: open }))}
+              onSelectNote={noteId => openNote(noteId)}
+            />
+          </div>
+          <SearchCommand
+            isOpen={searchOpen}
+            onOpenChange={setSearchOpen}
+            hits={searchHits}
+            commandSearch={commandSearch}
+          />
+          <CreateEntryDialog
+            mode={createNoteOpen ? 'note' : null}
+            parentFolderId={isNotesIndex || isNoteEditor ? storeApi.getState().navigation.selectedFolderId : null}
+            onOpenChange={setCreateNoteOpen}
+            onCreateNote={async (folderId, title) => {
+              const createdId = await storeApi.getState().createNote(folderId, title);
+              openNote(createdId);
+              return createdId;
+            }}
+            onCreateFolder={storeApi.getState().createFolder}
+          />
+        </AppShell>
+      </ScopedAppearanceProvider>
+    </EntryDragDropProvider>
   );
 }
 
@@ -385,11 +463,17 @@ export function AppRoot() {
 const NOTES_SIDEBAR_PREFERENCE_KEY = 'knowra:notes-sidebar-open';
 
 function readNotesSidebarPreference(): boolean {
-  try { return localStorage.getItem(NOTES_SIDEBAR_PREFERENCE_KEY) !== 'false'; }
-  catch { return true; }
+  try {
+    return localStorage.getItem(NOTES_SIDEBAR_PREFERENCE_KEY) !== 'false';
+  } catch {
+    return true;
+  }
 }
 
 function writeNotesSidebarPreference(open: boolean): void {
-  try { localStorage.setItem(NOTES_SIDEBAR_PREFERENCE_KEY, String(open)); }
-  catch { /* 本地存储不可用时仍可在当前页面切换。 */ }
+  try {
+    localStorage.setItem(NOTES_SIDEBAR_PREFERENCE_KEY, String(open));
+  } catch {
+    /* 本地存储不可用时仍可在当前页面切换。 */
+  }
 }

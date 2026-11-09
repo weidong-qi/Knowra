@@ -24,6 +24,10 @@ import type { AppPreferences } from '../features/settings/preferences';
 
 const PdfReaderView = lazy(async () => ({ default: (await import('../features/pdf/PdfReaderView')).PdfReaderView }));
 
+const TodosView = lazy(async () => ({
+  default: (await import('../features/personal-todos/TodosView')).TodosView
+}));
+
 const TaskWorkspacesView = lazy(async () => ({
   default: (await import('../features/task-workspaces/TaskWorkspacesView')).TaskWorkspacesView
 }));
@@ -53,7 +57,7 @@ export const DOMAIN_INFO: Record<WorkDomain, DomainDescriptor> = {
   materials: { title: '资料工作区', description: '按目录组织 Markdown 笔记，用标签串联主题。' },
   knowledge: { title: '知识库', description: '整理知识候选、人工确认并追溯原文来源。' },
   training: { title: '试题库', description: '学习目标、考试配置、考点与题目的管理。' },
-  learning: { title: '执行', description: '待办、打卡与习惯追踪（V4-08 接入）。' },
+  learning: { title: '待办', description: '主线、支线、今日安排与计划。' },
   profile: { title: '我的', description: '工作区与个人设置。' }
 };
 
@@ -135,6 +139,21 @@ export function AppRoutes(props: AppRoutesProps) {
       >
         <Suspense fallback={<LoadingState label="正在加载任务工作区…" />}>
           <TaskWorkspacesView />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  if (props.routeDomain === 'learning')
+    return (
+      <ErrorBoundary
+        fallbackRender={({ resetErrorBoundary }) => (
+          <section aria-label="待办加载失败">
+            <p role="alert">待办暂时不可用，笔记不受影响。</p>
+            <Button onPress={resetErrorBoundary}>重试待办</Button>
+          </section>
+        )}
+      >
+        <Suspense fallback={<LoadingState label="正在加载待办…" />}>
+          <TodosView pathname={props.pathname} />
         </Suspense>
       </ErrorBoundary>
     );
