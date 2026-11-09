@@ -9,6 +9,7 @@ import { createCodeBlockBehavior } from './editorCodeBlock';
 import { mathBlockSchema, mathBlockSerializerGuard } from './editorMathBlock';
 import { mathInlineSchema } from './editorMathInline';
 import { mathInlineGuardRemark, mathRemark } from './editorMathMarkdown';
+import { cjkFriendlyEmptyPhrasingGuard, cjkFriendlyRemark, cjkFriendlyStrikethroughRemark } from './editorCjkFriendly';
 import { highlightRemark, highlightSchema } from './editorHighlight';
 import { internalLinkRemark, internalLinkSchema } from './editorInternalLink';
 import { configureImageSize } from './editorImageBehavior';
@@ -58,6 +59,9 @@ export async function createHeadlessNoteCodec(
     .use(noteLinkSchema)
     .use(createCodeBlockBehavior(() => {}))
     .use(gfm)
+    .use(cjkFriendlyRemark)
+    .use(cjkFriendlyStrikethroughRemark)
+    .use(cjkFriendlyEmptyPhrasingGuard)
     .use(mathRemark)
     .use(mathInlineGuardRemark)
     .use(mathBlockSchema)

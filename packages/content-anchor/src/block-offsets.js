@@ -1,6 +1,8 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { mathFromMarkdown } from 'mdast-util-math';
+import { cjkFriendlyExtension } from 'micromark-extension-cjk-friendly';
+import { gfmStrikethroughCjkFriendly } from 'micromark-extension-cjk-friendly-gfm-strikethrough';
 import { gfm } from 'micromark-extension-gfm';
 import { math } from 'micromark-extension-math';
 
@@ -153,7 +155,7 @@ const BLOCKS = new Set(['paragraph', 'heading', 'blockquote', 'code', 'thematicB
 export function identityBlockModels(markdown) {
   const source = String(markdown ?? '');
   const tree = fromMarkdown(source, {
-    extensions: [gfm(), math({ singleDollarTextMath: true })],
+    extensions: [gfm(), cjkFriendlyExtension(), gfmStrikethroughCjkFriendly(), math({ singleDollarTextMath: true })],
     mdastExtensions: [gfmFromMarkdown(), mathFromMarkdown()]
   });
   guardInlineMath(tree, source);

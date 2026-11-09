@@ -100,6 +100,7 @@ import {
   mathBlockSchema
 } from './editorMathBlock';
 import { mathInlineGuardRemark, mathRemark } from './editorMathMarkdown';
+import { cjkFriendlyEmptyPhrasingGuard, cjkFriendlyRemark, cjkFriendlyStrikethroughRemark } from './editorCjkFriendly';
 import styles from './MilkdownNoteEditor.module.css';
 import { EditorAnnotationActions } from './EditorAnnotationActions';
 import { EditorTableHandles } from './EditorTableHandles';
@@ -615,6 +616,9 @@ export const MilkdownNoteEditor = forwardRef<EditorCommandTarget, MilkdownNoteEd
       .use(resourcePolicy?.disableLinks ? [] : noteLinkDomBehavior(() => noteLinkCallbacks.current.noteLinkStatuses))
       .use(createCodeBlockBehavior(message => onStatusRef.current?.(message)))
       .use(gfm)
+      .use(cjkFriendlyRemark)
+      .use(cjkFriendlyStrikethroughRemark)
+      .use(cjkFriendlyEmptyPhrasingGuard)
       .use(mathRemark)
       .use(mathInlineGuardRemark)
       .use(mathBlockSchema)

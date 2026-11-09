@@ -4,6 +4,7 @@ import {
   anchorForSection,
   anchorFromProjectedRange,
   followSectionAnchor,
+  identityBlockModels,
   projectMarkdown,
   relocateAnchor,
   resolveAnchor
@@ -64,4 +65,12 @@ test('正文缩短或清空时旧锚点返回失效，可按保留的上下文�
   assert.equal(relocateAnchor('', anchor).status, 'missing');
   assert.equal(relocateAnchor('重要内容 后文', anchor).status, 'resolved');
   assert.throws(() => resolveAnchor(original, { ...anchor, segments: [{ start: -1, end: 2 }] }), /source range/);
+});
+
+test('中文标点旁的强调定界符按编辑器规则投影，不留下字面星号', () => {
+  const markdown = '**小标题：**正文与~~删除：~~后文，还有*（斜体）*结尾';
+  const projection = projectMarkdown(markdown);
+  assert.equal(projection.text, '小标题：正文与删除：后文，还有（斜体）结尾');
+  // 编辑器偏移与投影一致：mark 不占位置，定界符不计入文本长度。
+  assert.equal(identityBlockModels(markdown)[0].size, projection.text.length);
 });
