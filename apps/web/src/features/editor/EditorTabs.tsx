@@ -156,7 +156,12 @@ export function EditorTabs(props: EditorTabsProps) {
           <MenuPopover placement="bottom end">
             <Menu ariaLabel="全部标签页">
               {props.notes.map((note, index) => (
-                <MenuItem key={note.id} id={note.id} onAction={() => props.onOpenNote(note.id)}>
+                <MenuItem
+                  key={note.id}
+                  id={note.id}
+                  isActive={note.id === props.activeNoteId}
+                  onAction={() => props.onOpenNote(note.id)}
+                >
                   {String(index + 1).padStart(2, '0')} · {note.title || '无标题笔记'}
                 </MenuItem>
               ))}

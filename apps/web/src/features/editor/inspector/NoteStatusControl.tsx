@@ -14,7 +14,11 @@ const STATUS_CHOICES = [
 ];
 
 /** 保留快捷菜单外观，写入期间串行操作，失败后可重新选择。父层按笔记 id 重建。 */
-export function NoteStatusControl({ status, disabled, onChange }: {
+export function NoteStatusControl({
+  status,
+  disabled,
+  onChange
+}: {
   status?: string;
   disabled: boolean;
   onChange(status: string): Promise<void>;
@@ -39,17 +43,46 @@ export function NoteStatusControl({ status, disabled, onChange }: {
     }
   }
 
-  return <>
-    <MenuTrigger>
-      <Button size="mini" variant="ghost" className={styles.statusButton} isDisabled={disabled || pending} aria-busy={pending || undefined} aria-label={`状态：${getStatusLabel(status)}，点击切换`}>
-        <ItemStatus status={getStatusLabel(status)} /><ChevronDownIcon size={11} />
-      </Button>
-      <MenuPopover placement="bottom start">
-        <Menu ariaLabel="切换状态" onAction={key => { void change(String(key)); }}>
-          {STATUS_CHOICES.map(choice => <MenuItem id={choice.id} key={choice.id} isDisabled={disabled || pending} kbd={choice.id === current ? '当前' : undefined}>{choice.label}</MenuItem>)}
-        </Menu>
-      </MenuPopover>
-    </MenuTrigger>
-    {error ? <span role="alert" className={styles.versionError}>{error}</span> : null}
-  </>;
+  return (
+    <>
+      <MenuTrigger>
+        <Button
+          size="mini"
+          variant="ghost"
+          className={styles.statusButton}
+          isDisabled={disabled || pending}
+          aria-busy={pending || undefined}
+          aria-label={`状态：${getStatusLabel(status)}，点击切换`}
+        >
+          <ItemStatus status={getStatusLabel(status)} />
+          <ChevronDownIcon size={11} />
+        </Button>
+        <MenuPopover placement="bottom start">
+          <Menu
+            ariaLabel="切换状态"
+            onAction={key => {
+              void change(String(key));
+            }}
+          >
+            {STATUS_CHOICES.map(choice => (
+              <MenuItem
+                id={choice.id}
+                key={choice.id}
+                isActive={choice.id === current}
+                isDisabled={disabled || pending}
+                kbd={choice.id === current ? '当前' : undefined}
+              >
+                {choice.label}
+              </MenuItem>
+            ))}
+          </Menu>
+        </MenuPopover>
+      </MenuTrigger>
+      {error ? (
+        <span role="alert" className={styles.versionError}>
+          {error}
+        </span>
+      ) : null}
+    </>
+  );
 }
