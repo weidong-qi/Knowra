@@ -13,6 +13,7 @@ import {
   RailQuestionIcon,
   RailSearchIcon,
   RailTaskIcon,
+  RailTodoIcon,
   RailUserIcon,
   SettingsIcon,
   type KnowraIconProps
@@ -61,10 +62,10 @@ export const PRIMARY_DOMAINS: readonly RailItem[] = [
   },
   {
     id: 'learning',
-    label: '执行',
-    description: '待办、打卡与习惯追踪。',
-    Icon: RailTaskIcon,
-    available: false
+    label: '待办',
+    description: '主线、支线、今日安排与计划。',
+    Icon: RailTodoIcon,
+    available: true
   }
 ] as const;
 

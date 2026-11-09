@@ -1,3 +1,4 @@
+import { reconcileLocalTodoChoice } from './personal-todo-sync.mjs';
 import { encodeSyncHistory } from './sync-history.mjs';
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
@@ -13,7 +14,8 @@ import {
   syncReferencesFor,
   changeReferencesFor,
   KNOWLEDGE_COLLECTIONS,
-  TRAINING_COLLECTIONS
+  TRAINING_COLLECTIONS,
+  PERSONAL_TODO_COLLECTIONS
 } from '../../api/src/modules/sync/entity-contract.ts';
 import { syncKey } from '../../api/src/modules/sync/journal.ts';
 import {
@@ -830,10 +832,13 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
     if (
       ['copy', 'manual'].includes(choice) &&
       dirty.some(
-        entry => KNOWLEDGE_COLLECTIONS.includes(entry.collection) || TRAINING_COLLECTIONS.includes(entry.collection)
+        entry =>
+          KNOWLEDGE_COLLECTIONS.includes(entry.collection) ||
+          TRAINING_COLLECTIONS.includes(entry.collection) ||
+          PERSONAL_TODO_COLLECTIONS.includes(entry.collection)
       )
     ) {
-      throw new Error('包含知识或来源、训练资产的关联冲突请采用本地或云端；正文合并与保留两篇不能安全处理关联来源。');
+      throw new Error('包含知识或来源、训练资产或待办的关联冲突请采用本地或云端；正文合并与保留两篇不能安全处理。');
     }
     db.prepare('INSERT INTO sync_recovery VALUES (?, ?)').run(
       randomUUID(),
@@ -924,11 +929,24 @@ export function resolveEntityConflict(store, { conflictId, choice, rawMarkdown }
             version: Math.max(entry.value.version, current.value.version + (edited ? 1 : 0))
           };
         }
+        if (
+          entry.collection === 'personalTodos' &&
+          entry.value &&
+          current?.value &&
+          !sameEntity('personalTodos', entry.value, current.value)
+        )
+          entry.value = {
+            ...entry.value,
+            revision: Math.max(entry.value.revision, current.value.revision + 1),
+            updatedAt: new Date().toISOString()
+          };
         if (entry.collection === 'pdfAnnotations' && entry.value && current?.value)
           entry.value = { ...entry.value, revision: Math.max(entry.value.revision, current.value.revision + 1) };
         replace(merged, entry);
       }
     }
+    if (choice === 'local' && dirty.some(entry => entry.collection === 'personalTodos'))
+      merged.personalTodos = reconcileLocalTodoChoice(merged.personalTodos, dirty, remote);
     preserveRemoteNotePrivacy(merged, remote);
     const localAttachments = state.attachments.map(attachment => ({ ...attachment }));
     const localPdfAnnotations = structuredClone(state.pdfAnnotations);

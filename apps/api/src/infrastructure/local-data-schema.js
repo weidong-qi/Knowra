@@ -9,6 +9,7 @@ import {
 import { isAttachmentStatus } from './attachment-status.ts';
 import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { migrateLegacyKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
+import { todoCollectionErrors, todoRecordError } from '../../../../packages/web-core/src/personal-todos/validation.ts';
 
 export const LOCAL_DATA_SCHEMA_VERSION = 8;
 export const LOCAL_SNAPSHOT_VERSION = 'v1-local-json';
@@ -34,7 +35,8 @@ export const LOCAL_DATA_COLLECTIONS = Object.freeze([
   'pdfAnnotations',
   'annotationExclusions',
   'annotationRevisions',
-  'analysisScopeSnapshots'
+  'analysisScopeSnapshots',
+  'personalTodos'
 ]);
 
 const REQUIRED_COLLECTIONS = Object.freeze(['spaces', 'folders', 'tags', 'notes']);
@@ -158,6 +160,8 @@ function validateCollections(input, { allowMissingOptionalCollections, reuseImmu
         ? value
         : cloneJsonData(value);
   }
+  const todoErrors = todoCollectionErrors(state.personalTodos);
+  if (todoErrors.length) invalidSnapshot(`personalTodos is invalid: ${todoErrors[0]}`);
 
   return state;
 }
@@ -402,6 +406,9 @@ function validateEntity(collectionName, item, index) {
     assertNonEmptyString(item.annotationId, `${location}.annotationId`);
     assertNonEmptyString(item.operation, `${location}.operation`);
     if (!Number.isInteger(item.revision) || item.revision < 1) invalidSnapshot(`${location}.revision is invalid`);
+  } else if (collectionName === 'personalTodos') {
+    const error = todoRecordError(item);
+    if (error) invalidSnapshot(`${location} is invalid: ${error}`);
   } else if (collectionName === 'analysisScopeSnapshots') {
     assertNonEmptyString(item.spaceId, `${location}.spaceId`);
     assertNonEmptyString(item.inputHash, `${location}.inputHash`);

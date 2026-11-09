@@ -36,6 +36,7 @@ interface MigrationRows {
   question: ReturnType<typeof rows.dbQuestion>;
   questionObjective: ReturnType<typeof rows.dbQuestionObjective>;
   questionSource: ReturnType<typeof rows.dbQuestionSource>;
+  personalTodo: ReturnType<typeof rows.dbPersonalTodo>;
   noteTag: { noteId: string; tagId: string };
 }
 export type MigrationTransaction = {

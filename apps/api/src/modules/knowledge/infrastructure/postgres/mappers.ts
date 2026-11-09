@@ -499,3 +499,8 @@ export function mapKnowledgeArtifactProvenance(
   }
   return structuredClone(record);
 }
+
+/** 个人待办整条记录存于 JSONB；结构由读取方按 web-core 规则校验。 */
+export function mapPersonalTodo(row: Models.PersonalTodo): SyncMappedEntityMap['personalTodos'] {
+  return structuredClone(row.data) as unknown as SyncMappedEntityMap['personalTodos'];
+}

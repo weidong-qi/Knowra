@@ -35,6 +35,14 @@
   font-weight: 500;
   color: var(--text-secondary);
 }
+.labelHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .required {
   color: var(--ink-danger);
   margin-left: 2px;
@@ -119,6 +127,23 @@
   font-variant-numeric: tabular-nums;
   appearance: textfield;
   -moz-appearance: textfield;
+}
+.fieldBare {
+  gap: 0;
+}
+.fieldBare .inputShell {
+  height: auto;
+  min-height: 30px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.fieldBare .input {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
 }
 .fieldInline .input::-webkit-outer-spin-button,
 .fieldInline .input::-webkit-inner-spin-button {

@@ -1,3 +1,4 @@
+import { applyTodoCommand, mergeTodoChanges, type Todo, type TodoCommand } from '@study-accelerator/web-core';
 import { test } from './fixtures/syntheticTest';
 import { expect, type Page } from '@playwright/test';
 import { mockShellServices } from './fixtures/shellServices';
@@ -486,3 +487,62 @@ async function mockWorkspace(page: Page): Promise<void> {
     });
   });
 }
+
+test('待办在 840px 和笔记侧栏关闭偏好下仍能切换全部视图', async ({ page }) => {
+  await mockWorkspace(page);
+  await page.addInitScript(() => localStorage.setItem('knowra:notes-sidebar-open', 'false'));
+  for (const width of [840, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/#/learning');
+    const tabs = page.getByRole('group', { name: '待办视图' });
+    const sidebar = page.getByRole('navigation', { name: '待办视图' });
+    const navigation = width <= 920 ? tabs : sidebar;
+    await expect(navigation).toBeVisible();
+    await navigation.getByRole('button', { name: /^计划/ }).click();
+    await expect(page).toHaveURL(/#\/learning\/plan$/);
+    await navigation.getByRole('button', { name: /^主线/ }).click();
+    await expect(page).toHaveURL(/#\/learning\/mainlines$/);
+    await navigation.getByRole('button', { name: /^支线/ }).click();
+    await expect(page).toHaveURL(/#\/learning\/sidelines$/);
+  }
+});
+
+test('今日安排清空重建后，截止事项在折叠和展开时均只有一份', async ({ page }) => {
+  await mockWorkspace(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const date = new Date();
+  const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  let todos: Todo[] = applyTodoCommand(
+    [],
+    { type: 'create', id: 'due', parentId: null, title: '截止任务', plannedDate: today, dueDate: today },
+    { now: date.toISOString() }
+  ).changed;
+  await page.route(
+    url => url.pathname === '/api/todos',
+    route => route.fulfill({ json: { data: { todos } } })
+  );
+  await page.route(
+    url => url.pathname === '/api/todos/commands',
+    route => {
+      const { command } = route.request().postDataJSON() as { command: TodoCommand };
+      const { changed } = applyTodoCommand(todos, command, { now: new Date().toISOString() });
+      todos = mergeTodoChanges(todos, changed);
+      return route.fulfill({ json: { data: { changed } } });
+    }
+  );
+  await page.goto('/#/learning');
+  const group = page.getByRole('button', { name: /^今日安排/ });
+  const rows = page.getByRole('button', { name: '打开「截止任务」详情', exact: true });
+  await expect(rows).toHaveCount(1);
+  await group.click();
+  await page.getByRole('button', { name: '「截止任务」更多操作' }).click();
+  await page.getByRole('menuitem', { name: '取消日期安排' }).click();
+  await expect(group).toHaveCount(0);
+  await page.getByRole('button', { name: '把「截止任务」加入今天' }).click();
+  await expect(group).toHaveAttribute('aria-expanded', 'false');
+  await expect(rows).toHaveCount(1);
+  await group.click();
+  await expect(group).toHaveAttribute('aria-expanded', 'true');
+  await expect(rows).toHaveCount(1);
+  await expect(page.getByText('截止提醒', { exact: true })).toHaveCount(0);
+});

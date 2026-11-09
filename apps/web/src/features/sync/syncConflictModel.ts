@@ -54,7 +54,8 @@ export const entityNames: Record<string, string> = {
   examFocuses: '考点',
   questions: '题目',
   questionObjectives: '题目目标关系',
-  questionSources: '题目来源'
+  questionSources: '题目来源',
+  personalTodos: '待办'
 };
 const fieldNames: Record<string, string> = {
   contentKind: '资料格式',
@@ -129,6 +130,15 @@ const fieldNames: Record<string, string> = {
   selectors: '定位规则',
   revision: '修订号',
   version: '版本',
+  note: '说明',
+  goal: '目标与完成标准',
+  plannedDate: '计划日期',
+  dueDate: '截止日期',
+  starred: '星标',
+  pausedBy: '暂停来源',
+  pauseReason: '暂停原因',
+  completedAt: '完成时间',
+  reminder: '提醒',
   label: '标签名称',
   sourceType: '来源类型',
   favorite: '收藏状态',
@@ -445,6 +455,16 @@ export function fieldValue(
   if (typeof value === 'string') {
     if (key === 'status' && collection === 'notes' && value === 'active') return '进行中';
     if (key === 'status' && collection === 'contentAnnotations' && value === 'archived') return '已取消';
+    if (collection === 'personalTodos') {
+      const todoValue = (
+        {
+          status: { active: '进行中', paused: '已暂停', done: '已完成' },
+          kind: { mainline: '主线', sideline: '支线', item: '任务' },
+          pausedBy: { self: '单独暂停', parent: '随上级暂停' }
+        } as Record<string, Record<string, string>>
+      )[key]?.[value];
+      if (todoValue) return todoValue;
+    }
     if (enumNames[key]?.[value]) return enumNames[key][value];
     const referenceCollection =
       key === 'sourceId'

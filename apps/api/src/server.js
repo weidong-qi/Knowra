@@ -1,6 +1,7 @@
 import { handlePdfRoute } from './modules/pdf/routes.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { handleTaskWorkspaceRoute } from './modules/task-workspaces/routes.ts';
+import { handlePersonalTodoRoute } from './modules/personal-todos/routes.ts';
 import { handleActionRoute } from './modules/ai/action-routes.js';
 import { URL } from 'node:url';
 import http from 'node:http';
@@ -95,6 +96,8 @@ export function createServer({ appContext, cors = /** @type {{allowedOrigins?: s
         })
       )
         return;
+
+      if (await handlePersonalTodoRoute({ request, response, url, service: appContext.personalTodos })) return;
 
       if (await handlePdfRoute({ request, response, url, pdf: appContext.http.pdf })) return;
 

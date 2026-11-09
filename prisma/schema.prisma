@@ -1,3 +1,10 @@
+// 个人待办：整条记录存 JSONB，规则由应用层校验；参与原子实体同步。
+model PersonalTodo {
+  id        String   @id
+  data      Json
+  updatedAt DateTime
+}
+
 model SyncJournal {
   ownerId String @id
   payload Json
