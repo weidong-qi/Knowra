@@ -900,6 +900,91 @@
   font-size: 12px;
 }
 
+.missedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--ni-accent-soft);
+  color: var(--ni-accent-ink);
+  white-space: nowrap;
+}
+.reminderMark {
+  display: inline-flex;
+  color: var(--ni-ink-3);
+}
+.reminderTrigger[data-state='missed'] {
+  color: var(--ni-accent-ink);
+}
+.reminderDialog {
+  width: 260px;
+  display: grid;
+  gap: 10px;
+  outline: 0;
+}
+.reminderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.reminderLabel {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+.reminderActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* 提醒到点时的应用内通知卡（网页端，或系统通知不可用时）。 */
+.reminderStack {
+  position: fixed;
+  z-index: 60;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100vw - 32px));
+}
+.reminderCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px 10px;
+  padding: 12px 10px 10px 14px;
+  border-radius: var(--radius-panel);
+  background: var(--ni-surf, var(--surface-page));
+  color: var(--ni-ink, var(--text-primary));
+  box-shadow: var(--ni-sh-pop, 0 10px 30px #0003);
+  animation: peekIn 180ms var(--motion-ease, ease) both;
+}
+.reminderCard > svg {
+  margin-top: 2px;
+  color: var(--ni-accent);
+}
+.reminderCard strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.reminderCard p {
+  grid-column: 2;
+  margin: 0;
+  color: var(--ni-ink-3, var(--text-secondary));
+  font-size: 12px;
+}
+.reminderCardActions {
+  grid-column: 2 / 4;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
 /* 窄屏时左侧栏不可见，入口改为页头下方的标签。 */
 .mobileTabs {
   display: none;

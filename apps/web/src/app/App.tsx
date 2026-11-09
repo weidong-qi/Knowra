@@ -24,6 +24,7 @@ import { SearchCommand } from '../shell/SearchCommand';
 import { useGlobalShortcuts } from '../shell/useGlobalShortcuts';
 import { NotesContextSidebar } from '../features/notes';
 import { TodosContextSidebar } from '../features/personal-todos/TodosContextSidebar';
+import { TodoReminderRunner } from '../features/personal-todos/TodoReminderRunner';
 import { EntryDragDropProvider } from '../features/notes/EntryDragDrop';
 import { CreateEntryDialog } from '../features/notes';
 import { getEditorNoteId } from '../features/editor/editorRoute';
@@ -412,6 +413,7 @@ export function App() {
           >
             <RecoveryDraftNotice onOpenNote={openNote} />
             <BudgetAlertBanner />
+            <TodoReminderRunner />
             <AppRoutes
               pathname={location.pathname}
               routeDomain={routeDomain}

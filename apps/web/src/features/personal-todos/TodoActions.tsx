@@ -1,5 +1,11 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { indexTodos, type Todo, type TodoCommand, type TodoEditableFields } from '@study-accelerator/web-core';
+import {
+  indexTodos,
+  type ReminderInput,
+  type Todo,
+  type TodoCommand,
+  type TodoEditableFields
+} from '@study-accelerator/web-core';
 import { randomId } from '../../browser/randomId';
 import { Button, Dialog, DialogBody, DialogFooter, Select, TextField } from '../../components/ui';
 import type { TodoStore } from './todoStore';
@@ -26,6 +32,7 @@ export interface TodoActions {
   toggleDone(todo: Todo): void;
   addToToday(todo: Todo): void;
   clearPlan(todo: Todo): void;
+  setReminder(todo: Todo, reminder: ReminderInput | null): void;
   pause(todo: Todo): void;
   resume(todo: Todo): void;
   remove(todo: Todo): void;
@@ -111,6 +118,9 @@ export function TodoActionsProvider({
     },
     clearPlan(todo) {
       void run({ type: 'update', id: todo.id, expectedRevision: todo.revision, patch: { plannedDate: null } });
+    },
+    setReminder(todo, reminder) {
+      void run({ type: 'setReminder', id: todo.id, expectedRevision: todo.revision, reminder });
     },
     pause: todo => setDialog({ kind: 'pause', todo }),
     resume(todo) {

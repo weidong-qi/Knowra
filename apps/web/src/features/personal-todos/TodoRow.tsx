@@ -1,6 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { progressOf, todayActionOf, type Todo, type TodoIndex } from '@study-accelerator/web-core';
-import { CalendarIcon, ChevronRightIcon, ClockIcon, MoreHorizontalIcon, StarIcon } from '../../components/icons/knowra';
+import {
+  BellIcon,
+  CalendarIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  MoreHorizontalIcon,
+  StarIcon
+} from '../../components/icons/knowra';
 import {
   DatePicker,
   IconButton,
@@ -101,6 +108,16 @@ export function TodoRow({
               <span style={{ width: `${(progress.done / progress.total) * 100}%` }} />
             </span>
             {progress.done}/{progress.total}
+          </span>
+        ) : null}
+        {todo.reminder?.state === 'missed' && !done && !archived ? (
+          <span className={styles.missedChip} title="提醒时间已过，应用当时未打开；请重新设置">
+            <BellIcon size={12} />
+            提醒已错过
+          </span>
+        ) : todo.reminder?.state === 'pending' && !done && !archived ? (
+          <span className={styles.reminderMark} title="已设置提醒" aria-label="已设置提醒">
+            <BellIcon size={12} />
           </span>
         ) : null}
         {todo.status === 'paused' ? (

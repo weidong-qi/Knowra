@@ -4,6 +4,7 @@ import { CalendarIcon, ClockIcon, CloseIcon, StarIcon } from '../../components/i
 import { Button, DatePicker, IconButton, TextAreaField, TextField } from '../../components/ui';
 import { useTodoActions } from './TodoActions';
 import { TodoMenu } from './TodoRow';
+import { ReminderEditor } from './ReminderEditor';
 import { KIND_LABEL, contextPath, dueLabel, dueTone, statusLabel } from './todoPresentation';
 import styles from './PersonalTodos.module.css';
 
@@ -128,6 +129,16 @@ export function TodoDetailPanel({
               >
                 {todo.dueDate ? `${todo.dueDate.slice(5).replace('-', '月')}日 · ${dueLabel(todo, today)}` : undefined}
               </DatePicker>
+            </dd>
+            <dt>提醒</dt>
+            <dd>
+              <ReminderEditor
+                key={`${todo.id}:${todo.revision}`}
+                todo={todo}
+                today={today}
+                isDisabled={locked || done}
+                onSave={reminder => actions.setReminder(todo, reminder)}
+              />
             </dd>
             <dt>星标</dt>
             <dd>
