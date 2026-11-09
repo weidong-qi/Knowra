@@ -84,6 +84,17 @@ export const RailTaskIcon = createIcon(
   ROOT_STROKE
 );
 
+/** 待办：日历页上的橙色对勾，表达「今天要做、按日期安排」，与任务工作区的清单区分。 */
+export const RailTodoIcon = createIcon(
+  'RailTodoIcon',
+  <Fit>
+    <rect x="4.2" y="5.4" width="15.6" height="14.4" rx="2.6" />
+    <path d="M8.4 3.6v3.4M15.6 3.6v3.4M4.2 9.8h15.6" />
+    <path d="m9.3 14.6 1.9 1.9 3.6-3.9" stroke={SIGN} />
+  </Fit>,
+  ROOT_STROKE
+);
+
 /** AI 助手：带两只眼睛和橙色微笑的对话框，不用四角星。 */
 export const RailAssistantIcon = createIcon(
   'RailAssistantIcon',
