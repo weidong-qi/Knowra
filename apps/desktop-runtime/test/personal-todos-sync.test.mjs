@@ -293,3 +293,56 @@ test('采用本地不能改写云端已归档任务，采用云端后可继续�
   clean(b);
   assert.equal((await b.todos.list()).find(todo => todo.id === 'c').title, '步骤');
 });
+
+for (const action of ['complete', 'delete', 'archive'])
+  test(`远端新增多层步骤后，本地${action}父任务可采用本地并传播到新步骤`, async t => {
+    const cloud = await fixture(t),
+      a = cloud.device('a'),
+      b = cloud.device('b');
+    await a.connect();
+    await b.connect();
+    await a.todos.execute({ type: 'create', id: 'parent', parentId: null, kind: 'mainline', title: '主线' });
+    await a.todos.execute({ type: 'create', id: 'old', parentId: 'parent', title: '原步骤' });
+    await a.engine.sync();
+    await b.engine.sync();
+    await a.todos.execute({ type: 'create', id: 'new', parentId: 'parent', title: '远端新步骤' });
+    await a.todos.execute({ type: 'create', id: 'grandchild', parentId: 'new', title: '远端多层步骤' });
+    await a.todos.execute({ type: 'create', id: 'unrelated', parentId: null, title: '独立事项' });
+    await a.todos.execute({
+      type: 'setReminder',
+      id: 'new',
+      expectedRevision: 1,
+      reminder: { kind: 'fixed', at: '2099-01-01T01:00:00.000Z' }
+    });
+    if (action === 'archive')
+      await b.todos.execute({ type: 'complete', id: 'parent', expectedRevision: 1, includeChildren: true });
+    await b.todos.execute({
+      type: action,
+      id: 'parent',
+      expectedRevision: action === 'archive' ? 2 : 1,
+      includeChildren: true
+    });
+    await a.engine.sync();
+    clean(a);
+    await b.engine.sync();
+    const conflict = b.engine.status().entityConflict;
+    assert(conflict, JSON.stringify(b.engine.status()));
+    await b.engine.resolve({ conflictId: conflict.id, choice: 'local' });
+    await b.engine.sync();
+    clean(b);
+    await a.engine.sync();
+    clean(a);
+    const result = byId(cloud.cloudTodos());
+    assert.equal(result.new.title, '远端新步骤');
+    assert.equal(result.grandchild.parentId, 'new');
+    for (const id of ['parent', 'old', 'new', 'grandchild']) {
+      if (action === 'delete') assert(result[id].deletedAt, id);
+      else assert.equal(result[id].status, 'done', id);
+      if (action === 'archive') assert.equal(result[id].archivedAt, result.parent.archivedAt, id);
+    }
+    assert.equal(result.new.reminder.state, 'cancelled');
+    assert.equal(result.unrelated.status, 'active');
+    assert.equal(result.unrelated.deletedAt, null);
+    assert.equal(result.unrelated.archivedAt, null);
+    assert.deepEqual(byId(await a.todos.list()), byId(await b.todos.list()));
+  });

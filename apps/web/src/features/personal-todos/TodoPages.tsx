@@ -32,7 +32,8 @@ function Group({
   collapsible = true,
   defaultExpanded = true,
   tone,
-  onExpandedChange
+  onExpandedChange,
+  expanded: controlledExpanded
 }: {
   title: string;
   count: number;
@@ -42,8 +43,10 @@ function Group({
   defaultExpanded?: boolean;
   tone?: 'alert';
   onExpandedChange?(expanded: boolean): void;
+  expanded?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [localExpanded, setExpanded] = useState(defaultExpanded);
+  const expanded = controlledExpanded ?? localExpanded;
   const heading = (
     <>
       {collapsible ? <ChevronDownIcon size={14} /> : null}
@@ -111,7 +114,7 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
         </Group>
       ) : null}
       {view.today.length ? (
-        <Group title="今日安排" count={view.today.length} onExpandedChange={setTodayExpanded}>
+        <Group title="今日安排" count={view.today.length} expanded={todayExpanded} onExpandedChange={setTodayExpanded}>
           {view.today.map(todo => (
             <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext />
           ))}

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -186,5 +186,28 @@ it('折叠今日安排后保留截止警示，展开后同一事项仍只显示�
   expect(screen.getByText('截止提醒')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: /今日安排/ }));
   expect(screen.getAllByText('今日截止材料')).toHaveLength(1);
+  expect(screen.queryByText('截止提醒')).not.toBeInTheDocument();
+});
+
+it('折叠今日安排并清空后重新加入今天，截止事项仍只显示一次', async () => {
+  const server = fakeServer([
+    { type: 'create', id: 'due', parentId: null, title: '重建截止任务', plannedDate: today, dueDate: today }
+  ]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning" store={server.store} />);
+  await screen.findByText('重建截止任务');
+  await user.click(screen.getByRole('button', { name: /今日安排/ }));
+  await act(async () => {
+    await server.store.execute({ type: 'update', id: 'due', expectedRevision: 1, patch: { plannedDate: null } });
+  });
+  expect(screen.queryByRole('button', { name: /今日安排/ })).not.toBeInTheDocument();
+  await act(async () => {
+    await server.store.execute({ type: 'update', id: 'due', expectedRevision: 2, patch: { plannedDate: today } });
+  });
+  expect(screen.getAllByText('重建截止任务')).toHaveLength(1);
+  const group = screen.getByRole('button', { name: /今日安排/ });
+  expect(group).toHaveAttribute('aria-expanded', 'false');
+  await user.click(group);
+  expect(screen.getAllByText('重建截止任务')).toHaveLength(1);
   expect(screen.queryByText('截止提醒')).not.toBeInTheDocument();
 });

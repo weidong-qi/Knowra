@@ -1,6 +1,6 @@
 import { syncKey } from '../../api/src/modules/sync/journal.ts';
 import { applyTodoCommand, mergeTodoChanges } from '../../../packages/web-core/src/personal-todos/commands.ts';
-import { missPastReminder } from '../../../packages/web-core/src/personal-todos/reminders.ts';
+import { cancelReminder, missPastReminder } from '../../../packages/web-core/src/personal-todos/reminders.ts';
 import { indexTodos } from '../../../packages/web-core/src/personal-todos/tree.ts';
 import { sameEntity } from '../../api/src/modules/sync/entity-contract.ts';
 
@@ -60,22 +60,56 @@ export function reconcileLocalTodoChoice(todos, chosen, remote, now = new Date()
         );
     }
   }
-  const index = indexTodos(result);
+  // 本地父任务的完成、删除、归档选择也作用于同步后新出现的步骤；保留这些记录及其内容。
+  // 使用包含墓碑的索引，才能从已删除父任务继续向下传播删除标记。
+  const fullIndex = indexTodos(result, { includeDeleted: true });
   const all = new Map(result.map(todo => [todo.id, todo]));
+  const write = next => {
+    const before = all.get(next.id);
+    if (sameEntity('personalTodos', before, next)) return;
+    const authoritative = remote.get(syncKey('personalTodos', next.id))?.value;
+    if (authoritative?.archivedAt && !sameEntity('personalTodos', authoritative, next))
+      fail('TODO_ARCHIVED', '云端待办已归档，请采用云端；采用时本地修改会保存在恢复记录中。');
+    all.set(next.id, {
+      ...next,
+      revision: Math.max(before.revision, authoritative?.revision ?? 0) + 1,
+      updatedAt: now
+    });
+  };
+  for (const node of [...fullIndex.byId.values()].sort((a, b) => fullIndex.depth(a.id) - fullIndex.depth(b.id))) {
+    if (node.deletedAt) continue;
+    const parent = all.get(node.parentId);
+    if (!parent) continue;
+    if (parent.deletedAt) {
+      write({ ...node, deletedAt: parent.deletedAt, reminder: cancelReminder(node.reminder) });
+      continue;
+    }
+    let next = node;
+    if (parent.status === 'done' && node.status !== 'done')
+      next = {
+        ...next,
+        status: 'done',
+        pausedBy: null,
+        pauseReason: null,
+        completedAt: now,
+        reminder: cancelReminder(next.reminder)
+      };
+    if (parent.archivedAt) next = { ...next, archivedAt: parent.archivedAt, reminder: cancelReminder(next.reminder) };
+    write(next);
+  }
+  const index = indexTodos([...all.values()]);
   for (const node of [...index.byId.values()].sort((a, b) => index.depth(a.id) - index.depth(b.id))) {
     const parent = all.get(node.parentId);
     const inherited = node.status === 'active' && parent?.status === 'paused';
     const released = node.status === 'paused' && node.pausedBy === 'parent' && parent?.status !== 'paused';
     if (!inherited && !released) continue;
     if (node.archivedAt) fail('TODO_ARCHIVED', '已归档的待办不能再修改。');
-    all.set(node.id, {
+    write({
       ...node,
       status: inherited ? 'paused' : 'active',
       pausedBy: inherited ? 'parent' : null,
       pauseReason: null,
-      reminder: released ? missPastReminder(node.reminder, now) : node.reminder,
-      revision: node.revision + 1,
-      updatedAt: now
+      reminder: released ? missPastReminder(node.reminder, now) : node.reminder
     });
   }
   return [...all.values()];
