@@ -31,7 +31,8 @@ const tables = [
   ['examFocuses', 'examFocus', 'dbExamFocus'],
   ['questions', 'question', 'dbQuestion'],
   ['questionObjectives', 'questionObjective', 'dbQuestionObjective'],
-  ['questionSources', 'questionSource', 'dbQuestionSource']
+  ['questionSources', 'questionSource', 'dbQuestionSource'],
+  ['personalTodos', 'personalTodo', 'dbPersonalTodo']
 ] as const satisfies readonly SyncTable[];
 
 /** 返回本次实际写入或删除的实体 ID（按集合），供事务结尾按 ID 重读后像。 */

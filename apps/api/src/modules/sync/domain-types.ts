@@ -89,6 +89,7 @@ export interface SyncEntityMap {
   questions: Question;
   questionObjectives: SyncQuestionObjective;
   questionSources: QuestionSource;
+  personalTodos: import('../../../../../packages/web-core/src/personal-todos/types.ts').Todo;
 }
 export type SyncCollection = keyof SyncEntityMap;
 type EntityUnion = SyncEntityMap[SyncCollection];

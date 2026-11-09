@@ -8,6 +8,8 @@ import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts'
 import { createPostgresCoreOperationStore } from './infrastructure/postgres-core-operation-store.ts';
 import path from 'node:path';
 import { createPostgresSyncRuntime, readPostgresPdfSnapshot } from './modules/sync/postgres-provider.ts';
+import { createPersonalTodoService } from './modules/personal-todos/service.ts';
+import { createPostgresTodoStore } from './modules/personal-todos/postgres-store.ts';
 import { createPrismaRuntime } from './infrastructure/prisma-client.js';
 import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.js';
 import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.ts';
@@ -222,6 +224,7 @@ export async function createPostgresAppContext({
     // V1 不把本地域隐式回退到 JSON，也不扩充 PostgreSQL 的普通笔记协议。
     taskWorkspaces: createTaskWorkspaceService({ store: null }),
     taskWorkspaceContext: () => ({ actor: { kind: 'user', id: normalizedOwnerId } }),
+    personalTodos: createPersonalTodoService({ store: createPostgresTodoStore(db) }),
     knowledgeExtractionCommit,
     knowledgeExtractionTasks,
     driver: 'postgres',

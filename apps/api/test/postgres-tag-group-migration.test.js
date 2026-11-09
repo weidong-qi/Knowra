@@ -55,7 +55,8 @@ const models = [
   'examFocus',
   'question',
   'questionObjective',
-  'questionSource'
+  'questionSource',
+  'personalTodo'
 ];
 
 // Contract double enforces the group foreign-key ordering and transaction rollback.

@@ -338,3 +338,12 @@ export const dbPdfAnnotation = value => ({
   revision: value.revision,
   payload: value
 });
+
+/** @param {import('../../../../../packages/web-core/src/personal-todos/types.ts').Todo} todo */
+export function dbPersonalTodo(todo) {
+  return {
+    id: todo.id,
+    data: JSON.parse(JSON.stringify(todo)),
+    updatedAt: new Date(todo.updatedAt)
+  };
+}

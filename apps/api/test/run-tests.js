@@ -5,6 +5,7 @@ import { taskWorkspaceBoundaryTests } from './task-workspace-boundaries.test.js'
 import { taskWorkspacePersistenceTests } from './task-workspace-persistence.test.js';
 import { taskWorkspaceHttpTests } from './task-workspace-http.test.js';
 import { personalTodoHttpTests } from './personal-todos-http.test.js';
+import { personalTodoPostgresTests } from './personal-todos-postgres.test.js';
 import { taskWorkspaceServiceTests } from './task-workspace-service.test.js';
 import { noteDependencyLifecycleTests } from './note-dependency-lifecycle.test.js';
 import { spaceAssetLifecyclePostgresTests } from './space-asset-lifecycle-postgres.test.js';
@@ -134,6 +135,7 @@ const tests = [
   ...taskWorkspaceServiceTests,
   ...taskWorkspaceHttpTests,
   ...personalTodoHttpTests,
+  ...personalTodoPostgresTests,
   ...taskWorkspacePersistenceTests,
   ...taskWorkspaceDiskIdentityTests,
   ...taskWorkspaceCommitGuardTests,
