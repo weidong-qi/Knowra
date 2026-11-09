@@ -52,6 +52,7 @@ import {
   legacyAnnotationSourceChange
 } from '../knowledge/application/content-annotation-service.js';
 import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contract.ts';
+import { assertTodoSyncChange } from './todo-batch-domain.ts';
 import { syncError } from './journal.ts';
 import { validateKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { addedNoteLinkTargets } from '../knowledge/application/note-link-relations.js';
@@ -256,6 +257,7 @@ export function prepareBatchState(
     let value: SyncWorkingEntity | null = cloneJsonData(change.value);
     value = normalizeKnowledgeChange(collection, value, old);
     value = normalizeTrainingChange({ ...change, value }, old, changes);
+    if (collection === 'personalTodos') assertTodoSyncChange(old, value);
     if (collection === 'knowledgeArtifactProvenance') {
       if (!value) throw syncError('SYNC_PROVENANCE_DELETE_UNSUPPORTED', '来源摘要只能随受控知识清理删除。', 422);
       value = validateKnowledgeArtifactProvenance(value);

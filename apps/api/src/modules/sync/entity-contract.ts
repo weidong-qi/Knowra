@@ -69,6 +69,9 @@ export const TRAINING_COLLECTIONS = Object.freeze([
   'questionObjectives',
   'questionSources'
 ]);
+// 个人待办：整条记录同步；树结构与归档封存由云端批次校验。
+export const PERSONAL_TODOS_SYNC_CAPABILITY = 'personal-todos-v1';
+export const PERSONAL_TODO_COLLECTIONS = Object.freeze(['personalTodos']);
 export const WRITABLE_COLLECTIONS = Object.freeze([
   'spaces',
   'folders',
@@ -83,7 +86,8 @@ export const WRITABLE_COLLECTIONS = Object.freeze([
   'annotationRevisions',
   'analysisScopeSnapshots',
   ...KNOWLEDGE_COLLECTIONS,
-  ...TRAINING_COLLECTIONS
+  ...TRAINING_COLLECTIONS,
+  ...PERSONAL_TODO_COLLECTIONS
 ]);
 export const IMMUTABLE_COLLECTIONS = new Set([
   'noteVersions',
@@ -124,6 +128,7 @@ export function referencesFor(collection: string, value: SyncReferenceEntity | n
     .filter(([field]) => value[field as keyof typeof fields])
     .map(([field, target]) => ({ collection: target, id: value[field as keyof typeof fields]! }));
   if (collection === 'folders' && value.parentId) refs.push({ collection: 'folders', id: value.parentId });
+  if (collection === 'personalTodos' && value.parentId) refs.push({ collection: 'personalTodos', id: value.parentId });
   if (collection === 'folders' && value.deletionPackage)
     for (const id of value.deletionPackage.noteIds ?? []) refs.push({ collection: 'notes', id });
   for (const id of value.tagIds ?? []) refs.push({ collection: 'tags', id });

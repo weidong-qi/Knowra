@@ -4,7 +4,8 @@ import { syncKey } from '../../api/src/modules/sync/journal.ts';
 import {
   referencesFor,
   changeReferencesFor,
-  TRAINING_COLLECTIONS
+  TRAINING_COLLECTIONS,
+  PERSONAL_TODO_COLLECTIONS
 } from '../../api/src/modules/sync/entity-contract.ts';
 
 /** 当前笔记及标注保持原子提交；不可变的旧版本、旧修订在所属对象之后分批交付。 */
@@ -37,6 +38,14 @@ export function selectEntityBatch(
   for (const entry of base.values()) if (entry.value) before[entry.collection].push(entry.value);
   for (const entry of base.values())
     if (entry.collection === 'contentAnnotations' && entry.value) annotationNotes.set(entry.id, entry.value.noteId);
+  // 一次待办命令可能同时改动整棵树（暂停继承、连同下级完成）；云端按整棵树校验，因此全部待办变更一起提交。
+  let firstTodoKey = null;
+  for (const entry of changes) {
+    if (!PERSONAL_TODO_COLLECTIONS.includes(entry.collection)) continue;
+    const key = syncKey(entry.collection, entry.id);
+    if (firstTodoKey === null) firstTodoKey = key;
+    else join(key, firstTodoKey);
+  }
   for (const entry of changes) {
     const value = entry.value ?? base.get(syncKey(entry.collection, entry.id))?.value;
     if (TRAINING_COLLECTIONS.includes(entry.collection))
