@@ -1200,13 +1200,18 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
                               }
                             }}
                           >
-                            <MenuItem id="plain" icon={scopeMark(scopeChoice === 'plain')}>
+                            <MenuItem
+                              id="plain"
+                              isActive={scopeChoice === 'plain'}
+                              icon={scopeMark(scopeChoice === 'plain')}
+                            >
                               普通聊天 · 不读取笔记
                             </MenuItem>
                             {activePolicies.map(policy => (
                               <MenuItem
                                 id={policy.policyId}
                                 key={policy.policyId}
+                                isActive={scopeChoice === policy.policyId}
                                 icon={scopeMark(scopeChoice === policy.policyId)}
                               >{`${scopeName(policy)} · 至 ${formatTime(policy.expiresAt)}`}</MenuItem>
                             ))}

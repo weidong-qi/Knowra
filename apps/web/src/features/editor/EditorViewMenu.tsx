@@ -1,8 +1,10 @@
 import { MenuItem, MenuSeparator } from '../../components/ui';
 import type { EditorViewAction, EffectiveEditorViewState } from './editorViewState';
-import styles from './EditorViewMenu.module.css';
 
-export function renderEditorViewMenu({ view, onAction }: {
+export function renderEditorViewMenu({
+  view,
+  onAction
+}: {
   view: EffectiveEditorViewState;
   onAction(action: EditorViewAction): void;
 }) {
@@ -34,22 +36,20 @@ export function renderEditorViewMenu({ view, onAction }: {
   );
 }
 
-function ViewMenuItem({ active, action, label, onAction }: {
+function ViewMenuItem({
+  active,
+  action,
+  label,
+  onAction
+}: {
   active: boolean;
   action: EditorViewAction;
   label: string;
   onAction(action: EditorViewAction): void;
 }) {
   return (
-    <MenuItem
-      id={action}
-      aria-label={label}
-      aria-describedby={active ? `${action}-state` : undefined}
-      className={active ? styles.active : undefined}
-      onAction={() => onAction(action)}
-    >
+    <MenuItem id={action} aria-label={label} isActive={active} onAction={() => onAction(action)}>
       {label}
-      {active ? <span id={`${action}-state`} className={styles.srOnly}>当前已启用</span> : null}
     </MenuItem>
   );
 }

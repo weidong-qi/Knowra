@@ -28,14 +28,6 @@
   text-align: left;
   cursor: pointer;
 }
-.row[data-hovered],
-.row[data-focus-visible] {
-  background: var(--ni-hover, var(--surface-hover));
-}
-.row[data-focus-visible] {
-  outline: 2px solid var(--accent-text);
-  outline-offset: -2px;
-}
 .rowIcon {
   flex: 0 0 16px;
   display: grid;

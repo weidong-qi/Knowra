@@ -4,14 +4,66 @@ import { Button, Menu, MenuItem, MenuPopover, MenuSeparator, MenuTrigger, Pressa
 import styles from './Overlay.module.css';
 
 describe('V4-04 Menu', () => {
+  it('业务启用态保留菜单项名称和原有说明，并可由外部状态取消', async () => {
+    const user = userEvent.setup();
+    const renderMenu = (active: boolean) => (
+      <Menu ariaLabel="视图">
+        <MenuItem id="edit" isActive={active} aria-describedby="edit-description">
+          编辑模式
+        </MenuItem>
+        <MenuItem id="read">阅读模式</MenuItem>
+      </Menu>
+    );
+    const { rerender } = render(
+      <>
+        <span id="edit-description">允许修改正文</span>
+        {renderMenu(true)}
+      </>
+    );
+    const edit = screen.getByRole('menuitem', { name: '编辑模式' });
+    expect(edit).toHaveAccessibleDescription('允许修改正文 当前已启用');
+    expect(edit).toHaveAttribute('data-active', 'true');
+    await user.hover(screen.getByRole('menuitem', { name: '阅读模式' }));
+    expect(edit).toHaveAttribute('data-active', 'true');
+    rerender(
+      <>
+        <span id="edit-description">允许修改正文</span>
+        {renderMenu(false)}
+      </>
+    );
+    expect(screen.getByRole('menuitem', { name: '编辑模式' })).not.toHaveAttribute('data-active');
+    expect(screen.getByRole('menuitem', { name: '编辑模式' })).toHaveAccessibleDescription('允许修改正文');
+  });
+
+  it('原生单选菜单切换后更新固定选中项及勾选语义', async () => {
+    const user = userEvent.setup();
+    render(
+      <Menu ariaLabel="每页条数" selectionMode="single" defaultSelectedKeys={['20']} shouldCloseOnSelect={false}>
+        <MenuItem id="20">每页 20 条</MenuItem>
+        <MenuItem id="50">每页 50 条</MenuItem>
+      </Menu>
+    );
+    expect(screen.getByRole('menuitemradio', { name: '每页 20 条' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('menuitemradio', { name: '每页 50 条' }));
+    expect(screen.getByRole('menuitemradio', { name: '每页 50 条' })).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByRole('menuitemradio', { name: '每页 20 条' })).toHaveAttribute('aria-checked', 'false');
+  });
+
   it('keeps rich item names separate from their accessible descriptions', async () => {
     const user = userEvent.setup();
     const onAction = vi.fn();
-    render(<MenuTrigger><Button>新建</Button><MenuPopover>
-      <Menu ariaLabel="新建选项" variant="rich" onAction={onAction}>
-        <MenuItem id="folder" textValue="新建文件夹" description="在当前位置创建">新建文件夹</MenuItem>
-      </Menu>
-    </MenuPopover></MenuTrigger>);
+    render(
+      <MenuTrigger>
+        <Button>新建</Button>
+        <MenuPopover>
+          <Menu ariaLabel="新建选项" variant="rich" onAction={onAction}>
+            <MenuItem id="folder" textValue="新建文件夹" description="在当前位置创建">
+              新建文件夹
+            </MenuItem>
+          </Menu>
+        </MenuPopover>
+      </MenuTrigger>
+    );
     await user.click(screen.getByRole('button', { name: '新建' }));
     const item = await screen.findByRole('menuitem', { name: '新建文件夹' });
     expect(item).toHaveAccessibleDescription('在当前位置创建');
@@ -50,7 +102,9 @@ describe('V4-04 Menu', () => {
         <Menu ariaLabel="操作">
           <MenuItem id="copy">复制</MenuItem>
           <MenuSeparator />
-          <MenuItem id="delete" isDanger>删除</MenuItem>
+          <MenuItem id="delete" isDanger>
+            删除
+          </MenuItem>
         </Menu>
       </MenuTrigger>
     );
@@ -104,7 +158,9 @@ describe('V4-04 Menu', () => {
       <MenuTrigger>
         <Button>操作</Button>
         <Menu ariaLabel="操作">
-          <MenuItem id="delete" isDanger>删除</MenuItem>
+          <MenuItem id="delete" isDanger>
+            删除
+          </MenuItem>
         </Menu>
       </MenuTrigger>
     );
@@ -120,7 +176,9 @@ describe('V4-04 Menu', () => {
       <MenuTrigger>
         <Button>操作</Button>
         <Menu ariaLabel="操作">
-          <MenuItem id="copy" kbd="⌘D">复制</MenuItem>
+          <MenuItem id="copy" kbd="⌘D">
+            复制
+          </MenuItem>
         </Menu>
       </MenuTrigger>
     );
