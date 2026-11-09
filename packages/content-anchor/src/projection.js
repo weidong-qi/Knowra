@@ -1,4 +1,6 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
+import { cjkFriendlyEmphasisExtension } from '@study-accelerator/shared/markdown-cjk';
+import { gfmStrikethroughCjkFriendly } from 'micromark-extension-cjk-friendly-gfm-strikethrough';
 import { gfm } from 'micromark-extension-gfm';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { math } from 'micromark-extension-math';
@@ -23,7 +25,7 @@ const LEAF_BLOCK_TYPES = new Set(['heading', 'paragraph', 'code', 'tableCell']);
 export function projectMarkdown(markdown, { includeMath = false } = {}) {
   const source = String(markdown ?? '');
   const tree = fromMarkdown(source, {
-    extensions: [gfm(), ...(includeMath ? [math({ singleDollarTextMath: true })] : [])],
+    extensions: [gfm(), cjkFriendlyEmphasisExtension(), gfmStrikethroughCjkFriendly(), ...(includeMath ? [math({ singleDollarTextMath: true })] : [])],
     mdastExtensions: [gfmFromMarkdown(), ...(includeMath ? [mathFromMarkdown()] : [])]
   });
   if (includeMath) guardInlineMath(tree, source);

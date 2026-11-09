@@ -1,4 +1,6 @@
 import { fromMarkdown } from 'mdast-util-from-markdown';
+import { cjkFriendlyEmphasisExtension } from '@study-accelerator/shared/markdown-cjk';
+import { gfmStrikethroughCjkFriendly } from 'micromark-extension-cjk-friendly-gfm-strikethrough';
 import { gfm } from 'micromark-extension-gfm';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 
@@ -26,7 +28,7 @@ export function createNoteLinkUrl(targetNoteId, occurrenceId) {
 /** 只解析真实 Markdown 节点，不把代码示例或标题猜测变成引用。 */
 export function extractNoteLinks(markdown) {
   const source = String(markdown ?? '');
-  const tree = fromMarkdown(source, { extensions: [gfm()], mdastExtensions: [gfmFromMarkdown()] });
+  const tree = fromMarkdown(source, { extensions: [gfm(), cjkFriendlyEmphasisExtension(), gfmStrikethroughCjkFriendly()], mdastExtensions: [gfmFromMarkdown()] });
   const definitions = new Map();
   walk(tree, node => {
     if (node.type === 'definition' && !definitions.has(node.identifier)) definitions.set(node.identifier, node.url);
