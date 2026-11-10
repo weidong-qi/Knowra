@@ -18,7 +18,7 @@
 
 .title {
   flex: 1;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -51,7 +51,8 @@
 .sectionTitle {
   margin: 0 6px 6px;
   color: var(--text-muted);
-  font: 500 13px/1.5 var(--font-ui);
+  font: 600 12px/1.5 var(--font-ui);
+  letter-spacing: 0.04em;
 }
 
 .sectionHeader {
@@ -149,7 +150,7 @@
 .folderRow[aria-current='page'] {
   color: var(--text-primary);
   background: var(--surface-nav-selected);
-  box-shadow: var(--shadow-control), var(--highlight-nav-selected);
+  box-shadow: var(--nav-selected-shadow, var(--shadow-control)), var(--highlight-nav-selected);
   font-weight: 600;
 }
 
@@ -169,7 +170,7 @@
 }
 .folderRow small {
   color: var(--text-muted);
-  font: 400 13px/1 var(--font-ui);
+  font: 450 12px/1 var(--font-ui);
   font-variant-numeric: tabular-nums;
 }
 .libraryRow {
@@ -331,7 +332,7 @@
 .sidebarContent[data-index-appearance] {
   --text-secondary: var(--ni-ink);
   --text-muted: var(--ni-body);
-  background: var(--ni-ctx-glow, none), var(--ni-ctx-bg);
+  background: var(--ni-ctx-glow, none);
 }
 .sidebarContent[data-index-appearance] .header {
   min-height: 44px;
@@ -340,12 +341,17 @@
   padding-top: 4px;
 }
 .sidebarContent[data-index-appearance] .section + .section {
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 18px;
+  padding-top: 0;
+  border-top: 0;
 }
 .sidebarContent[data-index-appearance] .sectionTitle {
-  font-size: 13px;
-  font-weight: 400;
+  color: var(--ni-ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+.sidebarContent[data-index-appearance] .folderRow small {
+  color: var(--ni-ink-3);
 }
 .sidebarContent[data-index-appearance] .sectionBody {
   gap: 0;

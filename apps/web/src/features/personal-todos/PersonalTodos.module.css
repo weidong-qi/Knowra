@@ -1012,7 +1012,7 @@
 }
 .sidebarTitle {
   flex: 1;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -1024,9 +1024,7 @@
   padding: 0 8px 8px;
 }
 .sidebarSection + .sidebarSection {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-subtle);
+  margin-top: 18px;
 }
 .sidebarSectionTitle {
   margin: 0 0 4px;
@@ -1041,7 +1039,7 @@
   height: 14px;
   border-radius: 999px;
   background:
-    radial-gradient(closest-side, var(--ni-ctx-bg, var(--surface-page)) 62%, transparent 64%),
+    radial-gradient(closest-side, var(--ni-shell-panel, var(--surface-page)) 62%, transparent 64%),
     conic-gradient(var(--ni-accent) calc(var(--p) * 360deg), var(--ni-fill-2) 0);
 }
 
