@@ -37,8 +37,8 @@
   --nav-selected-line: #cfd3dc;
   --nav-selected-ink: #0f1115;
   --nav-selected-shadow: 0 1px 2px rgba(24, 30, 48, 0.1);
-  --ni-accent: #f26b1d;
-  --ni-accent-ink: #c4510c;
+  --ni-accent: var(--brand-base);
+  --ni-accent-ink: var(--accent-text);
   --ni-accent-soft: color-mix(in srgb, var(--ni-accent) 9%, #fff);
   --ni-accent-line: color-mix(in srgb, var(--ni-accent) 24%, #fff);
   --ni-st-active: #ffb81f;
@@ -82,8 +82,8 @@
   --ni-danger-soft: #fbeeee;
   --ni-danger-ring: #e5a3a3;
   /* 面板靠清晰的 1px 描边加一道贴边短投影立住，不用大范围模糊阴影。 */
-  --ni-sh-page: 0 0 0 1px rgba(24, 30, 48, 0.11), 0 1px 2px rgba(24, 30, 48, 0.06);
-  --ni-sh-ctx: 0 0 0 1px rgba(24, 30, 48, 0.13), 0 1px 2px rgba(24, 30, 48, 0.06);
+  --ni-sh-page: 0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.06);
+  --ni-sh-ctx: 0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.06);
   --ni-sh-pop:
     inset 0 1px 0 var(--ni-ctx-hl), 0 0 0 1px var(--ni-ring), 0 2px 4px rgba(24, 30, 48, 0.05),
     0 10px 24px -8px rgba(24, 30, 48, 0.14), 0 28px 64px -14px rgba(24, 30, 48, 0.28);
@@ -101,7 +101,7 @@
 }
 
 .theme {
-  --ni-dotc: rgba(24, 30, 48, 0.11);
+  --ni-dotc: rgba(24, 30, 48, 0.26);
 }
 
 .theme {
@@ -132,13 +132,19 @@
   --shadow-panel-contact: 0 2px 6px -2px rgb(0 0 0 / 32%);
   --surface-action-crystal: linear-gradient(145deg, rgb(65 71 81 / 48%), rgb(36 39 46 / 40%));
   --border-action-crystal: rgb(113 119 129 / 60%);
-  --icon-action-crystal: #ffa56d;
+  --icon-action-crystal: color-mix(in srgb, var(--brand-base-dark) 70%, #fff);
   --shadow-action-crystal:
     inset 0 1px 1px #42464e, inset 0 -1px 0 #858f9f12, 0 0 0 1px #858f9f20, 0 4px 10px -4px rgb(0 0 0 / 53%);
   --shadow-action-crystal-hover: inset 0 1px 1px #42464e, 0 0 0 1px #858f9f35, 0 6px 15px -5px rgb(0 0 0 / 53%);
   --shadow-action-crystal-pressed: inset 0 2px 4px rgb(0 0 0 / 53%), 0 0 0 1px #858f9f20;
-  --surface-action-satin: linear-gradient(145deg, #b8743d, #a3592d 55%, #8c4321);
-  --border-action-satin: #bb672f;
+  --surface-action-satin: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--brand-base-dark) 80%, #000),
+    color-mix(in srgb, var(--brand-base-dark) 66%, #000) 55%,
+    color-mix(in srgb, var(--brand-base-dark) 52%, #000)
+  );
+  --border-action-satin: color-mix(in srgb, var(--brand-base-dark) 62%, #000);
+  --text-on-action-satin: #17181b;
   --shadow-action-satin: inset 0 1px 0 #ffbf8650, 0 3px 7px #0005;
   --shadow-action-satin-hover: inset 0 1px 0 #ffbf8670, 0 0 0 2px #d48b4930, 0 4px 10px #0007;
   --shadow-action-satin-pressed: inset 0 2px 4px #4e271b80;
@@ -193,8 +199,8 @@
   --nav-selected-line: rgba(255, 255, 255, 0.1);
   --nav-selected-ink: #f3f4f6;
   --nav-selected-shadow: 0 1px 2px #21273506, inset 0 1px rgba(255, 255, 255, 0.07);
-  --ni-accent: #f26b1d;
-  --ni-accent-ink: #ff8a4c;
+  --ni-accent: var(--brand-base-dark);
+  --ni-accent-ink: color-mix(in srgb, var(--brand-base-dark) 75%, #fff);
   --ni-accent-soft: color-mix(in srgb, var(--ni-accent) 15%, var(--ni-page));
   --ni-accent-line: color-mix(in srgb, var(--ni-accent) 38%, var(--ni-page));
   --ni-st-active: #ffc233;
@@ -233,8 +239,8 @@
   --ni-hair: rgba(255, 255, 255, 0.1);
   --ni-sheen: rgba(255, 255, 255, 0.03);
   --ni-hl-c: rgba(255, 255, 255, 0.07);
-  --ni-sh-ctx: 0 0 0 1px rgba(255, 255, 255, 0.12);
-  --ni-sh-page: 0 0 0 1px rgba(255, 255, 255, 0.13);
+  --ni-sh-ctx: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --ni-sh-page: 0 0 0 1px rgba(255, 255, 255, 0.07);
   --ni-sh-pop:
     inset 0 1px 0 var(--ni-ctx-hl), 0 0 0 1px rgba(255, 255, 255, 0.11), 0 2px 4px rgba(0, 0, 0, 0.35),
     0 10px 24px -8px rgba(0, 0, 0, 0.5), 0 28px 64px -14px rgba(0, 0, 0, 0.75);
@@ -252,7 +258,7 @@
 }
 
 .theme[data-ni-mode='dark'] {
-  --ni-dotc: rgba(255, 255, 255, 0.07);
+  --ni-dotc: rgba(255, 255, 255, 0.2);
 }
 
 .theme[data-ni-mode='dark'] {

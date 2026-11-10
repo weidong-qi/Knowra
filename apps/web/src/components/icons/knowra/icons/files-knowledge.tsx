@@ -30,7 +30,7 @@ export const QuestionIcon = createIcon("QuestionIcon", (
 /** 文件夹：圆角线框，单色。 */
 export const FolderIcon = createIcon("FolderIcon", (
   <Fit>
-    <path d="M4 7.4A1.8 1.8 0 0 1 5.8 5.6h3.8l1.9 2.1h6.7A1.8 1.8 0 0 1 20 9.5v8.1a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.6Z"/>
+    <path d="M4 7.4A1.8 1.8 0 0 1 5.8 5.6h3.8l1.9 2.1h6.7A1.8 1.8 0 0 1 20 9.5v8.1a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.6Z"/><path d="M4 11.5h16" strokeWidth={1.2} opacity=".7"/>
   </Fit>
 ), OWN_STROKE);
 
@@ -39,6 +39,13 @@ export const FolderIcon = createIcon("FolderIcon", (
 export const SolidFolderIcon = createIcon("SolidFolderIcon", (
   <Fit>
     <path d="M4 7.4A1.8 1.8 0 0 1 5.8 5.6h3.8l1.9 2.1h6.7A1.8 1.8 0 0 1 20 9.5v8.1a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.6Z"/>
+  </Fit>
+), OWN_STROKE);
+
+/** 侧栏未选中的闭合文件夹：整体外形 + 一条前板分界线（候选 02）。 */
+export const SidebarClosedFolderIcon = createIcon("SidebarClosedFolderIcon", (
+  <Fit>
+    <path d="M4 7.4A1.8 1.8 0 0 1 5.8 5.6h3.8l1.9 2.1h6.7A1.8 1.8 0 0 1 20 9.5v8.1a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 17.6Z"/><path d="M4 11.5h16" strokeWidth={1.2} opacity=".7"/>
   </Fit>
 ), OWN_STROKE);
 

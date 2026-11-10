@@ -304,7 +304,7 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-@media (pointer: coarse), (max-width: 767px) {
+@media (max-width: 767px) {
   .sectionToggle,
   .folderToggle,
   .folderRow,
@@ -336,6 +336,18 @@
 }
 .sidebarContent[data-index-appearance] .header {
   min-height: 44px;
+}
+.sidebarContent[data-index-appearance] .footer {
+  box-sizing: border-box;
+  height: 30px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+}
+.sidebarContent[data-index-appearance] .footer > button {
+  height: 26px;
+  min-height: 0;
+  padding-block: 0;
 }
 .sidebarContent[data-index-appearance] .section:first-child {
   padding-top: 4px;

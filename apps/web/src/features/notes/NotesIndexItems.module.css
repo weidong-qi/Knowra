@@ -621,14 +621,16 @@
     padding: 8px 12px 16px;
   }
 }
-@media (pointer: coarse), (max-width: 767px) {
-  .nameCell {
-    min-height: 44px;
-  }
+@media (pointer: coarse) {
   .selectionCell label,
   .tileSelection {
     opacity: 1;
     pointer-events: auto;
+  }
+}
+@media (max-width: 767px) {
+  .nameCell {
+    min-height: 44px;
   }
   .table col.actionColumn,
   .table .actionData,

@@ -117,6 +117,13 @@ export function NotesIndexView({ onOpenNote }: { path: PathSegment[]; onOpenNote
               data-drop-active={c.backgroundDrop.isOver || undefined}
               aria-label="索引内容"
               tabIndex={0}
+              onPointerMove={event => {
+                const host = event.currentTarget.parentElement;
+                if (!host) return;
+                const rect = host.getBoundingClientRect();
+                host.style.setProperty('--spot-x', `${event.clientX - rect.left}px`);
+                host.style.setProperty('--spot-y', `${event.clientY - rect.top}px`);
+              }}
               onDragOver={event => {
                 if ((event.target as Element).closest('[data-entry-item], table')) {
                   c.backgroundDrop.clear();
