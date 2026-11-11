@@ -57,7 +57,7 @@ export type FolderWriteData = StoredDates & {
   pathCache: string;
   sortOrder: number;
   deletedAt: Date | null;
-  deletionPackage: Prisma.InputJsonValue | Prisma.NullTypes.DbNull;
+  deletionPackage: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput;
 };
 export type TagWriteData = StoredDates & {
   id: string;

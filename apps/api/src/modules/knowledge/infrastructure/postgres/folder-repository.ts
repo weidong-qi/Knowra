@@ -19,7 +19,8 @@ export function createPostgresFolderRepository({ db }: FolderRepositoryOptions) 
         createdAt: toDate(folder.createdAt),
         updatedAt: toDate(folder.updatedAt),
         deletedAt: folder.deletedAt ? toDate(folder.deletedAt) : null,
-        deletionPackage: (folder.deletionPackage ?? Prisma.DbNull) as Prisma.InputJsonValue | Prisma.NullTypes.DbNull
+        deletionPackage: (folder.deletionPackage ?? Prisma.DbNull) as
+          Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput
       };
       return withRepositoryErrors(async () =>
         mapFolder(
