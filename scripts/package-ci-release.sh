@@ -40,7 +40,7 @@ cp -a "$root/packages/web-core/dist/." "$stage/packages/web-core/dist/"
 (
   cd "$stage"
   npm ci --omit=dev --ignore-scripts
-  node --input-type=module -e "await import('@study-accelerator/shared/attachments'); await import('./apps/api/src/app.factory.js'); await import('./apps/web/server/app.mjs')"
+  node --input-type=module -e "await import('@study-accelerator/shared/attachments'); await import('./apps/api/src/app.factory.ts'); await import('./apps/web/server/app.mjs')"
 )
 
 node "$stage/scripts/release-artifact.mjs" --write-linux "$stage" "$commit"
