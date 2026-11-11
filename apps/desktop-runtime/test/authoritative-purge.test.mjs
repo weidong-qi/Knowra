@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import { test } from 'node:test';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { readMeta, writeMeta } from '../src/sync-state.mjs';

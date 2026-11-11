@@ -10,7 +10,7 @@ import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { createAppContext } from '../../../api/src/app.factory.ts';
-import { createServer } from '../../../api/src/server.js';
+import { createServer } from '../../../api/src/server.ts';
 import { createV4WebServer } from '../../../web/server/app.mjs';
 
 async function fixture(t, driver, rawMarkdown = '- 父项\n  - 子项\n- 相邻') {

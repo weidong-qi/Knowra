@@ -161,7 +161,7 @@ for (const previousWebDir of ['web-v4', 'web-v5']) {
     assert.deepEqual(calls[5].args, ['start', path.join(fixture.root, 'deploy/ecosystem.config.cjs'), '--update-env']);
     const saved = JSON.parse(readFileSync(fixture.saved, 'utf8'));
     for (const [name, script] of [
-      ['knowra-api', 'apps/api/src/main.js'],
+      ['knowra-api', 'apps/api/src/main.ts'],
       ['knowra-web', 'apps/web/server.mjs']
     ]) {
       const env = saved.find(app => app.name === name).pm2_env;
@@ -256,13 +256,13 @@ function runFixture(
   for (const file of ['ecosystem.config.cjs', 'runtime-env.cjs']) {
     copyFileSync(path.join(repositoryRoot, 'deploy', file), path.join(root, 'deploy', file));
   }
-  writeFileSync(path.join(root, 'apps/api/src/main.js'), '');
+  writeFileSync(path.join(root, 'apps/api/src/main.ts'), '');
   writeFileSync(path.join(root, 'apps/web/server.mjs'), '');
   writeFileSync(path.join(root, 'apps/web/dist/assets/old.js'), 'old asset');
   const apiRoot = previousApiRoot ? path.join(base, 'previous release') : root;
   if (previousApiRoot) {
     mkdirSync(path.join(apiRoot, 'apps/api/src'), { recursive: true });
-    writeFileSync(path.join(apiRoot, 'apps/api/src/main.js'), '');
+    writeFileSync(path.join(apiRoot, 'apps/api/src/main.ts'), '');
     if (sharedStorage) {
       mkdirSync(path.join(root, 'storage'), { recursive: true });
       symlinkSync(path.join(root, 'storage'), path.join(apiRoot, 'storage'), 'dir');
@@ -289,7 +289,7 @@ function runFixture(
           ...(nestedEnv ? { env: apiSettings } : apiSettings),
           status: 'online',
           pm_cwd: apiRoot,
-          pm_exec_path: path.join(apiRoot, 'apps/api/src/main.js')
+          pm_exec_path: path.join(apiRoot, 'apps/api/src/main.ts')
         }
       },
       {

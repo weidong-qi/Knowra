@@ -3,7 +3,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import { createPostgresAppContext } from '../../apps/api/src/postgres-app.factory.ts';
-import { createServer } from '../../apps/api/src/server.js';
+import { createServer } from '../../apps/api/src/server.ts';
 import { resolveAssetPath, serveV4Asset } from '../../apps/web/server/static-assets.mjs';
 import { validateInstance, claimInstance, repositoryRoot } from './config.mjs';
 

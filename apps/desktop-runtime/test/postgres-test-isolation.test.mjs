@@ -148,7 +148,7 @@ test(
   },
   async t => {
     const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.ts');
-    const { createServer } = await import('../../api/src/server.js');
+    const { createServer } = await import('../../api/src/server.ts');
     const { createSyncEngine } = await import('../src/sync-engine.mjs');
     const { createAttachmentTransfer } = await import('../../api/src/modules/sync/attachment-transfer.ts');
     const { openWorkspace } = await import('./helpers.mjs');

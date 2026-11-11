@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createPersistentAppContext } from '../src/app.factory.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { aiRecords, insertAiRecords } from './ai-record-fixtures.js';
 import { createEmptyAiState } from '../src/modules/ai/record-state.ts';
 import { createJsonAiConversationStore } from '../src/modules/ai/conversation-store.ts';

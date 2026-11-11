@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createPersistentAppContext } from '../src/app.factory.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createInMemoryNoteRepository } from '../src/modules/knowledge/infrastructure/note-repository.ts';
 import { createInMemoryNoteVersionRepository } from '../src/modules/knowledge/infrastructure/note-version-repository.ts';
 import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrastructure/folder-repository.ts';

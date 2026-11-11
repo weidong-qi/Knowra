@@ -7,7 +7,7 @@ import { createAppContext } from '../src/app.factory.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createSqliteDataStore } from '../../desktop-runtime/src/sqlite-data-store.mjs';
 import { createLocalBudgetAuthority } from '../../desktop-runtime/src/local-budget-authority.mjs';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { scopeHash, manifestHash } from '../src/modules/ai/record-contract.ts';
 import { aiRecords } from './ai-record-fixtures.js';
 import { createAiTranslationService } from '../src/modules/ai/translation-service.ts';

@@ -11,7 +11,7 @@ import {
   validateBudgetState
 } from '../src/modules/ai/budget-ledger.ts';
 import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createRemoteBudgetAuthority } from '../src/modules/ai/remote-budget-authority.ts';
 import { createAiRuntime } from '../src/modules/ai/runtime.ts';
 import { aiRecords } from './ai-record-fixtures.js';

@@ -11,6 +11,9 @@ export interface NoteVersionDetailRouteParams extends NoteVersionRouteParams {
   versionId: string;
 }
 export type NoteVersionRouteQuery = Record<PropertyKey, unknown> & {
+  limit?: unknown;
+  cursor?: unknown;
+} & {
   [Member in keyof typeof Object.prototype]: unknown;
 };
 

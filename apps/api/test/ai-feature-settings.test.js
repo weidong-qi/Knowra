@@ -4,7 +4,7 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createAiFeatureSettings } from '../src/modules/ai/feature-settings.ts';
 import { createModelSettingsService } from '../src/modules/ai/model-settings.ts';
 import { createPersistentAppContext } from '../src/app.factory.ts';

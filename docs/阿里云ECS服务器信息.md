@@ -85,7 +85,7 @@ Git 仓库远程地址：`git@github.com:1848956505/Knowra.git`（部署用 Depl
 
 - Node.js monorepo（Git 克隆）
 - 前端服务：`apps/web-v4/server.mjs`（静态服务 + `/api/*` 同源代理）
-- 后端服务：`apps/api/src/main.js`
+- 后端服务：`apps/api/src/main.ts`
 - 进程管理：PM2（进程名 `knowra-web` / `knowra-api`）
 - 反向代理：Nginx（HTTPS 443 端口）
 - 对外端口：`443`（HTTPS），`80`（HTTP → HTTPS 跳转）
@@ -102,7 +102,7 @@ npm: 11.16.0
 PM2 服务：
 
 ```text
-knowra-api  -> /opt/knowra/apps/api/src/main.js, PORT=3001, KNOWRA_OWNER_ID=demo
+knowra-api  -> /opt/knowra/apps/api/src/main.ts, PORT=3001, KNOWRA_OWNER_ID=demo
 knowra-web  -> /opt/knowra/apps/web-v4/server.mjs, PORT=3000, API_ORIGIN=http://127.0.0.1:3001
 ```
 

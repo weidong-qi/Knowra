@@ -1,6 +1,13 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { createJsonBudgetAuthority } from './budget-ledger.ts';
-type BudgetRoutePort = Pick<ReturnType<typeof createJsonBudgetAuthority>, 'reserve' | 'settle' | 'status'>;
+import type { createPostgresBudgetAuthority } from './postgres-budget-authority.ts';
+type JsonBudgetAuthority = ReturnType<typeof createJsonBudgetAuthority>;
+type BudgetAuthorities = ReturnType<typeof createJsonBudgetAuthority | typeof createPostgresBudgetAuthority>;
+interface BudgetRoutePort {
+  reserve(...args: Parameters<JsonBudgetAuthority['reserve']>): ReturnType<BudgetAuthorities['reserve']>;
+  settle(...args: Parameters<JsonBudgetAuthority['settle']>): ReturnType<BudgetAuthorities['settle']>;
+  status(...args: Parameters<JsonBudgetAuthority['status']>): ReturnType<BudgetAuthorities['status']>;
+}
 import type { createBudgetPolicy } from './budget-policy.ts';
 interface BudgetRouteContext {
   request: IncomingMessage;

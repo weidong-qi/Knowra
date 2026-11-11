@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { syncContract, syncContractQuery } from '../../api/src/modules/sync/protocol-contract.ts';
 import { requestHash } from '../../api/src/modules/sync/journal.ts';

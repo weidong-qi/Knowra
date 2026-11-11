@@ -29,7 +29,7 @@ const apiEnv = createChildEnv({
   STUDY_RUNTIME_PORTS_FILE: runtimePortsFile
 });
 
-const apiProcess = spawnNode(['apps/api/src/main.js'], { env: apiEnv, name: 'api' });
+const apiProcess = spawnNode(['apps/api/src/main.ts'], { env: apiEnv, name: 'api' });
 let shuttingDown = false;
 
 attachChildShutdown(apiProcess);

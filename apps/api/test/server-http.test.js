@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 import { httpKeepAliveTests } from './http-keepalive.test.ts';

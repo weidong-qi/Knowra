@@ -25,10 +25,35 @@ import { createKnowledgeExtractionHttpService } from './modules/ai/knowledge-ext
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { isWriteMethod, writeOriginDecision } from '@study-accelerator/shared/http-origin';
 
-export function createServer({ appContext, cors = /** @type {{allowedOrigins?: string[]}} */ ({}), logger = console }) {
+import type { createPersistentAppContext } from './app.factory.ts';
+
+type PersistentContext = Awaited<ReturnType<typeof createPersistentAppContext>>;
+export interface ServerAppContext
+  extends
+    Pick<PersistentContext, 'http'>,
+    Partial<
+      Pick<
+        PersistentContext,
+        'taskWorkspaces' | 'taskWorkspaceContext' | 'personalTodos' | 'knowledgeExtractionTasks' | 'aiOwnerId'
+      >
+    > {
+  aiLocation?: string;
+  ai?: PersistentContext['ai'] & { unavailableReason?: string | null };
+}
+
+export interface ServerOptions {
+  appContext: ServerAppContext;
+  cors?: { allowedOrigins?: string[] };
+  logger?: Pick<Console, 'warn' | 'error'>;
+}
+export interface ApiServer extends http.Server {
+  closeAi: () => Promise<void>;
+}
+
+export function createServer({ appContext, cors = {}, logger = console }: ServerOptions): ApiServer {
   const taskWorkspaces = appContext.taskWorkspaces ?? createTaskWorkspaceService({ store: null });
   const taskWorkspaceContext =
-    appContext.taskWorkspaceContext ?? (() => ({ actor: { kind: 'user', id: 'unavailable' } }));
+    appContext.taskWorkspaceContext ?? (() => ({ actor: { kind: 'user' as const, id: 'unavailable' } }));
   const allowedOrigins = cors.allowedOrigins ?? [];
   const extraction = createKnowledgeExtractionHttpService({
     tasks: appContext.knowledgeExtractionTasks,
@@ -50,19 +75,28 @@ export function createServer({ appContext, cors = /** @type {{allowedOrigins?: s
       ? Promise.resolve()
       : aiLifecycle
           .recover()
-          .catch(error => logger.warn?.('AI task recovery failed', { code: error.code ?? 'AI_RECOVERY_FAILED' }));
+          .catch(error =>
+            logger.warn?.('AI task recovery failed', { code: (error as AppError).code ?? 'AI_RECOVERY_FAILED' })
+          );
 
-  /** @type {http.Server & {closeAi?: typeof aiLifecycle.close}} */
   const server = http.createServer(async (request, response) => {
     try {
-      const url = new URL(request.url, 'http://localhost');
+      const url = new URL(request.url!, 'http://localhost');
       const { knowledge, storage } = appContext.http;
 
       applyCorsHeaders(response, request, allowedOrigins);
       if (handleCorsPreflight({ request, response, allowedOrigins })) {
         return;
       }
-      if (isWriteMethod(request.method) && !writeOriginDecision(request, { allowedOrigins }).allowed) {
+      if (
+        isWriteMethod(request.method) &&
+        !(
+          writeOriginDecision as (
+            request: http.IncomingMessage,
+            options: { allowedOrigins: string[] }
+          ) => ReturnType<typeof writeOriginDecision>
+        )(request, { allowedOrigins }).allowed
+      ) {
         sendError(response, 403, 'REQUEST_ORIGIN_FORBIDDEN', '写入请求来源不被允许');
         return;
       }
@@ -163,11 +197,11 @@ export function createServer({ appContext, cors = /** @type {{allowedOrigins?: s
       }
 
       if (request.url?.startsWith('/api/sync/'))
-        logger.error?.('Sync request failed', { code: error.code ?? 'INTERNAL_SERVER_ERROR' });
+        logger.error?.('Sync request failed', { code: (error as AppError).code ?? 'INTERNAL_SERVER_ERROR' });
       else logger.error?.('Unhandled request error', error);
       sendError(response, 500, 'INTERNAL_SERVER_ERROR', 'Internal server error');
     }
-  });
+  }) as ApiServer;
   // 同步持久化阻塞事件循环时，已在空闲连接上排队的请求仍可能尚未被解析。
   // 保留对外 5 秒的空闲提示，但延后实际断开，避免代理收到 ECONNRESET。
   server.keepAliveTimeoutBuffer = 60_000;

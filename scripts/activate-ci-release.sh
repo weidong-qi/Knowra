@@ -169,7 +169,7 @@ process.stdin.on("data", chunk => input += chunk).on("end", () => {
   const webDir = process.argv[2];
   if (!["web", "web-v5", "web-v4"].includes(webDir)) process.exit(1);
   const apps = JSON.parse(input);
-  for (const [name, script] of [["knowra-api", "apps/api/src/main.js"], ["knowra-web", `apps/${webDir}/server.mjs`]]) {
+  for (const [name, script] of [["knowra-api", "apps/api/src/main.ts"], ["knowra-web", `apps/${webDir}/server.mjs`]]) {
     const app = apps.find(item => item.name === name);
     const env = app?.pm2_env;
     if (!env || env.status !== "online" || fs.realpathSync(env.pm_cwd) !== target || fs.realpathSync(env.pm_exec_path) !== path.join(target, script)) process.exit(1);

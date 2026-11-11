@@ -1,4 +1,4 @@
-import { createServer } from '../../src/server.js';
+import { createServer } from '../../src/server.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 
 /** 真实回环 HTTP；宿主自行装配临时库/Mock，关闭时必须先停接入再等 worker。 */

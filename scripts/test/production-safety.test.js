@@ -24,7 +24,7 @@ test('默认前端使用稳定 web 工作区，V3 归档仅提供回归测试', 
 });
 
 test('API and default V4 Web listeners bind to loopback only', () => {
-  const apiMain = readWorkspaceFile('apps/api/src/main.js');
+  const apiMain = readWorkspaceFile('apps/api/src/main.ts');
   const webMain = readWorkspaceFile('apps/web/server.mjs');
   const portListener = readWorkspaceFile('scripts/configured-port-listener.js');
 

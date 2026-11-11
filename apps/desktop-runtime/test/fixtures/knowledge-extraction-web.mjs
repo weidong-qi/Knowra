@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../../api/src/app.factory.ts';
-import { createServer } from '../../../api/src/server.js';
+import { createServer } from '../../../api/src/server.ts';
 import {
   extractionTaskGateway,
   quietTaskLogger

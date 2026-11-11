@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../../api/src/app.factory.ts';
-import { createServer } from '../../../api/src/server.js';
+import { createServer } from '../../../api/src/server.ts';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 
 // 合成资料、真实 HTTP 云端、生产 V4 和 SQLite；不替换页面 API。

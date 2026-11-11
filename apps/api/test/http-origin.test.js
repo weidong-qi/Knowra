@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 
 async function fixture(allowedOrigins, run) {
   let mutations = 0;

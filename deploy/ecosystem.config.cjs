@@ -9,7 +9,7 @@ module.exports = {
     {
       name: 'knowra-api',
       cwd: workspaceRoot,
-      script: 'apps/api/src/main.js',
+      script: 'apps/api/src/main.ts',
       env: {
         NODE_ENV: 'production',
         PORT: runtimeEnv.apiPort,

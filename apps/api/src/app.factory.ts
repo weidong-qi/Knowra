@@ -115,7 +115,7 @@ export interface AppContext extends PersistentContextExtensions {
     request: IncomingMessage,
     response?: ServerResponse
   ): {
-    actor: { kind: string; id: string };
+    actor: { kind: 'user'; id: string };
     datasetId: string | null;
     datasetEpoch: string | null;
     guard(): boolean;
@@ -401,7 +401,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
   const taskWorkspaceContext = (request: IncomingMessage, response?: ServerResponse) => {
     const deadline = Date.now() + 30_000;
     return {
-      actor: { kind: 'user', id: ownerId },
+      actor: { kind: 'user' as const, id: ownerId },
       ...(taskStore?.readSnapshot(tx => tx.identity()) ?? { datasetId: null, datasetEpoch: null }),
       guard: () => !request.aborted && !(response?.destroyed && !response.writableFinished) && Date.now() < deadline
     };

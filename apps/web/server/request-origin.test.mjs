@@ -4,7 +4,7 @@ import http from 'node:http';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createV4WebServer } from './app.mjs';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 
 async function listen(server) {
   server.listen(0, '127.0.0.1'); await once(server, 'listening');

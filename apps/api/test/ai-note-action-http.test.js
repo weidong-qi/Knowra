@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createPersistentAppContext } from '../src/app.factory.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 export const aiNoteActionHttpTests = [
   {
     name: 'P2 HTTP 写入需要受信指令/精确确认，重启查询保留回执',

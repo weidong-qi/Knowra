@@ -1,7 +1,8 @@
+import type { AppError } from './errors/app-error.ts';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createPersistentAppContext } from './app.factory.ts';
-import { createServer } from './server.js';
+import { createServer } from './server.ts';
 import { parseCorsAllowedOrigins } from './http/cors.ts';
 import { writeRuntimePort } from '../../../scripts/dev-runtime-ports.js';
 import { listenOnConfiguredPort } from '../../../scripts/configured-port-listener.js';
@@ -35,7 +36,7 @@ listenOnConfiguredPort(server, preferredPort, { allowPortFallback })
       await server.closeAi();
       await app.close?.();
     } catch (failure) {
-      console.error('Failed to close AI runtime:', failure.code ?? 'AI_CLOSE_FAILED');
+      console.error('Failed to close AI runtime:', (failure as AppError).code ?? 'AI_CLOSE_FAILED');
     }
     process.exitCode = 1;
   });

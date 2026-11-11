@@ -6,7 +6,7 @@ import { once } from 'node:events';
 import { createAppContext } from '../src/app.factory.ts';
 import { createPostgresAppContext } from '../src/postgres-app.factory.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { syncContract, syncContractQuery } from '../src/modules/sync/protocol-contract.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 

@@ -4,7 +4,7 @@ import { createAppError } from '../../api/src/errors/app-error.ts';
 import path from 'node:path';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createAppContext } from '../../api/src/app.factory.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 import { createSqliteDataStore } from './sqlite-data-store.mjs';
 import { createSyncEngine } from './sync-engine.mjs';
 import { createRuntimeBackup } from './backup.mjs';

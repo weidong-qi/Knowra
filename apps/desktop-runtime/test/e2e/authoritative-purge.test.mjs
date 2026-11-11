@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../../api/src/app.factory.ts';
-import { createServer } from '../../../api/src/server.js';
+import { createServer } from '../../../api/src/server.ts';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { trainingAssets } from '../../../api/test/authoritative-asset-purge.test.js';
 
