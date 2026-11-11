@@ -64,7 +64,7 @@
   border: 1px solid var(--ni-line-2, var(--border-strong));
   border-radius: 4px;
   background: var(--ni-surf, var(--surface-page));
-  color: #fff;
+  color: var(--ni-btn-on-accent, var(--text-on-accent));
 }
 .box[data-checked] {
   border-color: var(--ni-accent, var(--accent-solid));
