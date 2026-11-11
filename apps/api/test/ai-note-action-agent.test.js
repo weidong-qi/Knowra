@@ -25,7 +25,7 @@ async function fixture(run) {
       };
     const adapter = {
       async *stream() {
-        throw new Error('not tested');
+        yield Promise.reject(new Error('not tested'));
       },
       provider: 'mock',
       capabilities: () => ({ provider: 'mock' }),
