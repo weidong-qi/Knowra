@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { fork } from 'node:child_process';
+import { once } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,6 +19,40 @@ const adapter = limits =>
   createIsolatedDeepSeekAdapter({ childUrl, limits: { ...AI_PROCESS_LIMITS, wallMs: 2000, ...limits } });
 
 export const aiPluginIsolationTests = [
+  {
+    name: '真实默认供应商子进程归一化请求错误并释放进程与并发名额',
+    async run() {
+      const children = [];
+      const exits = [];
+      const isolated = createIsolatedDeepSeekAdapter({
+        limits: { ...AI_PROCESS_LIMITS, concurrency: 1, queue: 0, wallMs: 5000 },
+        spawn(...args) {
+          const child = fork(...args);
+          children.push(child);
+          exits.push(once(child, 'exit'));
+          return child;
+        }
+      });
+      try {
+        // 缺失 tools 在序列化阶段抛错，真实子进程不会发起供应商网络请求。
+        for (let index = 0; index < 2; index++) {
+          await assert.rejects(isolated.complete({}), error => {
+            assert.equal(error.code, 'AI_PROVIDER_UNAVAILABLE');
+            assert.equal(error.retryable, false);
+            assert.equal(error.httpStatus, null);
+            return true;
+          });
+        }
+        assert.equal(children.length, 2);
+        for (const [code, signal] of await Promise.all(exits)) {
+          assert.equal(code, null);
+          assert.equal(signal, 'SIGKILL');
+        }
+      } finally {
+        for (const child of children) child.kill('SIGKILL');
+      }
+    }
+  },
   {
     name: 'AI 子进程正常返回、异常退出、卡死和资源超限均有确定结果',
     async run() {
