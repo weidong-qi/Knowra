@@ -138,20 +138,17 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   await heading.click();
   await page.screenshot({ path: info.outputPath('folder-icons.png'), animations: 'disabled' });
   await toolbar.getByRole('button', { name: '卡片视图' }).click();
-  const badge = index.locator('[data-folder-style="badge"]');
-  await expect(badge).toHaveCount(4);
-  await expect(badge.first()).toHaveCSS('width', '40px');
-  await expect(badge.first()).toHaveCSS('border-radius', '0px');
-  await expect(index.locator('button[data-folder-art="sketch"]')).toHaveCount(4);
+  const paper = index.locator('[data-folder-style="paper"]');
+  await expect(paper).toHaveCount(4);
+  await expect(paper.first()).toHaveCSS('height', '74px');
   await page.screenshot({ path: info.outputPath('folder-cards.png'), animations: 'disabled' });
   await page.getByRole('button', { name: '切换深色模式' }).click();
-  await expect(badge.first()).toHaveCSS('color', 'rgb(242, 107, 29)');
   await page.screenshot({ path: info.outputPath('folder-cards-dark.png'), animations: 'disabled' });
   await page.setViewportSize({ width: 390, height: 844 });
   // 窄屏：标题与工具合为一行，类型筛选与布局切换收进“显示选项”。
   const displayOptions = toolbar.getByRole('button', { name: /^显示选项/ });
   await expect(displayOptions).toHaveCSS('min-height', '44px');
-  await expect(badge.first()).toBeInViewport();
+  await expect(paper.first()).toBeInViewport();
   await page.screenshot({ path: info.outputPath('folder-cards-mobile.png'), animations: 'disabled' });
   await page.reload();
   await toolbar.getByRole('button', { name: /^显示选项/ }).click();
@@ -163,20 +160,6 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
     'aria-pressed',
     'true'
   );
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/#/settings');
-  const folderArt = page.getByRole('group', { name: '文件夹卡片插画' });
-  await expect(folderArt.getByRole('button', { name: '手绘线稿', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
-  await folderArt.getByRole('button', { name: '夜空', exact: true }).click();
-  await page.reload();
-  await expect(folderArt.getByRole('button', { name: '夜空', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.goto('/#/materials');
-  await toolbar.getByRole('button', { name: '卡片视图' }).click();
-  await expect(index.locator('button[data-folder-art="night"]')).toHaveCount(4);
-  await page.screenshot({ path: info.outputPath('folder-cards-night.png'), animations: 'disabled' });
 });
 
 test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {
@@ -302,22 +285,18 @@ test('强制色保留页签和表单焦点，错误字段继续报告校验错�
 });
 
 for (const mode of ['light', 'dark']) {
-  for (const [buttonStyle, defaultButtonStyle] of [
-    ['paper', 'soft'],
-    ['frost', 'glass']
-  ]) {
-    test(`${mode} ${buttonStyle}/${defaultButtonStyle}：按钮材质不覆盖禁用反馈`, async ({ page }) => {
+  for (const buttonStyle of ['paper', 'frost']) {
+    test(`${mode} ${buttonStyle}：按钮材质不覆盖禁用反馈`, async ({ page }) => {
       await mockEditorWorkspace(page, []);
       await page.addInitScript(
         appearance => {
           localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify(appearance));
         },
-        { mode, buttonStyle, defaultButtonStyle }
+        { mode, buttonStyle }
       );
       await page.goto('/#/showcase');
       const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
       await expect(shell).toHaveAttribute('data-button-style', buttonStyle);
-      await expect(shell).toHaveAttribute('data-default-button-style', defaultButtonStyle);
       for (const name of ['默认', '保存']) {
         const button = page.getByRole('button', { name, exact: true, disabled: true });
         await expect(button).toBeDisabled();
@@ -340,8 +319,11 @@ for (const mode of ['light', 'dark']) {
         });
         expect(colors.actual).toEqual(colors.expected);
       }
-      // 同一外观下启用按钮仍保留材质投影，防止用全局移除样式掩盖问题。
-      await expect(page.getByRole('button', { name: '默认胶囊', exact: true })).not.toHaveCSS('box-shadow', 'none');
+      // 默认按钮是细线样式：透明底和 1px 描边，没有投影；主按钮仍保留材质投影，防止用全局移除样式掩盖问题。
+      const outline = page.getByRole('button', { name: '默认胶囊', exact: true });
+      await expect(outline).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      await expect(outline).toHaveCSS('border-top-width', '1px');
+      await expect(outline).toHaveCSS('box-shadow', 'none');
       await expect(page.getByRole('button', { name: '发布', exact: true })).not.toHaveCSS('box-shadow', 'none');
     });
   }

@@ -285,6 +285,18 @@ test('本地 HTTP 闭环：单实例、会话、跨源隔离、笔记保存及�
   );
 });
 
+test('桌面翻译入口绑定当前资料集并要求翻译请求头', async t => {
+  const { call } = await localRequests(t);
+  const input = { text: '' };
+  const headers = { 'X-Knowra-AI-Translate': '1' };
+  assert.equal((await call('/api/ai/translate', 'POST', input)).error.code, 'AI_REQUEST_REJECTED');
+  assert.equal(
+    (await call('/api/ai/translate', 'POST', input, { ...headers, 'X-Knowra-Dataset': 'old' })).error.code,
+    'LOCAL_DATASET_CHANGED'
+  );
+  assert.equal((await call('/api/ai/translate', 'POST', input, headers)).error.code, 'AI_TRANSLATION_INVALID');
+});
+
 test('桌面助手路由放行受信预览；预算账本在本机，未连接云端也可用，且所有助手请求绑定资料集', async t => {
   const root = temporaryDirectory(t);
   const distRoot = path.join(root, 'dist');

@@ -5,6 +5,7 @@ export interface AiRuntimeLifecyclePorts {
   conversationStore?: { recoverInterrupted?(): unknown } | null;
   agent?: { recover?(): unknown; close?(): unknown } | null;
   worker?: { recover?(): unknown; close?(): unknown } | null;
+  translation?: { recover?(): unknown; close?(): unknown } | null;
 }
 
 export interface AiRuntimeLifecycleOwner {
@@ -22,10 +23,11 @@ export function aiRuntimeLifecycle(runtime?: AiRuntimeLifecyclePorts | null): Ai
     attachments: () => runtime?.attachments?.recover?.(),
     conversation: () => runtime?.conversationStore?.recoverInterrupted?.(),
     agent: () => runtime?.agent?.recover?.(),
-    worker: () => runtime?.worker?.recover?.()
+    worker: () => runtime?.worker?.recover?.(),
+    translation: () => runtime?.translation?.recover?.()
   };
   const owner = {
-    recover(names: Iterable<string> = ['attachments', 'conversation', 'agent', 'worker']) {
+    recover(names: Iterable<string> = ['attachments', 'conversation', 'agent', 'worker', 'translation']) {
       return scope.run(async () => {
         for (const name of names) {
           if (scope.closed) return;
@@ -39,7 +41,8 @@ export function aiRuntimeLifecycle(runtime?: AiRuntimeLifecyclePorts | null): Ai
         const results = await Promise.allSettled([
           Promise.resolve().then(() => runtime?.attachments?.close?.()),
           Promise.resolve().then(() => runtime?.agent?.close?.()),
-          Promise.resolve().then(() => runtime?.worker?.close?.())
+          Promise.resolve().then(() => runtime?.worker?.close?.()),
+          Promise.resolve().then(() => runtime?.translation?.close?.())
         ]);
         const failures = results.filter(result => result.status === 'rejected').map(result => result.reason);
         if (failures.length) throw new AggregateError(failures, 'AI 执行器关闭失败。');

@@ -19,6 +19,7 @@ import {
   dbQuestion,
   dbQuestionObjective,
   dbQuestionSource,
+  dbPersonalTodo,
   dbNote,
   dbNoteVersion,
   dbSpace,
@@ -78,7 +79,8 @@ const syncPlanCollections = Object.freeze({
   contentAnnotations: 'annotations',
   annotationExclusions: 'annotationExclusions',
   annotationRevisions: 'annotationRevisions',
-  analysisScopeSnapshots: 'analysisScopeSnapshots'
+  analysisScopeSnapshots: 'analysisScopeSnapshots',
+  personalTodos: 'personalTodos'
 });
 const syncDbModels = Object.freeze({
   spaces: 'knowledgeSpace',
@@ -101,7 +103,8 @@ const syncDbModels = Object.freeze({
   contentAnnotations: 'contentAnnotation',
   annotationExclusions: 'annotationExclusion',
   annotationRevisions: 'annotationRevision',
-  analysisScopeSnapshots: 'analysisScopeSnapshot'
+  analysisScopeSnapshots: 'analysisScopeSnapshot',
+  personalTodos: 'personalTodo'
 });
 
 export function loadJsonMigrationSource(filePath) {
@@ -178,6 +181,7 @@ export function buildJsonMigrationPlan({
       transformQuestionObjective(relation, fallbackTimestamp)
     ),
     questionSources: state.questionSources.map(source => transformQuestionSource(source, fallbackTimestamp)),
+    personalTodos: (state.personalTodos ?? []).map(todo => JSON.parse(JSON.stringify(todo))),
     noteTags: [],
     annotations: state.contentAnnotations.map(annotation =>
       transformAnnotation(annotation, fallbackTimestamp, reportTools)
@@ -348,7 +352,8 @@ export function buildJsonMigrationPlan({
     'annotationRevisions',
     'analysisScopeSnapshots',
     'pdfAnnotations',
-    'attachments'
+    'attachments',
+    'personalTodos'
   ]) {
     reportTools.count(collection, plan[collection].length);
   }
@@ -411,6 +416,7 @@ export async function applyJsonMigration({
     if (tx.syncJournal) await tx.syncJournal.deleteMany();
     if (requireEmptyTarget) await assertEmptyTarget(tx);
     if (replaceExisting) {
+      await tx.personalTodo.deleteMany();
       await tx.analysisScopeSnapshot.deleteMany();
       await tx.annotationRevision.deleteMany();
       await tx.annotationExclusion.deleteMany();
@@ -478,6 +484,7 @@ export async function applyJsonMigration({
     if (plan.attachments.length) {
       await tx.attachment.createMany({ data: plan.attachments.map(dbAttachment) });
     }
+    if (plan.personalTodos.length) await tx.personalTodo.createMany({ data: plan.personalTodos.map(dbPersonalTodo) });
     if (tx.syncJournal) {
       const state = Object.fromEntries(
         Object.entries(syncPlanCollections).map(([collection, source]) => [collection, plan[source] ?? []])
@@ -505,6 +512,7 @@ export async function applyJsonMigration({
 export async function assertEmptyTarget(client) {
   const models = [
     'user',
+    'personalTodo',
     'knowledgeSpace',
     'folder',
     'tagGroup',

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { createLocalBudgetAuthority } from '../src/local-budget-authority.mjs';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
@@ -360,4 +362,82 @@ test('本机账本的月汇总字段为 null 或非数组时按损坏处理：�
   assert.equal(await code(createLocalBudgetAuthority({ filePath }).status(ACCOUNT)), 'AI_BUDGET_UNAVAILABLE');
   fs.writeFileSync(filePath, JSON.stringify({ budgetDays: [], budgetReservations: [] })); // 旧版本文件缺少该字段仍可读
   assert.equal((await createLocalBudgetAuthority({ filePath }).status(ACCOUNT)).availableMicrounits, 20_000_000);
+});
+
+test('桌面翻译预留后进程退出：SQLite 重启恢复为结果未知，用量页可释放且不重复外发', async t => {
+  const root = temporaryDirectory(t);
+  const child = spawnSync(
+    process.execPath,
+    [
+      fileURLToPath(new URL('../../api/test/fixtures/translation-crash.probe.ts', import.meta.url)),
+      root,
+      'reserved',
+      'desktop'
+    ],
+    { encoding: 'utf8', timeout: 10000 }
+  );
+  assert.equal(child.status, 0, child.stderr);
+  // 崩溃后租约仍有效；推进到租约过期后验证宿主启动恢复。
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 6 * 60_000 });
+  const recovered = Promise.withResolvers();
+  let calls = 0,
+    authority;
+  const runtime = await startLocalRuntime({
+    dataDirectory: path.join(root, 'data'),
+    distRoot: path.join(root, 'dist'),
+    syncOptions: { autoSync: false },
+    logger: { warn() {}, error() {} },
+    aiRuntimeFactory(options) {
+      authority = options.budgetAuthority;
+      const ai = createOptionalAiRuntime({
+        ...options,
+        providerAdapter: {
+          provider: 'mock',
+          capabilities: () => ({ provider: 'mock' }),
+          async *stream() {},
+          async complete() {
+            calls++;
+            throw new Error('恢复不能再次调用模型');
+          }
+        }
+      });
+      const recover = ai.translation.recover.bind(ai.translation);
+      ai.translation.recover = () =>
+        recover().then(
+          value => {
+            recovered.resolve();
+            return value;
+          },
+          error => {
+            recovered.reject(error);
+            throw error;
+          }
+        );
+      return ai;
+    }
+  });
+  t.after(() => runtime.close());
+  await recovered.promise;
+  assert.equal(calls, 0);
+  const cookie = (await fetch(runtime.launchUrl, { redirect: 'manual' })).headers.get('set-cookie').split(';')[0];
+  const headers = {
+    Cookie: cookie,
+    'X-Knowra-Dataset': runtime.store.getStatus().datasetId,
+    'X-Knowra-AI-Assistant': '1',
+    'Content-Type': 'application/json'
+  };
+  const summaryResponse = await fetch(`${runtime.origin}/api/ai/assistant/usage`, { headers });
+  assert.equal(summaryResponse.status, 200);
+  const { data } = await summaryResponse.json();
+  assert.equal(data.total.requests, 1);
+  assert.equal(data.total.unknownRequests, 1);
+  const attemptId = data.unknown[0].attemptId;
+  assert.equal(runtime.store.aiRepository.get('aiJobAttempt', attemptId).deliveryUncertain, true);
+  const resolved = await fetch(`${runtime.origin}/api/ai/assistant/usage/resolve`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ attemptId, disposition: 'released' })
+  });
+  assert.equal(resolved.status, 200, await resolved.text());
+  assert.equal((await authority.status(ACCOUNT)).heldMicrounits, 0);
 });

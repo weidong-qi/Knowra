@@ -123,6 +123,61 @@ describe('Notes index item views', () => {
     expect(container.querySelectorAll('[data-folder-paper]')).toHaveLength(1 + 3 + 0);
   });
 
+  it('卡片视图的 PDF 使用叠页封面，图标视图仍是单页图标', () => {
+    const pdf = { ...note, id: 'pdf', title: '示例 PDF', contentKind: 'pdf' as const, tagIds: [] };
+    const { container, unmount } = mount(<IndexTile {...tileProps({ item: { kind: 'note', note: pdf }, notes: [pdf] })} />);
+    const cover = container.querySelector('[data-pdf-style="stack"]');
+    expect(cover).toHaveAttribute('aria-hidden', 'true');
+    expect(cover?.querySelectorAll('[class*="pdfPage"] em')).toHaveLength(1);
+    expect(cover?.querySelectorAll('[class*="pdfPageShadow"]')).toHaveLength(3);
+    unmount();
+    const grid = mount(<IndexTile {...tileProps({ item: { kind: 'note', note: pdf }, notes: [pdf], view: 'grid' })} />);
+    expect(grid.container.querySelector('[data-pdf-style]')).toBeNull();
+    expect(grid.container.querySelector('[data-art-kind="pdf"]')).not.toBeNull();
+  });
+
+  it('卡片封面：没有标签的笔记不带行内颜色（由样式给青色），有标签的笔记保留标签色', () => {
+    const plain = { ...note, id: 'plain', tagIds: [] };
+    const first = mount(<IndexTile {...tileProps({ item: { kind: 'note', note: plain }, notes: [plain] })} />);
+    const cover = first.container.querySelector('[data-art-kind="document"]') as HTMLElement;
+    expect(cover.getAttribute('data-color')).toBe('neutral');
+    expect(cover.style.getPropertyValue('--art-color')).toBe('');
+    first.unmount();
+    const second = mount(<IndexTile {...tileProps()} />);
+    const tagged = second.container.querySelector('[data-art-kind="document"]') as HTMLElement;
+    expect(tagged.getAttribute('data-color')).toBe('blue');
+    expect(tagged.style.getPropertyValue('--art-color')).not.toBe('');
+    second.unmount();
+    const custom = mount(<IndexTile {...tileProps({ tags: [{ id: 'tag', name: '研究', color: '#ff00aa' }] })} />);
+    const hex = custom.container.querySelector('[data-art-kind="document"]') as HTMLElement;
+    expect(hex.getAttribute('data-color')).toBe('#ff00aa');
+    expect(hex.style.getPropertyValue('--art-color')).toBe('#ff00aa');
+  });
+
+  it('卡片视图的文件夹用纸质文件夹、类型胶囊和最近内容摘要，不再显示“n 项”', () => {
+    const folder = { id: 'folder', name: '论文', parentId: null, children: [], updatedAt: '2026-11-01T00:00:00.000Z' };
+    const inside = [
+      { ...note, id: 'a', title: '较早笔记', folderId: 'folder', updatedAt: '2026-11-02T08:00:00.000Z' },
+      { ...note, id: 'b', title: '最新 PDF', folderId: 'folder', contentKind: 'pdf' as const, updatedAt: '2026-11-04T08:00:00.000Z' }
+    ];
+    const { container } = mount(<IndexTile {...tileProps({ item: { kind: 'folder', folder }, notes: inside })} />);
+    expect(container.querySelector('[data-folder-style="paper"]')).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelectorAll('[data-folder-style="paper"] > span').length).toBeGreaterThan(0);
+    expect(screen.getByText('最近：最新 PDF、较早笔记')).toBeInTheDocument();
+    expect(screen.getByText('笔记', { selector: 'span' }).textContent).toBe('1笔记');
+    expect(screen.getByText('PDF', { selector: 'span' }).textContent).toBe('1PDF');
+    expect(container.textContent).not.toContain('2 项');
+    expect(container.textContent).toContain(formatUpdatedAt('2026-11-04T08:00:00.000Z'));
+  });
+
+  it('空文件夹没有叠放的纸，并提示还没有内容', () => {
+    const folder = { id: 'folder', name: '待整理', parentId: null, children: [], updatedAt: '2026-11-06T01:12:00.000Z' };
+    const { container } = mount(<IndexTile {...tileProps({ item: { kind: 'folder', folder }, notes: [] })} />);
+    expect(screen.getByText('还没有内容')).toBeInTheDocument();
+    expect(screen.getByText('空文件夹')).toBeInTheDocument();
+    expect(container.querySelector('[data-folder-style="paper"]')?.children).toHaveLength(1);
+  });
+
   it('always renders the favorite emphasis', () => {
     render(<ItemFavorite />);
     expect(screen.getByLabelText('已收藏')).toBeInTheDocument();

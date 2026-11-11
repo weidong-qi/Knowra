@@ -5,16 +5,17 @@
 import { forwardRef, type ReactNode } from 'react';
 import { PressableButton } from '../components/ui/button/PressableButton';
 import {
-  KnowledgeIcon,
   BellIcon,
-  CheckIcon,
-  HomeIcon,
-  NoteIcon,
-  QuestionIcon,
-  SparkIcon,
-  SearchIcon,
+  RailAssistantIcon,
+  RailHomeIcon,
+  RailKnowledgeIcon,
+  RailNoteIcon,
+  RailQuestionIcon,
+  RailSearchIcon,
+  RailTaskIcon,
+  RailTodoIcon,
+  RailUserIcon,
   SettingsIcon,
-  UserIcon,
   type KnowraIconProps
 } from '../components/icons/knowra';
 import type { WorkDomain } from '../store/types';
@@ -35,36 +36,36 @@ export const PRIMARY_DOMAINS: readonly RailItem[] = [
     id: 'materials',
     label: '资料',
     description: 'Markdown 笔记的采集、编辑与整理。',
-    Icon: NoteIcon,
+    Icon: RailNoteIcon,
     available: true
   },
   {
     id: 'knowledge',
     label: '知识',
     description: '知识候选、人工确认与来源追溯。',
-    Icon: KnowledgeIcon,
+    Icon: RailKnowledgeIcon,
     available: true
   },
   {
     id: 'training',
     label: '试题',
     description: '题目库与考试场景。',
-    Icon: QuestionIcon,
+    Icon: RailQuestionIcon,
     available: true
   },
   {
     id: 'task-workspaces',
     label: '任务',
     description: '协作文档、任务执行与人工验收。',
-    Icon: CheckIcon,
+    Icon: RailTaskIcon,
     available: true
   },
   {
     id: 'learning',
-    label: '执行',
-    description: '待办、打卡与习惯追踪。',
-    Icon: CheckIcon,
-    available: false
+    label: '待办',
+    description: '主线、支线、今日安排与计划。',
+    Icon: RailTodoIcon,
+    available: true
   }
 ] as const;
 
@@ -73,7 +74,7 @@ export const UTILITY_ITEMS: readonly RailItem[] = [
     id: 'profile',
     label: '我的',
     description: '工作区与个人设置。',
-    Icon: UserIcon,
+    Icon: RailUserIcon,
     available: false
   }
 ] as const;
@@ -118,7 +119,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
           onPress={onReturnHome}
         >
           <span className={styles.railIcon}>
-            <HomeIcon size={21} />
+            <RailHomeIcon size={21} />
           </span>
         </PressableButton>
         {onOpenSearch ? (
@@ -130,7 +131,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
             onPress={onOpenSearch}
           >
             <span className={styles.railIcon}>
-              <SearchIcon size={21} />
+              <RailSearchIcon size={21} />
             </span>
           </PressableButton>
         ) : null}
@@ -155,7 +156,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
           isDisabled={!onOpenAssistant}
         >
           <span className={styles.railIcon}>
-            <SparkIcon size={21} />
+            <RailAssistantIcon size={21} />
           </span>
         </PressableButton>
         {onOpenNotifications ? (
@@ -171,7 +172,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
               aria-current={isSettingsActive ? 'page' : undefined}
             >
               <span className={styles.railIcon}>
-                <UserIcon size={21} />
+                <RailUserIcon size={21} />
               </span>
             </PressableButton>
             <MenuPopover placement="right bottom">
@@ -255,4 +256,4 @@ function RailActionButton({ label, title, Icon, onClick }: RailActionButtonProps
 }
 
 /** 主页入口在 TopBar 也使用，这里只导出图标本身。 */
-export const HomeGlyphIcon = HomeIcon;
+export const HomeGlyphIcon = RailHomeIcon;

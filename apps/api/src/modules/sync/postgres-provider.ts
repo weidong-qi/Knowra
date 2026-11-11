@@ -69,7 +69,8 @@ const collections: {
   annotationExclusions: ['annotationExclusion'],
   annotationRevisions: ['annotationRevision'],
   analysisScopeSnapshots: ['analysisScopeSnapshot'],
-  knowledgeArtifactProvenance: ['knowledgeArtifactProvenance', 'mapKnowledgeArtifactProvenance']
+  knowledgeArtifactProvenance: ['knowledgeArtifactProvenance', 'mapKnowledgeArtifactProvenance'],
+  personalTodos: ['personalTodo', 'mapPersonalTodo']
 };
 
 async function readCollection<Collection extends SyncCollection>(

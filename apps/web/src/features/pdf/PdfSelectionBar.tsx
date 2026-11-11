@@ -17,6 +17,7 @@ export function PdfSelectionBar({
   mode,
   onMode,
   onLookup,
+  onTranslate,
   canAnnotate = true,
   inline = false
 }: {
@@ -26,6 +27,8 @@ export function PdfSelectionBar({
   mode?: PdfTextMode;
   onMode?(mode: PdfTextMode): void;
   onLookup?(): void;
+  /** 句段翻译：只在用户点击时把选中文字发送给模型。 */
+  onTranslate?(): void;
   canAnnotate?: boolean;
   /** 查词卡片内复用同一套标注操作，避免两个定位浮层重叠。 */
   inline?: boolean;
@@ -44,6 +47,11 @@ export function PdfSelectionBar({
       {onLookup ? (
         <Button variant="ghost" size="mini" onPress={onLookup}>
           查词
+        </Button>
+      ) : null}
+      {onTranslate ? (
+        <Button variant="ghost" size="mini" onPress={onTranslate}>
+          翻译
         </Button>
       ) : null}
       {canAnnotate && mode && onMode ? (

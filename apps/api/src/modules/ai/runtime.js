@@ -16,6 +16,7 @@ import { createBalanceService } from './balance-service.js';
 import { createBudgetSettingsStore } from './budget-settings.ts';
 import { createBudgetPolicy } from './budget-policy.ts';
 import { createBudgetAlertStore } from './budget-alerts.js';
+import { createAiTranslationService } from './translation-service.ts';
 
 /** 生成入口由 AI-01-04 的预算服务注入 authorizePaidCall 后才可启用。 */
 /** @param {import('./boundary-types.ts').RuntimeOptions} [options] */
@@ -159,10 +160,27 @@ export function createAiRuntime({
           close: attachmentService.close
         }
       : attachmentService;
+  // PDF 选区翻译：只发送用户选中的文字，与助手共用预算账本和单次调用授权。
+  const translation =
+    repository && budgetAuthority && priceProfile
+      ? createAiTranslationService({
+          repository,
+          ownerId: contextSources?.ownerId,
+          modelSettings,
+          gateway,
+          budget: budgetAuthority,
+          priceProfile,
+          policy,
+          allowExternal,
+          authorizeAttempt: id => activeAttempts.add(id),
+          revokeAttempt: id => activeAttempts.delete(id)
+        })
+      : null;
   return {
     actions,
     actionStore,
     attachments,
+    translation,
     generationAvailable: modelId =>
       Boolean(
         allowExternal &&
@@ -227,6 +245,7 @@ export function createUnavailableAiRuntime(reason = 'AI 功能当前不可用。
   return {
     actions: null,
     attachments: null,
+    translation: null,
     unavailableReason: reason,
     generationAvailable: () => false,
     credentialReference: async () => null,

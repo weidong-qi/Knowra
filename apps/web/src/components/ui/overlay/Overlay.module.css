@@ -345,9 +345,19 @@
   border-radius: 7px;
 }
 
-.item[data-focused] {
+.item[data-focused],
+.item[data-hovered] {
   background: var(--surface-hover);
   outline: 0;
+}
+
+/* 固定启用态、原生单/多选及组合筛选行共用中性选中底；悬停不覆盖选中状态。 */
+.item[data-active],
+.item[data-selected],
+.item[aria-checked='true'] {
+  background: var(--surface-selected);
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 .item[data-focus-visible] {

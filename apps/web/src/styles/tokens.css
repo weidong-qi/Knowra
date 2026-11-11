@@ -38,6 +38,11 @@
     color-mix(in srgb, var(--surface-raised) 94%, transparent),
     color-mix(in srgb, var(--surface-raised) 48%, transparent)
   );
+  --surface-toolbar-glass: linear-gradient(145deg, rgb(255 255 255 / 85%), rgb(255 255 255 / 70%));
+  --text-toolbar-glass: #4c535e;
+  --shadow-toolbar-glass:
+    inset 0 0 0 1px rgb(24 30 48 / 10%), inset 0 1px 0 rgb(255 255 255 / 95%), 0 1px 2px rgb(24 30 48 / 3%);
+  --backdrop-toolbar-glass: blur(20px) saturate(115%);
   --surface-action-crystal: linear-gradient(145deg, rgb(255 255 255 / 65%), rgb(255 255 255 / 40%));
   --border-action-crystal: rgb(255 255 255 / 93%);
   --icon-action-crystal: var(--accent);
@@ -273,6 +278,14 @@
   --index-size-17: 17px;
   --index-size-n3: -3px;
   --index-size-50: 50px;
+}
+
+/* 细缘白玻璃操作栏；深色模式沿用现有深色玻璃与文字层级。 */
+[data-ni-mode='dark'] {
+  --surface-toolbar-glass: var(--surface-action-glass-hover, var(--surface-page));
+  --text-toolbar-glass: var(--text-secondary);
+  --shadow-toolbar-glass: var(--shadow-action-glass, var(--shadow-control));
+  --backdrop-toolbar-glass: blur(16px) saturate(140%);
 }
 
 /* 全局浮层材质：每个 portal 继承同一外观作用域，保持菜单单层绘制。 */

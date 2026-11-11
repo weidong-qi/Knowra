@@ -156,6 +156,7 @@ export const phase1PostgresTests = [
           question: model(),
           questionObjective: model(),
           questionSource: model(),
+          personalTodo: model(),
           async $connect() {},
           async $disconnect() {},
           async $queryRawUnsafe(sql) {

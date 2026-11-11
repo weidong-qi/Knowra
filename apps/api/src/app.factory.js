@@ -1,5 +1,6 @@
 import { createPdfService } from './modules/pdf/service.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
+import { createPersonalTodoService, createStateBackedTodoStore } from './modules/personal-todos/service.ts';
 import { createTaskWorkspaceFiles } from './infrastructure/task-workspace-files.ts';
 import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-state.ts';
 import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts';
@@ -298,9 +299,13 @@ export function createAppContext(options = {}) {
       guard: () => !request.aborted && !(response?.destroyed && !response.writableFinished) && Date.now() < deadline
     };
   };
+  const personalTodos = createPersonalTodoService({
+    store: dataStore?.state && dataStore.runTransaction ? createStateBackedTodoStore(dataStore) : null
+  });
   return {
     taskWorkspaces,
     taskWorkspaceContext,
+    personalTodos,
     knowledgeExtractionCommit,
     knowledgeExtractionTasks,
     dataStore,

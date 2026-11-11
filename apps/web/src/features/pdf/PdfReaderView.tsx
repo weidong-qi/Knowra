@@ -26,6 +26,7 @@ import { PdfAnnotationTooltip } from './PdfAnnotationTooltip';
 import { PdfAnnotationActions } from './PdfAnnotationActions';
 import { PdfCommentEditor } from './PdfCommentEditor';
 import { PdfDictionaryPopover } from './PdfDictionaryPopover';
+import { PdfTranslationPopover } from './PdfTranslationPopover';
 import { normalizeDictionaryWord } from '../dictionary/localDictionary';
 import { PdfSelectionBar, type PdfBarAnchor, type PdfTextMode } from './PdfSelectionBar';
 import { PdfPageBar } from './PdfPageBar';
@@ -63,6 +64,7 @@ export function PdfReaderView({
   const scrollPosition = useRef({ top: 0, left: 0 });
   const [pending, setPending] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [dictionary, setDictionary] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
+  const [translation, setTranslation] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [tool, setTool] = useState('text'),
     [panel, setPanel] = useState(true);
   const [ghost, setGhost] = useState<PdfSegment | null>(null);
@@ -119,12 +121,14 @@ export function PdfReaderView({
   const cardAnchor = cardItem ? noteCardAnchor(cardItem) : null;
   const isTextSelection = pending?.value.type === 'highlight' || pending?.value.type === 'underline';
   const canLookup = isTextSelection && Boolean(normalizeDictionaryWord(pending!.value.quoteText));
+  const canTranslate = isTextSelection && Boolean(pending!.value.quoteText.trim());
   const actionItem = annotationAction ? items.find(item => item.id === annotationAction.id) : undefined;
   const editingItem = commentEditor ? items.find(item => item.id === commentEditor.id) : undefined;
   useEffect(() => {
     setAnnotationAction(null);
     setCommentEditor(null);
     setDictionary(null);
+    setTranslation(null);
   }, [viewer.viewportRevision]);
   useEffect(() => {
     alive.current = true;
@@ -256,6 +260,7 @@ export function PdfReaderView({
     setAnnotationAction(null);
     setCommentEditor(null);
     setDictionary(null);
+    setTranslation(null);
     setCardOpen(false);
     setPending(null);
     setGhost(null);
@@ -294,12 +299,13 @@ export function PdfReaderView({
     }
     setPending(null);
     setDictionary(null);
+    setTranslation(null);
     setGhost(null);
     window.getSelection()?.removeAllRanges();
   }
-  function saveDictionary(comment: string) {
-    if (!dictionary || !editable) return;
-    const value = { ...dictionary.value, type: textMode };
+  function saveSelectionComment(source: { value: PdfSelection } | null, comment: string) {
+    if (!source || !editable) return;
+    const value = { ...source.value, type: textMode };
     const existing = items.find(
       item =>
         item.type === value.type &&
@@ -312,6 +318,7 @@ export function PdfReaderView({
       setPanel(true);
       setPanelTab('marks');
       setDictionary(null);
+      setTranslation(null);
       window.getSelection()?.removeAllRanges();
       return;
     }
@@ -359,6 +366,7 @@ export function PdfReaderView({
     syncScrollPosition(event.currentTarget);
     setAnnotationAction(null);
     setDictionary(null);
+    setTranslation(null);
     annotationPress.current = null;
     skipTextMouseUp.current = false;
     if ((tool === 'text' || tool === 'region') && event.target instanceof Element) {
@@ -618,6 +626,7 @@ export function PdfReaderView({
               setAnnotationAction(null);
               setCommentEditor(null);
               setDictionary(null);
+              setTranslation(null);
               setTool(next);
               setPending(null);
               setGhost(null);
@@ -717,6 +726,7 @@ export function PdfReaderView({
               setAnnotationAction(null);
               setCommentEditor(null);
               setPending(null);
+              setTranslation(null);
               setDictionary({ value, anchor });
             }}
             onScroll={event => {
@@ -725,6 +735,7 @@ export function PdfReaderView({
               setAnnotationAction(null);
               setCommentEditor(null);
               setDictionary(null);
+              setTranslation(null);
               if (cardOpen) render(value => value + 1);
               // 文字选区随滚动重新定位；框选的位置无法回算，滚动即收起。
               setPending(current => {
@@ -741,6 +752,7 @@ export function PdfReaderView({
               if (event.key !== 'Escape') return;
               setAnnotationAction(null);
               setDictionary(null);
+              setTranslation(null);
               setCardOpen(false);
               setSelected(null);
               if (pending) {
@@ -755,7 +767,15 @@ export function PdfReaderView({
           <PdfAnnotationTooltip
             containerRef={viewer.containerRef}
             items={items}
-            enabled={tool === 'text' && !pending && !dictionary && !cardOpen && !annotationAction && !commentEditor}
+            enabled={
+              tool === 'text' &&
+              !pending &&
+              !dictionary &&
+              !translation &&
+              !cardOpen &&
+              !annotationAction &&
+              !commentEditor
+            }
             revision={viewer.revision}
           />
           {actionItem && annotationAction ? (
@@ -832,11 +852,31 @@ export function PdfReaderView({
                   />
                 ) : undefined
               }
-              onSave={saveDictionary}
+              onSave={comment => saveSelectionComment(dictionary, comment)}
               onClose={() => setDictionary(null)}
             />
           ) : null}
-          {pending && (editable || canLookup) ? (
+          {translation ? (
+            <PdfTranslationPopover
+              text={translation.value.quoteText}
+              anchor={translation.anchor}
+              canSave={editable}
+              annotationControls={
+                editable ? (
+                  <PdfSelectionBar
+                    inline
+                    anchor={translation.anchor}
+                    mode={textMode}
+                    onMode={setTextMode}
+                    onPick={kind => createMark({ ...translation.value, type: textMode }, kind)}
+                  />
+                ) : undefined
+              }
+              onSave={comment => saveSelectionComment(translation, comment)}
+              onClose={() => setTranslation(null)}
+            />
+          ) : null}
+          {pending && (editable || canLookup || canTranslate) ? (
             <PdfSelectionBar
               anchor={pending.anchor}
               mode={isTextSelection ? textMode : undefined}
@@ -846,6 +886,15 @@ export function PdfReaderView({
                 canLookup
                   ? () => {
                       setDictionary(pending);
+                      setPending(null);
+                      setAnnotationAction(null);
+                    }
+                  : undefined
+              }
+              onTranslate={
+                canTranslate
+                  ? () => {
+                      setTranslation(pending);
                       setPending(null);
                       setAnnotationAction(null);
                     }

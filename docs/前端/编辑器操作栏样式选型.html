@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>编辑器操作栏 · 白色玻璃细化</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f3f4f6;
+        --paper: #fefefe;
+        --ink: #17181b;
+        --muted: #686d76;
+        --line: rgb(24 30 48 / 10%);
+        --accent: #c4510c;
+        --font-ui: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font: 400 13px/1.6 var(--font-ui);
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      button:disabled {
+        cursor: not-allowed;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .wrap {
+        width: min(1160px, calc(100% - 64px));
+        margin: 0 auto;
+      }
+      .masthead {
+        padding: 28px 0 24px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 25px;
+        height: 25px;
+        border: 1px solid #e4d0c2;
+        border-radius: 7px;
+        color: var(--accent);
+        background: #fcf5ef;
+      }
+      .brand-mark svg {
+        width: 15px;
+        height: 15px;
+      }
+      .intro {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 24px;
+        margin-top: 25px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1.3;
+        letter-spacing: -0.6px;
+      }
+      .intro p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .count-label {
+        flex: none;
+        color: var(--muted);
+        font-size: 12px;
+        padding-bottom: 2px;
+      }
+      .controls {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-block: 1px solid var(--line);
+        background: rgb(243 244 246 / 96%);
+        backdrop-filter: blur(16px);
+      }
+      .control-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 66px;
+        padding-block: 12px;
+      }
+      .versions,
+      .sizes {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .versions {
+        flex-wrap: wrap;
+      }
+      .control-button {
+        min-height: 32px;
+        padding: 5px 12px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .control-button:hover {
+        color: var(--ink);
+        background: rgb(24 30 48 / 5%);
+      }
+      .control-button[aria-pressed='true'] {
+        background: white;
+        color: var(--ink);
+        border-color: var(--line);
+        font-weight: 500;
+      }
+      .sizes {
+        flex: none;
+        border-left: 1px solid var(--line);
+        padding-left: 16px;
+      }
+      .glass-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 0 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .glass-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 28px;
+        cursor: pointer;
+      }
+      .glass-toggle input {
+        width: 15px;
+        height: 15px;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+      .glass-controls p {
+        margin: 0;
+      }
+      .deck {
+        display: grid;
+        gap: 32px;
+        padding-block: 30px 56px;
+      }
+      .variant {
+        min-width: 0;
+        scroll-margin-top: 105px;
+      }
+      .variant-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 13px;
+      }
+      .variant-heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .variant-code {
+        flex: none;
+        display: grid;
+        place-items: center;
+        width: 25px;
+        height: 25px;
+        border: 1px solid #d9dce2;
+        border-radius: 6px;
+        background: #fff;
+        color: #646b76;
+        font: 500 12px/1 var(--font-ui);
+      }
+      .variant h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .variant-desc {
+        color: var(--muted);
+        font-size: 12px;
+        margin-left: 4px;
+      }
+      .recommend {
+        padding: 1px 7px;
+        border: 1px solid #e7d8ca;
+        border-radius: 4px;
+        color: #996037;
+        background: #faf3ec;
+        font-size: 11px;
+        font-weight: 400;
+      }
+      .solo {
+        flex: none;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        padding: 5px 0 5px 10px;
+      }
+      .solo:hover {
+        color: var(--ink);
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+      .preview-surround {
+        min-width: 0;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #e9ebef;
+        overflow: hidden;
+      }
+      .preview {
+        position: relative;
+        width: 100%;
+        margin: auto;
+        background: var(--paper);
+        container-type: inline-size;
+      }
+      .preview[data-size='tablet'] {
+        width: min(100%, 780px);
+      }
+      .preview[data-size='mobile'] {
+        width: min(100%, 390px);
+      }
+      .document {
+        max-width: 1032px;
+        margin: 0 auto;
+        padding: 28px 42px 26px;
+      }
+      .note-title {
+        margin: 0 0 14px;
+        color: var(--ink);
+        font-size: 34px;
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -0.6px;
+      }
+      .metadata {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .status-badge {
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: rgb(24 30 48 / 4.5%);
+      }
+      .toolbar-wrap {
+        margin: 22px 0 23px;
+        position: relative;
+      }
+      .glass-underlay {
+        display: none;
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        color: #444b55;
+        font: 400 13px/1.8 var(--font-ui);
+        pointer-events: none;
+      }
+      .glass-underlay span {
+        display: block;
+        white-space: nowrap;
+      }
+      .glass-underlay span + span {
+        margin-left: 38px;
+        color: #747b86;
+      }
+      .preview[data-over-text='true'] .glass-underlay {
+        display: block;
+      }
+      .toolbar {
+        --bar-ink: #454d58;
+        --bar-hover: rgb(24 30 48 / 7%);
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        min-height: 36px;
+        padding: 4px;
+        border-radius: 8px;
+        white-space: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        color: var(--bar-ink);
+      }
+      .toolbar::-webkit-scrollbar {
+        display: none;
+      }
+      .tool-group {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 2px;
+      }
+      .tool {
+        min-width: 28px;
+        height: 28px;
+        padding: 0 6px;
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+        font: 500 12px/1 var(--font-ui);
+      }
+      .tool.menu-tool {
+        padding-inline: 9px;
+      }
+      .tool:hover:not(:disabled) {
+        color: #252b33;
+        background: var(--bar-hover);
+      }
+      .tool[aria-pressed='true'],
+      .tool[aria-expanded='true'] {
+        color: var(--accent);
+        background: #f8e8db;
+      }
+      .tool:disabled {
+        opacity: 0.45;
+      }
+      .tool svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .tool strong {
+        font-weight: 650;
+      }
+      .tool em {
+        font-size: 15px;
+      }
+      .separator {
+        flex: 0 0 1px;
+        height: 16px;
+        margin-inline: 5px;
+        background: rgb(24 30 48 / 15%);
+      }
+      .spacer {
+        flex: 1;
+        min-width: 8px;
+      }
+      .baseline .toolbar {
+        --bar-ink: #686d76;
+        background: linear-gradient(145deg, #ffffffef, #ffffff7a);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        backdrop-filter: blur(16px) saturate(140%);
+        box-shadow:
+          inset 0 1px 0 #ffffffc7,
+          0 1px 3px rgb(24 30 48 / 5%);
+      }
+      .glass-mist .toolbar {
+        --bar-ink: #4c535e;
+        background: linear-gradient(180deg, rgb(255 255 255 / 94%), rgb(246 247 249 / 88%));
+        -webkit-backdrop-filter: blur(18px) saturate(115%);
+        backdrop-filter: blur(18px) saturate(115%);
+        box-shadow:
+          inset 0 0 0 1px rgb(24 30 48 / 6%),
+          inset 0 1px 0 rgb(255 255 255 / 95%),
+          0 1px 2px rgb(24 30 48 / 4%);
+      }
+      .glass-edge .toolbar {
+        --bar-ink: #4c535e;
+        background: linear-gradient(145deg, rgb(255 255 255 / 85%), rgb(255 255 255 / 70%));
+        -webkit-backdrop-filter: blur(20px) saturate(115%);
+        backdrop-filter: blur(20px) saturate(115%);
+        box-shadow:
+          inset 0 0 0 1px rgb(24 30 48 / 10%),
+          inset 0 1px 0 rgb(255 255 255 / 95%),
+          0 1px 2px rgb(24 30 48 / 3%);
+      }
+      .glass-light .toolbar {
+        --bar-ink: #4c535e;
+        background: linear-gradient(160deg, rgb(255 255 255 / 98%), rgb(246 248 252 / 72%));
+        -webkit-backdrop-filter: blur(22px) saturate(130%);
+        backdrop-filter: blur(22px) saturate(130%);
+        box-shadow:
+          inset 0 1px 0 #fff,
+          inset 0 -1px 0 rgb(24 30 48 / 6%),
+          0 2px 5px -2px rgb(24 30 48 / 12%);
+      }
+      .soft .toolbar {
+        background: #eff1f4;
+        box-shadow: inset 0 0 0 1px rgb(24 30 48 / 5%);
+      }
+      .outline .toolbar {
+        --bar-ink: #484f5a;
+        background: #fff;
+        box-shadow: inset 0 0 0 1px rgb(24 30 48 / 14%);
+      }
+      .groups .toolbar {
+        padding: 0;
+        gap: 6px;
+        background: transparent;
+      }
+      .groups .tool-group {
+        min-height: 36px;
+        padding: 4px;
+        background: #f0f1f3;
+        border-radius: 7px;
+        box-shadow: inset 0 0 0 1px rgb(24 30 48 / 4%);
+      }
+      .groups .separator {
+        display: none;
+      }
+      .groups .spacer {
+        min-width: 0;
+      }
+      .warm .toolbar {
+        --bar-ink: #55504a;
+        --bar-hover: rgb(70 52 32 / 7%);
+        background: #f3f0eb;
+        box-shadow: inset 0 0 0 1px rgb(70 52 32 / 7%);
+      }
+      .document-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+      }
+      .document-layout:has(.inspector:not([hidden])) {
+        grid-template-columns: minmax(0, 1fr) 166px;
+      }
+      .note-body {
+        min-width: 0;
+        color: #565d68;
+        font: 400 13px/1.8 var(--font-ui);
+      }
+      .note-body h3 {
+        margin: 0 0 5px;
+        color: #2e323a;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .note-body p {
+        margin: 0;
+      }
+      .inspector {
+        padding-left: 16px;
+        border-left: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .inspector strong {
+        color: #2e323a;
+        font-weight: 500;
+      }
+      .inspector p {
+        margin: 6px 0 0;
+      }
+      .preview-note {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 9px 14px;
+        border-top: 1px solid rgb(24 30 48 / 6%);
+        background: #fcfcfd;
+        color: #777d88;
+        font-size: 11px;
+      }
+      .swipe-hint {
+        display: none;
+      }
+      .legend {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 0 0 30px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .legend p {
+        margin: 0;
+      }
+      .demo-menu {
+        position: fixed;
+        z-index: 40;
+        width: 200px;
+        padding: 6px;
+        border: 1px solid rgb(24 30 48 / 14%);
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(24 30 48 / 5%);
+      }
+      .demo-menu button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        width: 100%;
+        min-height: 32px;
+        padding: 5px 10px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink);
+        text-align: left;
+        font: 400 13px/1.5 var(--font-ui);
+      }
+      .demo-menu button:hover,
+      .demo-menu button:focus-visible {
+        background: #f1f2f4;
+      }
+      .demo-menu button[data-danger] {
+        color: #c23a3a;
+      }
+      .demo-menu small {
+        color: var(--muted);
+        font: 400 12px/1 var(--font-ui);
+      }
+      .demo-menu hr {
+        height: 1px;
+        margin: 6px 8px;
+        border: 0;
+        background: rgb(24 30 48 / 12%);
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      @container (max-width: 800px) {
+        .document {
+          padding: 26px 24px;
+        }
+        .tool {
+          min-width: 40px;
+          height: 44px;
+        }
+        .tool.menu-tool {
+          min-width: 44px;
+          padding-inline: 8px;
+        }
+        .optional,
+        .spacer {
+          display: none;
+        }
+        .swipe-hint {
+          display: inline;
+        }
+        .document-layout:has(.inspector:not([hidden])) {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .inspector {
+          padding: 12px 0 0;
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+      }
+      @container (max-width: 450px) {
+        .document {
+          padding-inline: 20px;
+        }
+        .note-title {
+          font-size: 28px;
+        }
+        .preview-note {
+          flex-wrap: wrap;
+          gap: 3px;
+        }
+      }
+      @media (max-width: 760px) {
+        .wrap {
+          width: calc(100% - 32px);
+        }
+        .masthead {
+          padding-block: 22px;
+        }
+        .intro {
+          margin-top: 20px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        .count-label {
+          display: none;
+        }
+        .control-inner {
+          flex-wrap: wrap;
+          gap: 9px;
+        }
+        .sizes {
+          border: 0;
+          padding: 0;
+        }
+        .glass-controls {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .glass-toggle {
+          min-height: 36px;
+        }
+        .variant-head {
+          align-items: flex-start;
+        }
+        .variant-heading {
+          flex-wrap: wrap;
+          gap: 7px;
+        }
+        .variant-desc {
+          flex-basis: 100%;
+          margin-left: 32px;
+        }
+        .legend {
+          flex-direction: column;
+          gap: 8px;
+        }
+        .demo-menu button {
+          min-height: 44px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="wrap masthead">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"
+          ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M5 3h9l5 5v13H5Z" />
+            <path d="M14 3v5h5M9 12h6M9 16h4" /></svg
+        ></span>
+        知境 · Knowra <span aria-hidden="true">/</span> 编辑器视觉对比
+      </div>
+      <div class="intro">
+        <div>
+          <h1>白色玻璃 · 细化对比</h1>
+          <p>同一张白色纸面，比较微雾、细缘和柔光三种白玻璃。也可以切换正文经过的状态，查看通透感。</p>
+        </div>
+        <span class="count-label">已选 F 细缘白玻璃 · 原有方案保留</span>
+      </div>
+    </header>
+    <div class="controls">
+      <div class="wrap control-inner">
+        <nav class="versions" aria-label="方案筛选">
+          <button class="control-button" data-view="glass" aria-pressed="true">白玻璃细化</button>
+          <button class="control-button" data-view="all" aria-pressed="false">全部对比</button>
+          <button class="control-button" data-view="baseline" aria-pressed="false">当前</button>
+          <button class="control-button" data-view="soft" aria-pressed="false">A 轻灰底</button>
+          <button class="control-button" data-view="outline" aria-pressed="false">B 细线白底</button>
+          <button class="control-button" data-view="groups" aria-pressed="false">C 分组浅底</button>
+          <button class="control-button" data-view="warm" aria-pressed="false">D 暖灰底</button>
+        </nav>
+        <div class="sizes" role="group" aria-label="预览宽度">
+          <button class="control-button" data-size="desktop" aria-pressed="true">桌面</button>
+          <button class="control-button" data-size="tablet" aria-pressed="false">平板</button>
+          <button class="control-button" data-size="mobile" aria-pressed="false">手机</button>
+        </div>
+      </div>
+      <div class="wrap glass-controls">
+        <label class="glass-toggle"><input type="checkbox" id="over-text" />正文从操作栏下面经过</label>
+        <p>先看纯白背景下的边缘，再看正文经过时的透色与模糊。</p>
+      </div>
+    </div>
+    <main class="wrap deck" id="deck" aria-label="操作栏样式对比"></main>
+    <footer class="wrap legend">
+      <p>已选用 F 细缘白玻璃：用淡灰细边勾出轮廓，保留白色与通透感。</p>
+      <p>示例笔记仅用于预览 · 可离线打开</p>
+    </footer>
+    <div class="demo-menu" id="demo-menu" role="menu" aria-label="预览菜单" hidden></div>
+    <div class="sr-only" id="announcement" role="status" aria-live="polite"></div>
+    <script>
+      const variants = [
+        { id: 'baseline', code: '0', name: '当前效果', description: '白色玻璃底，作为对照。', family: 'glass' },
+        {
+          id: 'glass-mist',
+          code: 'E',
+          name: '微雾白玻璃',
+          description: '上白下微灰，雾感更稳，贴边影很轻。',
+          family: 'glass',
+          recommended: false
+        },
+        {
+          id: 'glass-edge',
+          code: 'F',
+          name: '细缘白玻璃',
+          description: '底色仍然纯白，主要靠极细灰边区分纸面。',
+          family: 'glass',
+          selected: true
+        },
+        {
+          id: 'glass-light',
+          code: 'G',
+          name: '柔光白玻璃',
+          description: '轻微冷白渐变、顶边亮光与短投影，更有浮起感。',
+          family: 'glass'
+        },
+        { id: 'soft', code: 'A', name: '轻灰底', description: '整条浅灰底，文字与图标稍深。' },
+        { id: 'outline', code: 'B', name: '细线白底', description: '保留白色，用细线定义操作区。' },
+        { id: 'groups', code: 'C', name: '分组浅底', description: '菜单、标题、格式与插入，各有自己的浅底。' },
+        { id: 'warm', code: 'D', name: '暖灰底', description: '低饱和暖灰，与橙色选中态呼应。' }
+      ];
+      const paths = {
+        code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
+        list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+        quote: '<path d="M7 17c2.5 0 4-1.5 4-4V8H5.5v5H8M17 17c2.5 0 4-1.5 4-4V8h-5.5v5H18"/>',
+        table: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>',
+        image:
+          '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+        star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8 5.8 21.1 7 14.2 2 9.3l6.9-1Z"/>',
+        plus: '<path d="M12 4v16M4 12h16"/>',
+        panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
+        more: '<circle cx="12" cy="5" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/>'
+      };
+      const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name]}</svg>`;
+      function tool(label, content, attributes = '') {
+        return `<button class="tool" type="button" title="${label}" aria-label="${label}" ${attributes}>${content}</button>`;
+      }
+      function toolbar() {
+        const menus = ['文件', '段落', '编辑', '格式', '视图']
+          .map(
+            label =>
+              `<button class="tool menu-tool" type="button" data-menu="${label}" aria-haspopup="menu" aria-expanded="false">${label}</button>`
+          )
+          .join('');
+        const headings = [1, 2, 3]
+          .map(level => tool(`${level}级标题`, `<strong>H${level}</strong>`, 'data-toggle aria-pressed="false"'))
+          .join('');
+        return `<div class="toolbar-wrap"><div class="glass-underlay" aria-hidden="true"><span>阅读记录：核对研究问题、方法与实验设置。阅读记录：核对研究问题、方法与实验设置。阅读记录：核对研究问题、方法与实验设置。</span><span>保留疑问，并记录可以继续验证的想法。保留疑问，并记录可以继续验证的想法。保留疑问，并记录可以继续验证的想法。</span></div><div class="toolbar" role="toolbar" aria-label="笔记格式工具栏">
+          <div class="tool-group">${menus}</div><span class="separator" aria-hidden="true"></span>
+          <div class="tool-group">${headings}</div><span class="separator" aria-hidden="true"></span>
+          <div class="tool-group">${tool('加粗', '<strong>B</strong>', 'data-toggle aria-pressed="false"')}${tool('斜体', '<em>I</em>', 'data-toggle aria-pressed="false"')}${tool('行内代码', icon('code'), 'data-toggle aria-pressed="false"')}</div><span class="separator" aria-hidden="true"></span>
+          <div class="tool-group">${tool('无序列表', icon('list'), 'data-toggle aria-pressed="false"')}${tool('引用', icon('quote'), 'data-toggle aria-pressed="false"')}<span class="optional">${tool('插入表格', icon('table'), 'data-menu="表格" aria-haspopup="menu" aria-expanded="false"')}${tool('插入图片', icon('image'), 'data-menu="图片" aria-haspopup="menu" aria-expanded="false"')}</span></div>
+          <span class="spacer"></span><span class="separator optional" aria-hidden="true"></span>
+          <div class="tool-group"><span class="optional">${tool('收藏当前笔记', icon('star'), 'data-toggle aria-pressed="false"')}${tool('打开插入菜单', icon('plus'), 'data-menu="插入" aria-haspopup="menu" aria-expanded="false"')}</span>${tool('切换文档检查器', icon('panel'), 'data-inspector aria-pressed="false"')}<span class="optional">${tool('更多文档操作（尚未接入）', icon('more'), 'disabled')}</span></div>
+        </div></div>`;
+      }
+      const deck = document.querySelector('#deck');
+      deck.innerHTML = variants
+        .map(
+          variant => `<section class="variant ${variant.id}" id="variant-${variant.id}" data-family="${variant.family ?? 'other'}" aria-labelledby="title-${variant.id}">
+        <header class="variant-head"><div class="variant-heading"><span class="variant-code">${variant.code}</span><h2 id="title-${variant.id}">${variant.name}</h2>${variant.selected ? '<span class="recommend">已选用</span>' : variant.recommended ? '<span class="recommend">建议先看</span>' : ''}<span class="variant-desc">${variant.description}</span></div><button class="solo" data-solo="${variant.id}">单独查看 ↗</button></header>
+        <div class="preview-surround"><div class="preview" data-size="desktop"><div class="document"><h3 class="note-title">CLIP</h3><div class="metadata"><span class="status-badge">待整理</span><span>更新于 08/31</span></div>${toolbar()}<div class="document-layout"><div class="note-body"><h3>阅读记录</h3><p>先整理这篇论文的研究问题，再核对方法、实验设置和结论。阅读时保留疑问，并记录可以继续验证的想法。</p></div><aside class="inspector" aria-label="文档检查器" hidden><strong>文档检查器</strong><p>标题：CLIP</p><p>状态：待整理</p></aside></div></div><div class="preview-note"><span class="feedback">试试悬停、加粗、收藏和检查器</span><span class="swipe-hint">操作栏可左右滑动</span></div></div></div>
+      </section>`
+        )
+        .join('');
+
+      function selectView(id) {
+        closeMenu();
+        const isGlass = id === 'glass' || variants.some(variant => variant.id === id && variant.family === 'glass');
+        document
+          .querySelectorAll('[data-view]')
+          .forEach(button =>
+            button.setAttribute(
+              'aria-pressed',
+              String(button.dataset.view === id || (button.dataset.view === 'glass' && isGlass && id !== 'baseline'))
+            )
+          );
+        document.querySelectorAll('.variant').forEach(section => {
+          section.hidden =
+            id === 'glass' ? section.dataset.family !== 'glass' : id !== 'all' && section.id !== `variant-${id}`;
+        });
+        document.querySelectorAll('[data-solo]').forEach(button => {
+          button.hidden = id !== 'all' && id !== 'glass';
+        });
+      }
+      document
+        .querySelectorAll('[data-view]')
+        .forEach(button => button.addEventListener('click', () => selectView(button.dataset.view)));
+      document.querySelectorAll('[data-solo]').forEach(button =>
+        button.addEventListener('click', () => {
+          selectView(button.dataset.solo);
+          window.scrollTo({ top: 0, behavior: 'instant' });
+          document.querySelector(`[data-view="${button.dataset.solo}"]`)?.focus({ preventScroll: true });
+          if (button.dataset.solo.startsWith('glass-'))
+            document.querySelector('[data-view="glass"]').focus({ preventScroll: true });
+        })
+      );
+      document.querySelectorAll('.sizes [data-size]').forEach(button =>
+        button.addEventListener('click', () => {
+          closeMenu();
+          document
+            .querySelectorAll('.sizes [data-size]')
+            .forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+          document.querySelectorAll('.preview').forEach(preview => {
+            preview.dataset.size = button.dataset.size;
+          });
+        })
+      );
+      document.querySelector('#over-text').addEventListener('change', event => {
+        closeMenu();
+        document.querySelectorAll('.preview').forEach(preview => {
+          preview.dataset.overText = String(event.target.checked);
+        });
+      });
+      function feedback(button, message) {
+        button.closest('.preview').querySelector('.feedback').textContent = message;
+        document.querySelector('#announcement').textContent = message;
+      }
+      document.querySelectorAll('[data-toggle]').forEach(button =>
+        button.addEventListener('click', () => {
+          const selected = button.getAttribute('aria-pressed') !== 'true';
+          button.setAttribute('aria-pressed', String(selected));
+          const label = button.getAttribute('aria-label');
+          feedback(button, `${label}：${selected ? '已选中' : '已取消'} · 预览状态`);
+        })
+      );
+      document.querySelectorAll('[data-inspector]').forEach(button =>
+        button.addEventListener('click', () => {
+          const inspector = button.closest('.preview').querySelector('.inspector');
+          inspector.hidden = !inspector.hidden;
+          button.setAttribute('aria-pressed', String(!inspector.hidden));
+          feedback(button, `文档检查器：${inspector.hidden ? '已收起' : '已展开'}`);
+        })
+      );
+      const menuOptions = {
+        文件: [['新建笔记', '⌘N'], ['导出为 Markdown', ''], null, ['移入回收站', '', true]],
+        段落: [
+          ['正文', ''],
+          ['一级标题', 'H1'],
+          ['二级标题', 'H2'],
+          ['三级标题', 'H3']
+        ],
+        编辑: [['撤销', '⌘Z'], ['重做', '⇧⌘Z'], null, ['复制', '⌘C'], ['粘贴', '⌘V']],
+        格式: [['加粗', '⌘B'], ['斜体', '⌘I'], ['行内代码', ''], null, ['插入表格', ''], ['插入图片', '']],
+        视图: [
+          ['阅读模式', ''],
+          ['专注模式', ''],
+          ['文档检查器', '']
+        ],
+        表格: [
+          ['插入 3 × 3 表格', ''],
+          ['插入 4 × 4 表格', '']
+        ],
+        图片: [
+          ['选择本地图片', ''],
+          ['通过链接插入', '']
+        ],
+        插入: [
+          ['插入表格', ''],
+          ['插入图片', ''],
+          ['插入分隔线', '']
+        ]
+      };
+      const menu = document.querySelector('#demo-menu');
+      let menuTrigger = null;
+      function closeMenu(restoreFocus = false) {
+        if (!menuTrigger) return;
+        const previous = menuTrigger;
+        menu.hidden = true;
+        previous.setAttribute('aria-expanded', 'false');
+        menuTrigger = null;
+        if (restoreFocus) previous.focus();
+      }
+      document.querySelectorAll('[data-menu]').forEach(button =>
+        button.addEventListener('click', () => {
+          if (menuTrigger === button) {
+            closeMenu(true);
+            return;
+          }
+          closeMenu();
+          menuTrigger = button;
+          button.setAttribute('aria-expanded', 'true');
+          menu.setAttribute('aria-label', `${button.dataset.menu}预览`);
+          menu.innerHTML = menuOptions[button.dataset.menu]
+            .map(item =>
+              item === null
+                ? '<hr role="separator">'
+                : `<button role="menuitem" ${item[2] ? 'data-danger' : ''}><span>${item[0]}</span><small>${item[1]}</small></button>`
+            )
+            .join('');
+          menu.hidden = false;
+          const rect = button.getBoundingClientRect();
+          menu.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+          menu.style.top = `${rect.bottom + menu.offsetHeight + 12 <= window.innerHeight ? rect.bottom + 5 : Math.max(8, rect.top - menu.offsetHeight - 5)}px`;
+          menu.querySelector('button').focus({ preventScroll: true });
+        })
+      );
+      menu.addEventListener('click', event => {
+        const item = event.target.closest('[role="menuitem"]');
+        if (!item || !menuTrigger) return;
+        feedback(menuTrigger, `预览操作：${item.querySelector('span').textContent}`);
+        closeMenu(true);
+      });
+      menu.addEventListener('keydown', event => {
+        const items = [...menu.querySelectorAll('button')];
+        const index = items.indexOf(document.activeElement);
+        if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+          event.preventDefault();
+          const next =
+            event.key === 'Home'
+              ? 0
+              : event.key === 'End'
+                ? items.length - 1
+                : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+          items[next].focus();
+        }
+        if (event.key === 'Tab') closeMenu(true);
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeMenu(true);
+      });
+      document.addEventListener('pointerdown', event => {
+        if (!menu.contains(event.target) && !event.target.closest('[data-menu]')) closeMenu();
+      });
+      window.addEventListener('resize', () => closeMenu());
+      window.addEventListener('scroll', () => closeMenu(), true);
+      const requestedView = window.location.hash.slice(1);
+      selectView(
+        ['all', 'glass', ...variants.map(variant => variant.id)].includes(requestedView) ? requestedView : 'glass'
+      );
+    </script>
+  </body>
+</html>

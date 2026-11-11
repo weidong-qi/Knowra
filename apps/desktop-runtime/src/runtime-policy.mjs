@@ -34,6 +34,7 @@ const MUTATIONS = [
   // AI 功能开关只写本机数据目录里的一个布尔文件，不触发 AI，也不读写模型凭据。
   ['PUT', /^\/api\/ai\/features$/],
   ['POST', /^\/api\/ai\/assistant\/preview$/],
+  ['POST', /^\/api\/ai\/translate$/],
   ['POST', /^\/api\/ai\/assistant\/jobs$/],
   ['POST', /^\/api\/ai\/assistant\/jobs\/[^/]+\/cancel$/],
   // 预算相关：只写本机数据目录里的设置/提醒/账本文件，或用已配置的密钥只读 DeepSeek 余额；不发送任何笔记或对话。

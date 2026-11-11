@@ -8,6 +8,35 @@ const attachmentUrl = id => `/api/storage/attachments/${id}/content`;
 
 export const assetLifecycleStage0Tests = [
   {
+    name: 'PostgreSQL 附件预检适配全部核心集合，并读取待办 JSONB 中的引用',
+    async run() {
+      const { inspectAttachmentDeletion, loadPostgresAttachmentReferenceState } =
+        await import('../src/infrastructure/attachment-deletion-preflight.ts');
+      const seen = new Set();
+      const db = new Proxy(
+        {},
+        {
+          get: (_, model) => {
+            assert.notEqual(model, 'undefined');
+            seen.add(model);
+            return {
+              findMany: async () =>
+                model === 'personalTodo'
+                  ? [{ data: { id: 'todo', title: '任务', note: attachmentUrl('todo-attachment') } }]
+                  : []
+            };
+          }
+        }
+      );
+      const state = await loadPostgresAttachmentReferenceState(db);
+      assert(seen.has('personalTodo'));
+      assert.deepEqual(
+        inspectAttachmentDeletion('todo-attachment', state).references.map(row => [row.collection, row.id, row.title]),
+        [['personalTodos', 'todo', '任务']]
+      );
+    }
+  },
+  {
     name: '附件只读预检区分正文、回收站、历史版本与业务来源引用',
     async run() {
       const { inspectAttachmentDeletion } = await import('../src/infrastructure/attachment-deletion-preflight.ts');

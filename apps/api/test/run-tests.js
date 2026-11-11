@@ -4,6 +4,8 @@ import { taskWorkspaceDiskIdentityTests } from './task-workspace-disk-identity.t
 import { taskWorkspaceBoundaryTests } from './task-workspace-boundaries.test.js';
 import { taskWorkspacePersistenceTests } from './task-workspace-persistence.test.js';
 import { taskWorkspaceHttpTests } from './task-workspace-http.test.js';
+import { personalTodoHttpTests } from './personal-todos-http.test.js';
+import { personalTodoPostgresTests } from './personal-todos-postgres.test.js';
 import { taskWorkspaceServiceTests } from './task-workspace-service.test.js';
 import { noteDependencyLifecycleTests } from './note-dependency-lifecycle.test.js';
 import { spaceAssetLifecyclePostgresTests } from './space-asset-lifecycle-postgres.test.js';
@@ -18,6 +20,7 @@ import { aiAgentRequestContextTests } from './ai-agent-request-context.test.js';
 import { noteLinkTests, noteLinkPostgresTests } from './note-links.test.js';
 import { aiAssistantAutonomyTests } from './ai-assistant-autonomy.test.js';
 import { aiAnnotationsListTests } from './ai-annotations-list.test.js';
+import { aiTranslationTests } from './ai-translation.test.js';
 import { aiProposalProgressTests } from './ai-proposal-progress.test.js';
 import { aiKnowledgePropose } from './ai-knowledge-propose.test.js';
 import { aiFeatureSettingsTests } from './ai-feature-settings.test.js';
@@ -131,6 +134,8 @@ const tests = [
   ...pdfMaterialsTests,
   ...taskWorkspaceServiceTests,
   ...taskWorkspaceHttpTests,
+  ...personalTodoHttpTests,
+  ...personalTodoPostgresTests,
   ...taskWorkspacePersistenceTests,
   ...taskWorkspaceDiskIdentityTests,
   ...taskWorkspaceCommitGuardTests,
@@ -152,6 +157,7 @@ const tests = [
   ...noteLinkPostgresTests,
   ...aiAssistantAutonomyTests,
   ...aiAnnotationsListTests,
+  ...aiTranslationTests,
   ...aiKnowledgePropose,
   ...aiProposalProgressTests,
   ...aiFeatureSettingsTests,

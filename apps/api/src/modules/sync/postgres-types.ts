@@ -27,6 +27,7 @@ export interface SyncModelNames {
   questions: 'question';
   questionObjectives: 'questionObjective';
   questionSources: 'questionSource';
+  personalTodos: 'personalTodo';
 }
 interface ReadRows {
   spaces: Models.KnowledgeSpace;
@@ -50,6 +51,7 @@ interface ReadRows {
   questions: Models.Question;
   questionObjectives: Models.QuestionObjective;
   questionSources: Models.QuestionSource;
+  personalTodos: Models.PersonalTodo;
 }
 type JsonFields =
   | 'deletionPackage'
@@ -74,7 +76,8 @@ type JsonFields =
   | 'options'
   | 'referenceAnswer'
   | 'rubric'
-  | 'locator';
+  | 'locator'
+  | 'data';
 type SyncWriteData<Collection extends SyncCollection> = Omit<Partial<ReadRows[Collection]>, JsonFields | 'noteTags'> & {
   [Field in Extract<keyof ReadRows[Collection], JsonFields>]?: Prisma.JsonValue | Prisma.NullTypes.DbNull;
 } & { id: string };
@@ -100,6 +103,7 @@ type MapperSuffix = {
   questions: 'Question';
   questionObjectives: 'QuestionObjective';
   questionSources: 'QuestionSource';
+  personalTodos: 'PersonalTodo';
 };
 export type SyncTable = {
   [Collection in SyncCollection]: readonly [Collection, SyncModelNames[Collection], `db${MapperSuffix[Collection]}`];

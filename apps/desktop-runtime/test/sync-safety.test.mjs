@@ -252,7 +252,7 @@ test('发送标记已落库但暂停尚未落库的崩溃窗口，下次同步�
   assert.deepEqual(cloud.meta('entityUpload'), operation);
   assert.equal(
     cloud.a.store.readSync(db => db.prepare('PRAGMA user_version').get().user_version),
-    7
+    8
   );
 });
 

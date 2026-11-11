@@ -1,9 +1,9 @@
 // V4-04 Menu
 //
 // 1. 行为（↑↓ 循环 / Esc 关闭 / 焦点归还 / Home/End / 字符搜索）由 React Aria 提供。
-// 2. 视觉与 MenuTrigger 由本封装统一：与印格 demo 的 .menu 完全一致。
+// 2. 菜单项视觉、固定选中态与 MenuTrigger 由本封装统一。
 
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, useId, type ReactNode } from 'react';
 import {
   Menu as RAMenu,
   Text as RAText,
@@ -30,6 +30,10 @@ export type MenuItemProps = Omit<RAMenuItemProps, 'className' | 'children'> & {
   /** 右侧提示键位，例如 "⌘K"。 */
   kbd?: string;
   isDanger?: boolean;
+  /** 由业务控制的固定启用态；与 Menu 的原生选中项共用浅灰样式。 */
+  isActive?: boolean;
+  /** 外部补充说明；固定启用态会在其后附加状态说明。 */
+  'aria-describedby'?: string;
   /** 标题下方的一行说明，仅在 `variant="rich"` 的菜单里排版。 */
   description?: string;
   children: ReactNode;
@@ -37,21 +41,50 @@ export type MenuItemProps = Omit<RAMenuItemProps, 'className' | 'children'> & {
 };
 
 export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuItem(
-  { children, icon, kbd, isDanger, description, className, ...rest },
+  {
+    children,
+    icon,
+    kbd,
+    isDanger,
+    isActive = false,
+    description,
+    className,
+    textValue,
+    'aria-describedby': ariaDescribedBy,
+    ...rest
+  },
   ref
 ) {
+  const activeDescriptionId = useId();
+  const describedBy =
+    [ariaDescribedBy, isActive ? activeDescriptionId : undefined].filter(Boolean).join(' ') || undefined;
   return (
     <RAMenuItem
       ref={ref}
       className={cx(styles.item, className)}
       data-danger={isDanger || undefined}
       {...rest}
+      data-active={isActive || undefined}
+      textValue={textValue ?? (typeof children === 'string' ? children : undefined)}
+      aria-describedby={describedBy}
     >
       {icon ? <span className={styles.itemIcon}>{icon}</span> : null}
-      {description
-        ? <span className={styles.itemText}><RAText slot="label">{children}</RAText><RAText slot="description" className={styles.itemDesc}>{description}</RAText></span>
-        : <span>{children}</span>}
+      {description ? (
+        <span className={styles.itemText}>
+          <RAText slot="label">{children}</RAText>
+          <RAText slot="description" className={styles.itemDesc}>
+            {description}
+          </RAText>
+        </span>
+      ) : (
+        <span>{children}</span>
+      )}
       {kbd ? <span className={styles.itemKbd}>{kbd}</span> : null}
+      {isActive ? (
+        <span id={activeDescriptionId} hidden>
+          当前已启用
+        </span>
+      ) : null}
     </RAMenuItem>
   );
 });
@@ -66,7 +99,11 @@ export interface MenuProps<T> extends Omit<RAMenuProps<T>, 'className' | 'childr
 
 export function Menu<T extends object>({ children, className, ariaLabel, variant = 'default', ...rest }: MenuProps<T>) {
   return (
-    <RAMenu<T> aria-label={ariaLabel} className={cx(styles.menu, variant === 'rich' && styles.menuRich, className)} {...rest}>
+    <RAMenu<T>
+      aria-label={ariaLabel}
+      className={cx(styles.menu, variant === 'rich' && styles.menuRich, className)}
+      {...rest}
+    >
       {children}
     </RAMenu>
   );
@@ -77,10 +114,7 @@ export interface MenuHeaderProps {
   className?: string;
 }
 
-export const MenuHeader = forwardRef<HTMLElement, MenuHeaderProps>(function MenuHeader(
-  { children, className },
-  ref
-) {
+export const MenuHeader = forwardRef<HTMLElement, MenuHeaderProps>(function MenuHeader({ children, className }, ref) {
   return (
     <RAHeader ref={ref} className={cx(styles.menuHead, className)}>
       {children}
@@ -97,14 +131,19 @@ export const MenuSection = forwardRef<HTMLElement, MenuSectionProps>(function Me
   { children, className },
   ref
 ) {
-  return <RAMenuSection ref={ref} className={className}>{children}</RAMenuSection>;
+  return (
+    <RAMenuSection ref={ref} className={className}>
+      {children}
+    </RAMenuSection>
+  );
 });
 
-export const MenuSeparator = forwardRef<HTMLHRElement, { className?: string }>(
-  function MenuSeparator({ className }, ref) {
-    return <RASeparator ref={ref} className={cx(styles.separator, className)} />;
-  }
-);
+export const MenuSeparator = forwardRef<HTMLHRElement, { className?: string }>(function MenuSeparator(
+  { className },
+  ref
+) {
+  return <RASeparator ref={ref} className={cx(styles.separator, className)} />;
+});
 
 export type MenuTriggerProps = Omit<RAMenuTriggerProps, 'children'> & {
   /**
@@ -130,20 +169,18 @@ export type SubmenuTriggerProps = RASubmenuTriggerProps;
 export const MenuPopover = forwardRef<
   HTMLDivElement,
   Omit<RAPopoverProps, 'children' | 'className'> & { children: ReactNode; className?: string }
->(
-  function MenuPopover({ children, className, ...rest }, ref) {
-    const appearance = useScopedAppearance();
-    return (
-      <RAPopover
-        ref={ref}
-        offset={4}
-        placement="bottom start"
-        {...appearance}
-        {...rest}
-        className={cx(styles.menuPopover, appearance?.className, className)}
-      >
-        <NestedOverlay>{children}</NestedOverlay>
-      </RAPopover>
-    );
-  }
-);
+>(function MenuPopover({ children, className, ...rest }, ref) {
+  const appearance = useScopedAppearance();
+  return (
+    <RAPopover
+      ref={ref}
+      offset={4}
+      placement="bottom start"
+      {...appearance}
+      {...rest}
+      className={cx(styles.menuPopover, appearance?.className, className)}
+    >
+      <NestedOverlay>{children}</NestedOverlay>
+    </RAPopover>
+  );
+});

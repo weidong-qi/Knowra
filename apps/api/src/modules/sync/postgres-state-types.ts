@@ -39,4 +39,5 @@ export interface SyncMappedEntityMap {
   questions: IsoRow<Models.Question>;
   questionObjectives: IsoRow<Models.QuestionObjective>;
   questionSources: IsoRow<Models.QuestionSource>;
+  personalTodos: import('../../../../../packages/web-core/src/personal-todos/types.ts').Todo;
 }

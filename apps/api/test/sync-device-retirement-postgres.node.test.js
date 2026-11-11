@@ -33,6 +33,7 @@ const models = [
   'question',
   'questionObjective',
   'questionSource',
+  'personalTodo',
   'syncJournal'
 ];
 

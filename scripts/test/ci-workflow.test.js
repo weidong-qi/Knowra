@@ -27,7 +27,7 @@ test('CI partitions every npm test entry exactly once and keeps Chromium in addi
     'test:e2e -w @study-accelerator/desktop-runtime',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
-    'test:e2e -w @study-accelerator/web -- sync-safety-recovery.spec.ts --workers=1'
+    'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts'
   ]);
   const matrix = workflow
     .match(/suite: \[([^\]]+)\]/)[1]
@@ -101,7 +101,7 @@ test('Chromium gate collects Knowra copy/save/reload scenarios and propagates th
   }
 });
 
-test('Chromium gate collects explicit sync recovery and propagates its failure', () => {
+test('Chromium gate collects explicit sync recovery and propagates its failure', async () => {
   const calls = [];
   assert.throws(
     () =>
@@ -109,7 +109,7 @@ test('Chromium gate collects explicit sync recovery and propagates its failure',
         calls.push(args);
         return { status: calls.length === 4 ? 1 : 0 };
       }),
-    /sync-safety-recovery\.spec\.ts/
+    /playwright\.sync-recovery\.config\.ts/
   );
   assert.deepEqual(
     calls,
@@ -125,6 +125,16 @@ test('Chromium gate collects explicit sync recovery and propagates its failure',
   assert.deepEqual(report.errors, []);
   const specs = report.suites.flatMap(suite => suite.specs);
   assert.equal(specs.length, 3);
+  assert.equal(report.config.workers, 1);
+  assert.equal(report.config.projects.length, 1);
+  assert.equal(report.config.projects[0].retries, 0);
+  // JSON reporter 不序列化 use；直接加载同一配置核对浏览器和隐私门禁。
+  const { default: recoveryConfig } = await import('../../apps/web/playwright.sync-recovery.config.ts');
+  assert.equal(recoveryConfig.projects[0].use.channel, 'chrome');
+  assert.equal(recoveryConfig.use.launchOptions.chromiumSandbox, true);
+  assert.equal(recoveryConfig.use.trace, 'off');
+  assert.equal(recoveryConfig.use.video, 'off');
+  assert.equal(recoveryConfig.use.screenshot, 'off');
   for (const spec of specs) {
     assert.equal(spec.file, 'sync-safety-recovery.spec.ts');
     assert.equal(spec.tests.length, 1);

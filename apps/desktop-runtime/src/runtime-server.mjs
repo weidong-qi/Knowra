@@ -143,9 +143,8 @@ export async function startLocalRuntime({
               '正在恢复资料或关闭应用，请等待完成后重新加载。'
             );
           const dataset = request.headers['x-knowra-dataset'];
-          const assistantRoute = /^\/api\/ai\/(?:assistant|conversations|access-policies|actions)(?:\/|$)/.test(
-            url.pathname
-          );
+          const assistantRoute =
+            /^\/api\/ai\/(?:assistant|conversations|access-policies|actions|translate)(?:\/|$)/.test(url.pathname);
           const requiresDataset =
             assistantRoute || (activeDirectory !== dataDirectory && !['GET', 'HEAD'].includes(request.method));
           // 原生图片和下载请求无法附加 fetch header；只读资源可使用会话授权。

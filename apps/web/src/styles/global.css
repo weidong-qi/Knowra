@@ -12,7 +12,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-:where(button, a, [role="button"]) {
+:where(button, a, [role='button']) {
   touch-action: manipulation;
 }
 
@@ -28,8 +28,16 @@ body {
 
 /* 全局焦点环：键盘聚焦时才出现，鼠标点击不显示。
  * 输入控件的焦点反馈由可见外壳（TextField/SearchField/业务 search shell）接管；
- * 原生控件这里只清除浏览器默认环，避免和外壳形成双重阴影。 */
-:where(button, [role="button"], a, [tabindex]):focus-visible {
+ * 原生控件这里只清除浏览器默认环，避免和外壳形成双重阴影。
+ *
+ * React Aria 元素（[data-rac]）只认它自己的 data-focus-visible：浏览器的 :focus-visible
+ * 启发式会让程序化聚焦沿用上一次键盘输入（打字、甚至只按过 Shift），鼠标打开菜单或
+ * 浮层时，容器（Popover/Dialog 的 role="dialog"，tabindex=-1）和自动聚焦的菜单项也会被
+ * 画上焦点环。React Aria 在 pointerdown 时就切回指针模态，因此不受影响；
+ * 浮层容器不暴露 data-focus-visible，本就不画环，键盘焦点由内部菜单项/按钮呈现。
+ * 两段选择器的特异性都保持 (0,1,0)，与改动前一致。 */
+:where(button, [role='button'], a, [tabindex]):where(:not([data-rac])):focus-visible,
+:where(button, [role='button'], a, [tabindex]):where([data-rac])[data-focus-visible] {
   outline: 2px solid var(--accent-text);
   outline-offset: 2px;
   box-shadow: var(--focus-ring);
@@ -68,7 +76,7 @@ body {
 
 /* 手机（宽度 ≤767px）的最小点击目标：所有 button / role=button 至少 44px 高；平板与桌面（含触屏）沿用组件自身尺寸。 */
 @media (max-width: 767px) {
-  :where(button, [role="button"], summary, [role="tab"]) {
+  :where(button, [role='button'], summary, [role='tab']) {
     min-height: 44px;
   }
 }

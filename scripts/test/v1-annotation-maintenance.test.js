@@ -1,3 +1,5 @@
+import { inspectJsonPrivateSource } from '../inline-annotation-retirement-private.mjs';
+import { applyTodoCommand } from '../../packages/web-core/src/personal-todos/commands.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -367,5 +369,23 @@ test('预检预演普通取消的留存清理，有额外历史回收时阻止�
     assert.equal(protectedResult.report.status, 'ready-for-maintenance-window');
     assert.equal(protectedResult.report.retentionPreview.noteVersions, 0);
     f.cloud.privateSources.pop();
+  }
+});
+
+test('只读检查区分新版待办数组与旧版历史对象，拒绝未知和损坏契约', () => {
+  const current = applyTodoCommand(
+    [],
+    { type: 'create', id: 'todo', parentId: null, title: '新待办' },
+    { now: new Date(now).toISOString() }
+  ).changed;
+  for (const personalTodos of [[], current, { version: 1, owners: [] }]) {
+    const state = { personalTodos };
+    const before = JSON.stringify(state);
+    assert.equal(inspectJsonPrivateSource(state, state).privateSources.length, 1);
+    assert.equal(JSON.stringify(state), before);
+  }
+  for (const personalTodos of [[{ ...current[0], title: '' }], { version: 2, owners: [] }]) {
+    const state = { personalTodos };
+    assert.throws(() => inspectJsonPrivateSource(state, state), /不可完整核对/);
   }
 });

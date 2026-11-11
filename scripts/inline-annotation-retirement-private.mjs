@@ -1,3 +1,4 @@
+import { todoCollectionErrors } from '../packages/web-core/src/personal-todos/validation.ts';
 import { validatePersonalTodoHistory } from '../apps/api/src/modules/personal-todos/history-contract.ts';
 import { createNoteVersionReferenceIndex } from '../apps/api/src/modules/knowledge/domain/note-version-references.ts';
 import { referencedAnnotationRevisions } from '../apps/api/src/modules/knowledge/domain/history-retention.ts';
@@ -20,7 +21,14 @@ const validators = {
   knowledgeExtractionCommits: validateKnowledgeExtractionCommitState,
   aiKnowledgeExtractionTasks: validateExtractionTaskState
 };
-const allValidators = { ...validators, personalTodos: validatePersonalTodoHistory };
+const allValidators = {
+  ...validators,
+  personalTodos(value) {
+    if (!Array.isArray(value)) return validatePersonalTodoHistory(value);
+    if (todoCollectionErrors(value).length) throw fail();
+    return value;
+  }
+};
 const fail = () => new Error('私有记录或待同步状态不可完整核对，未生成清理结论。');
 const json = value => {
   try {

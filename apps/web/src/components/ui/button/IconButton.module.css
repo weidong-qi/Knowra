@@ -1,5 +1,6 @@
 /* 图标按钮：base 为透明 ghost；floating 为通透玻璃圆形；primary 为柔橙实心。 */
 .base {
+  position: relative;
   --knowra-icon-accent: currentColor;
   display: inline-flex;
   align-items: center;
@@ -17,10 +18,48 @@
     box-shadow var(--motion-fast) var(--motion-ease);
 }
 
-.size24 { width: 24px; height: 24px; }
-.size28 { width: 28px; height: 28px; }
-.size30 { width: 30px; height: 30px; }
-.size40 { width: 40px; height: 40px; }
+.size24 {
+  width: 24px;
+  height: 24px;
+}
+.size28 {
+  width: 28px;
+  height: 28px;
+}
+.size30 {
+  width: 30px;
+  height: 30px;
+}
+.size40 {
+  width: 40px;
+  height: 40px;
+}
+
+.outline {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-control);
+}
+.square {
+  border-radius: var(--radius-control);
+}
+.countBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-solid);
+  color: var(--text-on-accent);
+  font: 550 10px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--surface-raised);
+  pointer-events: none;
+}
 
 .base:hover:not(:disabled),
 .base[data-force-hover]:not(:disabled) {
@@ -49,18 +88,27 @@
   -webkit-backdrop-filter: blur(9px) saturate(135%);
   backdrop-filter: blur(9px) saturate(135%);
 }
-.floating:hover:not(:disabled), .floating[data-force-hover]:not(:disabled),
-.floating[aria-expanded='true']:not(:disabled), .floating[aria-pressed='true']:not(:disabled) {
+.floating:hover:not(:disabled),
+.floating[data-force-hover]:not(:disabled),
+.floating[aria-expanded='true']:not(:disabled),
+.floating[aria-pressed='true']:not(:disabled) {
   background: var(--surface-action-crystal);
   color: var(--icon-action-crystal);
   box-shadow: var(--shadow-action-crystal-hover);
 }
-.floating:active:not(:disabled), .floating[data-force-active]:not(:disabled) {
+.floating:active:not(:disabled),
+.floating[data-force-active]:not(:disabled) {
   background: var(--surface-action-crystal);
   color: var(--icon-action-crystal);
   box-shadow: var(--shadow-action-crystal-pressed);
 }
-.floating:disabled { border-color: var(--border-subtle); background: var(--surface-hover); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.floating:disabled {
+  border-color: var(--border-subtle);
+  background: var(--surface-hover);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 
 /* primary 柔橙缎面：顶边高光、短投影与内凹按压；独立于业务页面的光晕样式。 */
 .primary {
@@ -70,18 +118,25 @@
   color: var(--text-on-action-satin);
   box-shadow: var(--shadow-action-satin);
 }
-.primary:hover:not(:disabled), .primary[data-force-hover]:not(:disabled),
-.primary[aria-expanded='true']:not(:disabled), .primary[aria-pressed='true']:not(:disabled) {
+.primary:hover:not(:disabled),
+.primary[data-force-hover]:not(:disabled),
+.primary[aria-expanded='true']:not(:disabled),
+.primary[aria-pressed='true']:not(:disabled) {
   background: var(--surface-action-satin);
   color: var(--text-on-action-satin);
   box-shadow: var(--shadow-action-satin-hover);
 }
-.primary:active:not(:disabled), .primary[data-force-active]:not(:disabled) {
+.primary:active:not(:disabled),
+.primary[data-force-active]:not(:disabled) {
   background: var(--surface-action-satin);
   color: var(--text-on-action-satin);
   box-shadow: var(--shadow-action-satin-pressed);
 }
-.primary:disabled { border-color: var(--border-subtle); background: var(--surface-hover); box-shadow: none; }
+.primary:disabled {
+  border-color: var(--border-subtle);
+  background: var(--surface-hover);
+  box-shadow: none;
+}
 
 .base:focus-visible,
 .base[data-force-focus] {
@@ -90,8 +145,15 @@
   box-shadow: var(--focus-ring);
 }
 
-.base:disabled { color: var(--text-muted); cursor: not-allowed; opacity: 0.5; }
+.base:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 
 @media (max-width: 767px) {
-  .base { min-width: 44px; min-height: 44px; }
+  .base {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

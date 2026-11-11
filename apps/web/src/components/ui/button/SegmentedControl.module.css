@@ -22,36 +22,159 @@
   font: 500 12px/1 var(--font-ui);
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
 }
 
-.segment[data-hovered]:not([data-disabled]) { color: var(--text-primary); background: var(--surface-hover); }
-.segment[data-pressed]:not([data-disabled]) { background: var(--surface-pressed); }
-.segment[aria-pressed='true'] { --knowra-icon-accent: var(--accent); background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-control); }
-.segment[aria-pressed='true'][data-hovered]:not([data-disabled]) { background: var(--surface-raised); color: var(--text-primary); }
-.segment[data-focus-visible] { position: relative; z-index: 1; outline: 2px solid var(--accent-text); outline-offset: 2px; box-shadow: var(--focus-ring); }
-.segment[data-disabled] { color: var(--text-muted); cursor: not-allowed; opacity: 0.6; }
-.count { color: var(--text-muted); font: 500 10px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
-.segment[aria-pressed='true'] .count { color: var(--text-secondary); }
-.iconOnly { width: var(--index-size-34); padding: 0; }
+.segment[data-hovered]:not([data-disabled]) {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+.segment[data-pressed]:not([data-disabled]) {
+  background: var(--surface-pressed);
+}
+.segment[aria-pressed='true'] {
+  --knowra-icon-accent: var(--accent);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-control);
+}
+.segment[aria-pressed='true'][data-hovered]:not([data-disabled]) {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+.segment[data-focus-visible] {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+.segment[data-disabled] {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.count {
+  color: var(--text-muted);
+  font: 500 10px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.segment[aria-pressed='true'] .count {
+  color: var(--text-secondary);
+}
+.iconOnly {
+  width: var(--index-size-34);
+  padding: 0;
+}
 
-.compactGroup { gap: 0; padding: 2px; }
-.compactGroup .segment { min-height: 22px; padding: 0 8px; font-weight: 450; }
-.compactGroup .iconOnly { width: 26px; padding: 0; }
+.compactGroup {
+  gap: 0;
+  padding: 2px;
+}
+.compactGroup .segment {
+  min-height: 22px;
+  padding: 0 8px;
+  font-weight: 450;
+}
+.compactGroup .iconOnly {
+  width: 26px;
+  padding: 0;
+}
 
-.comfortableGroup .segment { min-height: 28px; padding: 0 12px; font-size: 13px; }
-.comfortableGroup .count { font-size: 11px; }
+.comfortableGroup .segment {
+  min-height: 28px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.comfortableGroup .count {
+  font-size: 11px;
+}
 
-.underline { gap: 12px; padding: 0; border-radius: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; }
-.underline .segment { gap: 4px; min-width: 0; padding: 0 2px; border-radius: 0; border-bottom: 2px solid transparent; background: transparent; font-weight: 400; }
-.underline .segment[data-hovered]:not([data-disabled]) { background: var(--surface-hover); color: var(--text-primary); }
-.underline .segment[aria-pressed='true'] { color: var(--accent-text); border-bottom-color: var(--accent); background: transparent; box-shadow: none; font-weight: 600; }
-.underline .segment[aria-pressed='true'] .count { color: var(--accent-text); }
-.underline .segment[data-disabled] { color: var(--text-muted); background: transparent; }
-.underline .segment[data-focus-visible] { outline-offset: -2px; border-radius: var(--radius-control); box-shadow: var(--focus-ring); }
+.underline {
+  gap: 12px;
+  padding: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+}
+.underline .segment {
+  gap: 4px;
+  min-width: 0;
+  padding: 0 2px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-weight: 400;
+}
+.underline .segment[data-hovered]:not([data-disabled]) {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.underline .segment[aria-pressed='true'] {
+  color: var(--accent-text);
+  border-bottom-color: var(--accent);
+  background: transparent;
+  box-shadow: none;
+  font-weight: 600;
+}
+.underline .segment[aria-pressed='true'] .count {
+  color: var(--accent-text);
+}
+.underline .segment[data-disabled] {
+  color: var(--text-muted);
+  background: transparent;
+}
+.underline .segment[data-focus-visible] {
+  outline-offset: -2px;
+  border-radius: var(--radius-control);
+  box-shadow: var(--focus-ring);
+}
+
+.outline {
+  gap: 6px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.outline .segment {
+  min-width: 0;
+  min-height: 30px;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+}
+.outline .segment[aria-pressed='true'],
+.outline .segment[aria-pressed='true'][data-hovered]:not([data-disabled]) {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  box-shadow: none;
+}
+.outline .segment[data-focus-visible] {
+  box-shadow: var(--focus-ring);
+}
+.outline.compactGroup .segment {
+  min-height: 24px;
+  padding: 0 6px;
+}
 
 @media (max-width: 767px) {
-  .segment { min-height: var(--index-size-44); }
-  .iconOnly, .compactGroup .iconOnly { width: var(--index-size-44); }
-  .compactGroup .segment, .comfortableGroup .segment { min-height: var(--index-size-44); }
+  .segment {
+    min-height: var(--index-size-44);
+  }
+  .iconOnly,
+  .compactGroup .iconOnly {
+    width: var(--index-size-44);
+  }
+  .compactGroup .segment,
+  .comfortableGroup .segment,
+  .outline .segment,
+  .outline.compactGroup .segment {
+    min-height: var(--index-size-44);
+  }
 }

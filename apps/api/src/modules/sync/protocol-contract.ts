@@ -1,5 +1,5 @@
 import { syncError } from './journal.ts';
-import { TRAINING_SYNC_CAPABILITY } from './entity-contract.ts';
+import { PERSONAL_TODOS_SYNC_CAPABILITY, TRAINING_SYNC_CAPABILITY } from './entity-contract.ts';
 
 export interface SyncContract {
   entitySchemaVersion: number;
@@ -37,7 +37,9 @@ export const REQUIRED_SYNC_CAPABILITIES = Object.freeze([
   KNOWLEDGE_MCP_PROVENANCE_SYNC_CAPABILITY,
   KNOWLEDGE_LIFECYCLE_SYNC_CAPABILITY,
   TRAINING_SYNC_CAPABILITY,
-  INLINE_ANNOTATIONS_SYNC_CAPABILITY
+  INLINE_ANNOTATIONS_SYNC_CAPABILITY,
+  // 个人待办进入同步集合：旧端不认识该集合，必须在握手阶段要求两端都升级。
+  PERSONAL_TODOS_SYNC_CAPABILITY
 ]);
 export const SYNC_CAPABILITIES = Object.freeze([...REQUIRED_SYNC_CAPABILITIES, 'attachment-transfer-v1'].sort());
 export const syncContract = (): SyncContract => ({

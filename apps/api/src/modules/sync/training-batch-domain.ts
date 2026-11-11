@@ -122,7 +122,7 @@ export function normalizeTrainingChange(
       !value.questionId?.trim() ||
       !value.learningObjectiveId?.trim() ||
       !Number.isInteger(value.order) ||
-      value.order! < 0 ||
+      (value.order as number) < 0 ||
       typeof value.isPrimary !== 'boolean'
     )
       fail('SYNC_ENTITY_INVALID', '试题目标关系字段无效。');
@@ -130,7 +130,7 @@ export function normalizeTrainingChange(
       id: value.id,
       questionId: value.questionId!,
       learningObjectiveId: value.learningObjectiveId!,
-      order: value.order!,
+      order: value.order as number,
       isPrimary: value.isPrimary!,
       createdAt: value.createdAt!
     };

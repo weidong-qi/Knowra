@@ -154,13 +154,16 @@ export function createRuntimeServices({
       await aiLifecycle.recover(['agent']).catch(error => {
         logger.warn?.('AI agent recovery deferred', { code: error.code ?? 'AI_RECOVERY_FAILED' });
       });
+      await aiLifecycle.recover(['translation']).catch(error => {
+        logger.warn?.('AI translation recovery deferred', { code: error.code ?? 'AI_RECOVERY_FAILED' });
+      });
       return result;
     };
     const apiServer = createServer({ appContext: context, logger });
     const handleApi = apiServer.listeners('request')[0];
     // 先完成同步装配再启动恢复；并发恢复的一支失败不能提前结束整体等待。
     const recoverAi = Promise.allSettled(
-      ['attachments', 'conversation', 'agent', 'worker'].map(stage => aiLifecycle.recover([stage]))
+      ['attachments', 'conversation', 'agent', 'worker', 'translation'].map(stage => aiLifecycle.recover([stage]))
     ).then(results => {
       const failed = results.find(result => result.status === 'rejected');
       if (failed) logger.warn?.('AI task recovery deferred', { code: failed.reason?.code ?? 'AI_BUDGET_UNAVAILABLE' });

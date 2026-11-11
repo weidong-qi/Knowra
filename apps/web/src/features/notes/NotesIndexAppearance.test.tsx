@@ -31,9 +31,7 @@ describe('全局定稿外观', () => {
       shape: 'pill',
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
-      defaultButtonStyle: 'soft',
-      dialogStyle: 'float',
-      folderArt: 'sketch'
+      dialogStyle: 'float'
     });
   });
   it('旧数据默认通透玻璃，只接受已支持的浮层材质', () => {
@@ -44,9 +42,8 @@ describe('全局定稿外观', () => {
     expect(parseNotesIndexAppearance({ buttonStyle: 'unknown' }).buttonStyle).toBe('paper');
     expect(parseNotesIndexAppearance({ buttonStyle: 'flow' }).buttonStyle).toBe('paper');
     expect(parseNotesIndexAppearance({ buttonStyle: 'frost' }).buttonStyle).toBe('frost');
-    expect(parseNotesIndexAppearance(null).defaultButtonStyle).toBe('soft');
-    expect(parseNotesIndexAppearance({ defaultButtonStyle: 'unknown' }).defaultButtonStyle).toBe('soft');
-    expect(parseNotesIndexAppearance({ defaultButtonStyle: 'glass' }).defaultButtonStyle).toBe('glass');
+    // 默认按钮只有细线一种样式；旧版保存的“无边软影”“乳白玻璃”会被忽略，不出现在解析结果里。
+    expect(parseNotesIndexAppearance({ defaultButtonStyle: 'glass' })).not.toHaveProperty('defaultButtonStyle');
     expect(parseNotesIndexAppearance(null).dialogStyle).toBe('float');
     expect(parseNotesIndexAppearance({ dialogStyle: 'unknown' }).dialogStyle).toBe('float');
     expect(parseNotesIndexAppearance({ dialogStyle: 'glass' }).dialogStyle).toBe('float');
@@ -92,9 +89,7 @@ describe('全局定稿外观', () => {
       shape: 'pill',
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
-      defaultButtonStyle: 'soft',
-      dialogStyle: 'float',
-      folderArt: 'sketch'
+      dialogStyle: 'float'
     });
     await userEvent.click(screen.getByRole('button', { name: '切换浅色模式' }));
     expect(surface).toHaveAttribute('data-ni-mode', 'light');
@@ -106,9 +101,7 @@ describe('全局定稿外观', () => {
       shape: 'pill',
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
-      defaultButtonStyle: 'soft',
-      dialogStyle: 'float',
-      folderArt: 'sketch'
+      dialogStyle: 'float'
     });
   });
   it('存储不可用时依然允许切换并在重新挂载后保留会话设置', async () => {

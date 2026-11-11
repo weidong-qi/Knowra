@@ -1,0 +1,172 @@
+/* 触发按钮：与索引行内的元信息胶囊同一尺度，悬停才出现底色。 */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ni-ink-2, var(--text-secondary));
+  font: 400 12px/1.4 var(--font-ui);
+  cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease;
+}
+.trigger[data-hovered],
+.trigger[data-pressed] {
+  background: var(--ni-hover, var(--surface-hover));
+  color: var(--ni-ink, var(--text-primary));
+}
+.trigger[data-focus-visible] {
+  outline: 2px solid var(--ni-accent, var(--accent));
+  outline-offset: 1px;
+}
+.trigger[data-disabled] {
+  cursor: default;
+  opacity: 0.6;
+}
+.trigger[data-empty] {
+  color: var(--ni-ink-3, var(--text-muted));
+}
+.trigger[data-tone='attention'] {
+  color: var(--ni-accent-ink, var(--accent));
+}
+.trigger[data-tone='danger'] {
+  color: var(--ni-danger, var(--ink-danger));
+}
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.popover {
+  min-width: 0;
+  max-width: none;
+  padding: 10px;
+}
+.dialog {
+  width: 236px;
+  outline: 0;
+}
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--ni-line, var(--border-subtle));
+}
+.quickButton {
+  height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ni-fill-2, var(--surface-hover));
+  color: var(--ni-ink-2, var(--text-secondary));
+  font: 500 12px/1 var(--font-ui);
+  cursor: pointer;
+}
+.quickButton[data-hovered] {
+  color: var(--ni-ink, var(--text-primary));
+  background: var(--ni-press, var(--surface-pressed));
+}
+.quickButton[data-selected] {
+  background: var(--ni-accent-soft, var(--surface-selected));
+  color: var(--ni-accent-ink, var(--accent));
+}
+.quickButton[data-focus-visible],
+.navButton[data-focus-visible],
+.day[data-focus-visible] {
+  outline: 2px solid var(--ni-accent, var(--accent));
+  outline-offset: 1px;
+}
+.clear {
+  margin-left: auto;
+  background: transparent;
+}
+.monthBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.monthBar strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.navButton {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ni-ink-2, var(--text-secondary));
+  font-size: 16px;
+  cursor: pointer;
+}
+.navButton[data-hovered] {
+  background: var(--ni-hover, var(--surface-hover));
+}
+.grid {
+  display: grid;
+  gap: 2px;
+}
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.weekday {
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: var(--ni-ink-3, var(--text-muted));
+  font-size: 11px;
+}
+.day {
+  width: 100%;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ni-ink, var(--text-primary));
+  font: 400 12.5px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.day[data-hovered] {
+  background: var(--ni-hover, var(--surface-hover));
+}
+.day[data-outside] {
+  color: var(--ni-ink-4, var(--text-muted));
+}
+.day[data-today] {
+  color: var(--ni-accent-ink, var(--accent));
+  font-weight: 600;
+}
+.day[data-selected] {
+  background: var(--ni-accent, var(--accent));
+  color: var(--ni-btn-on-accent, #fff);
+  font-weight: 600;
+}
+@media (any-pointer: coarse) {
+  .trigger {
+    min-height: 36px;
+  }
+  .day {
+    height: 36px;
+  }
+}

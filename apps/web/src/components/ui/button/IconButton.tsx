@@ -1,4 +1,5 @@
-// 图标按钮：tone=ghost 透明（密集工具栏/行内）、floating 通透玻璃圆形（新建/编辑入口）、primary 柔橙实心（主操作）。
+// 图标按钮：ghost 透明、floating 通透玻璃、primary 柔橙实心、outline 细线轮廓。
+// 默认圆形，square 为小圆角矩形；count 显示筛选等入口的已选条件数量。
 // 通过背景与光影反馈状态，不移动控件；保留键盘焦点与触屏点击区域。
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react';
@@ -6,8 +7,7 @@ import { Button as RAButton, type ButtonProps as RAButtonProps } from 'react-ari
 import { cx } from '../classnames';
 import styles from './IconButton.module.css';
 
-export interface IconButtonProps
-  extends Omit<RAButtonProps, 'children' | 'aria-label' | 'className'> {
+export interface IconButtonProps extends Omit<RAButtonProps, 'children' | 'aria-label' | 'className'> {
   /**
    * 必填：a11y 标签。按钮内容只有图标，必须有 aria-label 才能被屏读器识别。
    * （HTML 原生 aria-label 是 string|undefined，这里收紧为 string 强制填写。）
@@ -24,7 +24,10 @@ export interface IconButtonProps
    * @default 30
    */
   size?: 24 | 28 | 30 | 40;
-  tone?: 'ghost' | 'floating' | 'primary';
+  tone?: 'ghost' | 'floating' | 'primary' | 'outline';
+  shape?: 'round' | 'square';
+  /** 筛选等入口的条件数量；无条件时不显示角标。 */
+  count?: number;
   /** 与 Button 一致的禁用入口。 */
   isDisabled?: boolean;
   /** 兼容原生按钮调用方式；内部映射为 React Aria 的 isDisabled。 */
@@ -33,40 +36,51 @@ export interface IconButtonProps
   title?: string;
 }
 
-export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
-  function IconButton(
-    {
-      'aria-label': ariaLabel,
-      children,
-      size = 30,
-      tone = 'ghost',
-      disabled,
-      isDisabled,
-      className,
-      title,
-      type,
-      ...rest
-    },
-    ref
-  ) {
-    const buttonRef = useRef<HTMLButtonElement>(null);
-    useImperativeHandle(ref, () => buttonRef.current as HTMLButtonElement);
-    useEffect(() => {
-      if (!buttonRef.current) return;
-      if (title) buttonRef.current.title = title;
-      else buttonRef.current.removeAttribute('title');
-    }, [title]);
-    return (
-      <RAButton
-        ref={buttonRef}
-        type={type ?? 'button'}
-        className={cx(styles.base, styles[`size${size}`], tone !== 'ghost' && styles[tone], className)}
-        isDisabled={disabled ?? isDisabled}
-        aria-label={ariaLabel}
-        {...rest}
-      >
-        {children}
-      </RAButton>
-    );
-  }
-);
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  {
+    'aria-label': ariaLabel,
+    children,
+    size = 30,
+    tone = 'ghost',
+    shape = 'round',
+    count,
+    disabled,
+    isDisabled,
+    className,
+    title,
+    type,
+    ...rest
+  },
+  ref
+) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  useImperativeHandle(ref, () => buttonRef.current as HTMLButtonElement);
+  useEffect(() => {
+    if (!buttonRef.current) return;
+    if (title) buttonRef.current.title = title;
+    else buttonRef.current.removeAttribute('title');
+  }, [title]);
+  return (
+    <RAButton
+      ref={buttonRef}
+      type={type ?? 'button'}
+      className={cx(
+        styles.base,
+        styles[`size${size}`],
+        tone !== 'ghost' && styles[tone],
+        shape === 'square' && styles.square,
+        className
+      )}
+      isDisabled={disabled ?? isDisabled}
+      aria-label={ariaLabel}
+      {...rest}
+    >
+      {children}
+      {count !== undefined && count > 0 ? (
+        <span className={styles.countBadge} aria-hidden="true">
+          {count}
+        </span>
+      ) : null}
+    </RAButton>
+  );
+});
