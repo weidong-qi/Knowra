@@ -8,7 +8,7 @@ import path from 'node:path';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createAiAccessService } from '../../api/src/modules/ai/access-service.ts';
-import { createNoteActionService } from '../../api/src/modules/ai/action-service.js';
+import { createNoteActionService } from '../../api/src/modules/ai/action-service.ts';
 import { noteActionScenarios } from '../../api/test/fixtures/note-action-scenarios.js';
 async function withFixture(run) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-p2-sqlite-'));

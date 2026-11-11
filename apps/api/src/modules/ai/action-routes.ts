@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { createNoteActionService } from './action-service.js';
+import type { createNoteActionService } from './action-service.ts';
 import type { createActionInboxMethods } from './action-inbox.ts';
 type ActionRoutePort = Pick<
   ReturnType<typeof createNoteActionService> & ReturnType<typeof createActionInboxMethods>,
@@ -53,17 +53,19 @@ export async function handleActionRoute({ request, response, url, actions }: Act
       throw createAppError('AI_REQUEST_REJECTED', '需要受信用户写入请求。', 403);
     const input = await parseBody(request, { limitBytes: 500000 });
     let result;
-    if (!parts.length) result = await actions.plan(input);
-    else if (parts.length === 1 && parts[0] === 'drafts') result = await actions.draft(input);
+    if (!parts.length) result = await actions.plan(input as Parameters<typeof actions.plan>[0]);
+    else if (parts.length === 1 && parts[0] === 'drafts')
+      result = await actions.draft(input as Parameters<typeof actions.draft>[0]);
     else if (parts.length === 2) {
       const [id, operation] = parts;
-      if (operation === 'approve') result = await actions.approve(id, input);
+      if (operation === 'approve') result = await actions.approve(id, input as Parameters<typeof actions.approve>[1]);
       else if (operation === 'apply') result = await actions.apply(id);
       else if (operation === 'cancel' || operation === 'reject')
         result = await actions.cancel(id, operation === 'reject');
       else if (operation === 'repreview') result = await actions.repreview(id, input);
       else if (operation === 'revise') result = await actions.revise(id, input);
-      else if (operation === 'undo-preview') result = await actions.undoPreview(id, input);
+      else if (operation === 'undo-preview')
+        result = await actions.undoPreview(id, input as Parameters<typeof actions.undoPreview>[1]);
     }
     if (result) {
       sendJson(response, 200, { data: result });

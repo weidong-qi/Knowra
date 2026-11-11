@@ -1,3 +1,32 @@
+import type { InboxFlow, ActionInboxOptions } from './action-inbox-types.ts';
+import type {
+  ActionServiceOptions,
+  ActionFlow,
+  ActionRecord,
+  ActionState,
+  ActionResult,
+  NoteActionService,
+  ActionServiceMethods,
+  NoteRecord,
+  NoteVersionRecord,
+  KnowledgeSpaceRecord,
+  AiConversationTurn,
+  AiAccessPolicy,
+  CoreNoteResult
+} from './action-service-types.ts';
+import type { ActionIdentity, AssistantMessageSource } from './action-state-types.ts';
+import type { ActionReference, NotePlanItem } from './note-plan-types.ts';
+import type { SourceReference, CatalogDependencies } from './access-service-types.ts';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
+import type { Tag } from '../knowledge/domain/tag.ts';
+import type {
+  CoreOperationInput,
+  CoreOperationKind,
+  CoreOperationReceipt,
+  CoreOperationChange
+} from '../../infrastructure/core-operation-types.ts';
+import type { AppError } from '../../errors/app-error.ts';
 import { assertAiReadableNote } from './note-privacy.ts';
 import { createActionInboxMethods, createAssistantMessageSourceGuard } from './action-inbox.ts';
 import { validateWriteIntent } from './note-write-intent.ts';
@@ -8,19 +37,24 @@ import { actionError, actionIdentityKeys, DRAFT_LEASE_MS } from './action-state.
 import { assertBaseline, baseline, buildActionPlan, finalizePlan, image, runAsync, runSync } from './action-plan.ts';
 import { reuseCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';
 
-const id = value => typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value;
-const rowFor = (state, actionId, ownerId) => {
+const id = (value: unknown) =>
+  typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value;
+const rowFor = (state: ActionState, actionId: string, ownerId: string): ActionRecord => {
   const row = state.actions.find(row => row.actionId === actionId && row.ownerId === ownerId);
   if (!row) actionError('AI_ACTION_NOT_FOUND', '动作不存在。', 404);
   return row;
 };
-const requestFor = row => ({
-  ...Object.fromEntries(actionIdentityKeys.map(key => [key, row[key]])),
-  kind: row.plan.toolName,
+const requestFor = (row: ActionRecord): CoreOperationInput => ({
+  ...(Object.fromEntries(actionIdentityKeys.map(key => [key, row[key]])) as unknown as ActionIdentity),
+  kind: row.plan.toolName as CoreOperationKind,
   planHash: row.plan.planHash
 });
-const lookupFor = row => ({ ownerId: row.ownerId, datasetId: row.datasetId, operationId: row.operationId });
-const serial = value => JSON.parse(JSON.stringify(value));
+const lookupFor = (row: ActionRecord) => ({
+  ownerId: row.ownerId,
+  datasetId: row.datasetId,
+  operationId: row.operationId
+});
+const serial = (value: object): unknown => JSON.parse(JSON.stringify(value));
 
 export function createNoteActionService({
   store,
@@ -32,7 +66,7 @@ export function createNoteActionService({
   access = null,
   now = () => new Date(),
   asyncDomain = false
-}) {
+}: ActionServiceOptions): NoteActionService {
   const repos = knowledge.repositories;
   const run = asyncDomain ? runAsync : runSync;
   const messageSources = createAssistantMessageSourceGuard({
@@ -42,11 +76,11 @@ export function createNoteActionService({
     ownerId,
     now
   });
-  function* space(spaceId) {
-    const record = yield repos.knowledgeSpaceRepository.findById(spaceId);
+  function* space(spaceId: string | null | undefined): ActionFlow<void> {
+    const record = (yield repos.knowledgeSpaceRepository.findById(spaceId)) as KnowledgeSpaceRecord | null;
     if (!record || record.userId !== ownerId) actionError('AI_SCOPE_FORBIDDEN', '无权访问知识空间。', 403);
   }
-  function checkCurrent(row, identity, allowExpired = false) {
+  function checkCurrent(row: ActionRecord, identity: DatasetIdentity, allowExpired = false) {
     if (row.datasetId !== identity.datasetId || row.datasetEpoch !== identity.datasetEpoch)
       actionError('AI_DATASET_STALE', '资料集已切换或恢复，旧动作不可提交。');
     if (
@@ -61,14 +95,17 @@ export function createNoteActionService({
     if (!allowExpired && Date.parse(row.expiresAt) <= now().getTime())
       actionError('AI_ACTION_EXPIRED', '写入指令已过期。');
   }
-  function* references(spaceId, ids) {
-    const result = [];
+  function* references(
+    spaceId: string,
+    ids: { folders: (string | null | undefined)[]; tags: string[] }
+  ): InboxFlow<ActionReference[]> {
+    const result: ActionReference[] = [];
     for (const [kind, repo, refIds] of [
       ['folder', repos.folderRepository, ids.folders],
       ['tag', repos.tagRepository, ids.tags]
-    ]) {
-      for (const refId of new Set(refIds.filter(Boolean))) {
-        const ref = yield repo.findById(refId);
+    ] as const) {
+      for (const refId of new Set(refIds.filter(Boolean) as string[])) {
+        const ref = (yield repo.findById(refId)) as ((FolderRecord | Tag) & { deletedAt?: unknown }) | null;
         if (!ref || ref.spaceId !== spaceId || ref.deletedAt)
           actionError('AI_NOTE_REFERENCE_DENIED', '目录或标签不可用。', 422);
         result.push({ kind, id: refId, hash: hashRecord(serial(ref)) });
@@ -76,13 +113,15 @@ export function createNoteActionService({
     }
     return result;
   }
-  function* verifyOrigin(row, identity, allowExpired = false) {
+  function* verifyOrigin(row: ActionRecord, identity: DatasetIdentity, allowExpired = false): ActionFlow<void> {
     checkCurrent(row, identity, allowExpired);
-    if (row.plan.provenance?.messageId) yield* messageSources.verify(row.plan.provenance, row);
+    if ((row.plan.provenance as Partial<AssistantMessageSource> | null)?.messageId)
+      yield* messageSources.verify(row.plan.provenance, row) as ActionFlow<void>;
     if (row.grant.originTurnId) {
       if (!Array.isArray(row.grant.sourceRefs))
         actionError('AI_ACTION_GRANT_REVOKED', '旧模型成果缺少可靠来源记录，请重新生成。', 403);
-      const turn = yield conversationStore?.peekTurn(row.grant.originTurnId);
+      const turn = (yield conversationStore?.peekTurn(row.grant.originTurnId!)) as
+        AiConversationTurn | null | undefined;
       if (
         !turn ||
         (!row.grant.autonomousOrigin && (!turn.writeIntent || turn.writeIntent.toolName !== row.plan.toolName)) ||
@@ -102,8 +141,9 @@ export function createNoteActionService({
     }
     for (const event of row.inboxEvents ?? []) {
       if (!event.originTurnId) continue;
-      const turn = yield conversationStore?.peekTurn(event.originTurnId);
-      const original = yield conversationStore?.peekTurn(row.grant.originTurnId);
+      const turn = (yield conversationStore?.peekTurn(event.originTurnId)) as AiConversationTurn | null | undefined;
+      const original = (yield conversationStore?.peekTurn(row.grant.originTurnId!)) as
+        AiConversationTurn | null | undefined;
       if (
         !turn ||
         !original ||
@@ -118,7 +158,8 @@ export function createNoteActionService({
         actionError('AI_ACTION_GRANT_REVOKED', '成果修订任务未成功完成。', 403);
     }
     if (row.grant.policyId) {
-      const policy = yield accessStore?.peek('aiAccessPolicy', row.grant.policyId);
+      const policy = (yield accessStore?.peek('aiAccessPolicy', row.grant.policyId)) as
+        AiAccessPolicy | null | undefined;
       if (
         !policy ||
         policy.actorId !== ownerId ||
@@ -128,24 +169,26 @@ export function createNoteActionService({
         policy.spaceId !== row.spaceId ||
         policy.revokedAt ||
         policy.revision !== row.grant.policyRevision ||
-        Date.parse(policy.expiresAt) <= now().getTime()
+        Date.parse(policy.expiresAt!) <= now().getTime()
       )
         actionError('AI_ACTION_GRANT_REVOKED', '计划来源授权已撤销或变化。', 403);
     }
-    for (const ref of row.grant.sourceRefs ?? []) assertAiReadableNote(yield repos.noteRepository.findById(ref.noteId));
+    for (const ref of row.grant.sourceRefs ?? [])
+      assertAiReadableNote((yield repos.noteRepository.findById(ref.noteId)) as NoteRecord | null);
     // 目录依赖（列出的笔记标题、目录名）：笔记仍可读、目录仍存在，成果才可采纳。
     for (const noteId of row.grant.catalogDeps?.noteIds ?? [])
-      assertAiReadableNote(yield repos.noteRepository.findById(noteId));
+      assertAiReadableNote((yield repos.noteRepository.findById(noteId)) as NoteRecord | null);
     for (const folderId of row.grant.catalogDeps?.folderIds ?? []) {
-      const folder = yield repos.folderRepository.findById(folderId);
+      const folder = (yield repos.folderRepository.findById(folderId)) as FolderRecord | null;
       if (!folder || folder.deletedAt || folder.spaceId !== row.spaceId)
         actionError('AI_SCOPE_FORBIDDEN', '成果依赖的目录已不可用，请重新生成。', 403);
     }
     yield* space(row.spaceId);
   }
-  function* verifyTargets(row, state) {
+  function* verifyTargets(row: ActionRecord, state: ActionState): ActionFlow<void> {
     for (const ref of row.plan.references) {
-      const record = yield (ref.kind === 'folder' ? repos.folderRepository : repos.tagRepository).findById(ref.id);
+      const record = (yield (ref.kind === 'folder' ? repos.folderRepository : repos.tagRepository).findById(ref.id)) as
+        ((FolderRecord | Tag) & { deletedAt?: unknown }) | null;
       if (!record || record.spaceId !== row.spaceId || record.deletedAt || hashRecord(serial(record)) !== ref.hash) {
         actionError('AI_ACTION_CONFLICT', '目录或标签已变化，请重新预览。');
       }
@@ -164,10 +207,10 @@ export function createNoteActionService({
       ) {
         actionError('AI_ACTION_DRAFT_CONFLICT', '目标有未保存草稿，请先保存或比较草稿，再重新预览。');
       }
-      assertBaseline(item, yield repos.noteRepository.findById(item.after.id));
+      assertBaseline(item, (yield repos.noteRepository.findById(item.after.id)) as NoteRecord | null);
     }
   }
-  function* verify(row, state, identity) {
+  function* verify(row: ActionRecord, state: ActionState, identity: DatasetIdentity): ActionFlow<void> {
     yield* verifyOrigin(row, identity);
     if (
       row.status !== 'applying' ||
@@ -180,40 +223,41 @@ export function createNoteActionService({
     }
     yield* verifyTargets(row, state);
   }
-  function* commit(actionId) {
-    const state = yield store.read(),
+  function* commit(actionId: string): ActionFlow<CoreNoteResult> {
+    const state = (yield store.read()) as ActionState,
       row = rowFor(state, actionId, ownerId);
-    yield* verify(row, state, yield store.identity());
-    const changes = [];
+    yield* verify(row, state, (yield store.identity()) as DatasetIdentity);
+    const changes: CoreOperationChange[] = [];
     for (const item of row.plan.items) {
       const beforeVersion = item.before
-        ? yield repos.noteVersionRepository.findByNoteIdAndContentHash(
+        ? ((yield repos.noteVersionRepository.findByNoteIdAndContentHash(
             item.after.id,
             calculateContentHash(item.before.rawMarkdown)
-          )
+          )) as NoteVersionRecord | null)
         : null;
-      let saved;
-      if (item.softDelete) saved = yield knowledge.noteService.deleteNote(item.after.id);
-      else if (!item.before) saved = yield knowledge.noteService.createNote({ ...item.after, sourceType: 'ai' });
+      let saved: NoteRecord;
+      if (item.softDelete) saved = (yield knowledge.noteService.deleteNote(item.after.id)) as NoteRecord;
+      else if (!item.before)
+        saved = (yield knowledge.noteService.createNote({ ...item.after, sourceType: 'ai' })) as NoteRecord;
       else {
         const { id: noteId, spaceId: _space, ...updates } = item.after;
         // 元数据整理不重写正文，保留版本及标注维护路径。
-        if (row.plan.toolName === 'notes_propose_organize') delete updates.rawMarkdown;
-        saved = yield knowledge.noteService.updateNote(noteId, {
+        if (row.plan.toolName === 'notes_propose_organize') delete (updates as { rawMarkdown?: string }).rawMarkdown;
+        saved = (yield knowledge.noteService.updateNote(noteId, {
           ...updates,
           expectedUpdatedAt: item.baseline.expectedUpdatedAt
-        });
+        })) as NoteRecord;
       }
-      const afterVersion = yield repos.noteVersionRepository.findByNoteIdAndContentHash(
+      const afterVersion = (yield repos.noteVersionRepository.findByNoteIdAndContentHash(
         saved.id,
         calculateContentHash(saved.rawMarkdown)
-      );
+      )) as NoteVersionRecord | null;
       if (!afterVersion) actionError('AI_ACTION_VERSION_MISSING', '提交版本缺失，事务已回滚。', 503);
       changes.push({
         noteId: saved.id,
-        beforeVersionId: beforeVersion?.id ?? null,
-        afterVersionId: afterVersion.id,
-        contentHash: afterVersion.contentHash,
+        beforeVersionId: (beforeVersion?.id as string | undefined) ?? null,
+        afterVersionId: afterVersion!.id as string,
+        contentHash: afterVersion!.contentHash as string,
         metadataBefore: item.before
           ? { title: item.before.title, folderId: item.before.folderId, tagIds: item.before.tagIds }
           : null
@@ -221,7 +265,7 @@ export function createNoteActionService({
     }
     return { changes, saveState: 'localCommitted' };
   }
-  async function reconcile(row) {
+  async function reconcile(row: ActionRecord): Promise<ActionResult> {
     const receipt = reuseCoreOperationReceipt(await core.get(lookupFor(row)), requestFor(row));
     if (!receipt) return row;
     // 私有账本失败不改变已提交事实；读回执仍可报告真实结果。
@@ -237,11 +281,16 @@ export function createNoteActionService({
       return { ...row, status: 'applied', receipt, reconciliationPending: true };
     }
   }
-  const mergeIds = (...parts) => ({
+  const mergeIds = (...parts: (CatalogDependencies | null | undefined)[]) => ({
     noteIds: [...new Set(parts.flatMap(part => part?.noteIds ?? []))],
     folderIds: [...new Set(parts.flatMap(part => part?.folderIds ?? []))]
   });
-  async function verifyRunSources(grantId, sourceRefs, targetIds = [], catalogDeps = null) {
+  async function verifyRunSources(
+    grantId: string | null,
+    sourceRefs: SourceReference[],
+    targetIds: (string | undefined)[] = [],
+    catalogDeps: CatalogDependencies | null = null
+  ) {
     if (!Array.isArray(sourceRefs) || sourceRefs.length > 128)
       actionError('AI_REQUEST_INVALID', '成果来源列表无效。', 422);
     if (catalogDeps && (catalogDeps.noteIds?.length || catalogDeps.folderIds?.length)) {
@@ -253,14 +302,14 @@ export function createNoteActionService({
     }
     for (const noteId of new Set([...targetIds, ...sourceRefs.map(ref => ref.noteId)])) {
       if (!access || !grantId) actionError('AI_SCOPE_FORBIDDEN', '成果来源需要本轮读取授权。', 403);
-      const verified = await access.verifyRead({ grantId, noteId });
+      const verified = await access.verifyRead({ grantId, noteId: noteId! });
       for (const ref of sourceRefs.filter(ref => ref.noteId === noteId)) {
         if (ref.noteVersionId !== verified.version.id || ref.contentHash !== verified.contentHash)
           actionError('AI_SOURCE_STALE', '成果来源已变化，请重新读取。');
       }
     }
   }
-  const service = {
+  const service: ActionServiceMethods = {
     async resumeForTurn(actionId, turn, { sourceRefs = [], grantId = null, catalogDeps = null } = {}) {
       const row = await service.get(actionId);
       const targets = row.plan.items.filter(item => item.before).map(item => item.after.id);
@@ -272,10 +321,12 @@ export function createNoteActionService({
       );
       return store.transaction(() =>
         run(
-          (function* () {
-            const current = yield conversationStore?.peekTurn(turn.turnId);
-            const identity = yield store.identity();
-            const policy = row.grant.policyId ? yield accessStore?.peek('aiAccessPolicy', row.grant.policyId) : null;
+          (function* (): ActionFlow<ActionRecord> {
+            const current = (yield conversationStore?.peekTurn(turn.turnId)) as AiConversationTurn | null | undefined;
+            const identity = (yield store.identity()) as DatasetIdentity;
+            const policy = row.grant.policyId
+              ? ((yield accessStore?.peek('aiAccessPolicy', row.grant.policyId)) as AiAccessPolicy | null | undefined)
+              : null;
             if (
               !current ||
               current.status !== 'running' ||
@@ -286,16 +337,16 @@ export function createNoteActionService({
               current.spaceId !== row.spaceId ||
               current.datasetId !== row.datasetId ||
               current.datasetEpoch !== row.datasetEpoch ||
-              Date.parse(current.leaseExpiresAt) <= now().getTime() ||
+              Date.parse(current.leaseExpiresAt!) <= now().getTime() ||
               (current.requestedPolicyId ?? null) !== row.grant.policyId ||
               (row.grant.policyId &&
                 (!policy ||
                   policy.revokedAt ||
                   policy.revision !== row.grant.policyRevision ||
-                  Date.parse(policy.expiresAt) <= now().getTime()))
+                  Date.parse(policy.expiresAt!) <= now().getTime()))
             )
               actionError('AI_ACTION_GRANT_REVOKED', '恢复任务的来源授权已失效。', 403);
-            return yield store.write(state => {
+            return (yield store.write(state => {
               const latest = rowFor(state, actionId, ownerId);
               if (
                 !Array.isArray(latest.grant.sourceRefs) ||
@@ -308,7 +359,7 @@ export function createNoteActionService({
               else if (event) event.originGeneration = turn.leaseGeneration;
               else actionError('AI_SCOPE_FORBIDDEN', '恢复任务与成果来源不匹配。', 403);
               return latest;
-            });
+            })) as ActionRecord;
           })()
         )
       );
@@ -331,12 +382,12 @@ export function createNoteActionService({
         current.datasetEpoch !== turn.datasetEpoch ||
         current.spaceId !== turn.spaceId ||
         (current.requestedPolicyId ?? null) !== (turn.requestedPolicyId ?? null) ||
-        Date.parse(current.leaseExpiresAt) <= now().getTime()
+        Date.parse(current.leaseExpiresAt!) <= now().getTime()
       )
         actionError('AI_ACTION_GRANT_REVOKED', '模型任务已失效。', 403);
       const policy = turn.requestedPolicyId ? await accessStore?.get('aiAccessPolicy', turn.requestedPolicyId) : null;
       if (
-        (policy && (policy.revokedAt || Date.parse(policy.expiresAt) <= now().getTime())) ||
+        (policy && (policy.revokedAt || Date.parse(policy.expiresAt!) <= now().getTime())) ||
         (turn.requestedPolicyId && !policy)
       )
         actionError('AI_ACTION_GRANT_REVOKED', '模型来源授权已失效。', 403);
@@ -370,14 +421,14 @@ export function createNoteActionService({
         const priorEvent = prior.inboxEvents?.find(event => event.requestId === turn.turnId);
         if (priorEvent && (priorEvent.kind !== 'revise' || priorEvent.originTurnId !== turn.turnId))
           actionError('AI_IDEMPOTENCY_CONFLICT', '修订请求已被其他成果操作使用。');
-        const action = await service.reviseForAssistantTurn(
+        const action = await (service as NoteActionService).reviseForAssistantTurn(
           actionId,
           {
             planHash: priorEvent?.previousPlan.planHash ?? prior.plan.planHash,
             requestId: turn.turnId,
             arguments: args
           },
-          { ...turn, sourceRefs, catalogDeps }
+          { ...turn, sourceRefs, catalogDeps: catalogDeps! }
         );
         return service.resumeForTurn(action.actionId, turn, { sourceRefs, grantId, catalogDeps });
       }
@@ -387,8 +438,8 @@ export function createNoteActionService({
       );
       return store.transaction(() =>
         run(
-          (function* () {
-            const latest = yield conversationStore.peekTurn(turn.turnId);
+          (function* (): ActionFlow<ActionRecord> {
+            const latest = (yield conversationStore!.peekTurn(turn.turnId)) as AiConversationTurn | null | undefined;
             const valid =
               latest &&
               latest.status === 'running' &&
@@ -397,8 +448,8 @@ export function createNoteActionService({
               latest.datasetId === row.datasetId &&
               latest.datasetEpoch === row.datasetEpoch &&
               latest.spaceId === row.spaceId &&
-              Date.parse(latest.leaseExpiresAt) > now().getTime();
-            return yield store.write(state => {
+              Date.parse(latest.leaseExpiresAt!) > now().getTime();
+            return (yield store.write(state => {
               const action = rowFor(state, row.actionId, ownerId);
               if (valid) {
                 if (
@@ -415,7 +466,7 @@ export function createNoteActionService({
                 action.grant.revoked = true;
               }
               return action;
-            });
+            })) as ActionRecord;
           })()
         )
       );
@@ -440,7 +491,7 @@ export function createNoteActionService({
       )
         actionError('AI_SCOPE_FORBIDDEN', '模型只能为明确指令的固定目标提出计划。', 403);
       const policy = turn.requestedPolicyId ? await accessStore?.get('aiAccessPolicy', turn.requestedPolicyId) : null;
-      if (turn.requestedPolicyId && (!policy || policy.revokedAt || Date.parse(policy.expiresAt) <= now().getTime()))
+      if (turn.requestedPolicyId && (!policy || policy.revokedAt || Date.parse(policy.expiresAt!) <= now().getTime()))
         actionError('AI_ACTION_GRANT_REVOKED', '模型来源授权已失效。', 403);
       const targetIds =
         call.name === 'notes_create'
@@ -456,8 +507,8 @@ export function createNoteActionService({
       );
       return store.transaction(() =>
         run(
-          (function* () {
-            const current = yield conversationStore.peekTurn(turn.turnId);
+          (function* (): ActionFlow<ActionRecord> {
+            const current = (yield conversationStore!.peekTurn(turn.turnId)) as AiConversationTurn | null | undefined;
             const valid =
               current &&
               current.status === 'running' &&
@@ -468,8 +519,8 @@ export function createNoteActionService({
               current.spaceId === row.spaceId &&
               current.turnId === row.requestId &&
               (current.requestedPolicyId ?? null) === row.grant.policyId &&
-              Date.parse(current.leaseExpiresAt) > now().getTime();
-            return yield store.write(state => {
+              Date.parse(current.leaseExpiresAt!) > now().getTime();
+            return (yield store.write(state => {
               const action = rowFor(state, row.actionId, ownerId);
               if (
                 valid &&
@@ -485,7 +536,7 @@ export function createNoteActionService({
                 action.grant.revoked = true;
               }
               return action;
-            });
+            })) as ActionRecord;
           })()
         )
       );
@@ -535,7 +586,10 @@ export function createNoteActionService({
       );
       if (existing) {
         if (existing.inputHash !== inputHash) actionError('AI_IDEMPOTENCY_CONFLICT', '相同指令 ID 的输入已变化。');
-        if (existing.plan.provenance?.messageId && existing.status !== 'applied') {
+        if (
+          (existing.plan.provenance as Partial<AssistantMessageSource> | null)?.messageId &&
+          existing.status !== 'applied'
+        ) {
           checkCurrent(existing, identity, true);
           await run(messageSources.verify(existing.plan.provenance, existing));
         }
@@ -545,7 +599,10 @@ export function createNoteActionService({
       if (input.sourceMessageId || input.conversationId) {
         if (!id(input.sourceMessageId) || !id(input.conversationId))
           actionError('AI_ACTION_SOURCE_INVALID', '对话来源不可用。', 422);
-        provenance = await messageSources.resolve(input, { ...identity, spaceId: input.spaceId });
+        provenance = await messageSources.resolve(
+          input as typeof input & { sourceMessageId: string; conversationId: string },
+          { ...identity, spaceId: input.spaceId }
+        );
         await run(messageSources.verify(provenance, { ...identity, spaceId: input.spaceId }));
       }
       const targetNoteId = input.toolName === 'notes_create' ? `note-${randomUUID()}` : input.arguments.noteId;
@@ -572,19 +629,19 @@ export function createNoteActionService({
       const changes = input.toolName === 'notes_propose_organize' ? args.changes : [args];
       const refs = await run(
         references(input.spaceId, {
-          folders: [...notes.map(note => note?.folderId), ...changes.map(change => change.folderId)],
-          tags: [...notes.flatMap(note => note?.tagIds ?? []), ...changes.flatMap(change => change.tagIds ?? [])]
+          folders: [...notes.map(note => note?.folderId), ...changes!.map(change => change.folderId)],
+          tags: [...notes.flatMap(note => note?.tagIds ?? []), ...changes!.flatMap(change => change.tagIds ?? [])]
         })
       );
       const plan = buildActionPlan({
         toolName: input.toolName,
         args,
-        notes,
+        notes: notes as NoteRecord[],
         references: refs,
         trusted: {
           ...identityFields,
           identity: identityFields,
-          targetNoteId,
+          targetNoteId: targetNoteId!,
           note: notes[0],
           provenance,
           allowedFolderIds: refs.filter(ref => ref.kind === 'folder').map(ref => ref.id),
@@ -593,9 +650,10 @@ export function createNoteActionService({
       });
       return store.transaction(() =>
         run(
-          (function* () {
-            if (provenance) yield* messageSources.verify(provenance, { ...identity, spaceId: input.spaceId });
-            return yield store.write((state, current) => {
+          (function* (): ActionFlow<ActionRecord> {
+            if (provenance)
+              yield* messageSources.verify(provenance, { ...identity, spaceId: input.spaceId }) as ActionFlow<void>;
+            return (yield store.write((state, current) => {
               if (hashRecord(current) !== hashRecord(identity)) actionError('AI_DATASET_STALE', '资料集已变化。');
               const prior = state.actions.find(
                 row =>
@@ -619,7 +677,7 @@ export function createNoteActionService({
                 errorCode: null,
                 createdAt: now().toISOString(),
                 expiresAt: new Date(now().getTime() + 30 * 60000).toISOString()
-              };
+              } as ActionRecord;
               row.grant = {
                 ...identityFields,
                 requestHash: inputHash,
@@ -649,7 +707,7 @@ export function createNoteActionService({
               };
               state.actions.push(row);
               return row;
-            });
+            })) as ActionRecord;
           })()
         )
       );
@@ -696,12 +754,12 @@ export function createNoteActionService({
         const recovered = await reconcile(row);
         if (recovered.status === 'applied') return recovered;
         // applying 保留可对账重试；确定的 CAS/授权拒绝才进入终态。
-        if (/CONFLICT|STALE|EXPIRED|APPROVAL|GRANT_REVOKED|SCOPE_FORBIDDEN/.test(error.code ?? ''))
+        if (/CONFLICT|STALE|EXPIRED|APPROVAL|GRANT_REVOKED|SCOPE_FORBIDDEN/.test((error as AppError).code ?? ''))
           await store.write(state => {
             const current = rowFor(state, actionId, ownerId);
             if (current.status === 'applying') {
               current.status = 'conflicted';
-              current.errorCode = error.code;
+              current.errorCode = (error as AppError).code;
             }
             return current;
           });
@@ -713,10 +771,13 @@ export function createNoteActionService({
       if (row.status === 'applied') return { ...row, cancellation: 'alreadyCommitted' };
       return store.transaction(() =>
         run(
-          (function* () {
-            const current = rowFor(yield store.read(), actionId, ownerId);
-            const receipt = reuseCoreOperationReceipt(yield core.get(lookupFor(current)), requestFor(current));
-            return yield store.write(state => {
+          (function* (): ActionFlow<ActionRecord> {
+            const current = rowFor((yield store.read()) as ActionState, actionId, ownerId);
+            const receipt = reuseCoreOperationReceipt(
+              (yield core.get(lookupFor(current))) as CoreOperationReceipt | null | undefined,
+              requestFor(current)
+            );
+            return (yield store.write(state => {
               const latest = rowFor(state, actionId, ownerId);
               if (receipt) {
                 latest.status = 'applied';
@@ -727,7 +788,7 @@ export function createNoteActionService({
               latest.approval = null;
               latest.grant.revoked = true;
               return latest;
-            });
+            })) as ActionRecord;
           })()
         )
       );
@@ -780,12 +841,13 @@ export function createNoteActionService({
         return reconcile(existing);
       }
       checkCurrent({ ...original, expiresAt: new Date(now().getTime() + 60000).toISOString() }, identity);
-      const items = [];
+      const items: (NotePlanItem & { before: NonNullable<NotePlanItem['before']>; softDelete: boolean })[] = [];
       for (const item of original.plan.items) {
         const note = await repos.noteRepository.findById(item.after.id);
         if (note) assertAiReadableNote(note);
         const currentImage = note ? image(note) : null;
-        if (currentImage && item.after.aiVisibility === undefined) delete currentImage.aiVisibility;
+        if (currentImage && item.after.aiVisibility === undefined)
+          delete (currentImage as { aiVisibility?: string }).aiVisibility;
         if (!note || note.deleted || hashRecord(currentImage) !== hashRecord(item.after))
           actionError('AI_ACTION_CONFLICT', '已有后续修改，不能撤销覆盖。');
         items.push({
@@ -845,7 +907,7 @@ export function createNoteActionService({
           errorCode: null,
           createdAt: now().toISOString(),
           expiresAt: new Date(now().getTime() + 30 * 60000).toISOString()
-        };
+        } as ActionRecord;
         row.grant = {
           ...fields,
           requestHash: inputHash,
@@ -859,48 +921,46 @@ export function createNoteActionService({
       });
     }
   };
-  /** @typedef {Parameters<typeof createActionInboxMethods>[0] & {checkCurrent: typeof checkCurrent}} ActionInboxInvocation */
   Object.assign(
     service,
-    createActionInboxMethods(
-      /** @type {ActionInboxInvocation} */ ({
-        service,
-        store,
-        ownerId,
-        now,
-        run,
-        rowFor,
-        checkCurrent,
-        references,
-        verifyRevisionTurn: (turn, row) =>
-          run(
-            (function* () {
-              const current = yield conversationStore?.peekTurn(turn.turnId);
-              const original = yield conversationStore?.peekTurn(row.grant.originTurnId);
-              if (
-                !current ||
-                !original ||
-                current.status !== 'running' ||
-                current.leaseGeneration !== turn.leaseGeneration ||
-                current.conversationId !== original.conversationId ||
-                current.ownerId !== ownerId ||
-                current.datasetId !== row.datasetId ||
-                current.datasetEpoch !== row.datasetEpoch ||
-                current.spaceId !== row.spaceId ||
-                Date.parse(current.leaseExpiresAt) <= now().getTime()
-              )
-                actionError('AI_ACTION_GRANT_REVOKED', '成果修订任务已失效。', 403);
-            })()
-          ),
-        verifyDraft: (row, state, identity) =>
-          run(
-            (function* () {
-              yield* verifyOrigin(row, identity, true);
-              yield* verifyTargets(row, state);
-            })()
-          )
-      })
-    )
+    createActionInboxMethods({
+      service,
+      store,
+      ownerId,
+      now,
+      run,
+      rowFor,
+      checkCurrent,
+      references,
+      verifyRevisionTurn: (turn, row) =>
+        run(
+          (function* (): ActionFlow<void> {
+            const current = (yield conversationStore?.peekTurn(turn.turnId)) as AiConversationTurn | null | undefined;
+            const original = (yield conversationStore?.peekTurn(row.grant.originTurnId!)) as
+              AiConversationTurn | null | undefined;
+            if (
+              !current ||
+              !original ||
+              current.status !== 'running' ||
+              current.leaseGeneration !== turn.leaseGeneration ||
+              current.conversationId !== original.conversationId ||
+              current.ownerId !== ownerId ||
+              current.datasetId !== row.datasetId ||
+              current.datasetEpoch !== row.datasetEpoch ||
+              current.spaceId !== row.spaceId ||
+              Date.parse(current.leaseExpiresAt!) <= now().getTime()
+            )
+              actionError('AI_ACTION_GRANT_REVOKED', '成果修订任务已失效。', 403);
+          })()
+        ),
+      verifyDraft: (row, state, identity) =>
+        run(
+          (function* (): ActionFlow<void> {
+            yield* verifyOrigin(row, identity, true);
+            yield* verifyTargets(row, state);
+          })()
+        )
+    } as ActionInboxOptions & { checkCurrent: typeof checkCurrent })
   );
-  return /** @type {typeof service & ReturnType<typeof createActionInboxMethods>} */ (service);
+  return service as NoteActionService;
 }
