@@ -17,6 +17,11 @@ const mimeTypes = new Set([
   'image/jpeg'
 ]);
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+const hasUnsafeFileNameCharacter = fileName =>
+  Array.from(fileName).some(character => {
+    const code = character.charCodeAt(0);
+    return character === '/' || character === '\\' || code < 32 || code === 127;
+  });
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const fail = (code, message, status = 409) => {
   throw createAppError(code, message, status);
@@ -97,6 +102,17 @@ export function createConversationAttachmentService({
         fail('AI_ATTACHMENT_STORAGE_INVALID', '附件目录不是安全的普通目录。', 503);
     }
     return attachmentDir;
+  }
+  // 清理失败仍覆盖上传失败；即使清理失败，也不再将临时文件标记为活跃。
+  async function cleanupTemporaryUpload(temporary) {
+    try {
+      await directory();
+      await io(() => fs.promises.unlink(temporary));
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    } finally {
+      activeTemps.delete(temporary);
+    }
   }
   async function filePath(record, create = false) {
     if (!uuid.test(record.attachmentId)) fail('AI_ATTACHMENT_STORAGE_INVALID', '附件存储标识无效。', 503);
@@ -221,7 +237,7 @@ export function createConversationAttachmentService({
           typeof input.fileName !== 'string' ||
           !input.fileName.trim() ||
           input.fileName.length > 180 ||
-          /[/\\\x00-\x1f\x7f]/.test(input.fileName) ||
+          hasUnsafeFileNameCharacter(input.fileName) ||
           typeof input.uploadKey !== 'string' ||
           !/^[a-zA-Z0-9-]{8,80}$/.test(input.uploadKey)
         )
@@ -278,14 +294,7 @@ export function createConversationAttachmentService({
           }
         } finally {
           if (handle) await handle.close();
-          try {
-            await directory();
-            await io(() => fs.promises.unlink(temporary));
-          } catch (error) {
-            if (error.code !== 'ENOENT') throw error;
-          } finally {
-            activeTemps.delete(temporary);
-          }
+          await cleanupTemporaryUpload(temporary);
         }
         await bytesFor(record);
         const latest = await current(record);

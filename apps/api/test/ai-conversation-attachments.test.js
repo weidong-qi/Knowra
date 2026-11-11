@@ -70,6 +70,74 @@ async function fixture(run) {
 
 export const aiConversationAttachmentTests = [
   {
+    name: '附件文件名拒绝全部C0控制字符及分隔符但保留相邻Unicode字符',
+    run: () =>
+      fixture(async f => {
+        const forbidden = [
+          ...Array.from({ length: 32 }, (_, code) => String.fromCharCode(code)),
+          String.fromCharCode(127),
+          '/',
+          '\\'
+        ];
+        for (const character of forbidden) {
+          await assert.rejects(f.upload(Buffer.from('文件名边界'), { fileName: `前${character}后.txt` }), {
+            code: 'AI_ATTACHMENT_UPLOAD_INVALID'
+          });
+        }
+        assert.equal((await f.store.listAttachments()).length, 0);
+        for (const character of [' ', '!', '~', String.fromCharCode(128), String.fromCharCode(159), '中', '😀']) {
+          const fileName = `前${character}后.txt`;
+          const record = await f.upload(Buffer.from('文件名边界'), { fileName });
+          assert.equal(record.fileName, fileName);
+          assert.equal(record.storageStatus, 'ready');
+        }
+      })
+  },
+  {
+    name: '上传临时清理保留错误优先级并释放失败临时文件以供原实例恢复',
+    run: async () => {
+      for (const publishFails of [false, true]) {
+        for (const cleanupFailure of [null, 'ENOENT', 'EACCES']) {
+          await fixture(async f => {
+            const originalLink = fs.promises.link;
+            const originalUnlink = fs.promises.unlink;
+            const publishError = Object.assign(new Error('合成发布失败'), { code: 'EIO' });
+            const cleanupError = Object.assign(new Error('合成清理失败'), { code: cleanupFailure });
+            let temporary;
+            fs.promises.link = async (...args) => {
+              if (publishFails) throw publishError;
+              return originalLink(...args);
+            };
+            fs.promises.unlink = async target => {
+              if (!String(target).endsWith('.pending')) return originalUnlink(target);
+              temporary = String(target);
+              if (cleanupFailure === 'ENOENT') await originalUnlink(target);
+              if (cleanupFailure) throw cleanupError;
+              return originalUnlink(target);
+            };
+            try {
+              if (cleanupFailure === 'EACCES') await assert.rejects(f.upload(), error => error === cleanupError);
+              else if (publishFails) await assert.rejects(f.upload(), error => error === publishError);
+              else assert.equal((await f.upload()).storageStatus, 'ready');
+            } finally {
+              fs.promises.link = originalLink;
+              fs.promises.unlink = originalUnlink;
+            }
+            assert.ok(temporary);
+            if (cleanupFailure === 'EACCES') {
+              assert.equal(fs.existsSync(temporary), true);
+              const old = new Date(Date.now() - 7200000);
+              fs.utimesSync(temporary, old, old);
+              await f.service.recover();
+              assert.equal(fs.existsSync(temporary), false);
+            } else assert.equal(fs.existsSync(temporary), false);
+          });
+        }
+      }
+    }
+  },
+
+  {
     name: '会话附件同payload键幂等、重启验证完整原字节，未解析且不自动入笔记',
     run: () =>
       fixture(async f => {
