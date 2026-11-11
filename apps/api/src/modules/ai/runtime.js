@@ -7,7 +7,7 @@ import { createIsolatedDeepSeekAdapter } from './isolated-provider.js';
 import { createAiWorker } from './worker.js';
 import { createIsolatedAiWorker } from './isolated-worker.js';
 import { createAiReadContextService } from './read-context-service.ts';
-import { createAiAccessService } from './access-service.js';
+import { createAiAccessService } from './access-service.ts';
 import { createAiConversationService } from './conversation-service.ts';
 import { createAiAgentWorker } from './agent-worker.js';
 import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.ts';

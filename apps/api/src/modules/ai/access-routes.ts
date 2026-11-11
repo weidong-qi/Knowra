@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { createAiAccessService } from './access-service.js';
+import type { createAiAccessService } from './access-service.ts';
 type AiAccessRoutePort = Pick<
   ReturnType<typeof createAiAccessService>,
   'createPolicy' | 'listPolicies' | 'narrowPolicy'
@@ -30,13 +30,20 @@ export async function handleAiAccessRoute({ request, response, url, access }: Ai
       return true;
     }
     if (request.method === 'POST' && url.pathname === root) {
-      sendJson(response, 201, { data: await access.createPolicy(await parseBody(request, { limitBytes: 8192 })) });
+      sendJson(response, 201, {
+        data: await access.createPolicy(
+          (await parseBody(request, { limitBytes: 8192 })) as Parameters<AiAccessRoutePort['createPolicy']>[0]
+        )
+      });
       return true;
     }
     const match = url.pathname.match(/^\/api\/ai\/access-policies\/([^/]+)$/);
     if (request.method === 'PATCH' && match) {
       sendJson(response, 200, {
-        data: await access.narrowPolicy(decodeURIComponent(match[1]), await parseBody(request, { limitBytes: 8192 }))
+        data: await access.narrowPolicy(
+          decodeURIComponent(match[1]),
+          (await parseBody(request, { limitBytes: 8192 })) as Parameters<AiAccessRoutePort['narrowPolicy']>[1]
+        )
       });
       return true;
     }

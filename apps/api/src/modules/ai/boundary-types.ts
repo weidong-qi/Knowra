@@ -1,4 +1,4 @@
-import type { createAiAccessService } from './access-service.js';
+import type { createAiAccessService } from './access-service.ts';
 import type { createAiGateway } from './gateway.ts';
 import type { AiAnswerResult, AiJob, AiRecordRepositoryPort } from './record-types.ts';
 import type { createJsonBudgetAuthority } from './budget-ledger.ts';

@@ -10,7 +10,7 @@ import { createInMemoryNoteVersionRepository } from '../src/modules/knowledge/in
 import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrastructure/folder-repository.ts';
 import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge/infrastructure/knowledge-space-repository.ts';
 import { NoteVersion } from '../src/modules/knowledge/domain/note-version.ts';
-import { createAiAccessService } from '../src/modules/ai/access-service.js';
+import { createAiAccessService } from '../src/modules/ai/access-service.ts';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
 import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
 import { createAuthorizedRetrieval } from '../src/modules/ai/retrieval.ts';
