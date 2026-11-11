@@ -3,7 +3,7 @@ import {
   deriveInlineAnnotations,
   marksOnlyDependencies,
   withInlineAnnotations
-} from './application/inline-annotations.js';
+} from './application/inline-annotations.ts';
 import { createAsyncNoteDependencyLifecycle } from './application/postgres-async/note-dependency-lifecycle.ts';
 import { createAsyncSpaceAssetLifecycle } from './application/postgres-async/space-asset-lifecycle.ts';
 import { createPostgresPdfAnnotationRepository } from '../pdf/repository.ts';
@@ -51,7 +51,7 @@ import { createPostgresTagRepository } from './infrastructure/postgres/tag-repos
 import { createAsyncLearningObjectiveService } from './application/postgres-async/learning-objective-service.ts';
 import { createAsyncAssessmentContextService } from './application/postgres-async/assessment-context-service.ts';
 import { createAsyncQuestionService } from './application/postgres-async/question-service.ts';
-import { createTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
+import { createTrainingAssetLifecycle } from './application/training-asset-lifecycle.ts';
 import { createWorkspaceQueryService } from './application/workspace-query-service.ts';
 import { conflictError, validationError } from './application/knowledge-errors.ts';
 import { withPostgresErrors } from '../../infrastructure/postgres-errors.ts';

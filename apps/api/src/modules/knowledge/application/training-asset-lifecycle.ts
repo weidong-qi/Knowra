@@ -1,3 +1,12 @@
+import type {
+  TrainingAssetKind,
+  TrainingRepositories,
+  TrainingAssetDependencies,
+  LocalTrainingAssetDependencies,
+  TrainingPurgeInput,
+  TrainingReference,
+  TrainingPreflight
+} from './training-asset-lifecycle-types.ts';
 import {
   taskCoverage,
   asyncTaskCoverage,
@@ -5,28 +14,29 @@ import {
   assertPurgeDatasetEpoch,
   assertManualPurgeScope
 } from './asset-purge-guard.ts';
+import type { AppErrorOptions } from '../../../errors/app-error.ts';
 import { createAppError } from '../../../errors/app-error.ts';
 
 const TYPES = Object.freeze({
-  learningObjective: { collection: 'learningObjectives', repository: 'learningObjectiveRepository' },
-  examProfile: { collection: 'examProfiles', repository: 'examProfileRepository' },
-  examFocus: { collection: 'examFocuses', repository: 'examFocusRepository' },
-  question: { collection: 'questions', repository: 'questionRepository' }
+  learningObjective: { collection: 'learningObjectives', repository: 'learningObjectiveRepository' as const },
+  examProfile: { collection: 'examProfiles', repository: 'examProfileRepository' as const },
+  examFocus: { collection: 'examFocuses', repository: 'examFocusRepository' as const },
+  question: { collection: 'questions', repository: 'questionRepository' as const }
 });
 
-function includesExactId(value, id, seen = new Set()) {
+function includesExactId(value: unknown, id: string, seen = new Set<object>()): boolean {
   if (value === id) return true;
   if (!value || typeof value !== 'object' || seen.has(value)) return false;
   seen.add(value);
   return Object.values(value).some(child => includesExactId(child, id, seen));
 }
 
-function fail(code, message, details) {
+function fail(code: string, message: string, details?: AppErrorOptions): never {
   throw createAppError(code, message, 409, details);
 }
 
-function nextTimestamp(previous) {
-  return new Date(Math.max(Date.now(), Date.parse(previous ?? 0) + 1)).toISOString();
+function nextTimestamp(previous: unknown) {
+  return new Date(Math.max(Date.now(), Date.parse((previous ?? 0) as string) + 1)).toISOString();
 }
 
 export function createTrainingAssetLifecycle({
@@ -35,14 +45,18 @@ export function createTrainingAssetLifecycle({
   getTombstone = null,
   readPurgeTaskState = null,
   getPurgeDatasetEpoch = null
-}) {
-  async function inspect(type, id, source = null) {
+}: TrainingAssetDependencies) {
+  async function inspect(
+    type: TrainingAssetKind,
+    id: string,
+    source: TrainingRepositories<true> | null = null
+  ): Promise<ReturnType<typeof supplementPurgePreview<TrainingPreflight>>> {
     if (!source) return runTransaction(transaction => inspect(type, id, transaction));
     const config = TYPES[type];
     if (!config) throw new TypeError(`Unknown training asset: ${type}`);
     const asset = await source[config.repository].findById(id);
     if (!asset) throw createAppError('TRAINING_ASSET_NOT_FOUND', '训练资产不存在。', 404);
-    const references = [];
+    const references: TrainingReference[] = [];
     if (type === 'learningObjective') {
       const [focuses, links, sources] = await Promise.all([
         source.examFocusRepository.list({ learningObjectiveId: id, includeArchived: true, includeDeleted: true }),
@@ -99,7 +113,7 @@ export function createTrainingAssetLifecycle({
     );
     const epoch = await getPurgeDatasetEpoch?.();
     const coverage = await asyncTaskCoverage(readPurgeTaskState);
-    return supplementPurgePreview(
+    return supplementPurgePreview<TrainingPreflight>(
       {
         asset: { type, id },
         operation: 'permanent-delete',
@@ -133,7 +147,7 @@ export function createTrainingAssetLifecycle({
     );
   }
 
-  async function trash(type, id) {
+  async function trash(type: TrainingAssetKind, id: string) {
     const config = TYPES[type];
     if (!config) throw new TypeError(`Unknown training asset: ${type}`);
     return runTransaction(async source => {
@@ -167,7 +181,7 @@ export function createTrainingAssetLifecycle({
     });
   }
 
-  async function restore(type, id) {
+  async function restore(type: TrainingAssetKind, id: string) {
     const config = TYPES[type];
     if (!config) throw new TypeError(`Unknown training asset: ${type}`);
     return runTransaction(async source => {
@@ -199,13 +213,18 @@ export function createTrainingAssetLifecycle({
       if (type === 'learningObjective' || type === 'examFocus') {
         if (updated.reviewStatus === 'confirmed') updated.reviewStatus = 'candidate';
       }
-      if (type === 'question' && ['candidate', 'confirmed'].includes(updated.reviewStatus))
+      if (type === 'question' && ['candidate', 'confirmed'].includes(updated.reviewStatus as string))
         updated.reviewStatus = 'draft';
       return repository.save(updated);
     });
   }
 
-  async function purge(type, id, expectedUpdatedAt, input = {}) {
+  async function purge(
+    type: TrainingAssetKind,
+    id: string,
+    expectedUpdatedAt: unknown,
+    input: TrainingPurgeInput = {}
+  ) {
     const config = TYPES[type];
     if (!config) throw new TypeError(`Unknown training asset: ${type}`);
     return runTransaction(async source => {
@@ -232,7 +251,7 @@ export function createTrainingAssetLifecycle({
             ?.message ?? '请先处理关联引用。',
           { preflight }
         );
-      assertManualPurgeScope(type, await source[config.repository].findById(id), input);
+      assertManualPurgeScope(type, (await source[config.repository].findById(id))!, input);
       if (type === 'question') {
         await source.questionObjectiveRepository.deleteByQuestionId(id);
         await source.questionSourceRepository.deleteByQuestionId(id);
@@ -258,13 +277,13 @@ export function createLocalTrainingAssetLifecycle({
   getTombstone = null,
   readPurgeTaskState = null,
   getPurgeDatasetEpoch = null
-}) {
-  function inspect(type, id) {
+}: LocalTrainingAssetDependencies) {
+  function inspect(type: TrainingAssetKind, id: string) {
     const config = TYPES[type];
     if (!config) throw new TypeError(`Unknown training asset: ${type}`);
     const asset = repositories[config.repository].findById(id);
     if (!asset) throw createAppError('TRAINING_ASSET_NOT_FOUND', '训练资产不存在。', 404);
-    const references = [];
+    const references: TrainingReference[] = [];
     if (type === 'learningObjective') {
       references.push(
         ...repositories.examFocusRepository
@@ -312,7 +331,7 @@ export function createLocalTrainingAssetLifecycle({
         .filter(record => includesExactId(record, id))
         .map(record => ({ collection: 'analysisScopeSnapshots', id: record.id, action: 'retain-or-resolve-history' }))
     );
-    return supplementPurgePreview(
+    return supplementPurgePreview<TrainingPreflight>(
       {
         asset: { type, id },
         operation: 'permanent-delete',
@@ -343,7 +362,7 @@ export function createLocalTrainingAssetLifecycle({
       getPurgeDatasetEpoch?.()
     );
   }
-  function trash(type, id) {
+  function trash(type: TrainingAssetKind, id: string) {
     return runTransaction(() => {
       const repository = repositories[TYPES[type]?.repository];
       if (!repository) throw new TypeError(`Unknown training asset: ${type}`);
@@ -375,7 +394,7 @@ export function createLocalTrainingAssetLifecycle({
       return next;
     });
   }
-  function restore(type, id) {
+  function restore(type: TrainingAssetKind, id: string) {
     return runTransaction(() => {
       const repository = repositories[TYPES[type]?.repository];
       if (!repository) throw new TypeError(`Unknown training asset: ${type}`);
@@ -405,12 +424,12 @@ export function createLocalTrainingAssetLifecycle({
       const updated = { ...current, deletedAt: null, updatedAt: nextTimestamp(current.updatedAt) };
       if (['learningObjective', 'examFocus'].includes(type) && updated.reviewStatus === 'confirmed')
         updated.reviewStatus = 'candidate';
-      if (type === 'question' && ['candidate', 'confirmed'].includes(updated.reviewStatus))
+      if (type === 'question' && ['candidate', 'confirmed'].includes(updated.reviewStatus as string))
         updated.reviewStatus = 'draft';
       return repository.save(updated);
     });
   }
-  function purge(type, id, expectedUpdatedAt, input = {}) {
+  function purge(type: TrainingAssetKind, id: string, expectedUpdatedAt: unknown, input: TrainingPurgeInput = {}) {
     return runTransaction(() => {
       assertPurgeDatasetEpoch(input, getPurgeDatasetEpoch?.());
       const config = TYPES[type];
@@ -437,7 +456,7 @@ export function createLocalTrainingAssetLifecycle({
             ?.message ?? '请先处理关联引用。',
           { preflight }
         );
-      assertManualPurgeScope(type, repositories[config.repository].findById(id), input);
+      assertManualPurgeScope(type, repositories[config.repository].findById(id)!, input);
       if (type === 'question') {
         repositories.questionObjectiveRepository.deleteByQuestionId(id);
         repositories.questionSourceRepository.deleteByQuestionId(id);

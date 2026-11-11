@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { planInlineAnnotations } from '../../../api/src/modules/knowledge/application/inline-annotations.js';
+import { planInlineAnnotations } from '../../../api/src/modules/knowledge/application/inline-annotations.ts';
 import { createNote } from './editorWorkspace';
 
 /** 新路径的合成服务使用真实派生逻辑；不把旧 POST 成功伪装成内联保存。 */
