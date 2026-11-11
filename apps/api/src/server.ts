@@ -44,7 +44,7 @@ export interface ServerAppContext
 export interface ServerOptions {
   appContext: ServerAppContext;
   cors?: { allowedOrigins?: string[] };
-  logger?: Pick<Console, 'warn' | 'error'>;
+  logger?: Partial<Pick<Console, 'warn' | 'error'>>;
 }
 export interface ApiServer extends http.Server {
   closeAi: () => Promise<void>;
