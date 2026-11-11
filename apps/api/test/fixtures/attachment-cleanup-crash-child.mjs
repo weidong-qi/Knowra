@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createAppContext } from '../../src/app.factory.js';
+import { createAppContext } from '../../src/app.factory.ts';
 import { createFileDataStore } from '../../src/infrastructure/file-data-store.ts';
 
 const [root, phase] = process.argv.slice(2);

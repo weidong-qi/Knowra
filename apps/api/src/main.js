@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPersistentAppContext } from './app.factory.js';
+import { createPersistentAppContext } from './app.factory.ts';
 import { createServer } from './server.js';
 import { parseCorsAllowedOrigins } from './http/cors.ts';
 import { writeRuntimePort } from '../../../scripts/dev-runtime-ports.js';

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 import { createServer } from '../src/server.js';
 export const aiNoteActionHttpTests=[{name:'P2 HTTP 写入需要受信指令/精确确认，重启查询保留回执',async run(){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'knowra-p2-http-'));let server;

@@ -8,7 +8,7 @@ import type {
 import { assertCommandSearchOwner } from '../application/command-note-search.ts';
 
 import type { createKnowledgeModule } from '../index.js';
-import type { createNoteDeletionCoordinator } from '../application/note-deletion-coordinator.ts';
+import type { NoteDeletionCoordinator } from '../application/note-deletion-coordinator.ts';
 import type { createContentAnnotationService } from '../application/content-annotation-service.ts';
 import type { createAnnotationScopeService } from '../application/annotation-scope-service.ts';
 import type { TrainingAssetKind } from '../application/training-asset-lifecycle-types.ts';
@@ -22,7 +22,11 @@ interface KnowledgeHttpModule extends Pick<Module, KnowledgeServiceKeys> {
 }
 interface KnowledgeHttpDependencies {
   knowledgeModule: KnowledgeHttpModule;
-  noteDeletionCoordinator?: ReturnType<typeof createNoteDeletionCoordinator> | null;
+  noteDeletionCoordinator?: NoteDeletionCoordinator<
+    object | null | undefined,
+    object | null | undefined,
+    string
+  > | null;
   ownerId?: string;
 }
 

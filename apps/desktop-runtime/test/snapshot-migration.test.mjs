@@ -4,7 +4,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { importJsonSnapshot } from '../src/snapshot-migration.mjs';
 import { createNote, openWorkspace, temporaryDirectory } from './helpers.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 
 test('JSON 快照迁移保留正文、附件与 ID，迁移失败不发布目标，原快照不变', t => {
   const root = temporaryDirectory(t);

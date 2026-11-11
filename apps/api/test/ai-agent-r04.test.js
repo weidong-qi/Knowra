@@ -14,7 +14,7 @@ import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.
 import { createAiConversationService } from '../src/modules/ai/conversation-service.ts';
 import { beijingDay } from '../src/modules/ai/budget-ledger.ts';
 import { createServer } from '../src/server.js';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 import { createEmptyAiState, validateAiState } from '../src/modules/ai/record-state.ts';
 

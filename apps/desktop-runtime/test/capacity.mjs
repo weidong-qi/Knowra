@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import { performance } from 'node:perf_hooks';
 import { createHash } from 'node:crypto';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.ts';

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
 import { createPostgresAiRepository } from '../../api/src/modules/ai/postgres-record-repository.ts';
 import { createServer } from '../../api/src/server.js';

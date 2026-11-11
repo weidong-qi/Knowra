@@ -229,7 +229,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: '持久化笔记永久删除遇共享附件时保持笔记、版本和文件',
     async run() {
-      const { createPersistentAppContext } = await import('../src/app.factory.js');
+      const { createPersistentAppContext } = await import('../src/app.factory.ts');
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-stage0-cascade-'));
       try {
         const app = createPersistentAppContext({ storageRootDir: root, ownerId: 'stage0-owner' });

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
-import { createAppContext } from '../src/app.factory.js';
+import { createAppContext } from '../src/app.factory.ts';
 import { createAttachmentCleanupQueue } from '../src/infrastructure/attachment-cleanup-queue.ts';
 import { buildNoteVersionPrunePreview } from '../src/modules/knowledge/application/note-version-prune-preview.ts';
 

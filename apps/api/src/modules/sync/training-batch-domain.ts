@@ -1,7 +1,7 @@
 import type {
   SyncCollection,
-  SyncStoredState,
-  SyncStoredEntity,
+  SyncHistoricalState,
+  SyncHistoricalEntity,
   SyncWorkingRecord,
   SyncEntity,
   SyncEntityMap,
@@ -51,12 +51,12 @@ const fail = (code: string, message: string): never => {
 
 export function normalizeTrainingChange<Collection extends SyncCollection>(
   change: SyncWorkingMutation<Collection>,
-  previous: SyncStoredEntity<Collection> | undefined,
+  previous: SyncHistoricalEntity<Collection> | undefined,
   changes: SyncChange[]
 ): SyncWorkingEntity<Collection> | null;
 export function normalizeTrainingChange(
   change: SyncWorkingMutation,
-  previous: SyncStoredEntity | undefined,
+  previous: SyncHistoricalEntity | undefined,
   changes: SyncChange[]
 ): SyncWorkingEntity | null {
   const { collection, value, lifecycleAction } = change;
@@ -152,7 +152,7 @@ export function normalizeTrainingChange(
 
 /** 未在本机出现的已确认下游也必须随内容变化失效；显式提交的最终确认可包含离线重新核对。 */
 export function reconcileTrainingChanges(
-  before: SyncStoredState,
+  before: SyncHistoricalState,
   state: SyncWorkingState,
   changes: SyncChange[]
 ): SyncWorkingState {
@@ -172,7 +172,7 @@ export function reconcileTrainingChanges(
   const downgrade = (value: SyncWorkingRecord<'learningObjectives' | 'questions'>) => {
     if (value.reviewStatus === 'confirmed') {
       value.reviewStatus = 'candidate';
-      value.updatedAt = new Date(Math.max(Date.now(), Date.parse(value.updatedAt) + 1 || 0)).toISOString();
+      value.updatedAt = new Date(Math.max(Date.now(), Date.parse(value.updatedAt as string) + 1 || 0)).toISOString();
     }
   };
   for (const objective of state.learningObjectives) {
@@ -193,7 +193,11 @@ export function reconcileTrainingChanges(
   return state;
 }
 
-export function validateTrainingBatch(before: SyncStoredState, state: SyncWorkingState, changes: SyncChange[]): void {
+export function validateTrainingBatch(
+  before: SyncHistoricalState,
+  state: SyncWorkingState,
+  changes: SyncChange[]
+): void {
   for (const change of changes.filter(entry => TRAINING_COLLECTIONS.includes(entry.collection) && entry.value)) {
     const value = find(state, change.collection, change.id)!;
     const previous = find(before, change.collection, change.id);
@@ -248,9 +252,9 @@ export function validateTrainingBatch(before: SyncStoredState, state: SyncWorkin
           noteVersion: 'noteVersions',
           knowledgeEvidence: 'knowledgeEvidence'
         } as Partial<Record<string, SyncCollection>>
-      )[value.sourceType!];
+      )[value.sourceType as string];
       if (collection) {
-        const source = find(state, collection, value.sourceId);
+        const source = find(state, collection, value.sourceId as string | null | undefined);
         if (
           !source ||
           source.deletedAt ||

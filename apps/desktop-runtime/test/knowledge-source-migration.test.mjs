@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { validateLocalSnapshot } from '../../api/src/infrastructure/local-data-schema.ts';
 import { temporaryDirectory, markText, inlineId } from './helpers.mjs';
 import { knowraCheck } from '@study-accelerator/shared/knowra-marks';

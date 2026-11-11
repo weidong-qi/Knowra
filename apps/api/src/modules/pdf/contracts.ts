@@ -51,7 +51,7 @@ export interface PdfSnapshot {
 }
 export interface PdfDataStore {
   state: PdfState;
-  runTransaction<T>(operation: () => T): T;
+  runTransaction?<T>(operation: () => T): T;
   flush(): void;
   exportSnapshot(): PdfSnapshot;
   prepareImport(snapshot: PdfSnapshot): PdfSnapshot;

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import sharp from 'sharp';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createServer } from '../../api/src/server.js';
 
 const quiet = { warn() {}, error() {} };

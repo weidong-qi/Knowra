@@ -1,3 +1,4 @@
+import type { LocalDataState, LocalRow } from '../../infrastructure/local-data-types.ts';
 import type { ContentAnchor, AnnotationStructure } from '@study-accelerator/content-anchor';
 import type { Prisma } from '@prisma/client';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
@@ -108,16 +109,21 @@ export type SyncDomainState = { [Collection in SyncCollection]: SyncEntity<Colle
 type SyncDerivedNote = Omit<SyncEntity<'notes'>, 'annotationStructure'> & {
   annotationStructure: AnnotationStructure | Prisma.JsonValue;
 };
+type LocalSyncEntity = LocalDataState[SyncCollection][number];
 type StoredEntityUnion = SyncEntity | SyncMappedEntityMap[SyncCollection] | SyncDerivedNote;
 type StoredFields = { [Key in EntityKeys<StoredEntityUnion>]?: EntityField<StoredEntityUnion, Key> };
 export type SyncStoredEntity<Collection extends SyncCollection = SyncCollection> =
   | SyncEntity<Collection>
   | ((SyncMappedEntityMap[Collection] | (Collection extends 'notes' ? SyncDerivedNote : never)) & StoredFields);
+type HistoricalFields = {
+  [Key in EntityKeys<StoredEntityUnion | LocalSyncEntity>]?: EntityField<StoredEntityUnion | LocalSyncEntity, Key>;
+};
+export type SyncHistoricalEntity<Collection extends SyncCollection = SyncCollection> =
+  SyncStoredEntity<Collection> | (LocalRow<Collection> & HistoricalFields);
+export type SyncHistoricalState = { [Collection in SyncCollection]: SyncHistoricalEntity<Collection>[] };
 export type SyncStoredState = { [Collection in SyncCollection]: SyncStoredEntity<Collection>[] };
 export type SyncBackend = 'local' | 'postgres';
-export type SyncProviderState<Backend extends SyncBackend> = Backend extends 'local'
-  ? SyncDomainState
-  : SyncStoredState;
+export type SyncProviderState<Backend extends SyncBackend> = Backend extends 'local' ? LocalDataState : SyncStoredState;
 // DTO 的 ID 列表与从 PG 继承的结构 JSON 尚未保证完整领域结构。
 type WorkingEntityMap = Omit<SyncEntityMap, 'notes'> & {
   notes: Omit<SyncEntityMap['notes'], 'tagIds' | 'annotationStructure'> & {
@@ -132,7 +138,7 @@ type ConcreteWorkingMap = {
 };
 export type SyncWorkingEntity<Collection extends SyncCollection = SyncCollection> = ConcreteWorkingMap[Collection];
 export type SyncWorkingRecord<Collection extends SyncCollection = SyncCollection> =
-  SyncWorkingEntity<Collection> | SyncStoredEntity<Collection>;
+  SyncWorkingEntity<Collection> | SyncHistoricalEntity<Collection>;
 export type SyncWorkingState = { [Collection in SyncCollection]: SyncWorkingRecord<Collection>[] };
 export type SyncWorkingConstructors = Partial<{
   [Collection in SyncCollection]: new (input: SyncWorkingEntity<Collection>) => WorkingEntityMap[Collection];
@@ -149,15 +155,15 @@ export type SyncAnnotationNoteFactory = (input: {
 }) => NonNullable<
   import('../knowledge/application/service-dependencies.ts').ContentAnnotationDependencies['noteRepository']
 >;
-export type SyncBatchValidator = (input: SyncWorkingState & { schemaVersion: number }) => SyncStoredState;
+export type SyncBatchValidator = (input: SyncWorkingState & { schemaVersion: number }) => SyncHistoricalState;
 export type SyncRawNoteReferences = (
   collection: 'notes',
   note: SyncWorkingRecord<'notes'>
 ) => { collection: string; id: unknown }[];
 export type SyncRawChangeReferences = (
   change: SyncChange,
-  before: SyncStoredState,
-  after: SyncStoredState
+  before: SyncHistoricalState,
+  after: SyncHistoricalState
 ) => { collection: SyncCollection; id: unknown }[];
 /** 仅供原始数据库 JSON 的属性读取，不表示其通过结构校验。 */
 export type SyncRawObject = Record<string, SyncJsonValue | undefined>;
@@ -281,7 +287,7 @@ export interface SyncNoteService {
   restoreNote(id: string): SyncAwaitable<SyncNoteMutationResult>;
 }
 export interface LocalSyncDataStore {
-  state: SyncDomainState;
+  state: LocalDataState;
   getSyncJournal?: () => SyncJournal;
   previewSyncJournal(): SyncJournal;
   runSyncTransaction<Result>(operation: () => Result): Result;
@@ -291,13 +297,27 @@ export interface LocalSyncDataStore {
 }
 export interface LocalSyncProvider extends SyncBatchProvider<'local'> {
   snapshotEntries(
-    state: SyncDomainState,
+    state: LocalDataState,
     journal: SyncJournal
   ): { entriesEncoding: string; entryPageSize: number; entryPages: string[]; count: number };
   readSnapshotEntries(snapshot: SyncSnapshot, start: number, end: number): SyncEntry[];
   applyNote(
     operation: SyncNoteOperation,
-    current: Pick<Note, 'deleted'> | null
+    current: Pick<LocalRow<'notes'>, 'deleted'> | null
   ): SyncAwaitable<SyncNoteMutationResult | void>;
 }
 export type SyncBatchResult = SyncReceiptResult;
+
+/** 旧 JSON 的可选空间字段原样传给内联构造器，不宣称完整 Note。 */
+export type SyncInlinePlanner = (
+  note: Pick<LocalRow<'notes'>, 'id' | 'spaceId' | 'rawMarkdown'>,
+  version: Parameters<typeof import('../knowledge/application/inline-annotations.ts').planInlineAnnotations>[1],
+  existing: Parameters<typeof import('../knowledge/application/inline-annotations.ts').planInlineAnnotations>[2],
+  now: string,
+  before?: string
+) => ReturnType<typeof import('../knowledge/application/inline-annotations.ts').planInlineAnnotations>;
+/** 引用扫描只检查身份、真值及原始 JSON 内容，不要求完整附件或实体。 */
+export type SyncAttachmentInspection = (
+  id: string,
+  state: SyncWorkingState
+) => ReturnType<typeof import('../../infrastructure/attachment-deletion-preflight.ts').inspectAttachmentDeletion>;

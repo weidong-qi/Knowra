@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { test } from 'node:test';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createNoteVersionDiscardGate } from '../src/note-version-discard-gate.mjs';
 import { temporaryDirectory } from './helpers.mjs';
 

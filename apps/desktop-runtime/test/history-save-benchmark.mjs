@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { performance } from 'node:perf_hooks';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 const moduleUrl = process.argv[2] ? pathToFileURL(process.argv[2]) : new URL('../src/sqlite-data-store.mjs', import.meta.url);
 const { createSqliteDataStore } = await import(moduleUrl);
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-history-benchmark-'));

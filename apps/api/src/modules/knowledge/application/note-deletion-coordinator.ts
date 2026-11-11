@@ -6,8 +6,8 @@ export interface CleanupValue {
 export interface CleanupResult {
   attachmentCleanup: CleanupValue;
 }
-export interface NoteView {
-  readonly id?: unknown;
+export interface NoteView<Id = unknown> {
+  readonly id: Id;
   readonly deleted?: unknown;
 }
 export interface AnnotationView {
@@ -15,27 +15,29 @@ export interface AnnotationView {
   readonly noteId?: unknown;
 }
 export interface MappableView<Item> {
-  map: (callback: (item: Item) => unknown) => unknown[];
+  map: <Value>(callback: (item: Item) => Value) => Value[];
 }
 export interface FilterableView<Item> {
   filter: (callback: (item: Item) => unknown) => MappableView<Item>;
 }
 export interface NoteDeletionOptions<
   NoteResult extends DeletionValue = DeletionValue,
-  RecycleResult extends DeletionValue = DeletionValue
+  RecycleResult extends DeletionValue = DeletionValue,
+  NoteId = unknown,
+  Detached = unknown
 > {
   noteService: {
-    permanentlyDeleteNote: (noteId: unknown) => NoteResult;
+    permanentlyDeleteNote: (noteId: NoteId) => NoteResult;
     emptyRecycleBin: (spaceId: string | null | undefined) => RecycleResult;
   };
   noteRepository: {
-    list: (options: { includeDeleted: true; spaceId: string | null | undefined }) => FilterableView<NoteView>;
+    list: (options: { includeDeleted: true; spaceId: string | null | undefined }) => FilterableView<NoteView<NoteId>>;
   };
-  noteVersionRepository?: { deleteByNoteIds?: ((noteIds: unknown[]) => unknown) | null | undefined } | null | undefined;
+  noteVersionRepository?: { deleteByNoteIds?: ((noteIds: NoteId[]) => unknown) | null | undefined } | null | undefined;
   contentAnnotationRepository?:
     | {
         list?: ((options: { includeDeleted: true }) => FilterableView<AnnotationView>) | null | undefined;
-        deleteByNoteIds?: ((noteIds: unknown[]) => unknown) | null | undefined;
+        deleteByNoteIds?: ((noteIds: NoteId[]) => unknown) | null | undefined;
       }
     | null
     | undefined;
@@ -45,25 +47,29 @@ export interface NoteDeletionOptions<
     { deleteByAnnotationIds?: ((annotationIds: unknown[]) => unknown) | null | undefined } | null | undefined;
   attachmentStore?:
     | {
-        detachAttachmentsForNotes?: ((noteIds: unknown[]) => unknown) | null | undefined;
-        removeDetachedAttachmentFiles?: ((attachments: unknown) => CleanupValue | null | undefined) | null | undefined;
+        detachAttachmentsForNotes?: ((noteIds: NoteId[]) => Detached) | null | undefined;
+        removeDetachedAttachmentFiles?:
+          ((attachments: Detached | never[]) => CleanupValue | null | undefined) | null | undefined;
       }
     | null
     | undefined;
-  removePdfAnnotations?: (noteIds: unknown[]) => void;
+  removePdfAnnotations?: (noteIds: NoteId[]) => void;
   runTransaction?: (<Value>(operation: () => Value) => Value) | undefined;
 }
 export interface NoteDeletionCoordinator<
   NoteResult extends DeletionValue = DeletionValue,
-  RecycleResult extends DeletionValue = DeletionValue
+  RecycleResult extends DeletionValue = DeletionValue,
+  NoteId = unknown
 > {
-  permanentlyDeleteNote: (noteId: unknown) => NoteResult | CleanupResult;
+  permanentlyDeleteNote: (noteId: NoteId) => NoteResult | CleanupResult;
   emptyRecycleBin: (spaceId?: string | null) => RecycleResult | CleanupResult;
 }
 
 export function createNoteDeletionCoordinator<
   NoteResult extends DeletionValue = DeletionValue,
-  RecycleResult extends DeletionValue = DeletionValue
+  RecycleResult extends DeletionValue = DeletionValue,
+  NoteId = unknown,
+  Detached = unknown
 >({
   noteService,
   noteRepository,
@@ -74,14 +80,18 @@ export function createNoteDeletionCoordinator<
   attachmentStore,
   removePdfAnnotations = _noteIds => {},
   runTransaction = operation => operation()
-}: NoteDeletionOptions<NoteResult, RecycleResult>): NoteDeletionCoordinator<NoteResult, RecycleResult> {
-  function removeDependents(noteIds: unknown[]): unknown {
+}: NoteDeletionOptions<NoteResult, RecycleResult, NoteId, Detached>): NoteDeletionCoordinator<
+  NoteResult,
+  RecycleResult,
+  NoteId
+> {
+  function removeDependents(noteIds: NoteId[]): Detached | never[] {
     removePdfAnnotations(noteIds);
     const annotationIds =
       typeof contentAnnotationRepository?.list === 'function'
         ? contentAnnotationRepository
             .list({ includeDeleted: true })
-            .filter(annotation => noteIds.includes(annotation.noteId))
+            .filter(annotation => noteIds.includes(annotation.noteId as NoteId))
             .map(annotation => annotation.id)
         : [];
     annotationExclusionRepository?.deleteByAnnotationIds?.(annotationIds);
@@ -91,12 +101,12 @@ export function createNoteDeletionCoordinator<
     return attachmentStore?.detachAttachmentsForNotes?.(noteIds) ?? [];
   }
 
-  function finishAttachmentCleanup(attachments: unknown): CleanupValue {
+  function finishAttachmentCleanup(attachments: Detached | never[]): CleanupValue {
     return attachmentStore?.removeDetachedAttachmentFiles?.(attachments) ?? [];
   }
 
-  function permanentlyDeleteNote(noteId: unknown): NoteResult | CleanupResult {
-    let detachedAttachments: unknown = [];
+  function permanentlyDeleteNote(noteId: NoteId): NoteResult | CleanupResult {
+    let detachedAttachments: Detached | never[] = [];
     const deletedNote = runTransaction(() => {
       const result = noteService.permanentlyDeleteNote(noteId);
       detachedAttachments = removeDependents([noteId]);
@@ -112,7 +122,7 @@ export function createNoteDeletionCoordinator<
       .list({ includeDeleted: true, spaceId })
       .filter(note => note.deleted)
       .map(note => note.id);
-    let detachedAttachments: unknown = [];
+    let detachedAttachments: Detached | never[] = [];
     const result = runTransaction(() => {
       const deletion = noteService.emptyRecycleBin(spaceId);
       detachedAttachments = removeDependents(noteIds);

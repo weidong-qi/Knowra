@@ -1,4 +1,4 @@
-import { createPersistentAppContext } from '../../src/app.factory.js';
+import { createPersistentAppContext } from '../../src/app.factory.ts';
 import { createOptionalAiRuntime } from '../../src/modules/ai/runtime.ts';
 
 const [root, phase, driver = 'json'] = process.argv.slice(2);

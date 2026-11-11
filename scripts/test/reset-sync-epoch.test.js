@@ -11,7 +11,7 @@ import { createEmptyLocalState } from '../../apps/api/src/infrastructure/local-d
 import { createPostgresTestDatabase } from '../test-support/postgres-test-database.mjs';
 import { createPostgresAppContext } from '../../apps/api/src/postgres-app.factory.js';
 import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.ts';
-import { createAppContext } from '../../apps/api/src/app.factory.js';
+import { createAppContext } from '../../apps/api/src/app.factory.ts';
 
 test('手动恢复 JSON 后重建世代，保留业务数据并备份原日志', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-reset-sync-'));

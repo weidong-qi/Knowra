@@ -10,7 +10,9 @@ import type {
   SyncWorkingConstructors,
   SyncBatchValidator,
   SyncRawNoteReferences,
-  SyncStoredState,
+  SyncHistoricalState,
+  SyncInlinePlanner,
+  SyncAttachmentInspection,
   SyncWorkingRecord,
   SyncBackend,
   SyncProviderState,
@@ -124,7 +126,7 @@ const replace = <Collection extends SyncCollection>(
 
 /** 客户端冻结请求预检与服务端共用；只核对旧重点变更，不授予同步写入权限。 */
 export function assertLegacyAnnotationChanges(
-  before: SyncStoredState,
+  before: SyncHistoricalState,
   changes: SyncChange[],
   selected: SyncChange[] = changes
 ): void {
@@ -179,11 +181,11 @@ export function prepareBatchState<Backend extends SyncBackend = 'local'>(
   preparedAttachments?: Record<string, PreparedSyncAttachment>
 ): { state: SyncProviderState<Backend>; aliases: Record<string, string> };
 export function prepareBatchState(
-  before: SyncStoredState,
+  before: SyncHistoricalState,
   changes: SyncChange[],
   ownerId: string,
   preparedAttachments: Record<string, PreparedSyncAttachment> = {}
-): { state: SyncStoredState; aliases: Record<string, string> } {
+): { state: SyncHistoricalState; aliases: Record<string, string> } {
   // 不可变历史只复制集合；领域流程与最终校验均不修改旧版本/修订。
   let state: SyncWorkingState = Object.fromEntries(
     Object.entries(before).map(([collection, items]) => [
@@ -361,7 +363,7 @@ export function prepareBatchState(
       if (constructors[collection])
         value = { ...new (constructors[collection] as new (input: SyncWorkingEntity) => SyncWorkingEntity)(value) };
       if (!IMMUTABLE_COLLECTIONS.has(collection)) {
-        value.createdAt = old?.createdAt ?? now;
+        (value as { createdAt?: SyncJsonValue }).createdAt = old?.createdAt ?? now;
         if ('updatedAt' in value)
           value.updatedAt = new Date(
             Math.max(Date.now(), Date.parse((old?.updatedAt ?? 0) as string) + 1 || 0)
@@ -440,7 +442,7 @@ export function prepareBatchState(
     )
       throw syncError('ANNOTATION_VERSION_CONFLICT', '原始标注快照缺少对应版本。', 422);
     const old = before.contentAnnotations.find(item => item.id === annotation.id);
-    if (old && annotation.revision < old.revision)
+    if (old && annotation.revision! < old.revision!)
       throw syncError('ANNOTATION_REVISION_CONFLICT', '标注修订不能倒退。');
     if (old && !sameEntity('contentAnnotations', { originSnapshot: old.originSnapshot }, { originSnapshot: origin }))
       throw syncError('SYNC_IMMUTABLE', '标注原始快照不可改写。', 422);
@@ -529,7 +531,7 @@ export function prepareBatchState(
           item.lifecycleStatus === 'active' &&
           currentById.get(item.id)?.lifecycleStatus === 'deleted'
       );
-      for (const { annotation } of planInlineAnnotations(
+      for (const { annotation } of (planInlineAnnotations as typeof planInlineAnnotations & SyncInlinePlanner)(
         note,
         version,
         uploadedDeletions,
@@ -566,7 +568,7 @@ export function prepareBatchState(
     applyInlineAnnotationChanges(
       createInMemoryContentAnnotationRepository({ records: state.contentAnnotations }),
       createInMemoryAnnotationRevisionRepository({ records: state.annotationRevisions }),
-      planInlineAnnotations(
+      (planInlineAnnotations as typeof planInlineAnnotations & SyncInlinePlanner)(
         note,
         version,
         state.contentAnnotations.filter(item => item.noteId === note.id),
@@ -608,7 +610,10 @@ export function prepareBatchState(
         throw syncError('DEPENDENCY_MISSING', '正文引用的目录、标签或附件尚未同步。');
     }
   for (const entry of changes.filter(item => item.collection === 'attachments' && !item.value)) {
-    const preflight = inspectAttachmentDeletion(entry.id, state);
+    const preflight = (inspectAttachmentDeletion as typeof inspectAttachmentDeletion & SyncAttachmentInspection)(
+      entry.id,
+      state
+    );
     if (preflight.references.length) throw syncError('ATTACHMENT_REFERENCED', '保留的资产仍引用此附件，不能删除。');
   }
   const folderMap = new Map(state.folders.map(folder => [folder.id, folder]));
@@ -638,7 +643,10 @@ export function prepareBatchState(
       throw syncError('SYNC_FOLDER_PACKAGE_INVALID', '删除包中的笔记状态不一致。', 422);
   }
   const paths = new Map<string, string>();
-  function folderPath(folder: Pick<FolderEntity, 'id' | 'name' | 'parentId'>, visiting = new Set<string>()): string {
+  function folderPath(
+    folder: Pick<FolderEntity, 'id' | 'name'> & Partial<Pick<FolderEntity, 'parentId'>>,
+    visiting = new Set<string>()
+  ): string {
     if (paths.has(folder.id)) return paths.get(folder.id)!;
     if (visiting.has(folder.id)) throw syncError('FOLDER_PARENT_CONFLICT', '目录不能循环嵌套。', 422);
     visiting.add(folder.id);
@@ -662,5 +670,5 @@ export function prepareBatchState(
   validateTrainingBatch(before, state, changes);
   state = (validateSyncBatchState as SyncBatchValidator)({ schemaVersion: LOCAL_DATA_SCHEMA_VERSION, ...state });
   // 仅收窄既有快照校验逐项检查的 note.tagIds；其余 JSON 字段仍保留原始表示。
-  return { state: state as SyncWorkingState & Pick<SyncStoredState, 'notes'>, aliases };
+  return { state: state as SyncWorkingState & Pick<SyncHistoricalState, 'notes'>, aliases };
 }

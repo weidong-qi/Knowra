@@ -68,7 +68,7 @@ export function createExtractionTaskQueries<Transaction, Context extends Extract
         )) as KnowledgeSpaceRecord | null;
         if (!space || space.userId !== ownerId)
           throw taskError('KNOWLEDGE_EXTRACTION_TASK_NOT_FOUND', '提炼空间不可用。', 404);
-        const rows = (yield store.listPage!(page, context.transaction)) as ExtractionPageRow[];
+        const rows = (yield store.listPage!(page, context.transaction as Transaction)) as ExtractionPageRow[];
         const items: ExtractionJobSummary[] = [];
         for (const row of rows.slice(0, page.limit)) {
           const task = yield* load(context, row.jobId);

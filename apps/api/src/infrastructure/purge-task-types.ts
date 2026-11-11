@@ -1,4 +1,3 @@
-import type { AppError } from '../errors/app-error.ts';
 import type { AiIdByKind, AiRecordBoundary, AiRecordCollections, AiRecordKind } from '../modules/ai/record-types.ts';
 
 // 核心记录复用 AI 校验契约；提炼扩展只列清理核查读取的字段，不重建或过滤正文。
@@ -64,7 +63,7 @@ export interface PurgeSqliteDatabase {
 export interface LocalPurgeTaskDataStore {
   getPurgeTaskState?: () => PurgeTaskState;
   readSync?<T>(operation: (db: PurgeSqliteDatabase) => T): T;
-  aiRuntimeError?: Partial<AppError> | null;
-  knowledgeExtractionTaskStoreError?: Partial<AppError> | null;
-  knowledgeExtractionCommitStoreError?: Partial<AppError> | null;
+  aiRuntimeError?: unknown;
+  knowledgeExtractionTaskStoreError?: unknown;
+  knowledgeExtractionCommitStoreError?: unknown;
 }

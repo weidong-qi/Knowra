@@ -3,7 +3,7 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createServer } from '../../api/src/server.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';

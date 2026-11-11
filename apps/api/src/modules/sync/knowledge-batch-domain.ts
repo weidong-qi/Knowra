@@ -1,7 +1,7 @@
 import type {
   SyncCollection,
-  SyncStoredState,
-  SyncStoredEntity,
+  SyncHistoricalState,
+  SyncHistoricalEntity,
   SyncEntity,
   SyncChange,
   SyncWorkingState,
@@ -21,12 +21,12 @@ import { syncError } from './journal.ts';
 export function normalizeKnowledgeChange<Collection extends SyncCollection>(
   collection: Collection,
   value: SyncWorkingEntity<Collection> | null,
-  previous?: SyncStoredEntity<Collection>
+  previous?: SyncHistoricalEntity<Collection>
 ): SyncWorkingEntity<Collection> | null;
 export function normalizeKnowledgeChange(
   collection: SyncCollection,
   value: SyncWorkingEntity | null,
-  _previous?: SyncStoredEntity
+  _previous?: SyncHistoricalEntity
 ): SyncWorkingEntity | null {
   if (!['knowledgeItems', 'knowledgeEvidence'].includes(collection)) return value;
   if (!value) throw syncError('SYNC_KNOWLEDGE_DELETE_UNSUPPORTED', '知识与来源不能通过同步永久删除，请使用归档。', 422);
@@ -46,7 +46,7 @@ export function normalizeKnowledgeChange(
   };
 }
 
-export function validateKnowledgeLifecycleChange(change: SyncChange, previous: SyncStoredEntity | undefined): void {
+export function validateKnowledgeLifecycleChange(change: SyncChange, previous: SyncHistoricalEntity | undefined): void {
   const { collection, value, lifecycleAction } = change;
   if (!value || !previous) return;
   if (collection === 'knowledgeItems') {
@@ -72,7 +72,11 @@ export function validateKnowledgeLifecycleChange(change: SyncChange, previous: S
 }
 
 /** 来源是不可变证据，只有健康状态可由云端重算；不能用客户端 status 绕过确认门槛。 */
-export function validateKnowledgeBatch(before: SyncStoredState, state: SyncWorkingState, changes: SyncChange[]): void {
+export function validateKnowledgeBatch(
+  before: SyncHistoricalState,
+  state: SyncWorkingState,
+  changes: SyncChange[]
+): void {
   for (const change of changes.filter(entry => entry.collection === 'knowledgeEvidence' && entry.value)) {
     if (before.knowledgeEvidence.some(entry => entry.id === change.id)) continue;
     const evidence = state.knowledgeEvidence.find(entry => entry.id === change.id)!;

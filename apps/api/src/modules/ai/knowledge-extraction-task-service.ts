@@ -68,7 +68,10 @@ export function createKnowledgeExtractionTaskService<Transaction>({
     const { job, descriptor } = yield* lifecycle.load(context, jobId);
     let candidateIds: string[] = [];
     if (job.status === 'succeeded') {
-      const receipt = (yield receiptStore.get(job, context.transaction)) as KnowledgeExtractionCommitReceipt | null;
+      const receipt = (yield receiptStore.get(
+        job,
+        context.transaction as Transaction
+      )) as KnowledgeExtractionCommitReceipt | null;
       if (
         !receipt ||
         receipt.scopeId !== descriptor.scopeId ||
@@ -178,7 +181,7 @@ export function createKnowledgeExtractionTaskService<Transaction>({
         ] as const) {
           yield ai.insert(kind, record);
         }
-        yield store.insert(records.descriptor, context.transaction);
+        yield store.insert(records.descriptor, context.transaction as Transaction);
         yield* taskEvent(ai, records.job.jobId, 'taskCreated', { status: 'pending', phase: 'preparing' }, clock());
         return { created: true, view: yield* view(context, records.job.jobId) };
       });

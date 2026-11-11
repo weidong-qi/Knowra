@@ -1,10 +1,9 @@
-import type { Note } from '../knowledge/domain/note.ts';
+import type { LocalRow } from '../../infrastructure/local-data-types.ts';
 import type {
   LocalSyncDataStore,
   LocalSyncProvider,
   SyncAttachmentTransfer,
   SyncCollection,
-  SyncEntity,
   SyncNoteOperation,
   SyncNoteService
 } from './domain-types.ts';
@@ -16,7 +15,7 @@ import { compactSnapshotEntries, readCompactSnapshot } from './compact-snapshot.
 export function applyNoteOperation(
   service: SyncNoteService,
   operation: SyncNoteOperation,
-  current: Pick<Note, 'deleted'> | null
+  current: Pick<LocalRow<'notes'>, 'deleted'> | null
 ) {
   const { deleted, ...fields } = operation.value;
   if (!current)
@@ -55,7 +54,7 @@ export function createLocalSyncService(
     preview: () => ({ state: dataStore.state, journal: dataStore.previewSyncJournal() }),
     applyState: next => {
       for (const [collection, items] of Object.entries(next))
-        (dataStore.state[collection as SyncCollection] as SyncEntity[]).splice(
+        (dataStore.state[collection as SyncCollection] as LocalRow<SyncCollection>[]).splice(
           0,
           dataStore.state[collection as SyncCollection].length,
           ...items

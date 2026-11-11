@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { aiRecords, insertAiRecords } from '../../api/test/ai-record-fixtures.js';
 import { hashRecord } from '../../api/src/modules/ai/record-contract.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createRuntimeBackup, inspectRuntimeBackup } from '../src/backup.mjs';
 import { prepareRestoredDirectory } from '../src/restore-directory.mjs';
 import { removeAiTablesForLegacyFixture, temporaryDirectory } from './helpers.mjs';

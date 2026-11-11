@@ -8,8 +8,8 @@ import type {
   SyncBlobInput,
   SyncBlobStreamInput,
   SyncCollection,
-  SyncStoredState,
-  SyncStoredEntity,
+  SyncHistoricalState,
+  SyncHistoricalEntity,
   SyncBackend,
   SyncProviderState,
   SyncRawChangeReferences
@@ -144,12 +144,12 @@ export function createBatchSyncService<Backend extends SyncBackend = 'local'>(
           return result;
         }
         // 仅供引用查找的后像不修改记录；替换受影响集合，避免复制所有历史正文。
-        const referenceState: SyncStoredState = { ...state };
+        const referenceState: SyncHistoricalState = { ...state };
         for (const entry of op.changes) {
-          (referenceState as Record<SyncCollection, SyncStoredEntity[]>)[entry.collection] = (
-            referenceState[entry.collection] as SyncStoredEntity[]
+          (referenceState as Record<SyncCollection, SyncHistoricalEntity[]>)[entry.collection] = (
+            referenceState[entry.collection] as SyncHistoricalEntity[]
           ).filter(value => value.id !== entry.id);
-          if (entry.value) (referenceState[entry.collection] as SyncStoredEntity[]).push(entry.value);
+          if (entry.value) (referenceState[entry.collection] as SyncHistoricalEntity[]).push(entry.value);
         }
         for (const entry of op.changes)
           for (const ref of (changeReferencesFor as typeof changeReferencesFor & SyncRawChangeReferences)(

@@ -509,7 +509,7 @@ export function createFileDataStore(
         throw new Error('持久化任务或提炼历史不可读，无法核查清理引用。');
       }
       return structuredClone({
-        ai: aiRuntime,
+        ai: aiRuntime as AiPrivateState,
         tasks: (extractionTasks as ExtractionTaskState).tasks,
         receipts: (knowledgeExtractionCommits as ExtractionCommitState).receipts
       });

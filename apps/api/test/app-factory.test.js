@@ -8,7 +8,7 @@ export const appFactoryTests = [
     name: 'persistent app context permanently deletes note dependents and attachment files',
     async run() {
       const { createPersistentAppContext } = await import(
-        '../src/app.factory.js'
+        '../src/app.factory.ts'
       );
       const tempRoot = fs.mkdtempSync(
         path.join(os.tmpdir(), 'study-cascade-delete-')
@@ -81,7 +81,7 @@ export const appFactoryTests = [
     name: 'persistent recycle-bin cleanup preserves formal sources and atomically removes unreferenced note versions',
     async run() {
       const { createPersistentAppContext } = await import(
-        '../src/app.factory.js'
+        '../src/app.factory.ts'
       );
       const tempRoot = fs.mkdtempSync(
         path.join(os.tmpdir(), 'study-recycle-version-cleanup-')
@@ -166,7 +166,7 @@ export const appFactoryTests = [
   {
     name: 'createAppContext rejects attachments for missing or deleted notes',
     async run() {
-      const { createAppContext } = await import('../src/app.factory.js');
+      const { createAppContext } = await import('../src/app.factory.ts');
       const uploaded = [];
       const dataStore = {
         state: {
@@ -232,7 +232,7 @@ export const appFactoryTests = [
   {
     name: 'createAppContext wires knowledge module and handlers together',
     async run() {
-      const { createAppContext } = await import('../src/app.factory.js');
+      const { createAppContext } = await import('../src/app.factory.ts');
 
       const app = createAppContext();
 
@@ -248,7 +248,7 @@ export const appFactoryTests = [
   {
     name: 'createAppContext storage handlers can export and import persistent data',
     async run() {
-      const { createAppContext } = await import('../src/app.factory.js');
+      const { createAppContext } = await import('../src/app.factory.ts');
 
       const dataStore = {
         state: {
@@ -351,7 +351,7 @@ export const appFactoryTests = [
   {
     name: 'createPersistentAppContext resolves storage paths from the workspace root instead of cwd',
     async run() {
-      const { createPersistentAppContext, resolveStoragePath } = await import('../src/app.factory.js');
+      const { createPersistentAppContext, resolveStoragePath } = await import('../src/app.factory.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'study-app-factory-'));
       const originalCwd = process.cwd();
       const apiCwd = originalCwd.endsWith(path.join('apps', 'api'))

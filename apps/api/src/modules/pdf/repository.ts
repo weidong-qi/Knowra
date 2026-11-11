@@ -84,7 +84,7 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
     },
     async importPdf(note: PdfNewNote, attachment: PdfNewAttachment) {
       if (dataStore)
-        return dataStore.runTransaction(() => {
+        return dataStore.runTransaction!(() => {
           const existing = dataStore.state.notes.find(item => item.id === note.id);
           if (existing) return existingImport(existing, note);
           dataStore.state.attachments.push(attachment);
@@ -143,7 +143,7 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
       update: (previous: PdfStoredAnnotation | null) => PdfStoredAnnotation
     ) {
       if (dataStore)
-        return dataStore.runTransaction(() => {
+        return dataStore.runTransaction!(() => {
           const note = dataStore.state.notes.find(item => item.id === noteId);
           if (!note || note.deleted) throw pdfError('NOTE_NOT_FOUND', '资料不存在。', 404);
           const index = dataStore.state.pdfAnnotations.findIndex(item => item.id === id);
@@ -184,7 +184,7 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
     },
     async setReady(attachment: PdfAttachment) {
       if (dataStore)
-        return dataStore.runTransaction(() => {
+        return dataStore.runTransaction!(() => {
           const current = dataStore.state.attachments.find(item => item.id === attachment.id);
           if (!current || current.sha256 !== attachment.sha256)
             throw pdfError('ATTACHMENT_CHANGED', 'PDF 文件身份已变化。', 409);

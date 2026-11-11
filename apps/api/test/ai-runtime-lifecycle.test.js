@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer } from '../src/server.js';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.ts';
 import { createAiAgentWorker } from '../src/modules/ai/agent-worker.ts';

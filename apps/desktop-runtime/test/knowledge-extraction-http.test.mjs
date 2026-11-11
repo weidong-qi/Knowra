@@ -4,7 +4,7 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { temporaryDirectory } from './helpers.mjs';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createExtractionTaskSources, extractionTaskGateway, quietTaskLogger } from '../../api/test/fixtures/knowledge-extraction-task.fixture.js';
 import { startExtractionHttpServer, callExtractionHttp as call } from '../../api/test/fixtures/knowledge-extraction-http.fixture.js';
 

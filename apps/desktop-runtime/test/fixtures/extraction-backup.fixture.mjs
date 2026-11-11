@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { createSqliteDataStore } from '../../src/sqlite-data-store.mjs';
 import { createRuntimeBackup } from '../../src/backup.mjs';
-import { createAppContext } from '../../../api/src/app.factory.js';
+import { createAppContext } from '../../../api/src/app.factory.ts';
 import { createExtractionTaskSources, extractionTaskGateway, quietTaskLogger } from '../../../api/test/fixtures/knowledge-extraction-task.fixture.js';
 import { temporaryDirectory } from '../helpers.mjs';
 

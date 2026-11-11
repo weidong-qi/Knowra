@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { validateLocalSnapshot } from '../../api/src/infrastructure/local-data-schema.ts';
 import { createLocalAttachmentFileManager } from '../../api/src/infrastructure/local-attachment-file-manager.ts';
 import { createSqliteDataStore } from './sqlite-data-store.mjs';

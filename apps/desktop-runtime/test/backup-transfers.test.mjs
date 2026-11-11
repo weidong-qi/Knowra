@@ -4,7 +4,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { execFileSync } from 'node:child_process';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createRuntimeBackup, inspectRuntimeBackup, listRuntimeBackups } from '../src/backup.mjs';
 import { exportRuntimeBackup, importRuntimeBackup } from '../src/backup-transfers.mjs';
 import { exportLocalRecovery } from '../src/recovery-export.mjs';

@@ -6,7 +6,7 @@ import { fork, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { mock } from 'node:test';
 import { aiRuntimeLifecycle } from '../src/modules/ai/runtime-lifecycle.ts';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 import { createServer } from '../src/server.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.ts';
 import {

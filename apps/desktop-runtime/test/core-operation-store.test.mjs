@@ -5,7 +5,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { coreOperationScenarios, request, lookup, resultFor } from '../../api/test/fixtures/core-operation-scenarios.js';
 import { createRuntimeBackup, inspectRuntimeBackup, restoreRuntimeBackup } from '../src/backup.mjs';
 

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { prepareBatchState } from '../../api/src/modules/sync/batch-domain.ts';
 import { temporaryDirectory, markText } from './helpers.mjs';
 

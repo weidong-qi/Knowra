@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { temporaryDirectory, openWorkspace } from './helpers.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { createKnowledgeExtractionJobFixture } from '../../api/test/fixtures/knowledge-extraction-job.fixture.js';
 import { validateSqliteKnowledgeExtractionCommits } from '../src/knowledge-extraction-commit-store.mjs';

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { once } from 'node:events';
 import test from 'node:test';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createServer } from '../../api/src/server.js';
 import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';

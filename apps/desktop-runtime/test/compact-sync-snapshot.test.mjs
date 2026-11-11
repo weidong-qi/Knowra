@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createLocalSyncService } from '../../api/src/modules/sync/local-provider.ts';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { entriesFor } from '../../api/src/modules/sync/journal.ts';

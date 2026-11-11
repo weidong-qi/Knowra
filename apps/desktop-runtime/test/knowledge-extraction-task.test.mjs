@@ -7,7 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { temporaryDirectory } from './helpers.mjs';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { createRuntimeBackup, restoreRuntimeBackup } from '../src/backup.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createExtractionTaskSources, extractionTaskGateway, deferredTaskResponse, quietTaskLogger } from '../../api/test/fixtures/knowledge-extraction-task.fixture.js';
 import { assertCrossInstanceExtractionRetry, assertSameInstanceExtractionRetry } from '../../api/test/fixtures/knowledge-extraction-retry-scenarios.js';
 

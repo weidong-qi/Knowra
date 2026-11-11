@@ -81,8 +81,10 @@ type ExtractionReadValue =
   | Pick<NoteRecord, 'id' | 'spaceId' | 'deleted' | 'contentKind' | 'aiVisibility'>[]
   | null;
 export type ExtractionQuerySteps<Result> = Generator<Awaitable<ExtractionReadValue>, Result, ExtractionReadValue>;
-export interface ExtractionQueryContext<Transaction = object | undefined> {
-  transaction: Transaction;
+export type ExtractionTransactionContext<Transaction> = [Transaction] extends [void]
+  ? { transaction?: Transaction }
+  : { transaction: Transaction };
+export type ExtractionQueryContext<Transaction = object | undefined> = ExtractionTransactionContext<Transaction> & {
   aiRepository: Pick<AiRecordRepositoryPort, 'identity' | 'get' | 'list' | 'listEvents'>;
   repositories: {
     knowledgeSpaceRepository: { findById(id: unknown): Awaitable<KnowledgeSpaceRecord | null> };
@@ -93,7 +95,7 @@ export interface ExtractionQueryContext<Transaction = object | undefined> {
     };
     noteVersionRepository: { findById(id: string): Awaitable<NoteVersionRecord | null> };
   };
-}
+};
 export interface ExtractionQueryOptions<
   Transaction = object | undefined,
   Context extends ExtractionQueryContext<Transaction> = ExtractionQueryContext<Transaction>

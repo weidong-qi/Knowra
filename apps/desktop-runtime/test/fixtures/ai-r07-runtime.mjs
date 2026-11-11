@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPersistentAppContext } from '../../../api/src/app.factory.js';
+import { createPersistentAppContext } from '../../../api/src/app.factory.ts';
 import { createPostgresAppContext } from '../../../api/src/postgres-app.factory.js';
 import { createServer } from '../../../api/src/server.js';
 import { createV4WebServer } from '../../../web/server/app.mjs';

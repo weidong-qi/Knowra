@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
-import { createAppContext } from '../src/app.factory.js';
+import { createAppContext } from '../src/app.factory.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 
 export const attachmentCleanupCrashTests = ['before-commit', 'after-commit'].map(phase => ({
