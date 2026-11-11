@@ -49,7 +49,7 @@ export interface AttachmentIntegrityOptions {
 }
 interface AttachmentRepairFields {
   size?: number | string | null;
-  sha256?: string | null;
+  sha256?: unknown;
   status?: string | null;
   verifiedAt?: string | null;
 }

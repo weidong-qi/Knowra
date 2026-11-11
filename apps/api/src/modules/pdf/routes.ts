@@ -86,9 +86,10 @@ export async function handlePdfRoute({ request, response, url, pdf }: PdfRouteCo
     const etag = `"${attachment.sha256}"`;
     let range;
     try {
+      // 保留原范围运算与 Node 响应头校验，不把读取结果升级为完整附件。
       range = parseByteRange(
         !request.headers['if-range'] || request.headers['if-range'] === etag ? request.headers.range : null,
-        attachment.size
+        attachment.size as number
       );
     } catch (error) {
       response.setHeader('Content-Range', `bytes */${attachment.size}`);
@@ -101,7 +102,7 @@ export async function handlePdfRoute({ request, response, url, pdf }: PdfRouteCo
       ETag: etag,
       'Cache-Control': 'private, no-cache',
       'Content-Disposition': `${regularFile ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
-      'Content-Length': range ? range.end - range.start + 1 : attachment.size,
+      'Content-Length': range ? range.end - range.start + 1 : (attachment.size as number),
       ...(range ? { 'Content-Range': `bytes ${range.start}-${range.end}/${attachment.size}` } : {})
     });
     if (request.method === 'HEAD') response.end();

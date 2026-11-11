@@ -82,7 +82,9 @@ export function createPdfArchive({
   async function writeArchive(output: Writable) {
     const current = await snapshot();
     const metadata = Buffer.from(JSON.stringify(current));
-    const byteBudget = metadata.length + current.data.attachments.reduce((sum, file) => sum + file.size + 1024, 0);
+    // 仅标注原加法操作；不补默认值，不改变缺失/非数值 size 的 JS 强制转换。
+    const byteBudget =
+      metadata.length + current.data.attachments.reduce((sum, file) => sum + (file.size as number) + 1024, 0);
     if (metadata.length > 64 * 1024 * 1024 || current.data.attachments.length > 65533 || byteBudget > 0xffff0000)
       throw pdfError('ARCHIVE_TOO_LARGE', '资料包超过 ZIP 首版支持的容量，请使用 Mac 完整目录备份。', 413);
     const manifest = {

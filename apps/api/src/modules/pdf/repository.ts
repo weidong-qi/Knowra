@@ -8,6 +8,7 @@ import type {
   PdfRepositoryOptions,
   PdfNoteRecord,
   PdfNewNote,
+  PdfNewAttachment,
   PdfFolder,
   PdfAttachment,
   PdfStoredAnnotation
@@ -17,7 +18,7 @@ import { pdfError } from './files.ts';
 
 function uniqueTitle(
   note: { title: string; folderId?: string | null },
-  notes: Array<{ title: string; folderId: string | null; deleted?: boolean; deletedAt?: string | Date | null }>,
+  notes: Array<{ title: string; folderId?: string | null; deleted?: unknown; deletedAt?: unknown }>,
   folders: PdfFolder[]
 ) {
   const names = new Set([
@@ -33,7 +34,10 @@ function uniqueTitle(
   while (names.has(title)) title = `${note.title} ${suffix++}`;
   return title;
 }
-function existingImport(existing: PdfNoteRecord, note: PdfNewNote) {
+function existingImport<Record extends Pick<PdfNoteRecord, 'deleted' | 'deletedAt' | 'pdfSource'>>(
+  existing: Record,
+  note: PdfNewNote
+) {
   if (
     existing.deleted ||
     existing.deletedAt ||
@@ -78,7 +82,7 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
           }
         : null;
     },
-    async importPdf(note: PdfNewNote, attachment: PdfAttachment) {
+    async importPdf(note: PdfNewNote, attachment: PdfNewAttachment) {
       if (dataStore)
         return dataStore.runTransaction(() => {
           const existing = dataStore.state.notes.find(item => item.id === note.id);
@@ -96,7 +100,7 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
       const { buildNoteData, mapNote } = postgres!;
       return db!.$transaction(async tx => {
         const existing = await tx.note.findUnique({ where: { id: note.id } });
-        if (existing) return existingImport(mapNote(existing)! as unknown as PdfNoteRecord, note);
+        if (existing) return existingImport(mapNote(existing)!, note);
         const space = await tx.knowledgeSpace.findUnique({ where: { id: note.spaceId } });
         const folder = note.folderId ? await tx.folder.findUnique({ where: { id: note.folderId } }) : null;
         if (

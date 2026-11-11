@@ -59,10 +59,10 @@ export function assertSameAttachment(
 }
 
 // 读取前保存期望值；文件定位工具不得把实测大小写回有可信哈希的记录。
-export function inspectAttachmentFile(
-  attachment: AttachmentRecoveryRecord,
+export function inspectAttachmentFile<Record extends AttachmentRecoveryRecord>(
+  attachment: Record,
   fileManager: AttachmentInspectionFileManager
-): AttachmentFileHealth {
+): AttachmentFileHealth<Record['verifiedAt']> {
   const expected = normalizeSha256(attachment.sha256);
   const readablePath = fileManager.resolveReadableAttachmentPath({ ...attachment });
   if (!readablePath) return { status: 'missing', verifiedAt: null };

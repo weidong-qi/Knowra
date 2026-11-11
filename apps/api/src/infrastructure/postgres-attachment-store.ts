@@ -138,7 +138,10 @@ export function createPostgresAttachmentStore({
     return attachment;
   }
 
-  async function saveHealth(original: StoredAttachment, health: Omit<AttachmentFileHealth, 'content'>) {
+  async function saveHealth(
+    original: StoredAttachment,
+    health: Omit<AttachmentFileHealth<StoredAttachment['verifiedAt']>, 'content'>
+  ) {
     const save = async () => {
       const current = await getAttachment(original.id);
       assertSameAttachment(current, original);
