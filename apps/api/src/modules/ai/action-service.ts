@@ -19,7 +19,7 @@ import type { ActionReference, NotePlanItem } from './note-plan-types.ts';
 import type { SourceReference, CatalogDependencies } from './access-service-types.ts';
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
-import type { Tag } from '../knowledge/domain/tag.ts';
+import type { TagRecord } from '../knowledge/infrastructure/tag-repository.ts';
 import type {
   CoreOperationInput,
   CoreOperationKind,
@@ -105,7 +105,7 @@ export function createNoteActionService({
       ['tag', repos.tagRepository, ids.tags]
     ] as const) {
       for (const refId of new Set(refIds.filter(Boolean) as string[])) {
-        const ref = (yield repo.findById(refId)) as ((FolderRecord | Tag) & { deletedAt?: unknown }) | null;
+        const ref = (yield repo.findById(refId)) as ((FolderRecord | TagRecord) & { deletedAt?: unknown }) | null;
         if (!ref || ref.spaceId !== spaceId || ref.deletedAt)
           actionError('AI_NOTE_REFERENCE_DENIED', '目录或标签不可用。', 422);
         result.push({ kind, id: refId, hash: hashRecord(serial(ref)) });
@@ -188,7 +188,7 @@ export function createNoteActionService({
   function* verifyTargets(row: ActionRecord, state: ActionState): ActionFlow<void> {
     for (const ref of row.plan.references) {
       const record = (yield (ref.kind === 'folder' ? repos.folderRepository : repos.tagRepository).findById(ref.id)) as
-        ((FolderRecord | Tag) & { deletedAt?: unknown }) | null;
+        ((FolderRecord | TagRecord) & { deletedAt?: unknown }) | null;
       if (!record || record.spaceId !== row.spaceId || record.deletedAt || hashRecord(serial(record)) !== ref.hash) {
         actionError('AI_ACTION_CONFLICT', '目录或标签已变化，请重新预览。');
       }
