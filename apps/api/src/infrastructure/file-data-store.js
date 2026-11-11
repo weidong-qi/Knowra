@@ -52,7 +52,7 @@ import {
   createJsonAiRepository,
   validateAiState
 } from '../modules/ai/record-state.ts';
-import { createJsonBudgetAuthority } from '../modules/ai/budget-ledger.js';
+import { createJsonBudgetAuthority } from '../modules/ai/budget-ledger.ts';
 import {
   LOCAL_DATA_COLLECTIONS,
   LOCAL_DATA_SCHEMA_VERSION,

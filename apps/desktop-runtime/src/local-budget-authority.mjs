@@ -9,7 +9,7 @@ import {
   usageRows,
   usageSummary,
   validateBudgetState
-} from '../../api/src/modules/ai/budget-ledger.js';
+} from '../../api/src/modules/ai/budget-ledger.ts';
 
 const unavailable = (message, cause) =>
   Object.assign(new Error(message), { code: 'AI_BUDGET_UNAVAILABLE', ...(cause ? { cause } : {}) });

@@ -1594,7 +1594,7 @@ export const aiKnowledgePropose = [
   {
     name: '预算：北京日额度为 20 元，单任务预留上限仍为 2 元',
     async run() {
-      const { DAILY_LIMIT_MICROUNITS, JOB_LIMIT_MICROUNITS } = await import('../src/modules/ai/budget-ledger.js');
+      const { DAILY_LIMIT_MICROUNITS, JOB_LIMIT_MICROUNITS } = await import('../src/modules/ai/budget-ledger.ts');
       assert.equal(DAILY_LIMIT_MICROUNITS, 20_000_000);
       assert.equal(JOB_LIMIT_MICROUNITS, 2_000_000);
     }

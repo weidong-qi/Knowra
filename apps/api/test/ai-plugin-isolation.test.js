@@ -8,7 +8,7 @@ import { createOptionalAiRuntime, createUnavailableAiRuntime } from '../src/modu
 import { AI_PROCESS_LIMITS, createIsolatedDeepSeekAdapter } from '../src/modules/ai/isolated-provider.js';
 import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.js';
 import { aiRecords } from './ai-record-fixtures.js';
-import { beijingDay } from '../src/modules/ai/budget-ledger.js';
+import { beijingDay } from '../src/modules/ai/budget-ledger.ts';
 import { measureCoreHttp, p95 } from './fixtures/ai-core-http-probe.mjs';
 import { startHangProbe } from './fixtures/ai-hang-probe.mjs';
 

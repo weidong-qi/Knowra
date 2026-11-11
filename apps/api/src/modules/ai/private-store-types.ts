@@ -120,7 +120,14 @@ export interface BudgetReservation {
   usage?: object | null;
 }
 export interface BudgetState {
-  budgetDays: { accountRef: string; day: string; spentMicrounits: number; heldMicrounits: number }[];
+  budgetDays: {
+    accountRef: string;
+    day: string;
+    spentMicrounits: number;
+    heldMicrounits: number;
+    archivedSpentMicrounits?: number;
+  }[];
+  budgetMonths?: BudgetMonth[];
   budgetReservations: BudgetReservation[];
 }
 export interface BudgetReserveInput {
@@ -130,4 +137,14 @@ export interface BudgetReserveInput {
   priceVersion: string;
   reservedMicrounits: number;
   limits?: BudgetLimits;
+}
+
+export interface BudgetMonth {
+  accountRef: string;
+  month: string;
+  requests: number;
+  spentMicrounits: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheHitTokens: number;
 }

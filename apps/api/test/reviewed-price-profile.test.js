@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
-import { beijingDay, createJsonBudgetAuthority } from '../src/modules/ai/budget-ledger.js';
+import { beijingDay, createJsonBudgetAuthority } from '../src/modules/ai/budget-ledger.ts';
 import { createJsonAiConversationStore } from '../src/modules/ai/conversation-store.js';
 import { createEmptyAiState } from '../src/modules/ai/record-state.ts';
 import { createAiAgentWorker } from '../src/modules/ai/agent-worker.js';

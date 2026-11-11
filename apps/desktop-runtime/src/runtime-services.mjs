@@ -120,7 +120,7 @@ export function createRuntimeServices({
             // 余额快照、预算设置、提醒状态与预算账本一样放在数据目录根，不随恢复备份切换的资料目录重置。
             balanceFile: path.join(budgetDirectory, 'ai-balance.json'),
             budgetSettingsFile: path.join(budgetDirectory, 'ai-budget-settings.json'),
-            budgetAlertsFile: path.join(budgetDirectory, 'ai-budget-alerts.json'),
+            budgetAlertsFile: path.join(budgetDirectory, 'ai-budget-alerts.tson'),
             conversationStore: store.aiConversationStore,
             actionStore: store.aiActionStore,
             coreOperationStore: context.coreOperationStore,

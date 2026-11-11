@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.ts';
-import { beijingDay } from './budget-ledger.js';
+import { beijingDay } from './budget-ledger.ts';
 import { normalizeAiRequest } from './gateway.js';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
 

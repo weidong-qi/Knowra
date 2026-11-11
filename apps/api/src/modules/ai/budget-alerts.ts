@@ -1,19 +1,44 @@
+import type { ReadableBudgetSettings } from './budget-types.ts';
+import type { AppError } from '../../errors/app-error.ts';
+import type { budgetStatus } from './budget-ledger.ts';
+type AlertRule = 'daily' | 'monthly';
+interface AlertMark {
+  notified?: unknown;
+  dismissed?: unknown;
+}
+interface AlertState {
+  marks: Record<string, AlertMark>;
+  overrides: Partial<Record<AlertRule, string>>;
+  pauses: Partial<Record<AlertRule, string>>;
+  invalid: boolean;
+}
+interface AlertEvaluation {
+  settings: ReadableBudgetSettings;
+  status: ReturnType<typeof budgetStatus>;
+  marks?: AlertState['marks'];
+  overrides?: AlertState['overrides'];
+  pauses?: AlertState['pauses'];
+  day: string;
+}
+interface BudgetAlertStoreOptions {
+  filePath: string;
+}
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-export const ALERT_RULES = ['daily', 'monthly'];
+export const ALERT_RULES: AlertRule[] = ['daily', 'monthly'];
 const ID_PATTERN = /^(daily|monthly):(\d{4}-\d{2}(?:-\d{2})?):(\d{1,3})$/;
 const KEEP_DAYS = 70;
-const invalid = message => Object.assign(new Error(message), { code: 'AI_BUDGET_ALERT_INVALID' });
+const invalid = (message: string) => Object.assign(new Error(message), { code: 'AI_BUDGET_ALERT_INVALID' });
 
-export const periodOf = (rule, day) => (rule === 'daily' ? day : day.slice(0, 7));
+export const periodOf = (rule: string, day: string) => (rule === 'daily' ? day : day.slice(0, 7));
 
 /**
  * 计算当前周期内已越过的提醒阈值。只看“每日”“每月”两条规则，且规则不是“关闭”时才提醒；
  * 已用额度 = 已结算 + 仍占用的预留（与拦截口径一致）。金额与阈值均为整数，按乘法比较避免浮点误差。
  */
-export function evaluateAlerts({ settings, status, marks = {}, overrides = {}, pauses = {}, day }) {
+export function evaluateAlerts({ settings, status, marks = {}, overrides = {}, pauses = {}, day }: AlertEvaluation) {
   const alerts = [];
   const rows = {
     daily: { used: status.spentMicrounits + status.heldMicrounits },
@@ -68,26 +93,27 @@ export function evaluateAlerts({ settings, status, marks = {}, overrides = {}, p
  * 并可对当前周期放行被“达到即停”拦截的规则（overrides，周期结束自动失效）。
  * 这些只是提示与便利，文件缺失或损坏时按“没有记录”处理，不影响任何拦截。
  */
-export function createBudgetAlertStore({ filePath }) {
+export function createBudgetAlertStore({ filePath }: BudgetAlertStoreOptions) {
   if (!path.isAbsolute(filePath ?? '')) throw new TypeError('预算提醒需要绝对路径。');
-  let queue = Promise.resolve();
-  const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-  const periodValue = value => typeof value === 'string' && /^\d{4}-\d{2}(-\d{2})?$/.test(value);
+  let queue: Promise<unknown> = Promise.resolve();
+  const plain = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+  const periodValue = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}(-\d{2})?$/.test(value);
   // 严格读取：缺文件按空状态；无法读取、无法解析或结构不对记为 invalid（并给出空状态），而不是悄悄当作“没有暂停”。
   // 暂停状态承担拦截职责，损坏时调用方必须阻止付费调用；只有明确的“暂停/恢复/放行”操作才会重置它。
-  async function load() {
+  async function load(): Promise<AlertState> {
     const empty = { marks: {}, overrides: {}, pauses: {}, invalid: false };
     let raw;
     try {
       raw = await fs.readFile(filePath, 'utf8');
     } catch (error) {
-      return error?.code === 'ENOENT' ? empty : { ...empty, invalid: true };
+      return (error as AppError | null)?.code === 'ENOENT' ? empty : { ...empty, invalid: true };
     }
     try {
-      const parsed = JSON.parse(raw);
+      const parsed: unknown = JSON.parse(raw);
       if (!plain(parsed)) throw new Error('invalid');
       // 只有“字段不存在”按空处理（旧版本文件没有 pauses）；null、数组等一律视为损坏。
-      const part = key => (parsed[key] === undefined ? {} : parsed[key]);
+      const part = (key: string) => (parsed[key] === undefined ? {} : parsed[key]);
       const [marks, overrides, pauses] = [part('marks'), part('overrides'), part('pauses')];
       if (
         !plain(marks) ||
@@ -98,12 +124,17 @@ export function createBudgetAlertStore({ filePath }) {
         !Object.values(marks).every(plain)
       )
         throw new Error('invalid');
-      return { marks, overrides, pauses, invalid: false };
+      return {
+        marks: marks as AlertState['marks'],
+        overrides: overrides as AlertState['overrides'],
+        pauses: pauses as AlertState['pauses'],
+        invalid: false
+      };
     } catch {
       return { ...empty, invalid: true };
     }
   }
-  async function save(state, today) {
+  async function save(state: AlertState, today: string) {
     // 只保留近期周期的标记，避免文件无限增长。
     const cutoff = new Date(Date.parse(`${today}T00:00:00Z`) - KEEP_DAYS * 24 * 3600_000).toISOString().slice(0, 10);
     const marks = Object.fromEntries(
@@ -124,8 +155,7 @@ export function createBudgetAlertStore({ filePath }) {
       await fs.rm(temp, { force: true }).catch(() => undefined);
     }
   }
-  /** @template T @param {() => Promise<T>} work @returns {Promise<T>} */
-  const serial = work => {
+  const serial = <T>(work: () => Promise<T>): Promise<T> => {
     const run = queue.then(work);
     queue = run.catch(() => undefined);
     return run;
@@ -133,7 +163,7 @@ export function createBudgetAlertStore({ filePath }) {
   return {
     get: () => serial(load),
     /** 标记提醒：kind 为 notified（已推送系统通知）或 dismissed（已关闭横幅）。 */
-    mark: (ids, kind, today) =>
+    mark: (ids: unknown, kind: string, today: string) =>
       serial(async () => {
         if (
           !Array.isArray(ids) ||
@@ -153,7 +183,7 @@ export function createBudgetAlertStore({ filePath }) {
         await save(state, today);
       }),
     /** 放行：当前周期内不再因该规则拦截；同时解除该周期的暂停。 */
-    allow: (rule, period, today) =>
+    allow: (rule: AlertRule, period: string, today: string) =>
       serial(async () => {
         if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('放行请求无效。');
         const state = await load();
@@ -162,7 +192,7 @@ export function createBudgetAlertStore({ filePath }) {
         await save(state, today);
       }),
     /** 暂停：到当前周期结束前不再发起付费调用，周期结束自动恢复；不改写用户的预算设置。 */
-    pause: (rule, period, today) =>
+    pause: (rule: AlertRule, period: string, today: string) =>
       serial(async () => {
         if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('暂停请求无效。');
         const state = await load();
@@ -171,7 +201,7 @@ export function createBudgetAlertStore({ filePath }) {
         await save(state, today);
       }),
     /** 恢复：提前解除当前周期的暂停。 */
-    resume: (rule, period, today) =>
+    resume: (rule: AlertRule, period: string, today: string) =>
       serial(async () => {
         if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('恢复请求无效。');
         const state = await load();

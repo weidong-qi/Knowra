@@ -7,7 +7,7 @@ import {
   inferConsumption,
   normalizeBalance,
   parseMicrounits
-} from '../src/modules/ai/balance-service.js';
+} from '../src/modules/ai/balance-service.ts';
 
 const body = (total, extra = {}) => ({
   is_available: true,
