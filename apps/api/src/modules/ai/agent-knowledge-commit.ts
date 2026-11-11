@@ -9,7 +9,7 @@ import type {
   CommitSteps,
   CommitNote,
   FolderRecord,
-  KnowledgeItemServiceRecord,
+  CommitItem,
   AiAccessPolicy,
   AiRunGrant,
   AiConversationTurn,
@@ -173,9 +173,7 @@ export function createAgentKnowledgeCommitService({
   // 只比对仍然有效（未删除、未归档）的知识陈述；提示只含候选序号，不向模型泄露已有内容。
   function* rejectDuplicates(plan: ProposalPlan): CommitSteps<void> {
     const known = new Set(
-      ((yield repos.knowledgeItemRepository.list({})) as KnowledgeItemServiceRecord[]).map(item =>
-        normalized(item.canonicalStatement)
-      )
+      ((yield repos.knowledgeItemRepository.list({})) as CommitItem[]).map(item => normalized(item.canonicalStatement))
     );
     const repeated: number[] = [];
     plan.candidates.forEach((candidate, index) => {
