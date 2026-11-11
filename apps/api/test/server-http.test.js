@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer } from '../src/server.js';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
-import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.js';
+import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 import { httpKeepAliveTests } from './http-keepalive.test.ts';
 
 function createHttpFixture({ knowledgeHandlers, storageHandlers, logger } = {}) {

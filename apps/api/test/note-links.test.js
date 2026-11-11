@@ -7,7 +7,7 @@ import { createPersistentAppContext } from '../src/app.factory.js';
 import { withCommandServer } from './command-search-http.test.js';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.js';
+import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 
 async function acceptance(app) {
   const k = app.http.knowledge;

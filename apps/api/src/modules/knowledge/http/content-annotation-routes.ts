@@ -1,7 +1,8 @@
+import type { HttpInput } from './handler-input-types.ts';
 import type { IncomingMessage } from 'node:http';
 import type { ResponseWriter } from '../../../http/response.ts';
-import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
-import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.ts';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.ts';
 
 type ContentAnnotationRouteKnowledge = Pick<
   ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
@@ -42,7 +43,9 @@ export async function handleContentAnnotationRoute({
 }: ContentAnnotationRouteContext): Promise<boolean> {
   const root = '/api/knowledge/annotations';
   if (request.method === 'POST' && url.pathname === '/api/knowledge/analysis-scopes/preview') {
-    sendJson(response, 200, { data: await knowledge.previewAnalysisScope(await parseBody(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.previewAnalysisScope((await parseBody(request)) as HttpInput)
+    });
     return true;
   }
   if (request.method === 'GET' && url.pathname === '/api/knowledge/analysis-scopes') {
@@ -50,14 +53,16 @@ export async function handleContentAnnotationRoute({
     return true;
   }
   if (request.method === 'POST' && url.pathname === '/api/knowledge/analysis-scopes') {
-    sendJson(response, 201, { data: await knowledge.createAnalysisScope(await parseBody(request)) });
+    sendJson(response, 201, {
+      data: await knowledge.createAnalysisScope((await parseBody(request)) as HttpInput)
+    });
     return true;
   }
   const scopeAction = url.pathname.match(/^\/api\/knowledge\/analysis-scopes\/([^/]+)\/(trash|restore)$/);
   if (request.method === 'POST' && scopeAction) {
     const method = scopeAction[2] === 'trash' ? knowledge.trashAnalysisScope : knowledge.restoreDeletedAnalysisScope;
     sendJson(response, 200, {
-      data: await method({ id: decodeURIComponent(scopeAction[1]) }, await parseBody(request))
+      data: await method({ id: decodeURIComponent(scopeAction[1]) }, (await parseBody(request)) as HttpInput)
     });
     return true;
   }
@@ -69,7 +74,9 @@ export async function handleContentAnnotationRoute({
     return true;
   }
   if (request.method === 'POST' && url.pathname === root) {
-    sendJson(response, 201, { data: await knowledge.createAnnotation(await parseBody(request)) });
+    sendJson(response, 201, {
+      data: await knowledge.createAnnotation((await parseBody(request)) as HttpInput)
+    });
     return true;
   }
   if (request.method === 'GET' && url.pathname === root) {
@@ -81,12 +88,17 @@ export async function handleContentAnnotationRoute({
     const id = decodeURIComponent(exclusionMatch[1]);
     const exclusionId = exclusionMatch[2] ? decodeURIComponent(exclusionMatch[2]) : null;
     if (request.method === 'POST' && !exclusionId) {
-      sendJson(response, 201, { data: await knowledge.createAnnotationExclusion({ id }, await parseBody(request)) });
+      sendJson(response, 201, {
+        data: await knowledge.createAnnotationExclusion({ id }, (await parseBody(request)) as HttpInput)
+      });
       return true;
     }
     if (request.method === 'DELETE' && exclusionId) {
       sendJson(response, 200, {
-        data: await knowledge.deleteAnnotationExclusion({ id, exclusionId }, await parseOptionalBody(request))
+        data: await knowledge.deleteAnnotationExclusion(
+          { id, exclusionId },
+          (await parseOptionalBody(request)) as HttpInput
+        )
       });
       return true;
     }
@@ -110,23 +122,33 @@ export async function handleContentAnnotationRoute({
     return true;
   }
   if (request.method === 'PATCH' && !action) {
-    sendJson(response, 200, { data: await knowledge.updateAnnotation({ id }, await parseBody(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.updateAnnotation({ id }, (await parseBody(request)) as HttpInput)
+    });
     return true;
   }
   if (request.method === 'DELETE' && !action) {
-    sendJson(response, 200, { data: await knowledge.deleteAnnotation({ id }, await parseOptionalBody(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.deleteAnnotation({ id }, (await parseOptionalBody(request)) as HttpInput)
+    });
     return true;
   }
   if (request.method === 'POST' && action === 'restore') {
-    sendJson(response, 200, { data: await knowledge.restoreAnnotation({ id }, await parseOptionalBody(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.restoreAnnotation({ id }, (await parseOptionalBody(request)) as HttpInput)
+    });
     return true;
   }
   if (request.method === 'POST' && action === 'confirm-range') {
-    sendJson(response, 200, { data: await knowledge.confirmAnnotationRange({ id }, await parseBody(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.confirmAnnotationRange({ id }, (await parseBody(request)) as HttpInput)
+    });
     return true;
   }
   if (request.method === 'PATCH' && action === 'anchor') {
-    sendJson(response, 200, { data: await knowledge.updateAnnotationAnchor({ id }, await parseBody(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.updateAnnotationAnchor({ id }, (await parseBody(request)) as HttpInput)
+    });
     return true;
   }
   return false;

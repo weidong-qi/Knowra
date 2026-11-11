@@ -1,7 +1,8 @@
+import type { HttpInput } from './handler-input-types.ts';
 import type { IncomingMessage } from 'node:http';
 import type { ResponseWriter } from '../../../http/response.ts';
-import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
-import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.ts';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.ts';
 type NoteRouteKnowledge = Pick<
   ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
   | 'assignTagToNote'
@@ -68,7 +69,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }: Not
     const body = await parseBody(request);
     assertMarkdownBody(body);
     sendJson(response, 201, {
-      data: await knowledge.createNote(body)
+      data: await knowledge.createNote(body as HttpInput)
     });
     return true;
   }
@@ -77,7 +78,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }: Not
     const body = await parseBody(request);
     assertMarkdownBody(body);
     sendJson(response, 201, {
-      data: await knowledge.importMarkdown(body)
+      data: await knowledge.importMarkdown(body as HttpInput)
     });
     return true;
   }
@@ -86,7 +87,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }: Not
     const body = await parseBody(request);
     assertMarkdownBody(body);
     sendJson(response, 201, {
-      data: await knowledge.importMarkdownBatch(body)
+      data: await knowledge.importMarkdownBatch(body as HttpInput)
     });
     return true;
   }
@@ -167,7 +168,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }: Not
       throw createAppError('NOTE_VERSION_REQUIRED', '正文保存需要加载时的版本，请刷新客户端后重试。', 428);
     }
     sendJson(response, 200, {
-      data: await knowledge.updateNote({ id: decodeRouteId(noteMatch[1]) }, body)
+      data: await knowledge.updateNote({ id: decodeRouteId(noteMatch[1]) }, body as HttpInput)
     });
     return true;
   }
@@ -234,7 +235,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }: Not
         {
           id: decodeRouteId(tagsMatch[1])
         },
-        body
+        body as HttpInput
       )
     });
     return true;
