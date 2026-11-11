@@ -1,5 +1,4 @@
 import type { GatewayRequest } from './gateway.ts';
-import type { BudgetReservation, BudgetReserveInput, BudgetSettlement } from './private-store-types.ts';
 import { randomUUID } from 'node:crypto';
 import { beijingDay } from './budget-ledger.ts';
 import { actualCostMicrounits, quoteWorstCase } from './worker.ts';
@@ -20,21 +19,21 @@ const PROMPT = [
 ].join('\n');
 
 type TranslationLanguage = 'zh' | 'en';
-type Usage = { unknown?: boolean; inputTokens?: number; outputTokens?: number; cacheHitTokens?: number | null };
+type Usage = {
+  unknown?: boolean;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  cacheHitTokens?: number | null;
+};
 interface TranslationOptions {
   repository: Pick<AiRecordRepositoryPort, 'identity' | 'get' | 'list' | 'insert' | 'replace'>;
   ownerId?: string;
-  modelSettings: { credentialReference(): Promise<{ modelId: string; credentialRef: string } | null> };
+  modelSettings: { credentialReference(): Promise<{ modelId: string; credentialRef?: string } | null> };
   gateway: {
     capabilities?: () => { provider?: string } | undefined;
     complete(request: GatewayRequest): Promise<{ content?: unknown; usage?: Usage; finishReason?: unknown }>;
   };
-  budget: {
-    reserve(
-      input: Partial<BudgetReserveInput> & { day?: string }
-    ): BudgetReservation | null | Promise<BudgetReservation | null>;
-    settle(input: BudgetSettlement): BudgetReservation | Promise<BudgetReservation>;
-  };
+  budget: NonNullable<import('./boundary-types.ts').WorkerOptions['budget']>;
   priceProfile: PriceProfile;
   policy?: {
     snapshot(): Promise<{ profile?: PriceProfile; limits: BudgetLimits } | null>;
@@ -177,7 +176,8 @@ export function createAiTranslationService({
       // 必须先持久化调用 ID，再预留预算；即使进程在 reserve 返回前退出也能恢复。
       await tasks.begin({
         attemptId,
-        ...reference,
+        // 旧流程将缺失凭据交给任务记录校验；仅标注字段，不提前改变失败时序。
+        ...(reference as typeof reference & { credentialRef: string }),
         payloadHash: quote.payloadHash,
         inputUpperBound: quote.inputUpperBound
       });
@@ -241,8 +241,8 @@ export function createAiTranslationService({
           modelId: request.modelId,
           ...(known
             ? {
-                inputTokens: usage!.inputTokens,
-                outputTokens: usage!.outputTokens,
+                inputTokens: usage!.inputTokens!,
+                outputTokens: usage!.outputTokens!,
                 cacheHitTokens: usage!.cacheHitTokens ?? null
               }
             : {})

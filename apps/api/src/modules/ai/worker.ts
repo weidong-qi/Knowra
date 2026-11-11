@@ -11,7 +11,7 @@ interface BillableUsage {
 
 interface QuoteOptions {
   request: GatewayRequest;
-  priceProfile?: PriceProfile;
+  priceProfile?: PriceProfile | null;
   now?: Date;
   writeToolName?: string | null;
   assistantTools?: boolean;

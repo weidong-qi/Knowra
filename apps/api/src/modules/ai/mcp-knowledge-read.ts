@@ -10,7 +10,7 @@ import type {
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { NoteVersionRecord } from '../knowledge/infrastructure/note-version-repository.ts';
 import type { NormalizedContentAnnotationRecord } from '../knowledge/infrastructure/content-annotation-repository.ts';
-import type { KnowledgeEvidenceRecord } from '../knowledge/infrastructure/knowledge-evidence-repository.ts';
+import type { ReadKnowledgeEvidence } from './mcp-read-snapshot-types.ts';
 import type { RecordedKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.ts';
@@ -165,7 +165,7 @@ export function createMcpKnowledgeReadService({
         throw unavailable();
       return version;
     }
-    const evidenceById = new Map<string, KnowledgeEvidenceRecord<unknown, unknown>>();
+    const evidenceById = new Map<string, ReadKnowledgeEvidence>();
     for (const evidence of state.evidence) {
       if (
         !id(evidence.id) ||

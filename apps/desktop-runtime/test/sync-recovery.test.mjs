@@ -12,7 +12,7 @@ import { createSyncEngine } from '../src/sync-engine.mjs';
 import { createRuntimeBackup, inspectRuntimeBackup, listRuntimeBackups, readBackupDrafts } from '../src/backup.mjs';
 import { prepareRestoredDirectory, activateRestoredDirectory } from '../src/restore-directory.mjs';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
-import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
+import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.ts';
 import { scopeHash } from '../../api/src/modules/ai/record-contract.ts';
 import { readMeta, nextUpload } from '../src/sync-state.mjs';
 import { openWorkspace } from './helpers.mjs';

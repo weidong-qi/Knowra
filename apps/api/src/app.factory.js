@@ -40,7 +40,7 @@ import { createStorageConfig } from './config/storage.config.ts';
 import { createLocalSyncService } from './modules/sync/local-provider.ts';
 import { createModelSettingsService } from './modules/ai/model-settings.ts';
 import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
-import { createOptionalAiRuntime } from './modules/ai/runtime.js';
+import { createOptionalAiRuntime } from './modules/ai/runtime.ts';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.ts';

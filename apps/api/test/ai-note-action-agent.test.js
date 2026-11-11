@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { validateConversationRecord } from '../src/modules/ai/conversation-store.ts';
-import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../src/modules/ai/runtime.ts';
 const priceProfile = {
   version: 'synthetic-v1',
   modelId: 'deepseek-flash',

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
-import { createOptionalAiRuntime } from '../../api/src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../../api/src/modules/ai/runtime.ts';
 import { connectMcpRuntime } from '../src/mcp/client.mjs';
 import { temporaryDirectory } from './helpers.mjs';
 

@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import test from 'node:test';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
-import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
+import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
 import { temporaryDirectory } from './helpers.mjs';

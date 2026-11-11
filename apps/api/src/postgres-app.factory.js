@@ -50,7 +50,7 @@ import {
   wrapHandlersWithPostgresAdvisoryLock
 } from './infrastructure/postgres-advisory-lock.ts';
 import { createModelSettingsService } from './modules/ai/model-settings.ts';
-import { createOptionalAiRuntime } from './modules/ai/runtime.js';
+import { createOptionalAiRuntime } from './modules/ai/runtime.ts';
 import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';

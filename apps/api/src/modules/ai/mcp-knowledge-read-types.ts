@@ -1,8 +1,5 @@
-import type { SnapshotDependencies, SnapshotRepositories } from './mcp-read-snapshot-types.ts';
-import type {
-  KnowledgeItemRepository,
-  KnowledgeItemRecord
-} from '../knowledge/infrastructure/knowledge-item-repository.ts';
+import type { SnapshotDependencies, SnapshotRepositories, ReadKnowledgeItem } from './mcp-read-snapshot-types.ts';
+import type { KnowledgeItemListOptions } from '../knowledge/infrastructure/knowledge-item-repository.ts';
 import type { KnowledgeArtifactProvenanceRepository } from '../knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { ProposalInput } from './boundary-types.ts';
@@ -11,9 +8,7 @@ import type { createAgentKnowledgeCommitService } from './agent-knowledge-commit
 type Awaitable<T> = T | Promise<T>;
 export interface McpKnowledgeRepositories extends SnapshotRepositories {
   knowledgeItemRepository: SnapshotRepositories['knowledgeItemRepository'] & {
-    list: (
-      ...args: Parameters<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>['list']>
-    ) => Awaitable<ReturnType<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>['list']>>;
+    list(options?: KnowledgeItemListOptions): Awaitable<ReadKnowledgeItem[]>;
   };
   knowledgeArtifactProvenanceRepository: SnapshotRepositories['knowledgeArtifactProvenanceRepository'] & {
     list: (
@@ -25,7 +20,7 @@ export interface McpKnowledgeReadDependencies {
   knowledge?: { repositories: McpKnowledgeRepositories };
   ownerId?: string;
   accessStore?: SnapshotDependencies['accessStore'] & { identity(): Awaitable<DatasetIdentity> };
-  knowledgeCommit?: Pick<ReturnType<typeof createAgentKnowledgeCommitService>, 'findCommitted'>;
+  knowledgeCommit?: Pick<ReturnType<typeof createAgentKnowledgeCommitService>, 'findCommitted'> | null;
 }
 export type McpReadAccess = Pick<ProposalInput['access'], 'verifyRead' | 'assertSearchSources' | 'assertSearchGrant'>;
 export type McpVerifiedRead = Awaited<ReturnType<McpReadAccess['verifyRead']>>;

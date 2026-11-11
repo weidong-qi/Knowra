@@ -9,7 +9,7 @@ import { createSqliteDataStore } from './sqlite-data-store.mjs';
 import { createSyncEngine } from './sync-engine.mjs';
 import { createRuntimeBackup } from './backup.mjs';
 import { createNoteVersionDiscardGate } from './note-version-discard-gate.mjs';
-import { createOptionalAiRuntime, createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
+import { createOptionalAiRuntime, createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.ts';
 import { aiRuntimeLifecycle } from '../../api/src/modules/ai/runtime-lifecycle.ts';
 import { reviewedDeepSeekPriceProfile } from '../../api/src/modules/ai/reviewed-price-profile.ts';
 import { createLocalBudgetAuthority } from './local-budget-authority.mjs';

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { chromium, expect } from '@playwright/test';
-import { createOptionalAiRuntime } from '../../../api/src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../../../api/src/modules/ai/runtime.ts';
 import { syntheticPdf } from '../../../../scripts/test-support/pdf-fixtures.mjs';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 

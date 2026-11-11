@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { createLocalBudgetAuthority } from '../src/local-budget-authority.mjs';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
-import { createOptionalAiRuntime } from '../../api/src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../../api/src/modules/ai/runtime.ts';
 import { temporaryDirectory } from './helpers.mjs';
 
 const ACCOUNT = 'deepseek-primary';

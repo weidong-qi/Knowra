@@ -1,3 +1,5 @@
+import type { RuntimeOptions } from './boundary-types.ts';
+import type { AppError } from '../../errors/app-error.ts';
 import { createMcpKnowledgeReadService } from './mcp-knowledge-read.ts';
 import { wrapHandlersWithMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
 import { createNoteActionService } from './action-service.ts';
@@ -19,7 +21,6 @@ import { createBudgetAlertStore } from './budget-alerts.ts';
 import { createAiTranslationService } from './translation-service.ts';
 
 /** 生成入口由 AI-01-04 的预算服务注入 authorizePaidCall 后才可启用。 */
-/** @param {import('./boundary-types.ts').RuntimeOptions} [options] */
 export function createAiRuntime({
   modelSettings,
   repository = null,
@@ -46,14 +47,14 @@ export function createAiRuntime({
   balanceFile = null,
   budgetSettingsFile = null,
   budgetAlertsFile = null
-} = {}) {
+}: RuntimeOptions = {}) {
   if (!modelSettings || typeof modelSettings.resolveCredential !== 'function')
     throw new TypeError('Model settings service is required');
-  const activeAttempts = new Set();
+  const activeAttempts = new Set<string>();
   const gateway = createAiGateway({
     adapter: providerAdapter ?? (fetchImpl ? createDeepSeekAdapter({ fetchImpl }) : createIsolatedDeepSeekAdapter()),
     resolveCredential: reference => modelSettings.resolveCredential(reference),
-    authorizePaidCall: authorizePaidCall ?? (request => activeAttempts.delete(request.budgetAttemptId))
+    authorizePaidCall: authorizePaidCall ?? (request => activeAttempts.delete(request.budgetAttemptId!))
   });
   const readContext =
     repository && contextSources ? createAiReadContextService({ repository, ...contextSources }) : null;
@@ -65,13 +66,14 @@ export function createAiRuntime({
           annotationRepository: knowledge?.repositories?.contentAnnotationRepository ?? null
         })
       : null;
+  // 不补齐缺失 contextSources：保留原装配访问抛错及 optional runtime 的隔离路径。
   const actionService =
     actionStore && coreOperationStore && knowledge
       ? createNoteActionService({
           store: actionStore,
           core: coreOperationStore,
           knowledge,
-          ownerId: contextSources.ownerId,
+          ownerId: contextSources!.ownerId,
           conversationStore,
           accessStore,
           access,
@@ -88,7 +90,8 @@ export function createAiRuntime({
       ? createAgentKnowledgeCommitService({
           core: coreOperationStore,
           knowledge,
-          ownerId: contextSources?.ownerId,
+          // 缺失 owner 仍由知识保存服务的初始化守卫拒绝。
+          ownerId: contextSources?.ownerId as string,
           conversationStore,
           accessStore,
           asyncDomain
@@ -142,12 +145,13 @@ export function createAiRuntime({
           agent
         })
       : null;
+  // conversation 已装配意味着同一组 conversationStore/contextSources 存在。
   const attachmentService =
     conversation && uploadsDir
       ? createConversationAttachmentService({
-          conversationStore,
+          conversationStore: conversationStore!,
           uploadsDir,
-          ownerId: contextSources.ownerId,
+          ownerId: contextSources!.ownerId,
           assertConversation: id => conversation.get(id)
         })
       : null;
@@ -181,7 +185,7 @@ export function createAiRuntime({
     actionStore,
     attachments,
     translation,
-    generationAvailable: modelId =>
+    generationAvailable: (modelId: string) =>
       Boolean(
         allowExternal &&
         priceProfile?.version &&
@@ -268,15 +272,25 @@ export function createUnavailableAiRuntime(reason = 'AI 功能当前不可用。
   };
 }
 
+interface OptionalRuntimeOptions {
+  enabled?: boolean;
+  unavailableReason?: string;
+  logger?: Pick<Console, 'warn'>;
+}
+
 export function createOptionalAiRuntime(
-  options,
-  { enabled = process.env.KNOWRA_AI_ENABLED !== '0', unavailableReason = 'AI 功能已关闭。', logger = console } = {}
+  options: RuntimeOptions,
+  {
+    enabled = process.env.KNOWRA_AI_ENABLED !== '0',
+    unavailableReason = 'AI 功能已关闭。',
+    logger = console
+  }: OptionalRuntimeOptions = {}
 ) {
   if (!enabled) return createUnavailableAiRuntime(unavailableReason);
   try {
     return createAiRuntime(options);
   } catch (error) {
-    logger.warn?.('AI plugin assembly failed', { code: error?.code ?? 'AI_ASSEMBLY_FAILED' });
+    logger.warn?.('AI plugin assembly failed', { code: (error as AppError | null)?.code ?? 'AI_ASSEMBLY_FAILED' });
     return createUnavailableAiRuntime('AI 组件装配失败，核心功能仍可使用。');
   }
 }

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createPersistentAppContext } from '../src/app.factory.js';
-import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../src/modules/ai/runtime.ts';
 
 const priceProfile = { version: 'crashgap-synthetic-v1', modelId: 'deepseek-flash', expiresAt: '2030-01-01T00:00:00Z',
   inputMicrounitsPerMillion: 2000000, outputMicrounitsPerMillion: 8000000 };

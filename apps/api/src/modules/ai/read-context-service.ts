@@ -150,7 +150,8 @@ export function createAiReadContextService({
       fail('AI_SOURCE_STALE', '笔记当前版本不可用，请重新预览。');
     }
     await assertAiNoteUnchanged(noteRepository!, note!);
-    return { note, version };
+    // hash/noteId 已核对；id、content 保留旧流程对历史存储字段的假设，不增加运行校验。
+    return { note, version: version as typeof version & { id: string; content: string; contentHash: string } };
   }
   async function loadSource(ref: AiSourceRef, spaceId: string, allowedFolderIds: string[] = []) {
     const note = await read(noteRepository!.findById(ref.noteId));
@@ -158,6 +159,7 @@ export function createAiReadContextService({
     if (note!.spaceId !== spaceId || (allowedFolderIds.length && !allowedFolderIds.includes(note!.folderId as string)))
       fail('AI_SOURCE_STALE', '来源笔记已失效。');
     const version = await read(noteVersionRepository!.findById(ref.noteVersionId));
+    // 下方字符串操作保留旧流程对历史 content 的假设，异常行为不变。
     if (
       !version ||
       version.noteId !== ref.noteId ||
@@ -166,14 +168,14 @@ export function createAiReadContextService({
       !Number.isSafeInteger(ref.start) ||
       !Number.isSafeInteger(ref.end) ||
       ref.start < 0 ||
-      ref.end > version.content.length ||
+      ref.end > (version.content as string).length ||
       ref.end <= ref.start ||
-      !safeBoundary(version.content, ref.start) ||
-      !safeBoundary(version.content, ref.end)
+      !safeBoundary(version.content as string, ref.start) ||
+      !safeBoundary(version.content as string, ref.end)
     ) {
       fail('AI_SOURCE_STALE', '来源版本或偏移已失效。');
     }
-    const text = version.content.slice(ref.start, ref.end);
+    const text = (version.content as string).slice(ref.start, ref.end);
     if (calculateContentHash(text) !== ref.quoteHash || text.length !== ref.characters) {
       fail('AI_SOURCE_STALE', '来源摘录与原版本不一致。');
     }

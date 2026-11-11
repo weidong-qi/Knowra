@@ -31,9 +31,14 @@ export interface WorkerOptions {
     AiRecordRepositoryPort,
     'identity' | 'get' | 'list' | 'insert' | 'replace' | 'appendEvent' | 'listEvents'
   >;
-  budget?: Pick<ReturnType<typeof createJsonBudgetAuthority>, 'reserve' | 'settle'>;
+  budget?:
+    | Pick<ReturnType<typeof createJsonBudgetAuthority>, 'reserve' | 'settle'>
+    | Pick<
+        ReturnType<typeof import('./postgres-budget-authority.ts').createPostgresBudgetAuthority>,
+        'reserve' | 'settle'
+      >;
   gateway?: Gateway;
-  priceProfile?: PriceProfile;
+  priceProfile?: PriceProfile | null;
   accountRef?: string;
   workerId?: string;
   now?: () => Date;
@@ -92,8 +97,8 @@ export interface AgentWorkerOptions {
   retrievalCandidates?: CandidateSource | null;
   actions?: ReturnType<typeof createNoteActionService> | null;
   webSearchAdapter?: Parameters<typeof import('./assistant-tools.ts').createAssistantWebSearch>[0];
-  annotations?: ReturnType<typeof createKnowledgeModule>['repositories']['contentAnnotationRepository'] | null;
-  knowledgeProposals?: boolean | (() => boolean);
+  annotations?: Parameters<typeof import('./annotation-read-tool.ts').listAnnotatedRanges>[0]['repository'] | null;
+  knowledgeProposals?: boolean | (() => boolean | Promise<boolean>);
   knowledgeCommit?: ReturnType<typeof createAgentKnowledgeCommitService> | null;
 }
 export interface CapabilityProbeOptions {
@@ -122,32 +127,45 @@ export interface BudgetSettlement {
 }
 export interface RuntimeOptions {
   modelSettings?: ReturnType<typeof createModelSettingsService>;
-  repository?: WorkerOptions['repository'];
-  accessStore?: ReturnType<typeof createAiAccessStore>;
-  conversationStore?: AgentWorkerOptions['store'];
-  budgetAuthority?: ReturnType<typeof createJsonBudgetAuthority>;
-  priceProfile?: PriceProfile;
-  actionStore?: Parameters<typeof createNoteActionService>[0]['store'];
-  coreOperationStore?: Parameters<typeof createNoteActionService>[0]['core'];
-  knowledge?: ReturnType<typeof createKnowledgeModule>;
+  repository?: WorkerOptions['repository'] | null;
+  accessStore?: ReturnType<typeof createAiAccessStore> | null;
+  conversationStore?: AgentWorkerOptions['store'] | null;
+  budgetAuthority?:
+    | ReturnType<typeof createJsonBudgetAuthority>
+    | ReturnType<typeof import('./postgres-budget-authority.ts').createPostgresBudgetAuthority>
+    | null;
+  priceProfile?: PriceProfile | null;
+  actionStore?: Parameters<typeof createNoteActionService>[0]['store'] | null;
+  coreOperationStore?: Parameters<typeof createNoteActionService>[0]['core'] | null;
+  knowledge?:
+    | (Parameters<typeof createNoteActionService>[0]['knowledge'] &
+        Parameters<typeof createAgentKnowledgeCommitService>[0]['knowledge'] &
+        NonNullable<import('./mcp-knowledge-read-types.ts').McpKnowledgeReadDependencies['knowledge']> & {
+          repositories: { contentAnnotationRepository?: NonNullable<AgentWorkerOptions['annotations']> };
+        })
+    | null;
   asyncDomain?: boolean;
-  maintenanceGate?: Parameters<
-    typeof import('../../infrastructure/maintenance-gate.ts').wrapHandlersWithMaintenanceGate
-  >[1];
+  maintenanceGate?:
+    Parameters<typeof import('../../infrastructure/maintenance-gate.ts').wrapHandlersWithMaintenanceGate>[1] | null;
   authorizePaidCall?: Parameters<typeof createAiGateway>[0]['authorizePaidCall'];
   fetchImpl?: typeof fetch;
   allowExternal?: boolean;
-  contextSources?: import('./access-service-types.ts').ReadRepositories;
+  contextSources?:
+    | (import('./access-service-types.ts').ReadRepositories & {
+        ownerId: string;
+        spaceRepository: NonNullable<import('./access-service-types.ts').ReadRepositories['spaceRepository']>;
+      })
+    | null;
   verifySources?: WorkerOptions['verifySources'];
   validateResult?: WorkerOptions['validateResult'];
   knowledgeProposals?: AgentWorkerOptions['knowledgeProposals'];
-  providerAdapter?: Parameters<typeof createAiGateway>[0]['adapter'];
-  retrievalCandidates?: CandidateSource;
+  providerAdapter?: Parameters<typeof createAiGateway>[0]['adapter'] | null;
+  retrievalCandidates?: CandidateSource | null;
   webSearchAdapter?: AgentWorkerOptions['webSearchAdapter'];
-  uploadsDir?: string;
-  balanceFile?: string;
-  budgetSettingsFile?: string;
-  budgetAlertsFile?: string;
+  uploadsDir?: string | null;
+  balanceFile?: string | null;
+  budgetSettingsFile?: string | null;
+  budgetAlertsFile?: string | null;
 }
 export interface ProviderMessage {
   type: string;
