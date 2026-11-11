@@ -12,7 +12,7 @@ import {
 } from '../src/modules/ai/budget-ledger.js';
 import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.js';
 import { createServer } from '../src/server.js';
-import { createRemoteBudgetAuthority } from '../src/modules/ai/remote-budget-authority.js';
+import { createRemoteBudgetAuthority } from '../src/modules/ai/remote-budget-authority.ts';
 import { createAiRuntime } from '../src/modules/ai/runtime.js';
 import { aiRecords } from './ai-record-fixtures.js';
 import { reviewedPriceProfileTests } from './reviewed-price-profile.test.js';

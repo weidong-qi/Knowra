@@ -8,7 +8,7 @@ import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-re
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { aiRecords } from './ai-record-fixtures.js';
 import { trainingAssets, storedTranslation } from './authoritative-asset-purge.test.js';
-import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.js';
+import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.ts';
 import { createKnowledgeExtractionJobFixture } from './fixtures/knowledge-extraction-job.fixture.js';
 
 async function fixture(run) {

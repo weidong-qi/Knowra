@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-repository.ts';
-import { createPostgresAiConversationStore } from '../src/modules/ai/postgres-conversation-store.js';
+import { createPostgresAiConversationStore } from '../src/modules/ai/postgres-conversation-store.ts';
 
 export const aiConversationAttachmentPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABASE_URL
   ? [

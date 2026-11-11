@@ -301,7 +301,7 @@ export const aiTranslationTests = [
             const { createPostgresTestDatabase } =
               await import('../../../scripts/test-support/postgres-test-database.mjs');
             const { createPostgresAiRepository } = await import('../src/modules/ai/postgres-record-repository.ts');
-            const { createPostgresBudgetAuthority } = await import('../src/modules/ai/postgres-budget-authority.js');
+            const { createPostgresBudgetAuthority } = await import('../src/modules/ai/postgres-budget-authority.ts');
             const database = await createPostgresTestDatabase();
             const clients = [0, 1].map(
               () => new PrismaClient({ datasources: { db: { url: database.databaseUrl } }, log: [] })
@@ -351,7 +351,7 @@ export const aiTranslationTests = [
             const { createPostgresTestDatabase } =
               await import('../../../scripts/test-support/postgres-test-database.mjs');
             const { createPostgresAiRepository } = await import('../src/modules/ai/postgres-record-repository.ts');
-            const { createPostgresBudgetAuthority } = await import('../src/modules/ai/postgres-budget-authority.js');
+            const { createPostgresBudgetAuthority } = await import('../src/modules/ai/postgres-budget-authority.ts');
             const database = await createPostgresTestDatabase();
             let client, runtime;
             const connect = () => {

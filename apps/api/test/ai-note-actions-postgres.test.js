@@ -6,8 +6,8 @@ import { randomUUID } from 'node:crypto';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
-import { createPostgresAiAccessStore } from '../src/modules/ai/postgres-access-store.js';
-import { createPostgresActionStore } from '../src/modules/ai/postgres-action-store.js';
+import { createPostgresAiAccessStore } from '../src/modules/ai/postgres-access-store.ts';
+import { createPostgresActionStore } from '../src/modules/ai/postgres-action-store.ts';
 import { createNoteActionService } from '../src/modules/ai/action-service.js';
 import { noteActionScenarios } from './fixtures/note-action-scenarios.js';
 async function withFixture(run) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as records from '../src/modules/ai/conversation-records.js';
 import * as legacy from '../src/modules/ai/conversation-store.js';
-import { createPostgresAiConversationStore } from '../src/modules/ai/postgres-conversation-store.js';
+import { createPostgresAiConversationStore } from '../src/modules/ai/postgres-conversation-store.ts';
 import { validateSqliteConversationRows } from '../../desktop-runtime/src/ai-sqlite-conversation-store.mjs';
 import { emptyAgentCheckpoint } from '../src/modules/ai/agent-checkpoint.ts';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';

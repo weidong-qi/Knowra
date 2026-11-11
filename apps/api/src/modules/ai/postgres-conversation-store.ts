@@ -1,3 +1,13 @@
+import type {
+  PrivateStoreOptions,
+  PrivateSqlTransaction,
+  AiSqlError,
+  ConversationState,
+  ConversationSqlRow,
+  ConversationIndexRecord,
+  ConversationCollection
+} from './private-store-types.ts';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import { randomUUID } from 'node:crypto';
 import {
   CONVERSATION_KINDS,
@@ -9,20 +19,27 @@ import {
 import { createAiConversationStore } from './conversation-store.js';
 import { hashRecord } from './record-contract.ts';
 
-const retryable = error =>
-  ['P2034', '23505', '40001'].includes(error?.code) || ['23505', '40001'].includes(error?.meta?.code);
+const retryable = (error: AiSqlError | null | undefined) =>
+  ['P2034', '23505', '40001'].includes(error?.code as string) ||
+  ['23505', '40001'].includes(error?.meta?.code as string);
 
-export function createPostgresAiConversationStore({ client, repository, ownerId }, options) {
+export function createPostgresAiConversationStore(
+  { client, repository, ownerId }: PrivateStoreOptions,
+  options?: { now?: () => Date }
+) {
   if (!client?.$transaction || !repository || !ownerId)
     throw new TypeError('PostgreSQL AI conversation store needs client, repository and owner');
-  async function load(db) {
-    const state = emptyConversationState();
-    for (const row of await db.$queryRawUnsafe('SELECT * FROM ai_conversation_records WHERE owner_id = $1', ownerId)) {
+  async function load(db: PrivateSqlTransaction): Promise<ConversationState> {
+    const state: ConversationState = emptyConversationState();
+    for (const row of await db.$queryRawUnsafe<ConversationSqlRow[]>(
+      'SELECT * FROM ai_conversation_records WHERE owner_id = $1',
+      ownerId
+    )) {
       const definition = CONVERSATION_KINDS[row.kind];
       if (!definition) throw new Error('AI 会话记录类型无效。');
-      const record = validateConversationRecord(row.kind, JSON.parse(row.record_json));
+      const record: ConversationIndexRecord = validateConversationRecord(row.kind, JSON.parse(row.record_json));
       if (
-        record[definition.id] !== row.record_id ||
+        record[definition.id as keyof ConversationIndexRecord] !== row.record_id ||
         record.ownerId !== row.owner_id ||
         record.datasetId !== row.dataset_id ||
         record.datasetEpoch !== row.dataset_epoch ||
@@ -31,7 +48,7 @@ export function createPostgresAiConversationStore({ client, repository, ownerId 
       ) {
         throw new Error('AI 会话私有索引与正文不一致。');
       }
-      state[definition.collection].push(record);
+      state[definition.collection as ConversationCollection].push(record);
     }
     return validateConversationState(state);
   }
@@ -39,7 +56,7 @@ export function createPostgresAiConversationStore({ client, repository, ownerId 
     {
       identity: () => repository.identity(),
       read: () => load(client),
-      async write(action) {
+      async write<Result>(action: (state: ConversationState, identity: DatasetIdentity) => Result) {
         for (let attempt = 0; attempt < 4; attempt += 1) {
           try {
             return await client.$transaction(
@@ -53,7 +70,7 @@ export function createPostgresAiConversationStore({ client, repository, ownerId 
                   randomUUID(),
                   new Date().toISOString()
                 );
-                const [epoch] = await db.$queryRawUnsafe(
+                const [epoch] = await db.$queryRawUnsafe<{ dataset_id: string; dataset_epoch: string }[]>(
                   'SELECT dataset_id, dataset_epoch FROM ai_runtime_epochs WHERE owner_id = $1 FOR UPDATE',
                   ownerId
                 );
@@ -61,14 +78,17 @@ export function createPostgresAiConversationStore({ client, repository, ownerId 
                 const state = await load(db),
                   previous = new Map();
                 for (const [kind, definition] of Object.entries(CONVERSATION_KINDS)) {
-                  for (const record of state[definition.collection])
-                    previous.set(`${kind}:${record[definition.id]}`, hashRecord(record));
+                  for (const record of state[definition.collection as ConversationCollection])
+                    previous.set(
+                      `${kind}:${record[definition.id as keyof ConversationIndexRecord]}`,
+                      hashRecord(record)
+                    );
                 }
                 const result = action(state, identity);
                 for (const [kind, definition] of Object.entries(CONVERSATION_KINDS)) {
-                  for (const record of state[definition.collection]) {
+                  for (const record of state[definition.collection as ConversationCollection]) {
                     if (record.ownerId !== ownerId) throw new Error('AI 会话 owner 不匹配。');
-                    const recordId = record[definition.id],
+                    const recordId = record[definition.id as keyof ConversationIndexRecord],
                       recordHash = hashRecord(record);
                     if (previous.get(`${kind}:${recordId}`) === recordHash) continue;
                     const changed = await db.$executeRawUnsafe(
@@ -99,7 +119,7 @@ export function createPostgresAiConversationStore({ client, repository, ownerId 
               { isolationLevel: 'Serializable', maxWait: 5000, timeout: 15000 }
             );
           } catch (error) {
-            if (!retryable(error) || attempt === 3) throw error;
+            if (!retryable(error as AiSqlError | null | undefined) || attempt === 3) throw error;
           }
         }
       }

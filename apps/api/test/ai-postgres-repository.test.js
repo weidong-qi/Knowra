@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-repository.ts';
-import { createPostgresAiAccessStore } from '../src/modules/ai/postgres-access-store.js';
+import { createPostgresAiAccessStore } from '../src/modules/ai/postgres-access-store.ts';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
-import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.js';
+import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.ts';
 import { createAiWorker } from '../src/modules/ai/worker.js';
 import { aiRecords } from './ai-record-fixtures.js';
 
