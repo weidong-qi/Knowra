@@ -3,7 +3,7 @@ import {
   emptyConversationState,
   validateConversationRecord,
   validateConversationState
-} from '../../api/src/modules/ai/conversation-records.js';
+} from '../../api/src/modules/ai/conversation-records.ts';
 import { createAiConversationStore } from '../../api/src/modules/ai/conversation-store.js';
 import { hashRecord } from '../../api/src/modules/ai/record-contract.ts';
 

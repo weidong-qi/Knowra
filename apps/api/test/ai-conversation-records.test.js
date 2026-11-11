@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import * as records from '../src/modules/ai/conversation-records.js';
+import * as records from '../src/modules/ai/conversation-records.ts';
 import * as legacy from '../src/modules/ai/conversation-store.js';
 import { createPostgresAiConversationStore } from '../src/modules/ai/postgres-conversation-store.ts';
 import { validateSqliteConversationRows } from '../../desktop-runtime/src/ai-sqlite-conversation-store.mjs';

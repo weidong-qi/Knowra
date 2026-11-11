@@ -4,7 +4,7 @@ import {
   createAiAccessStore,
   validateAccessRecord,
   validateAccessRelationships
-} from '../../api/src/modules/ai/access-records.js';
+} from '../../api/src/modules/ai/access-records.ts';
 import { hashRecord } from '../../api/src/modules/ai/record-contract.ts';
 
 const definitions = {

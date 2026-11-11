@@ -24,8 +24,8 @@ import {
   createJsonAiAccessStore,
   validateAccessRecord,
   validateAccessRelationships
-} from './access-records.js';
-import { CONVERSATION_KINDS, emptyConversationState, validateConversationState } from './conversation-records.js';
+} from './access-records.ts';
+import { CONVERSATION_KINDS, emptyConversationState, validateConversationState } from './conversation-records.ts';
 import { createJsonAiConversationStore } from './conversation-store.js';
 
 export const AI_PRIVATE_STATE_VERSION = 6;
@@ -46,7 +46,7 @@ export function createEmptyAiState({
     ...(Object.fromEntries<AiAccessCollections[keyof AiAccessCollections]>(
       accessCollections.map(name => [name, []])
     ) as AiAccessCollections),
-    ...(emptyConversationState() as Record<string, object[]> as AiConversationCollections),
+    ...(emptyConversationState() as AiConversationCollections),
     actionLedger: emptyActionState() as AiPrivateState['actionLedger'],
     events: [],
     budgetDays: [],
@@ -139,7 +139,7 @@ export function validateAiState(input: unknown): AiPrivateState {
       ids.add(record[id]);
     }
   }
-  validateAccessRelationships(state);
+  validateAccessRelationships(state as unknown as import('./private-record-types.ts').ValidatedAccessState);
   validateConversationState(state);
   return validateBudgetState(state) as AiPrivateState;
 }

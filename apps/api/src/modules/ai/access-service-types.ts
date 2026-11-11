@@ -23,7 +23,7 @@ export interface ReadRepositories {
 }
 export interface AiAccessServiceDependencies extends ReadRepositories {
   store?: Pick<
-    ReturnType<typeof import('./access-records.js').createAiAccessStore>,
+    ReturnType<typeof import('./access-records.ts').createAiAccessStore>,
     'identity' | 'get' | 'list' | 'insert' | 'replacePolicy'
   >;
   annotationRepository?: AsyncMethods<Pick<ContentAnnotationRepository, 'list'>> | null;
