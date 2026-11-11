@@ -10,14 +10,15 @@ import type { createBalanceService } from './balance-service.ts';
 
 type ReadContext = ReturnType<typeof createAiReadContextService>;
 type BudgetAuthority = ReturnType<typeof createJsonBudgetAuthority>;
+// 历史不受支持的模型配置可没有 credentialRef；prepareRead 保留原校验。
 export interface AssistantReference {
   modelId: string;
-  credentialRef: string;
+  credentialRef?: string;
 }
 export interface AssistantPreview {
   prepared: Awaited<ReturnType<ReadContext['prepareRead']>>;
   expiresAt: number;
-  credentialRef: string;
+  credentialRef?: string;
 }
 export interface AssistantStartInput {
   previewId?: string;
