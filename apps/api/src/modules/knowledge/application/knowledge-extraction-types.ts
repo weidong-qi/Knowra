@@ -43,7 +43,7 @@ export interface ExtractionSource {
 export interface ExtractionRequest {
   contractVersion: 1;
   requestId: string;
-  scopeId: string;
+  scopeId: string | null;
   spaceId: string;
   inputHash: string;
   sources: ExtractionSource[];
@@ -70,7 +70,7 @@ export interface ExtractionCandidatePlan {
 }
 export interface ExtractionPlan {
   requestId: string;
-  scopeId: string;
+  scopeId: string | null;
   inputHash: string;
   outputHash: string;
   candidates: ExtractionCandidatePlan[];

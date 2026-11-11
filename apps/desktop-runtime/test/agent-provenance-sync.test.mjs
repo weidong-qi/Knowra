@@ -13,7 +13,7 @@ import {
   REQUIRED_SYNC_CAPABILITIES,
   syncContract
 } from '../../api/src/modules/sync/protocol-contract.ts';
-import { buildKnowledgeProposalPlan } from '../../api/src/modules/ai/knowledge-propose-tool.js';
+import { buildKnowledgeProposalPlan } from '../../api/src/modules/ai/knowledge-propose-tool.ts';
 import { createAgentKnowledgeCommitService } from '../../api/src/modules/ai/agent-knowledge-commit.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { temporaryDirectory, openWorkspace } from './helpers.mjs';

@@ -64,7 +64,7 @@ export interface CandidateSource {
 }
 export interface RetrievalOptions {
   access?: AccessService;
-  candidateSource?: CandidateSource;
+  candidateSource?: CandidateSource | null;
   candidateTimeoutMs?: number;
 }
 export interface KeywordSearchOptions {
@@ -218,7 +218,7 @@ export interface KnowledgeProposalOptions extends ProposalInput {
       citedRanges?: { noteId: string; start: number; end: number }[];
     } | null>;
     save: (
-      plan: Awaited<ReturnType<typeof import('./knowledge-propose-tool.js').buildKnowledgeProposalPlan>>
+      plan: Awaited<ReturnType<typeof import('./knowledge-propose-tool.ts').buildKnowledgeProposalPlan>>
     ) => Promise<void>;
-  };
+  } | null;
 }

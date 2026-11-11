@@ -1,24 +1,29 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { hashRecord } from './record-contract.ts';
 
-const copy = value => structuredClone(value);
+import type { SnapshotDependencies, OutputGuard } from './mcp-read-snapshot-types.ts';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
+
+const copy = <T>(value: T): T => structuredClone(value);
 
 /** 最终同步外发检查：快照只存在于 WeakMap，禁止将其序列化给客户端。 */
-export function createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavailable }) {
-  const outputGuards = new WeakMap();
-  const sync = value => {
-    if (value?.then) {
-      value.catch?.(() => {});
+export function createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavailable }: SnapshotDependencies) {
+  const outputGuards = new WeakMap<object, OutputGuard>();
+  const sync = <T>(value: T | Promise<T>): T => {
+    const candidate = value as Promise<T> | null | undefined;
+    if (candidate?.then) {
+      candidate.catch?.(() => {});
       throw unavailable();
     }
-    return value;
+    return value as T;
   };
-  const remember = (output, guard) => {
+  const remember = <T extends object>(output: T, guard: OutputGuard) => {
     outputGuards.set(output, { ...guard, outputHash: hashRecord(output) });
     return output;
   };
 
-  function assertGrantNow(grantId, identity, notes) {
+  function assertGrantNow(grantId: string, identity: DatasetIdentity, notes: Map<string, NoteRecord>) {
     if (
       typeof accessStore.peekIdentity !== 'function' ||
       typeof accessStore.peek !== 'function' ||
@@ -79,12 +84,12 @@ export function createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavai
     }
   }
 
-  function assertOutputCurrent(output) {
+  function assertOutputCurrent(output: object) {
     const guard = outputGuards.get(output);
     if (!guard || hashRecord(output) !== guard.outputHash) throw unavailable();
-    const notes = new Map();
+    const notes = new Map<string, NoteRecord>();
     for (const value of guard.checkedItems) {
-      const candidateId = value.state.item?.id ?? value.knowledgeId;
+      const candidateId = (value.state.item?.id ?? value.knowledgeId) as string;
       const evidence = sync(repos.knowledgeEvidenceRepository.list({ knowledgeItemId: candidateId }));
       if (!Array.isArray(evidence)) throw unavailable();
       const current = {
@@ -96,7 +101,7 @@ export function createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavai
       for (const [noteId, before] of value.reads) {
         const note = sync(repos.noteRepository?.findById(noteId));
         if (!note || hashRecord(note) !== hashRecord(before.note)) throw unavailable();
-        const version = sync(repos.noteVersionRepository.findById(before.version.id));
+        const version = sync(repos.noteVersionRepository.findById(before.version.id as string));
         if (hashRecord(version) !== hashRecord(before.version)) throw unavailable();
         notes.set(noteId, note);
       }
@@ -112,7 +117,7 @@ export function createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavai
     assertGrantNow(guard.grantId, guard.identity, notes);
   }
 
-  function captureNavigationGuard({ grantId }) {
+  function captureNavigationGuard({ grantId }: { grantId: string }) {
     const snapshotNow = () => {
       const identity = sync(accessStore.peekIdentity());
       const grant = sync(accessStore.peek('aiRunGrant', grantId));
@@ -131,7 +136,7 @@ export function createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavai
       for (const note of notes) {
         if (
           note.deleted ||
-          note.deletedAt ||
+          (note as NoteRecord & { deletedAt?: string | null }).deletedAt ||
           (note.aiVisibility !== undefined && note.aiVisibility !== 'normal') ||
           note.spaceId !== policy.spaceId ||
           policy.excludedNoteIds?.includes(note.id) ||
@@ -201,7 +206,7 @@ export function createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavai
     remember,
     assertCurrent: assertOutputCurrent,
     captureNavigationGuard,
-    inherit(output, previous) {
+    inherit<T extends object>(output: T, previous: object) {
       const guard = outputGuards.get(previous);
       if (!guard) throw unavailable();
       return remember(output, guard);

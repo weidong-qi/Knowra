@@ -5,7 +5,7 @@ import path from 'node:path';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
-import { buildKnowledgeProposalPlan, proposeKnowledge } from '../src/modules/ai/knowledge-propose-tool.js';
+import { buildKnowledgeProposalPlan, proposeKnowledge } from '../src/modules/ai/knowledge-propose-tool.ts';
 import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.ts';
 import { proposalProgress } from '../src/modules/ai/agent-worker.js';
 import { markParagraphs } from './fixtures/inline-annotation-seed.js';

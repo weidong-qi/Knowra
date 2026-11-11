@@ -10,7 +10,7 @@ import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge
 import { NoteVersion, calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 import { createAiAccessService } from '../src/modules/ai/access-service.js';
 import { createAiAgentWorker } from '../src/modules/ai/agent-worker.js';
-import { createAuthorizedRetrieval } from '../src/modules/ai/retrieval.js';
+import { createAuthorizedRetrieval } from '../src/modules/ai/retrieval.ts';
 
 const samples = JSON.parse(
   fs.readFileSync(new URL('../../../docs/AI功能/p1/fixtures/retrieval-v1.json', import.meta.url), 'utf8')

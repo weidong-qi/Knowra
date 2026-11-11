@@ -1,10 +1,10 @@
-import { createAuthorizedKeywordSearch } from '../../../api/src/modules/ai/keyword-search.js';
-import { listAnnotatedRanges } from '../../../api/src/modules/ai/annotation-read-tool.js';
+import { createAuthorizedKeywordSearch } from '../../../api/src/modules/ai/keyword-search.ts';
+import { listAnnotatedRanges } from '../../../api/src/modules/ai/annotation-read-tool.ts';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import {
   KNOWLEDGE_PROPOSE_TOOL,
   buildKnowledgeProposalPlan
-} from '../../../api/src/modules/ai/knowledge-propose-tool.js';
+} from '../../../api/src/modules/ai/knowledge-propose-tool.ts';
 import { mcpError } from './mcp-error.mjs';
 
 const MAX_READ_UNITS = 1000;

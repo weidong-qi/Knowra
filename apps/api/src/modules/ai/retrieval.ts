@@ -1,8 +1,21 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { RetrievalOptions, AccessService } from './boundary-types.ts';
+import type { SearchInput, SearchHit } from './keyword-search.ts';
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
-import { createAuthorizedKeywordSearch } from './keyword-search.js';
+import { createAuthorizedKeywordSearch } from './keyword-search.ts';
 
+interface RetrievalDependencies extends Omit<RetrievalOptions, 'access'> {
+  access?: Pick<
+    AccessService,
+    | 'listAuthorizedNotes'
+    | 'verifyRead'
+    | 'findAuthorizedSearchCandidates'
+    | 'assertSearchGrant'
+    | 'assertSearchSources'
+  >;
+}
 const MAX_INDEX_CANDIDATES = 32;
-const validBoundary = (text, offset) =>
+const validBoundary = (text: string, offset: number) =>
   offset <= 0 ||
   offset >= text.length ||
   !(
@@ -11,7 +24,7 @@ const validBoundary = (text, offset) =>
     text.charCodeAt(offset) >= 0xdc00 &&
     text.charCodeAt(offset) <= 0xdfff
   );
-const validSearch = ({ grantId, query, limit }) =>
+const validSearch = ({ grantId, query, limit }: Required<SearchInput>) =>
   typeof grantId === 'string' &&
   !!grantId &&
   typeof query === 'string' &&
@@ -20,9 +33,8 @@ const validSearch = ({ grantId, query, limit }) =>
   Number.isSafeInteger(limit) &&
   limit >= 1 &&
   limit <= 8;
-const invalid = () => {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error('检索参数无效。');
+const invalid = (): never => {
+  const error = new Error('检索参数无效。') as AppError;
   error.code = 'AI_SEARCH_INVALID';
   throw error;
 };
@@ -31,8 +43,11 @@ const invalid = () => {
  * 候选源只负责排序和定位，不提供可外发的正文、标题或引用。
  * 当前授权版本由 R02 读取服务重新取得；候选源异常、陈旧或无结果时回退关键词。
  */
-/** @param {import('./boundary-types.ts').RetrievalOptions} [options] */
-export function createAuthorizedRetrieval({ access, candidateSource = null, candidateTimeoutMs = 1500 } = {}) {
+export function createAuthorizedRetrieval({
+  access,
+  candidateSource = null,
+  candidateTimeoutMs = 1500
+}: RetrievalDependencies = {}) {
   if (
     !access?.listAuthorizedNotes ||
     !access?.verifyRead ||
@@ -45,15 +60,15 @@ export function createAuthorizedRetrieval({ access, candidateSource = null, cand
   }
   const baseline = createAuthorizedKeywordSearch({ access });
 
-  async function fallback(input, reason) {
+  async function fallback(input: SearchInput, reason?: string) {
     const result = await baseline.search(input);
     return { ...result, mode: reason ? 'keyword_fallback' : 'keyword', ...(reason ? { fallbackReason: reason } : {}) };
   }
 
   return {
-    async search(input) {
+    async search(input: SearchInput) {
       if (!input || !validSearch({ grantId: input.grantId, query: input.query, limit: input.limit ?? 5 })) invalid();
-      const { grantId, query, limit = 5 } = input;
+      const { grantId, query, limit = 5 } = input as SearchInput & { query: string };
       if (!candidateSource) return fallback({ grantId, query, limit });
 
       // 空命中和索引故障也先验证 grant；索引不能决定授权是否有效。
@@ -61,7 +76,7 @@ export function createAuthorizedRetrieval({ access, candidateSource = null, cand
       const byId = new Map(authorized.map(row => [row.noteId, row]));
       let found;
       const controller = new AbortController();
-      let timeout;
+      let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
         found = await Promise.race([
           Promise.resolve().then(() =>
@@ -76,7 +91,7 @@ export function createAuthorizedRetrieval({ access, candidateSource = null, cand
               signal: controller.signal
             })
           ),
-          new Promise((_, reject) => {
+          new Promise<never>((_, reject) => {
             timeout = setTimeout(() => {
               controller.abort();
               reject(new Error('candidate source timeout'));
@@ -98,7 +113,7 @@ export function createAuthorizedRetrieval({ access, candidateSource = null, cand
       }
       if (!found.candidates.length) return fallback({ grantId, query, limit }, 'empty');
 
-      const hits = [],
+      const hits: SearchHit[] = [],
         seen = new Set();
       for (const candidate of found.candidates) {
         const allowed = typeof candidate?.noteId === 'string' ? byId.get(candidate.noteId) : null;
@@ -124,7 +139,8 @@ export function createAuthorizedRetrieval({ access, candidateSource = null, cand
           current = await access.verifyRead({ grantId, noteId: candidate.noteId, tool: 'notes_search' });
         } catch (error) {
           // 授权本身失效必须传播；单篇移出范围或变更版本由回退重新检索。
-          if (error?.code !== 'AI_SCOPE_FORBIDDEN' && error?.code !== 'AI_SOURCE_STALE') throw error;
+          if ((error as AppError)?.code !== 'AI_SCOPE_FORBIDDEN' && (error as AppError)?.code !== 'AI_SOURCE_STALE')
+            throw error;
           return fallback({ grantId, query, limit }, 'stale');
         }
         const { note, version, contentHash } = current;
