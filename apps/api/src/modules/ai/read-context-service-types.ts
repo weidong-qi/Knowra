@@ -22,7 +22,7 @@ export interface PrepareReadInput {
   maxInputTokens?: number;
   excludedSourceIds?: string[];
 }
-type ReadContextService = ReturnType<typeof import('./read-context-service.js').createAiReadContextService>;
+type ReadContextService = ReturnType<typeof import('./read-context-service.ts').createAiReadContextService>;
 export interface AuthorizeReadInput {
   prepared?: Awaited<ReturnType<ReadContextService['prepareRead']>>;
   actorId?: string;

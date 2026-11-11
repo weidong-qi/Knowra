@@ -9,7 +9,7 @@ import { createInMemoryNoteVersionRepository } from '../src/modules/knowledge/in
 import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrastructure/folder-repository.ts';
 import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge/infrastructure/knowledge-space-repository.ts';
 import { NoteVersion } from '../src/modules/knowledge/domain/note-version.ts';
-import { createAiReadContextService } from '../src/modules/ai/read-context-service.js';
+import { createAiReadContextService } from '../src/modules/ai/read-context-service.ts';
 import { normalizeAiRequest } from '../src/modules/ai/gateway.ts';
 import { createAiGateway } from '../src/modules/ai/gateway.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from '../src/modules/ai/outbound-payload.ts';

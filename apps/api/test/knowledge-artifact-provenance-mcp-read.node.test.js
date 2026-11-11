@@ -3,7 +3,7 @@ import test from 'node:test';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { buildKnowledgeProposalPlan } from '../src/modules/ai/knowledge-propose-tool.ts';
 import { createKnowledgeArtifactProvenanceFromMcpProposal } from '../src/modules/ai/agent-knowledge-provenance.ts';
-import { createMcpKnowledgeReadService } from '../src/modules/ai/mcp-knowledge-read.js';
+import { createMcpKnowledgeReadService } from '../src/modules/ai/mcp-knowledge-read.ts';
 import {
   createLegacyKnowledgeArtifactProvenance,
   hashKnowledgeArtifactProvenance

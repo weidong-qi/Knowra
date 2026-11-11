@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { openWorkspace, temporaryDirectory } from './helpers.mjs';
 import { createAgentKnowledgeCommitService } from '../../api/src/modules/ai/agent-knowledge-commit.ts';
 import { createAiAccessService } from '../../api/src/modules/ai/access-service.js';
-import { createMcpKnowledgeReadService } from '../../api/src/modules/ai/mcp-knowledge-read.js';
+import { createMcpKnowledgeReadService } from '../../api/src/modules/ai/mcp-knowledge-read.ts';
 import { createPairingStore } from '../src/mcp/pairing-store.mjs';
 import { createMcpPairingService } from '../src/mcp/pairing-service.mjs';
 import { createMcpGate } from '../src/mcp/mcp-gate.mjs';
