@@ -6,7 +6,7 @@ import { toolsForWriteIntent, toolsForAssistant } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { beijingDay } from './budget-ledger.ts';
-import { actualCostMicrounits, quoteWorstCase } from './worker.js';
+import { actualCostMicrounits, quoteWorstCase } from './worker.ts';
 import { hashRecord } from './record-contract.ts';
 import { createAuthorizedRetrieval } from './retrieval.ts';
 import { createAiRecoveryScope } from './recovery-scope.ts';

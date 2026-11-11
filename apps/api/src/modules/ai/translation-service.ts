@@ -2,7 +2,7 @@ import type { GatewayRequest } from './gateway.ts';
 import type { BudgetReservation, BudgetReserveInput, BudgetSettlement } from './private-store-types.ts';
 import { randomUUID } from 'node:crypto';
 import { beijingDay } from './budget-ledger.ts';
-import { actualCostMicrounits, quoteWorstCase } from './worker.js';
+import { actualCostMicrounits, quoteWorstCase } from './worker.ts';
 import { createAiRecoveryScope } from './recovery-scope.ts';
 import { createTranslationTasks } from './translation-tasks.ts';
 import type { AppError } from '../../errors/app-error.ts';

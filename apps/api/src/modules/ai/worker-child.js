@@ -1,4 +1,4 @@
-import { createAiWorker } from './worker.js';
+import { createAiWorker } from './worker.ts';
 import { createAiGateway } from './gateway.ts';
 import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.ts';
 

@@ -10,7 +10,7 @@ import {
   usageSummary,
   validateBudgetState
 } from '../src/modules/ai/budget-ledger.ts';
-import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.js';
+import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.ts';
 import { createServer } from '../src/server.js';
 import { createRemoteBudgetAuthority } from '../src/modules/ai/remote-budget-authority.ts';
 import { createAiRuntime } from '../src/modules/ai/runtime.js';

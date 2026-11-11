@@ -20,7 +20,7 @@ import {
   enforcedLimits,
   normalizeBudgetSettings
 } from '../src/modules/ai/budget-settings.ts';
-import { actualCostMicrounits } from '../src/modules/ai/worker.js';
+import { actualCostMicrounits } from '../src/modules/ai/worker.ts';
 import { createBudgetAlertStore, evaluateAlerts } from '../src/modules/ai/budget-alerts.ts';
 import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.js';
 import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.ts';
