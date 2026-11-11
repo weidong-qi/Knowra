@@ -1,3 +1,20 @@
+import type { NoteVersion } from '../knowledge/domain/note-version.ts';
+import type {
+  AgentKnowledgeCommitOptions,
+  ProposalCommitInput,
+  ProposalApplyInput,
+  ProposalFindInput,
+  ProposalOrigin,
+  ProposalPlan,
+  CommitSteps,
+  NoteRecord,
+  FolderRecord,
+  KnowledgeItemServiceRecord,
+  AiAccessPolicy,
+  AiRunGrant,
+  AiConversationTurn,
+  CoreKnowledgeResult
+} from './knowledge-commit-service-types.ts';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.ts';
 import { hashRecord } from './record-contract.ts';
@@ -9,10 +26,10 @@ import {
   createKnowledgeArtifactProvenanceFromMcpProposal
 } from './agent-knowledge-provenance.ts';
 
-const refuse = (code, message, status = 409) => {
+const refuse: (code: string, message: string, status?: number) => never = (code, message, status = 409) => {
   throw createAppError(code, message, status);
 };
-const normalized = value => value.normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
+const normalized = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
 
 /**
  * 受信宿主的 Agent 知识候选保存入口：全部候选、证据与来源摘要在一次核心操作事务内提交，
@@ -29,7 +46,7 @@ export function createAgentKnowledgeCommitService({
   accessStore,
   asyncDomain = false,
   now = () => new Date()
-}) {
+}: AgentKnowledgeCommitOptions) {
   if (!core || !knowledge || !ownerId || !conversationStore || !accessStore) {
     throw new TypeError('Agent 知识保存需要核心操作账本、知识模块、对话与授权存储和 owner。');
   }
@@ -39,13 +56,21 @@ export function createAgentKnowledgeCommitService({
   const stamp = () => now().getTime();
   // 保存时在事务内重新复核回合与授权：取消、租约失效、授权撤销/收窄后迟到的提议不得入库。
   // 与动作服务一致，通过 peek 读取私有存储，本地同步事务内不会与取消/撤销交错。
-  function* verifyOrigin({ plan, origin, identity, grantId, generation, mode, guard }) {
-    const stale = () => refuse('AI_CANCELLED', '任务已取消或租约失效，未保存任何候选。');
-    const revoked = () => refuse('AI_ACCESS_REVOKED', '本次运行授权已撤销或已变化，未保存任何候选。', 403);
+  function* verifyOrigin({
+    plan,
+    origin,
+    identity,
+    grantId,
+    generation,
+    mode,
+    guard
+  }: ProposalCommitInput): CommitSteps<void> {
+    const stale: () => never = () => refuse('AI_CANCELLED', '任务已取消或租约失效，未保存任何候选。');
+    const revoked: () => never = () => refuse('AI_ACCESS_REVOKED', '本次运行授权已撤销或已变化，未保存任何候选。', 403);
     const conversationId = mode === 'mcp' ? `mcp-${origin.pairingId}` : origin.conversationId;
-    if (mode === 'mcp') guard();
+    if (mode === 'mcp') guard!();
     else {
-      const turn = yield conversationStore.peekTurn(origin.turnId);
+      const turn = (yield conversationStore.peekTurn(origin.turnId)) as AiConversationTurn | null;
       if (
         !turn ||
         turn.ownerId !== ownerId ||
@@ -55,11 +80,11 @@ export function createAgentKnowledgeCommitService({
         turn.conversationId !== origin.conversationId ||
         turn.status !== 'running' ||
         turn.leaseGeneration !== generation ||
-        Date.parse(turn.leaseExpiresAt) <= stamp()
+        Date.parse(turn.leaseExpiresAt as string) <= stamp()
       )
         stale();
     }
-    const grant = grantId ? yield accessStore.peek('aiRunGrant', grantId) : null;
+    const grant = grantId ? ((yield accessStore.peek('aiRunGrant', grantId)) as AiRunGrant | null) : null;
     if (
       !grant ||
       grant.ownerId !== ownerId ||
@@ -71,7 +96,7 @@ export function createAgentKnowledgeCommitService({
       grant.spaceId !== plan.spaceId
     )
       revoked();
-    const policy = yield accessStore.peek('aiAccessPolicy', grant.policyId);
+    const policy = (yield accessStore.peek('aiAccessPolicy', grant.policyId)) as AiAccessPolicy | null;
     if (
       !policy ||
       policy.ownerId !== ownerId ||
@@ -89,7 +114,7 @@ export function createAgentKnowledgeCommitService({
       ...new Set(plan.candidates.flatMap(candidate => candidate.provenance.map(source => source.noteId)))
     ];
     for (const noteId of noteIds) {
-      const note = yield repos.noteRepository.findById(noteId);
+      const note = (yield repos.noteRepository.findById(noteId)) as NoteRecord | null;
       if (
         !note ||
         note.spaceId !== plan.spaceId ||
@@ -104,7 +129,7 @@ export function createAgentKnowledgeCommitService({
         const seen = new Set();
         while (folderId && !seen.has(folderId)) {
           seen.add(folderId);
-          const folder = yield repos.folderRepository.findById(folderId);
+          const folder = (yield repos.folderRepository.findById(folderId)) as FolderRecord | null;
           if (!folder || folder.deletedAt || folder.spaceId !== plan.spaceId) break;
           if (folderId === policy.scope.folderId) {
             allowed = true;
@@ -116,20 +141,24 @@ export function createAgentKnowledgeCommitService({
       }
     }
   }
-  function* verifySources(plan) {
+  function* verifySources(plan: ProposalPlan): CommitSteps<void> {
     const sources = plan.candidates.flatMap(candidate => candidate.provenance);
-    yield* verifyExtractionSourcePrivacy(repos, sources, plan.spaceId);
-    const versions = new Map(),
-      notes = new Map();
+    yield* verifyExtractionSourcePrivacy(repos, sources, plan.spaceId) as CommitSteps<void>;
+    const versions = new Map<string, NoteVersion | null>(),
+      notes = new Map<string, NoteRecord | null>();
     for (const source of sources) {
       // 提议计划生成之后、保存之前笔记可能被改写：事务内对照当前正文，来源版本已不是当前正文就整批拒绝，不保存一开始就是 stale 的候选。
-      if (!notes.has(source.noteId)) notes.set(source.noteId, yield repos.noteRepository.findById(source.noteId));
+      if (!notes.has(source.noteId))
+        notes.set(source.noteId, (yield repos.noteRepository.findById(source.noteId)) as NoteRecord | null);
       const current = notes.get(source.noteId);
       if (!current || calculateContentHash(current.rawMarkdown) !== source.contentHash) {
         refuse('AI_PROPOSAL_SOURCE_STALE', '来源笔记已变化，未保存任何候选。请重新读取后再提交。');
       }
       if (!versions.has(source.noteVersionId))
-        versions.set(source.noteVersionId, yield repos.noteVersionRepository.findById(source.noteVersionId));
+        versions.set(
+          source.noteVersionId,
+          (yield repos.noteVersionRepository.findById(source.noteVersionId)) as NoteVersion | null
+        );
       const version = versions.get(source.noteVersionId);
       if (
         !version ||
@@ -142,11 +171,13 @@ export function createAgentKnowledgeCommitService({
     }
   }
   // 只比对仍然有效（未删除、未归档）的知识陈述；提示只含候选序号，不向模型泄露已有内容。
-  function* rejectDuplicates(plan) {
+  function* rejectDuplicates(plan: ProposalPlan): CommitSteps<void> {
     const known = new Set(
-      (yield repos.knowledgeItemRepository.list({})).map(item => normalized(item.canonicalStatement))
+      ((yield repos.knowledgeItemRepository.list({})) as KnowledgeItemServiceRecord[]).map(item =>
+        normalized(item.canonicalStatement)
+      )
     );
-    const repeated = [];
+    const repeated: number[] = [];
     plan.candidates.forEach((candidate, index) => {
       const key = normalized(candidate.candidateInput.canonicalStatement);
       if (known.has(key)) repeated.push(index + 1);
@@ -159,9 +190,22 @@ export function createAgentKnowledgeCommitService({
       );
     }
   }
-  function* apply({ plan, origin, identity, grantId, generation, provider, modelId, committedAt, mode, guard }) {
+  function* apply({
+    plan,
+    origin,
+    identity,
+    grantId,
+    generation,
+    provider,
+    modelId,
+    committedAt,
+    mode,
+    guard
+  }: ProposalApplyInput): CommitSteps<CoreKnowledgeResult> {
     yield* verifyOrigin({ plan, origin, identity, grantId, generation, mode, guard });
-    const space = yield repos.knowledgeSpaceRepository.findById(plan.spaceId);
+    const space = (yield repos.knowledgeSpaceRepository.findById(plan.spaceId)) as Awaited<
+      ReturnType<typeof repos.knowledgeSpaceRepository.findById>
+    >;
     if (!space || space.userId !== ownerId) refuse('AI_SCOPE_FORBIDDEN', '无权在该知识空间保存知识候选。', 403);
     yield* verifySources(plan);
     yield* rejectDuplicates(plan);
@@ -178,10 +222,20 @@ export function createAgentKnowledgeCommitService({
     return { candidates: saved, saveState: 'localCommitted' };
   }
 
-  const operationId = (origin, mode) =>
+  const operationId = (origin: ProposalOrigin, mode: string | undefined) =>
     `knowledge-propose-${hashRecord(mode === 'mcp' ? ['mcp', origin.pairingId, origin.callId] : [origin.turnId, origin.toolCallId])}`;
   return {
-    async commit({ plan, origin, identity, grantId, generation, provider, modelId, mode = 'agent', guard = null }) {
+    async commit({
+      plan,
+      origin,
+      identity,
+      grantId,
+      generation,
+      provider,
+      modelId,
+      mode = 'agent',
+      guard = null
+    }: ProposalCommitInput) {
       if (mode === 'mcp' && typeof guard !== 'function') throw new TypeError('MCP 保存必须提供事务内复核 guard。');
       const candidateIds = plan.candidates.map(candidate => candidate.candidateInput.id);
       const request = {
@@ -192,7 +246,7 @@ export function createAgentKnowledgeCommitService({
         spaceId: plan.spaceId,
         requestId: plan.requestId,
         operationId: operationId(origin, mode),
-        kind: 'knowledge_propose',
+        kind: 'knowledge_propose' as const,
         planHash: hashRecord({
           requestId: plan.requestId,
           inputHash: plan.inputHash,
@@ -206,7 +260,7 @@ export function createAgentKnowledgeCommitService({
       );
     },
     /** 同一回合与工具调用已提交时返回回执摘要：用于响应丢失或重试后的对账，不重新校验提议。 */
-    async findCommitted({ origin, identity, mode = 'agent' }) {
+    async findCommitted({ origin, identity, mode = 'agent' }: ProposalFindInput) {
       const receipt = await core.get({
         ownerId,
         datasetId: identity.datasetId,
@@ -215,7 +269,7 @@ export function createAgentKnowledgeCommitService({
       if (!receipt || receipt.kind !== 'knowledge_propose' || receipt.ownerId !== ownerId) return null;
       const candidates = [],
         cited = new Map();
-      for (const { candidateId } of receipt.result.candidates) {
+      for (const { candidateId } of (receipt.result as CoreKnowledgeResult).candidates) {
         const item = await Promise.resolve(repos.knowledgeItemRepository.findById(candidateId));
         const provenance = await Promise.resolve(
           repos.knowledgeArtifactProvenanceRepository.findByArtifactId(candidateId)

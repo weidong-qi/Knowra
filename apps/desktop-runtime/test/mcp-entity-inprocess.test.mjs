@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { openWorkspace, temporaryDirectory } from './helpers.mjs';
-import { createAgentKnowledgeCommitService } from '../../api/src/modules/ai/agent-knowledge-commit.js';
+import { createAgentKnowledgeCommitService } from '../../api/src/modules/ai/agent-knowledge-commit.ts';
 import { createAiAccessService } from '../../api/src/modules/ai/access-service.js';
 import { createMcpKnowledgeReadService } from '../../api/src/modules/ai/mcp-knowledge-read.js';
 import { createPairingStore } from '../src/mcp/pairing-store.mjs';

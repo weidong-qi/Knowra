@@ -7,7 +7,7 @@ import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts'
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createKnowledgeModule } from './modules/knowledge/index.js';
-import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.js';
+import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.ts';
 import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.ts';
 import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-handlers.ts';
 import { createFileDataStore } from './infrastructure/file-data-store.js';

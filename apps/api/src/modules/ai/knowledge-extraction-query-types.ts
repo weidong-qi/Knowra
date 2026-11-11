@@ -78,6 +78,7 @@ type ExtractionReadValue =
   | ExtractionQueryAttempt[]
   | ExtractionQueryEvent[]
   | NoteRecord[]
+  | Pick<NoteRecord, 'id' | 'spaceId' | 'deleted' | 'contentKind' | 'aiVisibility'>[]
   | null;
 export type ExtractionQuerySteps<Result> = Generator<Awaitable<ExtractionReadValue>, Result, ExtractionReadValue>;
 export interface ExtractionQueryContext<Transaction = object | undefined> {

@@ -34,7 +34,7 @@ export function createPostgresKnowledgeArtifactProvenanceRepository({ db }: Prov
         if (!current) throw createAppError('KNOWLEDGE_ARTIFACT_PROVENANCE_CONFLICT', '来源记录已被并发删除。', 409);
         assertProvenanceWrite(current, record);
       }
-      return structuredClone(record);
+      return structuredClone(record) as KnowledgeArtifactProvenance;
     });
   return {
     supportsAsync: true,
