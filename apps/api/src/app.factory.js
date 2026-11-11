@@ -19,7 +19,7 @@ import { createInMemoryTagRepository } from './modules/knowledge/infrastructure/
 import { createInMemoryTagGroupRepository } from './modules/knowledge/infrastructure/tag-group-repository.ts';
 import { createInMemoryKnowledgeSpaceRepository } from './modules/knowledge/infrastructure/knowledge-space-repository.ts';
 import { createInMemoryContentAnnotationRepository } from './modules/knowledge/infrastructure/content-annotation-repository.js';
-import { createInMemoryNoteVersionRepository } from './modules/knowledge/infrastructure/note-version-repository.js';
+import { createInMemoryNoteVersionRepository } from './modules/knowledge/infrastructure/note-version-repository.ts';
 import { createInMemoryKnowledgeItemRepository } from './modules/knowledge/infrastructure/knowledge-item-repository.js';
 import { createInMemoryKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/knowledge-evidence-repository.js';
 import { createInMemoryKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.js';

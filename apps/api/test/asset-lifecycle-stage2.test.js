@@ -6,7 +6,7 @@ import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { createAppContext } from '../src/app.factory.js';
 import { createAttachmentCleanupQueue } from '../src/infrastructure/attachment-cleanup-queue.ts';
-import { buildNoteVersionPrunePreview } from '../src/modules/knowledge/application/note-version-prune-preview.js';
+import { buildNoteVersionPrunePreview } from '../src/modules/knowledge/application/note-version-prune-preview.ts';
 
 export const assetLifecycleStage2Tests = [
   {

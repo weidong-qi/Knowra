@@ -32,7 +32,7 @@ import {
   createInMemoryAnnotationRevisionRepository
 } from './infrastructure/annotation-support-repositories.js';
 import { createAnnotationScopeService } from './application/annotation-scope-service.js';
-import { createInMemoryNoteVersionRepository } from './infrastructure/note-version-repository.js';
+import { createInMemoryNoteVersionRepository } from './infrastructure/note-version-repository.ts';
 import { createInMemoryKnowledgeItemRepository } from './infrastructure/knowledge-item-repository.js';
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
 import { createInMemoryKnowledgeArtifactProvenanceRepository } from './infrastructure/knowledge-artifact-provenance-repository.js';
@@ -43,8 +43,8 @@ import { createInMemoryExamFocusRepository } from './infrastructure/exam-focus-r
 import { createInMemoryQuestionRepository } from './infrastructure/question-repository.js';
 import { createInMemoryQuestionObjectiveRepository } from './infrastructure/question-objective-repository.js';
 import { createInMemoryQuestionSourceRepository } from './infrastructure/question-source-repository.js';
-import { createNoteVersionService } from './application/note-version-service.js';
-import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.js';
+import { createNoteVersionService } from './application/note-version-service.ts';
+import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { NOTE_VERSION_COALESCE_WINDOW_MS, selectCoalescibleVersion } from './application/note-version-coalescing.js';
 import { createKnowledgeItemService } from './application/knowledge-item-service.js';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';

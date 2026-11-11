@@ -6,7 +6,7 @@ import {
   stripKnowraMarks,
   stripKnowraMarksMapped
 } from '@study-accelerator/shared/knowra-marks';
-import { createInlineAnnotationSourceResolver } from './inline-annotation-ranges.js';
+import { createInlineAnnotationSourceResolver } from './inline-annotation-ranges.ts';
 import { ContentAnnotation, INLINE_ANCHOR_FORMAT, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
 import { isEvidenceUsable } from '../domain/evidence-applicability.ts';
 

@@ -1,4 +1,4 @@
-import { inlineAnnotationSourceRanges } from './inline-annotation-ranges.js';
+import { inlineAnnotationSourceRanges } from './inline-annotation-ranges.ts';
 import { legacyAnnotationRemoved } from './content-annotation-service.js';
 import { resolveLegacyAnnotationAnchor } from './legacy-annotation-anchor.ts';
 import crypto from 'node:crypto';

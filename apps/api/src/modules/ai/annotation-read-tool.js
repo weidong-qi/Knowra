@@ -1,5 +1,5 @@
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
-import { createInlineAnnotationSourceResolver } from '../knowledge/application/inline-annotation-ranges.js';
+import { createInlineAnnotationSourceResolver } from '../knowledge/application/inline-annotation-ranges.ts';
 
 const SNIPPET_CHARS = 1000;
 const MAX_LIMIT = 8;

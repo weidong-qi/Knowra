@@ -92,15 +92,15 @@ interface NoteTransactionContext extends Partial<PostgresRepositories> {
   itemRepository?: PostgresRepositories['knowledgeItemRepository'];
   evidenceRepository?: EvidencePort;
   annotationRepository?: PostgresRepositories['contentAnnotationRepository'] | null;
-  noteVersionService?: ReturnType<typeof import('../note-version-service.js').createAsyncNoteVersionService>;
+  noteVersionService?: ReturnType<typeof import('../note-version-service.ts').createAsyncNoteVersionService>;
   onNoteContentChanged?: (
     note: SavedNote,
     version: NoteVersion,
-    change: ReturnType<typeof import('../annotation-change-context.js').prepareAnnotationChange>
+    change: ReturnType<typeof import('../annotation-change-context.ts').prepareAnnotationChange>
   ) => void | Promise<void | AnnotationReconciliation>;
   onNoteIdentityChanged?: (
     note: SavedNote,
-    change: ReturnType<typeof import('../annotation-change-context.js').prepareAnnotationChange>
+    change: ReturnType<typeof import('../annotation-change-context.ts').prepareAnnotationChange>
   ) => void | AnnotationRecord[] | Promise<void | AnnotationRecord[]>;
   onNoteDeleted?: (
     id: string
