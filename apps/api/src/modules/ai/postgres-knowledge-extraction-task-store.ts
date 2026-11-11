@@ -1,10 +1,20 @@
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { ExtractionPage } from './knowledge-extraction-query-types.ts';
+import type { ExtractionSqlTransaction, PostgresExtractionStoreOptions } from './knowledge-extraction-host-types.ts';
+interface TaskRow {
+  owner_id: unknown;
+  dataset_id: unknown;
+  job_id: string;
+  descriptor_json: string;
+  created_at: string;
+}
 import { taskKey, taskError, validateExtractionTask } from './knowledge-extraction-task-contract.ts';
-import { createPostgresKnowledgeExtractionCommitStore } from './postgres-knowledge-extraction-commit-store.js';
+import { createPostgresKnowledgeExtractionCommitStore } from './postgres-knowledge-extraction-commit-store.ts';
 import { extractionPageSql } from './knowledge-extraction-task-page.ts';
 
-export function createPostgresKnowledgeExtractionTaskStore({ client, ownerId }) {
+export function createPostgresKnowledgeExtractionTaskStore({ client, ownerId }: PostgresExtractionStoreOptions) {
   const transactions = createPostgresKnowledgeExtractionCommitStore({ client, ownerId });
-  const decode = row => {
+  const decode = (row: TaskRow) => {
     let record;
     try {
       record = validateExtractionTask(JSON.parse(row.descriptor_json));
@@ -18,9 +28,12 @@ export function createPostgresKnowledgeExtractionTaskStore({ client, ownerId }) 
   };
   return {
     supportsAsync: true,
-    runTransaction: (operation, input = {}) => transactions.runTransaction(operation, { jobId: input.jobId ?? '' }),
-    async get(input, tx = client) {
-      const [row] = await tx.$queryRawUnsafe(
+    runTransaction: <Result>(
+      operation: (tx: ExtractionSqlTransaction) => Result | PromiseLike<Result>,
+      input: { jobId?: string } = {}
+    ) => transactions.runTransaction(operation, { jobId: input.jobId ?? '' }),
+    async get(input: Pick<DatasetIdentity, 'datasetId'> & { jobId: string }, tx: ExtractionSqlTransaction = client) {
+      const [row] = await tx.$queryRawUnsafe<TaskRow[]>(
         'SELECT * FROM ai_knowledge_extraction_tasks WHERE owner_id = $1 AND dataset_id = $2 AND job_id = $3',
         ownerId,
         input.datasetId,
@@ -28,20 +41,23 @@ export function createPostgresKnowledgeExtractionTaskStore({ client, ownerId }) 
       );
       return row ? decode(row) : null;
     },
-    async list(input, tx = client) {
+    async list(input: Pick<DatasetIdentity, 'datasetId'>, tx: ExtractionSqlTransaction = client) {
       return (
-        await tx.$queryRawUnsafe(
+        await tx.$queryRawUnsafe<TaskRow[]>(
           'SELECT * FROM ai_knowledge_extraction_tasks WHERE owner_id = $1 AND dataset_id = $2',
           ownerId,
           input.datasetId
         )
       ).map(decode);
     },
-    async listPage(input, tx = client) {
+    async listPage(input: ExtractionPage, tx: ExtractionSqlTransaction = client) {
       const { sql, values } = extractionPageSql({ ...input, ownerId }, true);
-      return (await tx.$queryRawUnsafe(sql, ...values)).map(row => ({ jobId: row.job_id, createdAt: row.created_at }));
+      return (await tx.$queryRawUnsafe<TaskRow[]>(sql, ...values)).map(row => ({
+        jobId: row.job_id,
+        createdAt: row.created_at
+      }));
     },
-    insert(input, tx) {
+    insert(input: unknown, tx: ExtractionSqlTransaction) {
       const task = validateExtractionTask(input);
       if (task.ownerId !== ownerId) throw taskError('KNOWLEDGE_EXTRACTION_TASK_INVALID', '任务 owner 不匹配。');
       return tx.$executeRawUnsafe(

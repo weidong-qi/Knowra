@@ -1,5 +1,5 @@
 import { EXTRACTION_MOCK_PROFILE as profile, taskError, taskId } from './knowledge-extraction-task-contract.ts';
-import { verifyTaskRequest } from './knowledge-extraction-task-context.js';
+import { verifyTaskRequest } from './knowledge-extraction-task-context.ts';
 import { extractionPageInput } from './knowledge-extraction-task-page.ts';
 import { extractionSafeError } from './knowledge-extraction-http-errors.ts';
 import type { AppError } from '../../errors/app-error.ts';
@@ -12,6 +12,7 @@ import type {
   ExtractionLoadedTask,
   ExtractionPageRow,
   ExtractionQueryEvent,
+  ExtractionQueryContext,
   ExtractionQueryJob,
   ExtractionQueryOptions,
   ExtractionQuerySteps
@@ -41,7 +42,7 @@ function summary(job: ExtractionQueryJob, descriptor: ExtractionLoadedTask['desc
 }
 
 /** 只读协议投影；操作仍由原生命周期在写事务中复核。 */
-export function createExtractionTaskQueries<Transaction>({
+export function createExtractionTaskQueries<Transaction, Context extends ExtractionQueryContext<Transaction>>({
   read,
   load,
   view,
@@ -49,7 +50,7 @@ export function createExtractionTaskQueries<Transaction>({
   ownerId,
   clock,
   canUse
-}: ExtractionQueryOptions<Transaction>) {
+}: ExtractionQueryOptions<Transaction, Context>) {
   return {
     async ready() {
       if (!canUse()) return false;

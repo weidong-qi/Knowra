@@ -1,3 +1,16 @@
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
+import type { NoteVersion } from '../knowledge/domain/note-version.ts';
+import type { KnowledgeSpaceRecord } from '../knowledge/infrastructure/knowledge-space-repository.ts';
+import type { ExtractionScope } from '../knowledge/application/knowledge-extraction-types.ts';
+import type {
+  ExtractionQueryContext,
+  ExtractionQuerySteps,
+  ExtractionLoadedTask
+} from './knowledge-extraction-query-types.ts';
+import type { ExtractionTaskLifecycleOptions } from './knowledge-extraction-host-types.ts';
+import type { ExtractionTaskDescriptor } from './knowledge-extraction-task-types.ts';
+import type { AiScopeSnapshot, AiContextManifest, AiGrant, AiJob } from './record-types.ts';
 import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { hashRecord, manifestHash, scopeHash, validateAiRecord } from './record-contract.ts';
@@ -15,35 +28,49 @@ import {
 } from './knowledge-extraction-task-contract.ts';
 import { isAiReadableNote } from './note-privacy.js';
 
-export function* verifyExtractionSourcePrivacy(repos, sourceRefs, spaceId) {
+export function* verifyExtractionSourcePrivacy(
+  repos: Pick<ExtractionQueryContext['repositories'], 'noteRepository'>,
+  sourceRefs: { noteId: string }[],
+  spaceId: string
+): ExtractionQuerySteps<void> {
   const ids = [...new Set(sourceRefs.map(ref => ref.noteId))];
   if (!repos.noteRepository.findByIds && ids.length > 1) {
     throw taskError('KNOWLEDGE_EXTRACTION_SOURCE_UNAVAILABLE', '当前仓库未提供批量来源隐私检查。');
   }
-  const notes = repos.noteRepository.findByIds
-    ? yield repos.noteRepository.findByIds(ids)
-    : [yield repos.noteRepository.findById(ids[0])];
-  const byId = new Map(notes.filter(Boolean).map(note => [note.id, note]));
-  if (ids.some(id => !isAiReadableNote(byId.get(id)) || byId.get(id).spaceId !== spaceId)) {
+  const notes = (
+    repos.noteRepository.findByIds
+      ? yield repos.noteRepository.findByIds(ids)
+      : [yield repos.noteRepository.findById(ids[0])]
+  ) as (NoteRecord | null)[];
+  const byId = new Map(notes.filter(Boolean).map(note => [note!.id, note!]));
+  if (ids.some(id => !isAiReadableNote(byId.get(id)) || byId.get(id)!.spaceId !== spaceId)) {
     throw taskError('KNOWLEDGE_EXTRACTION_SOURCE_UNAVAILABLE', '原始提炼来源不在当前 AI 可读取范围。');
   }
 }
 
-export function* prepareTaskSources(context, ownerId, scopeId, idempotencyKey) {
+export function* prepareTaskSources<Transaction>(
+  context: ExtractionQueryContext<Transaction>,
+  ownerId: string,
+  scopeId: string,
+  idempotencyKey: string
+): ExtractionQuerySteps<PreparedTaskSources> {
   const repos = context.repositories;
-  const scope = yield repos.analysisScopeRepository.findById(scopeId);
-  const space = scope && (yield repos.knowledgeSpaceRepository.findById(scope.spaceId));
+  // 仓库保留原始快照；结构视图供原校验读取，完整来源仍由 Gateway 校验。
+  const scope = (yield repos.analysisScopeRepository.findById(scopeId)) as
+    (ExtractionScope & { deletedAt?: unknown; exclusions?: object[]; omittedItems?: object[] }) | null;
+  const space =
+    scope && ((yield repos.knowledgeSpaceRepository.findById(scope.spaceId)) as KnowledgeSpaceRecord | null);
   if (!scope || scope.deletedAt || !space || space.userId !== ownerId) {
     throw taskError('KNOWLEDGE_EXTRACTION_SCOPE_FORBIDDEN', '提炼范围不存在或不属于当前 owner。');
   }
-  const versions = [];
+  const versions: NoteVersion[] = [];
   for (const binding of scope.noteVersions) {
-    const note = yield repos.noteRepository.findById(binding.noteId);
-    if (!isAiReadableNote(note) || note.spaceId !== scope.spaceId) {
+    const note = (yield repos.noteRepository.findById(binding.noteId)) as NoteRecord | null;
+    if (!isAiReadableNote(note) || note!.spaceId !== scope.spaceId) {
       throw taskError('KNOWLEDGE_EXTRACTION_SOURCE_UNAVAILABLE', '原始提炼来源不在当前 AI 可读取范围。');
     }
-    const version = yield repos.noteVersionRepository.findById(binding.noteVersionId);
-    if (!version || version.noteId !== note.id) {
+    const version = (yield repos.noteVersionRepository.findById(binding.noteVersionId)) as NoteVersion | null;
+    if (!version || version.noteId !== note!.id) {
       throw taskError(
         'KNOWLEDGE_EXTRACTION_SOURCE_UNAVAILABLE',
         '原始提炼版本不可用或来源已删除、迁移；请重新保存范围。'
@@ -80,10 +107,16 @@ export function* prepareTaskSources(context, ownerId, scopeId, idempotencyKey) {
   };
 }
 
-export function buildTaskRecords(prepared, identity, ownerId, idempotencyKey, now) {
+export function buildTaskRecords(
+  prepared: PreparedTaskSources,
+  identity: DatasetIdentity,
+  ownerId: string,
+  idempotencyKey: string,
+  now: Date
+) {
   const time = now.toISOString();
   const boundary = { ownerId, ...identity, spaceId: prepared.scope.spaceId };
-  const snapshot = {
+  const snapshot: AiScopeSnapshot = {
     contractVersion: 1,
     kind: 'scopeSnapshot',
     scopeSnapshotId: randomUUID(),
@@ -96,7 +129,7 @@ export function buildTaskRecords(prepared, identity, ownerId, idempotencyKey, no
     createdAt: time
   };
   snapshot.scopeHash = scopeHash(snapshot);
-  const manifest = {
+  const manifest: AiContextManifest = {
     contractVersion: 1,
     kind: 'contextManifest',
     manifestId: randomUUID(),
@@ -113,7 +146,7 @@ export function buildTaskRecords(prepared, identity, ownerId, idempotencyKey, no
     payloadHash: prepared.payloadHash,
     createdAt: time
   };
-  const grant = {
+  const grant: AiGrant = {
     contractVersion: 1,
     kind: 'aiGrant',
     grantId: randomUUID(),
@@ -129,7 +162,7 @@ export function buildTaskRecords(prepared, identity, ownerId, idempotencyKey, no
     expiresAt: new Date(now.getTime() + profile.grantMs).toISOString(),
     revokedAt: null
   };
-  const job = {
+  const job: AiJob = {
     contractVersion: 1,
     kind: 'aiJob',
     jobId: randomUUID(),
@@ -154,7 +187,7 @@ export function buildTaskRecords(prepared, identity, ownerId, idempotencyKey, no
     createdAt: time,
     updatedAt: time
   };
-  const content = {
+  const content: Omit<ExtractionTaskDescriptor, 'recordHash' | 'creationHash'> & { creationHash?: string } = {
     schemaVersion: 1,
     ...boundary,
     jobId: job.jobId,
@@ -176,13 +209,20 @@ export function buildTaskRecords(prepared, identity, ownerId, idempotencyKey, no
   };
 }
 
-export function* requireTask(context, store, ownerId, jobId) {
-  const identity = yield context.aiRepository.identity();
-  const job = yield context.aiRepository.get('aiJob', jobId);
+export function* requireTask<Transaction>(
+  context: ExtractionQueryContext<Transaction>,
+  store: Pick<ExtractionTaskLifecycleOptions<Transaction>['store'], 'get'>,
+  ownerId: string,
+  jobId: string
+): ExtractionQuerySteps<ExtractionLoadedTask> {
+  const identity = (yield context.aiRepository.identity()) as DatasetIdentity;
+  const job = (yield context.aiRepository.get('aiJob', jobId)) as AiJob | null;
   const raw = yield store.get({ ownerId, ...identity, jobId }, context.transaction);
   if (!job || !raw) throw taskError('KNOWLEDGE_EXTRACTION_TASK_NOT_FOUND', '提炼任务不存在。', 404);
   const descriptor = validateExtractionTask(raw);
-  const space = yield context.repositories.knowledgeSpaceRepository.findById(job.spaceId);
+  const space = (yield context.repositories.knowledgeSpaceRepository.findById(
+    job.spaceId
+  )) as KnowledgeSpaceRecord | null;
   if (
     job.ownerId !== ownerId ||
     job.datasetId !== identity.datasetId ||
@@ -208,18 +248,24 @@ export function* requireTask(context, store, ownerId, jobId) {
 }
 
 /** 创建、领取与发送前都从宿主库重读固定范围；不使用对话的持续授权或检索结果。 */
-export function* verifyTaskRequest(context, ownerId, task, clock) {
+export function* verifyTaskRequest<Transaction>(
+  context: ExtractionQueryContext<Transaction>,
+  ownerId: string,
+  task: ExtractionLoadedTask,
+  clock: () => Date
+): ExtractionQuerySteps<{ request: PreparedTaskSources['request']; grantExpiresAt: string }> {
   const { job, descriptor } = task;
   const prepared = yield* prepareTaskSources(context, ownerId, descriptor.scopeId, job.idempotencyKey);
-  const grant = yield context.aiRepository.get('aiGrant', job.grantId);
-  const manifest = yield context.aiRepository.get('contextManifest', job.manifestId);
-  const snapshot = manifest && (yield context.aiRepository.get('scopeSnapshot', manifest.scopeSnapshotId));
+  const grant = (yield context.aiRepository.get('aiGrant', job.grantId)) as AiGrant | null;
+  const manifest = (yield context.aiRepository.get('contextManifest', job.manifestId)) as AiContextManifest | null;
+  const snapshot =
+    manifest && ((yield context.aiRepository.get('scopeSnapshot', manifest.scopeSnapshotId)) as AiScopeSnapshot | null);
   if (!grant || !manifest || !snapshot) throw taskError('KNOWLEDGE_EXTRACTION_GRANT_INVALID', '提炼授权依赖缺失。');
   for (const [kind, record] of [
     ['aiGrant', grant],
     ['contextManifest', manifest],
     ['scopeSnapshot', snapshot]
-  ])
+  ] as const)
     validateAiRecord(kind, record);
   const now = clock();
   if (
@@ -259,4 +305,13 @@ export function* verifyTaskRequest(context, ownerId, task, clock) {
   }
   yield* verifyExtractionSourcePrivacy(context.repositories, prepared.refs, job.spaceId);
   return { request: prepared.request, grantExpiresAt: grant.expiresAt };
+}
+
+interface PreparedTaskSources extends ReturnType<typeof prepareKnowledgeExtractionGateway> {
+  scope: ExtractionScope;
+  request: ReturnType<typeof prepareKnowledgeExtractionGateway>['gatewayRequest'];
+  refs: AiScopeSnapshot['allowedSources'];
+  omissions: string[];
+  estimatedInputTokens: number;
+  payloadHash: string;
 }
