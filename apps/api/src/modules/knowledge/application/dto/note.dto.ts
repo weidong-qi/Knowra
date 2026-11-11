@@ -1,5 +1,5 @@
 import { createPrefixedId, normalizeIdList, normalizeOptionalId, requireText, trimIfString } from './_shared.ts';
-import { assertNoInsecureImageUrls } from '../note-content-policy.js';
+import { assertNoInsecureImageUrls } from '../note-content-policy.ts';
 import { validationError } from '../knowledge-errors.js';
 
 export interface NoteDtoInput {

@@ -19,13 +19,13 @@ import { createTagService } from './application/tag-service.ts';
 import { createTagGroupService } from './application/tag-group-service.js';
 import { createKnowledgeSpaceService } from './application/knowledge-space-service.ts';
 import { createSearchService } from './application/search-service.ts';
-import { createContentAnnotationService } from './application/content-annotation-service.js';
+import { createContentAnnotationService } from './application/content-annotation-service.ts';
 import { createInMemoryNoteRepository } from './infrastructure/note-repository.js';
 import { createInMemoryFolderRepository } from './infrastructure/folder-repository.ts';
 import { createInMemoryTagRepository } from './infrastructure/tag-repository.ts';
 import { createInMemoryTagGroupRepository } from './infrastructure/tag-group-repository.ts';
 import { createInMemoryKnowledgeSpaceRepository } from './infrastructure/knowledge-space-repository.ts';
-import { createInMemoryContentAnnotationRepository } from './infrastructure/content-annotation-repository.js';
+import { createInMemoryContentAnnotationRepository } from './infrastructure/content-annotation-repository.ts';
 import {
   createInMemoryAnalysisScopeRepository,
   createInMemoryAnnotationExclusionRepository,

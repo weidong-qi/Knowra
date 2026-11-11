@@ -52,7 +52,7 @@ import {
   validateDatabaseConstraints
 } from './json-transformers.ts';
 import { createPostgresAdvisoryLock } from '../postgres-advisory-lock.ts';
-import { findInsecureImageUrls } from '../../modules/knowledge/application/note-content-policy.js';
+import { findInsecureImageUrls } from '../../modules/knowledge/application/note-content-policy.ts';
 import { createJournal, loadJournal, syncKey } from '../../modules/sync/journal.ts';
 import { preserveDeviceRetirements } from '../../modules/sync/device-retirement.ts';
 import {

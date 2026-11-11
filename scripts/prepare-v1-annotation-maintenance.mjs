@@ -9,8 +9,8 @@ import {
   planHistoryRetention,
   changedHistoryNoteIds
 } from '../apps/api/src/modules/knowledge/domain/history-retention.ts';
-import { createContentAnnotationService } from '../apps/api/src/modules/knowledge/application/content-annotation-service.js';
-import { createInMemoryContentAnnotationRepository } from '../apps/api/src/modules/knowledge/infrastructure/content-annotation-repository.js';
+import { createContentAnnotationService } from '../apps/api/src/modules/knowledge/application/content-annotation-service.ts';
+import { createInMemoryContentAnnotationRepository } from '../apps/api/src/modules/knowledge/infrastructure/content-annotation-repository.ts';
 import { readActiveDirectory } from '../apps/desktop-runtime/src/restore-directory.mjs';
 import { inspectAnnotationRetirement, readRetirementInspection } from './inspect-inline-annotation-retirement.mjs';
 import { isDirectExecution } from './cli-entry.mjs';

@@ -19,7 +19,7 @@ import { createAsyncFolderService } from './application/postgres-async/folder-se
 import { createAsyncTagService } from './application/postgres-async/tag-service.ts';
 import { createAsyncTagGroupService } from './application/postgres-async/tag-group-service.js';
 import { createAsyncKnowledgeSpaceService } from './application/postgres-async/space-service.ts';
-import { createAsyncContentAnnotationService } from './application/postgres-async/content-annotation-service.js';
+import { createAsyncContentAnnotationService } from './application/postgres-async/content-annotation-service.ts';
 import { createAsyncNoteVersionService } from './application/note-version-service.ts';
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.ts';
@@ -463,8 +463,11 @@ export function createPostgresKnowledgeModule({
     (...args) =>
       runTransaction(transaction => buildTransactionAnnotationServices(transaction).annotationService[method](...args));
   const contentAnnotationService = {
-    listAnnotationsByNote: (...args) => directAnnotationService.listAnnotationsByNote(...args),
-    getAnnotation: (...args) => directAnnotationService.getAnnotation(...args),
+    listAnnotationsByNote: /** @param {Parameters<typeof directAnnotationService.listAnnotationsByNote>} args */ (
+      ...args
+    ) => directAnnotationService.listAnnotationsByNote(...args),
+    getAnnotation: /** @param {Parameters<typeof directAnnotationService.getAnnotation>} args */ (...args) =>
+      directAnnotationService.getAnnotation(...args),
     ...Object.fromEntries(
       [
         'createAnnotation',

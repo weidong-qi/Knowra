@@ -9,7 +9,7 @@ import {
 } from '@study-accelerator/content-anchor';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
-import { legacyAnnotationSourceChange } from '../src/modules/knowledge/application/content-annotation-service.js';
+import { legacyAnnotationSourceChange } from '../src/modules/knowledge/application/content-annotation-service.ts';
 import {
   inlineAnnotationId,
   inlineMarksOf,
