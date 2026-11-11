@@ -22,9 +22,9 @@ export const phase2KnowledgeDomainTests = [
     name: '版本历史分页只返回摘要，游标稳定且当前正文按内容匹配',
     async run() {
       const { createInMemoryNoteVersionRepository } =
-        await import('../src/modules/knowledge/infrastructure/note-version-repository.js');
+        await import('../src/modules/knowledge/infrastructure/note-version-repository.ts');
       const { createNoteVersionService, createAsyncNoteVersionService } =
-        await import('../src/modules/knowledge/application/note-version-service.js');
+        await import('../src/modules/knowledge/application/note-version-service.ts');
       const records = ['a', 'b', 'c'].map(id => ({
         id,
         noteId: 'note-page',

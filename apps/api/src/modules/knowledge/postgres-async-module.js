@@ -20,8 +20,8 @@ import { createAsyncTagService } from './application/postgres-async/tag-service.
 import { createAsyncTagGroupService } from './application/postgres-async/tag-group-service.js';
 import { createAsyncKnowledgeSpaceService } from './application/postgres-async/space-service.ts';
 import { createAsyncContentAnnotationService } from './application/postgres-async/content-annotation-service.js';
-import { createAsyncNoteVersionService } from './application/note-version-service.js';
-import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.js';
+import { createAsyncNoteVersionService } from './application/note-version-service.ts';
+import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.js';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
 import { createAsyncSearchService } from './application/postgres-async/search-service.js';

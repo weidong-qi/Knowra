@@ -1,4 +1,4 @@
-import { prepareAnnotationChange } from '../annotation-change-context.js';
+import { prepareAnnotationChange } from '../annotation-change-context.ts';
 import { Note } from '../../domain/note.ts';
 import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.ts';
 import { createNoteSummary } from '../note-summary.js';

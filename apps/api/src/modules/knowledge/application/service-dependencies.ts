@@ -54,12 +54,16 @@ export interface QuestionDependencies extends TransactionDependencies {
   noteVersionRepository?: NoteVersionRepository;
   knowledgeEvidenceRepository?: KnowledgeEvidenceRepository;
 }
+type VersionServiceMethods = 'findByNoteIdAndContentHash' | 'save' | 'findById' | 'list' | 'listIds' | 'listPage';
 export interface NoteVersionDependencies {
-  repository?: NoteVersionRepository;
+  repository?: Pick<NoteVersionRepository, VersionServiceMethods>;
 }
 export interface AsyncNoteVersionDependencies {
-  repository?: ReturnType<
-    typeof import('../infrastructure/postgres/note-version-repository.ts').createPostgresNoteVersionRepository
+  repository?: Pick<
+    ReturnType<
+      typeof import('../infrastructure/postgres/note-version-repository.ts').createPostgresNoteVersionRepository
+    >,
+    VersionServiceMethods
   >;
 }
 export interface ContentAnnotationNoteRepository {

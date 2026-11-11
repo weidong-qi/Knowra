@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildNoteVersionPrunePreview } from '../src/modules/knowledge/application/note-version-prune-preview.js';
+import { buildNoteVersionPrunePreview } from '../src/modules/knowledge/application/note-version-prune-preview.ts';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 import { resolveAnalysisScopeNoteVersion } from '../src/modules/knowledge/domain/analysis-scope-version-alias.ts';
 
