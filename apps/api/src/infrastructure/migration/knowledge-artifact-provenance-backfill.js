@@ -1,5 +1,5 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { validateKnowledgeExtractionCommit } from '../../modules/ai/knowledge-extraction-commit-contract.js';
+import { validateKnowledgeExtractionCommit } from '../../modules/ai/knowledge-extraction-commit-contract.ts';
 import {
   knowledgeArtifactProvenanceId,
   hashKnowledgeArtifactProvenance,

@@ -6,7 +6,7 @@ import {
   KNOWLEDGE_EXTRACTION_PROMPT_VERSION,
   prepareKnowledgeExtractionGateway,
   validateKnowledgeExtractionGatewayResult
-} from '../src/modules/ai/knowledge-extraction-gateway.js';
+} from '../src/modules/ai/knowledge-extraction-gateway.ts';
 import { createKnowledgeExtractionFixture } from './fixtures/knowledge-extraction.fixture.js';
 
 const prepare = (fixture, extra = {}) =>

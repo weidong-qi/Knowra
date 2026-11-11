@@ -1,4 +1,4 @@
-import { taskKey, taskError, validateExtractionTask } from './knowledge-extraction-task-contract.js';
+import { taskKey, taskError, validateExtractionTask } from './knowledge-extraction-task-contract.ts';
 import { createPostgresKnowledgeExtractionCommitStore } from './postgres-knowledge-extraction-commit-store.js';
 import { extractionPageSql } from './knowledge-extraction-task-page.ts';
 

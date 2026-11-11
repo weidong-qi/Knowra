@@ -6,8 +6,8 @@ import { LOCAL_DATA_COLLECTIONS } from '../apps/api/src/infrastructure/local-dat
 import { validateAiState } from '../apps/api/src/modules/ai/record-state.ts';
 import { validateTaskWorkspaceSnapshot } from '../apps/api/src/modules/task-workspaces/storage-validation.ts';
 import { validateCoreOperationState } from '../apps/api/src/infrastructure/core-operation-contract.ts';
-import { validateKnowledgeExtractionCommitState } from '../apps/api/src/modules/ai/knowledge-extraction-commit-contract.js';
-import { validateExtractionTaskState } from '../apps/api/src/modules/ai/knowledge-extraction-task-contract.js';
+import { validateKnowledgeExtractionCommitState } from '../apps/api/src/modules/ai/knowledge-extraction-commit-contract.ts';
+import { validateExtractionTaskState } from '../apps/api/src/modules/ai/knowledge-extraction-task-contract.ts';
 import { HISTORY_NON_PRIVATE_TABLES } from '../apps/desktop-runtime/src/note-version-discard-gate.mjs';
 import {
   validatePrivateHistory,

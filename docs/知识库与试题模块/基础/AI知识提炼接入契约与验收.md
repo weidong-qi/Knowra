@@ -4,7 +4,7 @@
 
 ## 已完成的接入基础
 
-- `apps/api/src/modules/knowledge/application/knowledge-extraction-contract.js`：`prepareKnowledgeExtraction` 从服务端保存的分析快照和不可变笔记版本生成稳定请求；`validateKnowledgeExtractionResult` 严格校验模型结果并返回候选创建计划。均为纯函数，不写数据库、不调用提供商。
+- `apps/api/src/modules/knowledge/application/knowledge-extraction-contract.ts`：`prepareKnowledgeExtraction` 从服务端保存的分析快照和不可变笔记版本生成稳定请求；`validateKnowledgeExtractionResult` 严格校验模型结果并返回候选创建计划。均为纯函数，不写数据库、不调用提供商。
 - `KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA`：供后续提供商适配器使用的 JSON Schema。即使提供商支持结构化输出，仍必须通过服务端校验。
 - `apps/api/test/fixtures/knowledge-extraction.fixture.js`：使用真实范围服务构建的内存验收资料，包括被排除段落、中文和 emoji。
 - API 自定义 runner 已注册契约测试。执行 `npm run test:api`，无需配置任何模型服务。

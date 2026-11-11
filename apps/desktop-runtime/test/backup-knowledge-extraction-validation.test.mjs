@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { hashRecord } from '../../api/src/modules/ai/record-contract.ts';
-import { extractionCreationHash } from '../../api/src/modules/ai/knowledge-extraction-task-contract.js';
+import { extractionCreationHash } from '../../api/src/modules/ai/knowledge-extraction-task-contract.ts';
 import { createKnowledgeExtractionJobFixture } from '../../api/test/fixtures/knowledge-extraction-job.fixture.js';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.js';

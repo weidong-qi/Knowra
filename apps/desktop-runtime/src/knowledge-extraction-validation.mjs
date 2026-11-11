@@ -1,18 +1,40 @@
-import { knowledgeExtractionCommitKey, validateKnowledgeExtractionCommit } from '../../api/src/modules/ai/knowledge-extraction-commit-contract.js';
-import { EXTRACTION_MOCK_PROFILE, taskKey, validateExtractionTask } from '../../api/src/modules/ai/knowledge-extraction-task-contract.js';
-import { KNOWLEDGE_EXTRACTION_PROMPT_VERSION } from '../../api/src/modules/ai/knowledge-extraction-gateway.js';
+import {
+  knowledgeExtractionCommitKey,
+  validateKnowledgeExtractionCommit
+} from '../../api/src/modules/ai/knowledge-extraction-commit-contract.ts';
+import {
+  EXTRACTION_MOCK_PROFILE,
+  taskKey,
+  validateExtractionTask
+} from '../../api/src/modules/ai/knowledge-extraction-task-contract.ts';
+import { KNOWLEDGE_EXTRACTION_PROMPT_VERSION } from '../../api/src/modules/ai/knowledge-extraction-gateway.ts';
 
 const extensions = {
-  commits: { table: 'knowledge_extraction_commits', metadata: 'knowledgeExtractionCommitsVersion', column: 'receipt_json', label: '提炼提交' },
-  tasks: { table: 'ai_knowledge_extraction_tasks', metadata: 'aiKnowledgeExtractionTasksVersion', column: 'descriptor_json', label: '提炼任务' }
+  commits: {
+    table: 'knowledge_extraction_commits',
+    metadata: 'knowledgeExtractionCommitsVersion',
+    column: 'receipt_json',
+    label: '提炼提交'
+  },
+  tasks: {
+    table: 'ai_knowledge_extraction_tasks',
+    metadata: 'aiKnowledgeExtractionTasksVersion',
+    column: 'descriptor_json',
+    label: '提炼任务'
+  }
 };
 const same = (left, right, fields) => fields.every(key => left[key] === right[key]);
 const boundary = ['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'];
-const invalidLinks = () => { throw new Error('备份提炼记录的历史关联不一致。'); };
+const invalidLinks = () => {
+  throw new Error('备份提炼记录的历史关联不一致。');
+};
 
 function parseRecord(value, label) {
-  try { return JSON.parse(value); }
-  catch { throw new Error(`${label}记录 JSON 无效。`); }
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new Error(`${label}记录 JSON 无效。`);
+  }
 }
 
 /** 仅检查这两种独立扩展；不初始化、不迁移、不修改 metadata 或历史记录。 */
@@ -25,8 +47,17 @@ function readRows(db, kind) {
   // 写入使用固定列序；空表也必须保有正确的列约束和唯一身份，不能仅逐行 decode。
   const columns = db.prepare(`PRAGMA table_xinfo(${table})`).all();
   const expected = ['owner_id', 'dataset_id', 'job_id', column];
-  if (columns.length !== expected.length || columns.some((item, index) => item.name !== expected[index]
-    || item.type.toUpperCase() !== 'TEXT' || item.notnull !== 1 || item.pk !== (index < 3 ? index + 1 : 0) || item.hidden !== 0)) {
+  if (
+    columns.length !== expected.length ||
+    columns.some(
+      (item, index) =>
+        item.name !== expected[index] ||
+        item.type.toUpperCase() !== 'TEXT' ||
+        item.notnull !== 1 ||
+        item.pk !== (index < 3 ? index + 1 : 0) ||
+        item.hidden !== 0
+    )
+  ) {
     throw new Error(`${label}存储表结构无效。`);
   }
   return db.prepare(`SELECT * FROM ${table}`).all();
@@ -34,8 +65,11 @@ function readRows(db, kind) {
 
 export function decodeSqliteKnowledgeExtractionCommit(row) {
   const receipt = validateKnowledgeExtractionCommit(parseRecord(row.receipt_json, '提炼提交'));
-  if (knowledgeExtractionCommitKey(receipt) !== knowledgeExtractionCommitKey({ ownerId: row.owner_id,
-    datasetId: row.dataset_id, jobId: row.job_id })) throw new Error('提炼提交索引与内容不一致。');
+  if (
+    knowledgeExtractionCommitKey(receipt) !==
+    knowledgeExtractionCommitKey({ ownerId: row.owner_id, datasetId: row.dataset_id, jobId: row.job_id })
+  )
+    throw new Error('提炼提交索引与内容不一致。');
   return receipt;
 }
 
@@ -62,20 +96,44 @@ export function validateSqliteKnowledgeExtractionBackup(db, jobs) {
   const jobsByKey = new Map(jobs.map(job => [taskKey(job), job]));
   const receiptsByKey = new Map(receipts.map(receipt => [knowledgeExtractionCommitKey(receipt), receipt]));
   for (const task of tasks) {
-    const key = taskKey(task), job = jobsByKey.get(key), receipt = receiptsByKey.get(key);
-    if (!job || !same(job, task, [...boundary, 'jobId', 'inputHash', 'createdAt'])
-      || job.jobKind !== 'knowledgeExtraction' || job.promptVersion !== KNOWLEDGE_EXTRACTION_PROMPT_VERSION
-      || job.resultSchemaVersion !== 'knowledge-extraction-v1' || job.modelId !== EXTRACTION_MOCK_PROFILE.modelId
-      || job.credentialRef !== EXTRACTION_MOCK_PROFILE.credentialRef || job.provider !== 'deepseek' || job.resultJson) invalidLinks();
+    const key = taskKey(task),
+      job = jobsByKey.get(key),
+      receipt = receiptsByKey.get(key);
+    if (
+      !job ||
+      !same(job, task, [...boundary, 'jobId', 'inputHash', 'createdAt']) ||
+      job.jobKind !== 'knowledgeExtraction' ||
+      job.promptVersion !== KNOWLEDGE_EXTRACTION_PROMPT_VERSION ||
+      job.resultSchemaVersion !== 'knowledge-extraction-v1' ||
+      job.modelId !== EXTRACTION_MOCK_PROFILE.modelId ||
+      job.credentialRef !== EXTRACTION_MOCK_PROFILE.credentialRef ||
+      job.provider !== 'deepseek' ||
+      job.resultJson
+    )
+      invalidLinks();
     if (job.status === 'succeeded' && !receipt) invalidLinks();
-    if (receipt && (!same(receipt, task, [...boundary, 'scopeId', 'inputHash', 'executionMode']))) invalidLinks();
+    if (receipt && !same(receipt, task, [...boundary, 'scopeId', 'inputHash', 'executionMode'])) invalidLinks();
   }
   for (const receipt of receipts) {
     // 核心历史不依赖私有任务的保留。02A 没有 descriptor，配置也不必是02B的固定Mock profile。
     const job = jobsByKey.get(knowledgeExtractionCommitKey(receipt));
     if (!job) continue;
-    if (!same(receipt, job, [...boundary, 'requestId', 'inputHash', 'outputHash', 'modelId', 'promptVersion', 'resultSchemaVersion'])
-      || job.jobKind !== 'knowledgeExtraction' || job.status !== 'succeeded' || job.phase !== 'finished'
-      || job.acceptedAttemptId !== receipt.attemptId || job.resultJson) invalidLinks();
+    if (
+      !same(receipt, job, [
+        ...boundary,
+        'requestId',
+        'inputHash',
+        'outputHash',
+        'modelId',
+        'promptVersion',
+        'resultSchemaVersion'
+      ]) ||
+      job.jobKind !== 'knowledgeExtraction' ||
+      job.status !== 'succeeded' ||
+      job.phase !== 'finished' ||
+      job.acceptedAttemptId !== receipt.attemptId ||
+      job.resultJson
+    )
+      invalidLinks();
   }
 }

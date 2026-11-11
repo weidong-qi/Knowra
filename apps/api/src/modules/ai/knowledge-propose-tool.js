@@ -2,7 +2,7 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import {
   KNOWLEDGE_EXTRACTION_CONTRACT_VERSION,
   validateKnowledgeExtractionResult
-} from '../knowledge/application/knowledge-extraction-contract.js';
+} from '../knowledge/application/knowledge-extraction-contract.ts';
 
 const MAX_CANDIDATES = 20;
 const MAX_CITATIONS = 8;

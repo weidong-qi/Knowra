@@ -5,14 +5,14 @@ import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-paylo
 import {
   prepareKnowledgeExtractionGateway,
   KNOWLEDGE_EXTRACTION_PROMPT_VERSION
-} from './knowledge-extraction-gateway.js';
+} from './knowledge-extraction-gateway.ts';
 import {
   EXTRACTION_MOCK_PROFILE as profile,
   extractionCreationHash,
   taskBoundary,
   taskError,
   validateExtractionTask
-} from './knowledge-extraction-task-contract.js';
+} from './knowledge-extraction-task-contract.ts';
 import { isAiReadableNote } from './note-privacy.js';
 
 export function* verifyExtractionSourcePrivacy(repos, sourceRefs, spaceId) {

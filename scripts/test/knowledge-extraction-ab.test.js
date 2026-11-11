@@ -3,7 +3,14 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { buildUserPayload, checkResult, headingsOf, locateQuote, summarize, titleFlags } from '../experiments/knowledge-extraction-ab/lib.mjs';
+import {
+  buildUserPayload,
+  checkResult,
+  headingsOf,
+  locateQuote,
+  summarize,
+  titleFlags
+} from '../experiments/knowledge-extraction-ab/lib.mjs';
 import { buildPromptV2 } from '../experiments/knowledge-extraction-ab/prompt-v2.mjs';
 import { main, parseArgs, resolveApiKey } from '../experiments/knowledge-extraction-ab/run.mjs';
 
@@ -23,12 +30,24 @@ test('标题标记能识别问题句、空泛后缀、照抄小标题和复用',
 });
 
 test('引文按线上规则匹配：正确偏移直接采用，错误偏移可唯一 quote 重定位', () => {
-  const content = JSON.stringify({ contractVersion: 1, requestId: 'r', candidates: [
-    { title: '矩阵-向量乘法', canonicalStatement: '矩阵乘向量得到向量。', knowledgeType: 'fact',
-      citations: [{ sourceId: 's1', start, end: start + quote.length, quote }] },
-    { title: '矩阵-向量乘法的结果', canonicalStatement: '矩阵乘向量得到向量。', knowledgeType: 'fact',
-      citations: [{ sourceId: 's1', start: 0, end: quote.length, quote }] }
-  ] });
+  const content = JSON.stringify({
+    contractVersion: 1,
+    requestId: 'r',
+    candidates: [
+      {
+        title: '矩阵-向量乘法',
+        canonicalStatement: '矩阵乘向量得到向量。',
+        knowledgeType: 'fact',
+        citations: [{ sourceId: 's1', start, end: start + quote.length, quote }]
+      },
+      {
+        title: '矩阵-向量乘法的结果',
+        canonicalStatement: '矩阵乘向量得到向量。',
+        knowledgeType: 'fact',
+        citations: [{ sourceId: 's1', start: 0, end: quote.length, quote }]
+      }
+    ]
+  });
   const check = checkResult({ content, requestId: 'r', sources });
   assert.equal(check.ok, true);
   assert.equal(check.candidates[0].citationsExact, true);
@@ -40,10 +59,18 @@ test('引文按线上规则匹配：正确偏移直接采用，错误偏移可�
   assert.equal(checkResult({ content: '不是 JSON', requestId: 'r', sources }).batchError, 'JSON 解析失败');
 
   // 有效标题的统计不应被单个无效引文抹掉；整批却必须拒绝。
-  const bad = JSON.stringify({ contractVersion: 1, requestId: 'r', candidates: [
-    { title: '张量的定义', canonicalStatement: '一条原文没有的内容', knowledgeType: 'fact',
-      citations: [{ sourceId: 's1', start: 0, end: 4, quote: '不存在的原文' }] }
-  ] });
+  const bad = JSON.stringify({
+    contractVersion: 1,
+    requestId: 'r',
+    candidates: [
+      {
+        title: '张量的定义',
+        canonicalStatement: '一条原文没有的内容',
+        knowledgeType: 'fact',
+        citations: [{ sourceId: 's1', start: 0, end: 4, quote: '不存在的原文' }]
+      }
+    ]
+  });
   const invalid = checkResult({ content: bad, requestId: 'r', sources });
   assert.equal(invalid.ok, false);
   assert.equal(invalid.candidates[0].citationsLocated, false);
@@ -59,18 +86,32 @@ test('引文唯一性、安全范围和 UTF-16 边界：错误时不接受', () 
   assert.equal(locateQuote('A😀B', { sourceId: 'x', start: 0, end: 1, quote: '\ud83d' }).status, 'invalid');
   assert.equal(locateQuote('A😀B', { sourceId: 'x', start: 0, end: 1, quote: '😀' }).status, 'relocated');
   assert.equal(locateQuote(markdown, { sourceId: 'x', start: 0, end: 4, quote: '' }).status, 'invalid');
-  const repeated = checkResult({ content: JSON.stringify({ contractVersion: 1, requestId: 'r', candidates: [
-    { title: '重复引用', canonicalStatement: '原文', knowledgeType: 'fact', citations: [
-      { sourceId: 's1', start: 0, end: quote.length, quote },
-      { sourceId: 's1', start, end: start + quote.length, quote }
-    ] }
-  ] }), requestId: 'r', sources });
+  const repeated = checkResult({
+    content: JSON.stringify({
+      contractVersion: 1,
+      requestId: 'r',
+      candidates: [
+        {
+          title: '重复引用',
+          canonicalStatement: '原文',
+          knowledgeType: 'fact',
+          citations: [
+            { sourceId: 's1', start: 0, end: quote.length, quote },
+            { sourceId: 's1', start, end: start + quote.length, quote }
+          ]
+        }
+      ]
+    }),
+    requestId: 'r',
+    sources
+  });
   assert.equal(repeated.ok, false);
   assert.match(repeated.candidates[0].problems.join(' '), /重复引用/);
 });
 
 test('实验定位算法和线上 anchorQuote 的行为一致（合成数据）', async () => {
-  const { anchorQuote } = await import('../../apps/api/src/modules/knowledge/application/knowledge-extraction-contract.js');
+  const { anchorQuote } =
+    await import('../../apps/api/src/modules/knowledge/application/knowledge-extraction-contract.ts');
   const cases = [
     ['A😀B', { sourceId: 'x', start: 1, end: 3, quote: '😀' }],
     ['A😀B', { sourceId: 'x', start: 0, end: 2, quote: '😀' }],
@@ -87,9 +128,14 @@ test('实验定位算法和线上 anchorQuote 的行为一致（合成数据）'
 });
 
 test('只有 v2 请求携带已有知识点标题，v1 外发结构与线上一致', () => {
-  assert.deepEqual(Object.keys(buildUserPayload({ variant: 'v1', requestId: 'r', sources, existingTitles: ['x'] })).sort(),
-    ['contractVersion', 'requestId', 'sources']);
-  assert.deepEqual(buildUserPayload({ variant: 'v2', requestId: 'r', sources, existingTitles: ['x'] }).existingKnowledgeTitles, ['x']);
+  assert.deepEqual(
+    Object.keys(buildUserPayload({ variant: 'v1', requestId: 'r', sources, existingTitles: ['x'] })).sort(),
+    ['contractVersion', 'requestId', 'sources']
+  );
+  assert.deepEqual(
+    buildUserPayload({ variant: 'v2', requestId: 'r', sources, existingTitles: ['x'] }).existingKnowledgeTitles,
+    ['x']
+  );
   assert.match(buildPromptV2({ type: 'object' }), /不能是问题句/);
 });
 
@@ -121,14 +167,30 @@ test('端到端：v2 逐篇累积已有标题，报告与汇总生成且不泄�
     calls.push(user);
     const title = user.existingKnowledgeTitles === undefined ? '矩阵和向量如何相乘？' : '矩阵-向量乘法';
     const s = user.sources[0];
-    const content = JSON.stringify({ contractVersion: 1, requestId: user.requestId, candidates: [
-      { title, canonicalStatement: '矩阵乘向量得到向量。', knowledgeType: 'fact',
-        citations: [{ sourceId: s.sourceId, start, end: start + quote.length, quote }] }] });
-    return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 5 } }));
+    const content = JSON.stringify({
+      contractVersion: 1,
+      requestId: user.requestId,
+      candidates: [
+        {
+          title,
+          canonicalStatement: '矩阵乘向量得到向量。',
+          knowledgeType: 'fact',
+          citations: [{ sourceId: s.sourceId, start, end: start + quote.length, quote }]
+        }
+      ]
+    });
+    return new Response(
+      JSON.stringify({
+        choices: [{ finish_reason: 'stop', message: { content } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5 }
+      })
+    );
   };
   const out = path.join(dir, 'out');
   const { summaries } = await main(['--notes', notesDir, '--out', out], {
-    env: { DEEPSEEK_API_KEY: 'secret-key-value' }, fetchImpl, log: () => {},
+    env: { DEEPSEEK_API_KEY: 'secret-key-value' },
+    fetchImpl,
+    log: () => {},
     loadV1: async () => ({ v1Prompt: 'v1 prompt', schema: { type: 'object' } })
   });
   assert.equal(summaries.v1.questionTitles, 2);
@@ -155,16 +217,29 @@ test('端到端：模型偏移全部错但 quote 唯一时，第二篇仍收到�
     const text = request.sources[0].markdown;
     const quote = text.includes('线性变换') ? '矩阵乘法用于计算线性变换。' : '矩阵乘法也用于计算神经网络的线性层。';
     const body = {
-      contractVersion: 1, requestId: request.requestId,
-      candidates: [{ title: '矩阵乘法', canonicalStatement: quote, knowledgeType: 'fact',
-        citations: [{ sourceId: request.sources[0].sourceId, start: 0, end: quote.length, quote }] }]
+      contractVersion: 1,
+      requestId: request.requestId,
+      candidates: [
+        {
+          title: '矩阵乘法',
+          canonicalStatement: quote,
+          knowledgeType: 'fact',
+          citations: [{ sourceId: request.sources[0].sourceId, start: 0, end: quote.length, quote }]
+        }
+      ]
     };
-    return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(body) } }],
-      usage: { prompt_tokens: 15, completion_tokens: 10 } }));
+    return new Response(
+      JSON.stringify({
+        choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(body) } }],
+        usage: { prompt_tokens: 15, completion_tokens: 10 }
+      })
+    );
   };
   const out = path.join(dir, 'out');
   const { summaries } = await main(['--notes', notesDir, '--out', out], {
-    env: { DEEPSEEK_API_KEY: 'synthetic-key' }, fetchImpl, log: () => {},
+    env: { DEEPSEEK_API_KEY: 'synthetic-key' },
+    fetchImpl,
+    log: () => {},
     loadV1: async () => ({ v1Prompt: 'v1', schema: { type: 'object' } })
   });
   assert.equal(summaries.v2.relocatedCitationCandidates, 2);
@@ -188,14 +263,26 @@ test('端到端：引文真正无效导致整批失败时，不把标题加入�
     const request = JSON.parse(JSON.parse(init.body).messages[1].content);
     seen.push(request);
     const quoted = request.sources[0].markdown.includes('局部') ? '来源并未包含这句话' : '使用梯度决定更新方向。';
-    const body = { contractVersion: 1, requestId: request.requestId, candidates: [
-      { title: '梯度', canonicalStatement: quoted, knowledgeType: 'fact',
-        citations: [{ sourceId: request.sources[0].sourceId, start: 0, end: quoted.length, quote: quoted }] }
-    ] };
-    return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(body) } }] }));
+    const body = {
+      contractVersion: 1,
+      requestId: request.requestId,
+      candidates: [
+        {
+          title: '梯度',
+          canonicalStatement: quoted,
+          knowledgeType: 'fact',
+          citations: [{ sourceId: request.sources[0].sourceId, start: 0, end: quoted.length, quote: quoted }]
+        }
+      ]
+    };
+    return new Response(
+      JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(body) } }] })
+    );
   };
   const { summaries } = await main(['--notes', notesDir, '--out', path.join(dir, 'out')], {
-    env: { DEEPSEEK_API_KEY: 'synthetic-key' }, fetchImpl, log: () => {},
+    env: { DEEPSEEK_API_KEY: 'synthetic-key' },
+    fetchImpl,
+    log: () => {},
     loadV1: async () => ({ v1Prompt: 'v1', schema: { type: 'object' } })
   });
   assert.deepEqual(seen[3].existingKnowledgeTitles, []);
@@ -205,7 +292,13 @@ test('端到端：引文真正无效导致整批失败时，不把标题加入�
 
 test('单个长笔记按“章.节”切分，同一节的小节留在一篇里', async () => {
   const { splitBySection } = await import('../experiments/knowledge-extraction-ab/lib.mjs');
-  const parts = splitBySection('前言\n# 1.0 引言\nA\n# 1.1 日常\nB\n## 2.1 数据\nC\n### 2.1.2 运算\nD\n### 2.3.2 向量\nE', 'n');
-  assert.deepEqual(parts.map(part => part.name), ['n-01-0.md', 'n-02-1.0.md', 'n-03-1.1.md', 'n-04-2.1.md', 'n-05-2.3.md']);
+  const parts = splitBySection(
+    '前言\n# 1.0 引言\nA\n# 1.1 日常\nB\n## 2.1 数据\nC\n### 2.1.2 运算\nD\n### 2.3.2 向量\nE',
+    'n'
+  );
+  assert.deepEqual(
+    parts.map(part => part.name),
+    ['n-01-0.md', 'n-02-1.0.md', 'n-03-1.1.md', 'n-04-2.1.md', 'n-05-2.3.md']
+  );
   assert.match(parts[3].markdown, /2\.1\.2 运算\nD/);
 });

@@ -4,11 +4,12 @@ import {
   KNOWLEDGE_EXTRACTION_LIMITS as LIMITS,
   prepareKnowledgeExtraction,
   validateKnowledgeExtractionResult
-} from '../src/modules/knowledge/application/knowledge-extraction-contract.js';
+} from '../src/modules/knowledge/application/knowledge-extraction-contract.ts';
 import { createKnowledgeExtractionFixture } from './fixtures/knowledge-extraction.fixture.js';
 
-const code = (expected) => (error) => error.code === expected;
-const validate = (fixture, result = fixture.result) => validateKnowledgeExtractionResult({ request: fixture.request, result });
+const code = expected => error => error.code === expected;
+const validate = (fixture, result = fixture.result) =>
+  validateKnowledgeExtractionResult({ request: fixture.request, result });
 
 export const knowledgeExtractionContractTests = [
   {
@@ -59,8 +60,11 @@ export const knowledgeExtractionContractTests = [
     run() {
       const fixture = createKnowledgeExtractionFixture();
       for (const patch of [
-        { sourceId: 'unknown-source' }, { quote: fixture.excluded }, { quote: '生成的非原文陈述' },
-        { end: 1.5 }, { start: '0' }
+        { sourceId: 'unknown-source' },
+        { quote: fixture.excluded },
+        { quote: '生成的非原文陈述' },
+        { end: 1.5 },
+        { start: '0' }
       ]) {
         const result = structuredClone(fixture.result);
         Object.assign(result.candidates[0].citations[0], patch);
@@ -76,9 +80,14 @@ export const knowledgeExtractionContractTests = [
     run() {
       const fixture = createKnowledgeExtractionFixture();
       const citation = fixture.result.candidates[0].citations[0];
-      const source = fixture.request.sources.find((entry) => entry.sourceId === citation.sourceId);
+      const source = fixture.request.sources.find(entry => entry.sourceId === citation.sourceId);
       const expected = source.start + source.markdown.indexOf(citation.quote);
-      for (const patch of [{ start: -1 }, { end: 1_000_000 }, { start: 0 }, { start: citation.start + 3, end: citation.end + 3 }]) {
+      for (const patch of [
+        { start: -1 },
+        { end: 1_000_000 },
+        { start: 0 },
+        { start: citation.start + 3, end: citation.end + 3 }
+      ]) {
         const result = structuredClone(fixture.result);
         Object.assign(result.candidates[0].citations[0], patch);
         const provenance = validate(fixture, result).candidates[0].provenance[0];
@@ -89,8 +98,14 @@ export const knowledgeExtractionContractTests = [
       const markdown = '梯度是向量。梯度是向量。另一句。';
       assert.deepEqual(anchorQuote(markdown, { start: 6, end: 12, quote: '梯度是向量。' }), { start: 6, end: 12 });
       assert.deepEqual(anchorQuote(markdown, { start: 3, end: 9, quote: '另一句。' }), { start: 12, end: 16 });
-      assert.throws(() => anchorQuote(markdown, { start: 3, end: 9, quote: '梯度是向量。' }), code('KNOWLEDGE_EXTRACTION_CITATION_INVALID'));
-      assert.throws(() => anchorQuote(markdown, { start: 0, end: 3, quote: '不存在' }), code('KNOWLEDGE_EXTRACTION_CITATION_INVALID'));
+      assert.throws(
+        () => anchorQuote(markdown, { start: 3, end: 9, quote: '梯度是向量。' }),
+        code('KNOWLEDGE_EXTRACTION_CITATION_INVALID')
+      );
+      assert.throws(
+        () => anchorQuote(markdown, { start: 0, end: 3, quote: '不存在' }),
+        code('KNOWLEDGE_EXTRACTION_CITATION_INVALID')
+      );
     }
   },
   {
@@ -113,18 +128,28 @@ export const knowledgeExtractionContractTests = [
       const other = prepareKnowledgeExtraction({ ...fixture, idempotencyKey: 'another-request' });
       assert.notEqual(other.requestId, fixture.request.requestId);
       for (const patch of [{ requestId: other.requestId }, { contractVersion: 2 }]) {
-        assert.throws(() => validate(fixture, { ...fixture.result, ...patch }), code('KNOWLEDGE_EXTRACTION_REQUEST_MISMATCH'));
+        assert.throws(
+          () => validate(fixture, { ...fixture.result, ...patch }),
+          code('KNOWLEDGE_EXTRACTION_REQUEST_MISMATCH')
+        );
       }
-      assert.throws(() => prepareKnowledgeExtraction({ ...fixture, scope: fixture.preview, idempotencyKey: 'preview' }), code('KNOWLEDGE_EXTRACTION_SCOPE_INVALID'));
+      assert.throws(
+        () => prepareKnowledgeExtraction({ ...fixture, scope: fixture.preview, idempotencyKey: 'preview' }),
+        code('KNOWLEDGE_EXTRACTION_SCOPE_INVALID')
+      );
     }
   },
   {
     name: 'AI 请求拒绝版本不存在、内容哈希不符和超出版本的选区',
     run() {
       const fixture = createKnowledgeExtractionFixture();
-      const prepare = (patch) => prepareKnowledgeExtraction({ ...fixture, idempotencyKey: 'extraction-request', ...patch });
+      const prepare = patch =>
+        prepareKnowledgeExtraction({ ...fixture, idempotencyKey: 'extraction-request', ...patch });
       assert.throws(() => prepare({ noteVersions: [] }), code('KNOWLEDGE_EXTRACTION_SOURCE_MISMATCH'));
-      assert.throws(() => prepare({ noteVersions: [{ ...fixture.noteVersions[0], content: '篡改' }] }), code('KNOWLEDGE_EXTRACTION_SOURCE_MISMATCH'));
+      assert.throws(
+        () => prepare({ noteVersions: [{ ...fixture.noteVersions[0], content: '篡改' }] }),
+        code('KNOWLEDGE_EXTRACTION_SOURCE_MISMATCH')
+      );
       for (const patch of [{ noteId: 'other-note' }, { markdown: '伪造片段' }, { end: 1_000_000 }]) {
         const scope = structuredClone(fixture.scope);
         Object.assign(scope.segments[0], patch);
@@ -142,7 +167,10 @@ export const knowledgeExtractionContractTests = [
       assert.equal(saved.item.reviewStatus, 'candidate');
       assert.equal(saved.evidence[0].status, 'stale');
       assert.equal(saved.evidence[0].noteVersionId, fixture.noteVersions[0].id);
-      assert.throws(() => fixture.knowledge.knowledgeItemService.confirmItem(saved.item.id), code('KNOWLEDGE_ITEM_SOURCE_REQUIRED'));
+      assert.throws(
+        () => fixture.knowledge.knowledgeItemService.confirmItem(saved.item.id),
+        code('KNOWLEDGE_ITEM_SOURCE_REQUIRED')
+      );
     }
   },
   {
@@ -150,13 +178,22 @@ export const knowledgeExtractionContractTests = [
     run() {
       const fixture = createKnowledgeExtractionFixture();
       assert.deepEqual(validate(fixture, { ...fixture.result, candidates: [] }).candidates, []);
-      for (const result of ['```json\n{}\n```', '{', null, {}, { ...fixture.result, candidates: Array(LIMITS.candidates + 1).fill(fixture.result.candidates[0]) }]) {
+      for (const result of [
+        '```json\n{}\n```',
+        '{',
+        null,
+        {},
+        { ...fixture.result, candidates: Array(LIMITS.candidates + 1).fill(fixture.result.candidates[0]) }
+      ]) {
         assert.throws(() => validate(fixture, result), code('KNOWLEDGE_EXTRACTION_RESULT_INVALID'));
       }
       const oversized = structuredClone(fixture.result);
       oversized.candidates[0].title = '标题'.repeat(LIMITS.titleCharacters);
       assert.throws(() => validate(fixture, oversized), code('KNOWLEDGE_EXTRACTION_RESULT_INVALID'));
-      assert.throws(() => validate(fixture, ' '.repeat(LIMITS.resultBytes + 1)), code('KNOWLEDGE_EXTRACTION_RESULT_TOO_LARGE'));
+      assert.throws(
+        () => validate(fixture, ' '.repeat(LIMITS.resultBytes + 1)),
+        code('KNOWLEDGE_EXTRACTION_RESULT_TOO_LARGE')
+      );
     }
   }
 ];
