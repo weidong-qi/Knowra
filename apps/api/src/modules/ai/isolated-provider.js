@@ -76,6 +76,9 @@ export function createIsolatedDeepSeekAdapter({
     provider: 'deepseek',
     deferredSendValidation: true,
     capabilities,
+    /** @param {import('./infrastructure/providers/deepseek-adapter.ts').ProviderRequest} request
+     * @param {Parameters<import('./boundary-types.ts').GatewayOptions['adapter']['complete']>[1]} [control]
+     */
     async complete(request, { verifyBeforeSend, onSend, expiresAt } = {}) {
       // 信号不可通过 IPC 克隆；其余字段必须有上限，防止子进程内存积压。
       const { signal, ...payload } = request;

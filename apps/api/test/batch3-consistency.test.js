@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createAsyncNoteService } from '../src/modules/knowledge/application/postgres-async/note-service.js';
 import { createAsyncSearchService } from '../src/modules/knowledge/application/postgres-async/search-service.js';
-import { createAsyncKnowledgeSpaceService } from '../src/modules/knowledge/application/postgres-async/space-service.js';
+import { createAsyncKnowledgeSpaceService } from '../src/modules/knowledge/application/postgres-async/space-service.ts';
 import { createPostgresTagGroupRepository } from '../src/modules/knowledge/infrastructure/postgres/tag-group-repository.ts';
 import { buildNoteWhere } from '../src/modules/knowledge/infrastructure/postgres/repository-utils.ts';
 

@@ -4,7 +4,7 @@ export const tagRepositoryTests = [
   {
     name: 'TagRepository saves and finds tag by id',
     async run() {
-      const { createInMemoryTagRepository } = await import('../src/modules/knowledge/infrastructure/tag-repository.js');
+      const { createInMemoryTagRepository } = await import('../src/modules/knowledge/infrastructure/tag-repository.ts');
       const repository = createInMemoryTagRepository();
 
       repository.save({
@@ -23,7 +23,7 @@ export const tagRepositoryTests = [
   {
     name: 'TagRepository list filters by spaceId',
     async run() {
-      const { createInMemoryTagRepository } = await import('../src/modules/knowledge/infrastructure/tag-repository.js');
+      const { createInMemoryTagRepository } = await import('../src/modules/knowledge/infrastructure/tag-repository.ts');
       const repository = createInMemoryTagRepository();
 
       repository.save({

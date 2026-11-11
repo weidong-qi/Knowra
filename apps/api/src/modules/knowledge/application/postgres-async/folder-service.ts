@@ -1,27 +1,46 @@
 import { Folder } from '../../domain/folder.ts';
 import { buildCreateFolderDto, buildUpdateFolderDto } from '../dto/folder.dto.ts';
-import { conflictError, notFoundError } from '../knowledge-errors.js';
+import { conflictError, notFoundError } from '../knowledge-errors.ts';
 
-/** @param {import('./service-dependencies.ts').FolderDependencies} dependencies */
+import type { Prisma } from '@prisma/client';
+import type { FolderDeletionPackage } from '../../domain/folder.ts';
+import type { FolderDtoInput } from '../dto/folder.dto.ts';
+import type { FolderRecord, FolderListOptions } from '../../infrastructure/folder-repository.ts';
+import type { FolderSiblingNameInput, FolderTreeNode } from '../folder-service.ts';
+
+type MaybePromise<Value> = Value | PromiseLike<Value>;
+// PostgreSQL 原始 JSON 由恢复流程按原有 folderIds 形状读取，不在类型迁移中补做校验。
+export type AsyncFolderRecord = Omit<FolderRecord, 'deletionPackage'> & {
+  deletionPackage?: FolderDeletionPackage | Prisma.JsonValue;
+};
+export interface AsyncFolderServiceDependencies {
+  repository?: {
+    findById: (id: string | null | undefined) => MaybePromise<AsyncFolderRecord | null>;
+    list: (options?: FolderListOptions) => MaybePromise<AsyncFolderRecord[]>;
+    save: (folder: AsyncFolderRecord) => MaybePromise<AsyncFolderRecord>;
+  };
+  validateSiblingNameConflict?: ((input: FolderSiblingNameInput) => void | PromiseLike<void>) | null;
+  validateSpaceReference?: ((spaceId: string) => void | PromiseLike<void>) | null;
+}
 export function createAsyncFolderService({
   repository,
   validateSiblingNameConflict = null,
   validateSpaceReference = null
-} = {}) {
+}: AsyncFolderServiceDependencies = {}) {
   if (!repository) throw new TypeError('Async folder service requires a repository');
 
-  async function requireFolder(folderId) {
-    const folder = await repository.findById(folderId);
+  async function requireFolder(folderId: string | null | undefined) {
+    const folder = await repository!.findById(folderId);
     if (!folder) throw notFoundError('FOLDER_NOT_FOUND', 'Folder not found');
     return folder;
   }
-  async function requireActiveFolder(folderId) {
+  async function requireActiveFolder(folderId: string | null | undefined) {
     const folder = await requireFolder(folderId);
     if (folder.deletedAt) throw conflictError('FOLDER_IN_TRASH', '文件夹位于回收站');
     return folder;
   }
 
-  function normalizeSegment(name) {
+  function normalizeSegment(name: string) {
     return (
       String(name ?? '')
         .trim()
@@ -31,13 +50,17 @@ export function createAsyncFolderService({
     );
   }
 
-  function buildPathCache({ name, parentFolder }) {
+  function buildPathCache({ name, parentFolder }: { name: string; parentFolder: AsyncFolderRecord | null }) {
     const segment = normalizeSegment(name);
     if (!parentFolder) return `/${segment}`;
     return `${parentFolder.pathCache}/${segment}`.replace(/\/+/g, '/');
   }
 
-  async function validateParent(spaceId, parentId, currentFolderId = null) {
+  async function validateParent(
+    spaceId: string,
+    parentId: string | null | undefined,
+    currentFolderId: string | null = null
+  ) {
     if (!parentId) return null;
     if (currentFolderId && parentId === currentFolderId) {
       throw conflictError('FOLDER_PARENT_CONFLICT', 'Folder cannot be its own parent');
@@ -47,19 +70,19 @@ export function createAsyncFolderService({
       throw conflictError('FOLDER_SPACE_MISMATCH', 'Parent folder must belong to the same space');
     }
     if (currentFolderId) {
-      let cursor = parentFolder;
+      let cursor: AsyncFolderRecord | null = parentFolder;
       while (cursor) {
         if (cursor.id === currentFolderId) {
           throw conflictError('FOLDER_DESCENDANT_CONFLICT', 'Folder cannot move under its descendant');
         }
-        cursor = cursor.parentId ? await repository.findById(cursor.parentId) : null;
+        cursor = cursor.parentId ? await repository!.findById(cursor.parentId) : null;
       }
     }
     return parentFolder;
   }
 
-  async function reindexDescendants(parentFolder) {
-    const descendants = (await repository.list({ spaceId: parentFolder.spaceId })).filter(
+  async function reindexDescendants(parentFolder: AsyncFolderRecord): Promise<void> {
+    const descendants = (await repository!.list({ spaceId: parentFolder.spaceId })).filter(
       folder => folder.parentId === parentFolder.id
     );
     for (const folder of descendants) {
@@ -67,13 +90,13 @@ export function createAsyncFolderService({
         ...folder,
         pathCache: buildPathCache({ name: folder.name, parentFolder })
       });
-      const saved = await repository.save(updatedFolder);
+      const saved = await repository!.save(updatedFolder);
       await reindexDescendants(saved);
     }
   }
 
-  async function collectSubtreeIds(folderId) {
-    const allFolders = await repository.list({ includeDeleted: true });
+  async function collectSubtreeIds(folderId: string | null | undefined) {
+    const allFolders = await repository!.list({ includeDeleted: true });
     const ids = new Set([folderId]);
     const queue = [folderId];
     while (queue.length) {
@@ -91,7 +114,7 @@ export function createAsyncFolderService({
   }
 
   return {
-    async createFolder(input) {
+    async createFolder(input?: FolderDtoInput) {
       const dto = buildCreateFolderDto(input);
       if (await repository.findById(dto.id)) {
         throw conflictError('FOLDER_ID_CONFLICT', 'A folder with the same id already exists');
@@ -111,7 +134,7 @@ export function createAsyncFolderService({
         })
       );
     },
-    async updateFolder(folderId, updates) {
+    async updateFolder(folderId: string | null | undefined, updates?: FolderDtoInput) {
       const currentFolder = await requireActiveFolder(folderId);
       const dto = buildUpdateFolderDto(updates);
       const nextParentId = dto.parentId !== undefined ? dto.parentId : currentFolder.parentId;
@@ -137,7 +160,7 @@ export function createAsyncFolderService({
       await reindexDescendants(updatedFolder);
       return updatedFolder;
     },
-    async trashFolder(folderId, deletionPackage) {
+    async trashFolder(folderId: string, deletionPackage: FolderDeletionPackage | null) {
       await requireActiveFolder(folderId);
       const deletedIds = await collectSubtreeIds(folderId);
       const deletedAt = new Date().toISOString();
@@ -155,13 +178,11 @@ export function createAsyncFolderService({
         );
       return result;
     },
-    async restoreDeletedFolder(folderId) {
+    async restoreDeletedFolder(folderId: string | null | undefined) {
       const root = await requireFolder(folderId);
       if (!root.deletedAt || !root.deletionPackage) throw conflictError('FOLDER_NOT_IN_TRASH', '文件夹不在回收站中');
       const folders = await Promise.all(
-        /** @type {{folderIds: import('@prisma/client').Prisma.JsonArray}} */ (root.deletionPackage).folderIds.map(id =>
-          requireFolder(id)
-        )
+        (root.deletionPackage as { folderIds: string[] }).folderIds.map(id => requireFolder(id))
       );
       for (const folder of folders)
         await validateSiblingNameConflict?.({
@@ -179,19 +200,19 @@ export function createAsyncFolderService({
         );
       return result;
     },
-    listFolders(options = {}) {
+    listFolders(options: FolderListOptions = {}) {
       return repository.list(options);
     },
-    async listFolderTree(options = {}) {
+    async listFolderTree(options: FolderListOptions = {}) {
       const folders = await repository.list(options);
-      const byParent = new Map();
+      const byParent = new Map<string, AsyncFolderRecord[]>();
       folders.forEach(folder => {
         const key = folder.parentId ?? '__root__';
         const list = byParent.get(key) ?? [];
         list.push(folder);
         byParent.set(key, list);
       });
-      function buildNodes(parentId = null) {
+      function buildNodes(parentId: string | null = null): FolderTreeNode<AsyncFolderRecord>[] {
         const key = parentId ?? '__root__';
         return (byParent.get(key) ?? [])
           .sort((left, right) => left.name.localeCompare(right.name))
@@ -199,7 +220,7 @@ export function createAsyncFolderService({
       }
       return buildNodes();
     },
-    async getFolderSubtreeIds(folderId) {
+    async getFolderSubtreeIds(folderId: string | null | undefined) {
       await requireFolder(folderId);
       return collectSubtreeIds(folderId);
     }

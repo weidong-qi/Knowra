@@ -4,7 +4,8 @@ export const knowledgeSpaceRepositoryTests = [
   {
     name: 'KnowledgeSpaceRepository saves and finds space by id',
     async run() {
-      const { createInMemoryKnowledgeSpaceRepository } = await import('../src/modules/knowledge/infrastructure/knowledge-space-repository.js');
+      const { createInMemoryKnowledgeSpaceRepository } =
+        await import('../src/modules/knowledge/infrastructure/knowledge-space-repository.ts');
       const repository = createInMemoryKnowledgeSpaceRepository();
 
       repository.save({
@@ -23,7 +24,8 @@ export const knowledgeSpaceRepositoryTests = [
   {
     name: 'KnowledgeSpaceRepository list filters by userId',
     async run() {
-      const { createInMemoryKnowledgeSpaceRepository } = await import('../src/modules/knowledge/infrastructure/knowledge-space-repository.js');
+      const { createInMemoryKnowledgeSpaceRepository } =
+        await import('../src/modules/knowledge/infrastructure/knowledge-space-repository.ts');
       const repository = createInMemoryKnowledgeSpaceRepository();
 
       repository.save({
