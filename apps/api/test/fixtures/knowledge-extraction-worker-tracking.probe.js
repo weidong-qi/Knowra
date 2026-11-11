@@ -4,27 +4,37 @@ import os from 'node:os';
 import path from 'node:path';
 import { createAppContext } from '../../src/app.factory.js';
 import { createFileDataStore } from '../../src/infrastructure/file-data-store.js';
-import { createExtractionTaskSources, extractionTaskGateway, quietTaskLogger } from './knowledge-extraction-task.fixture.js';
+import {
+  createExtractionTaskSources,
+  extractionTaskGateway,
+  quietTaskLogger
+} from './knowledge-extraction-task.fixture.js';
 
 // 父测试有硬超时：若 idle 回归为 await([]) 忙循环，也不会挂住整个 API runner。
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-extraction-tracking-'));
 let service;
 try {
-  const releases = [], entered = [];
+  const releases = [],
+    entered = [];
   const mock = extractionTaskGateway(async (_request, response, count) => {
     entered.push(count);
     if (count !== 3) await new Promise(resolve => releases.push(resolve));
     return response;
   });
-  const app = createAppContext({ dataStore: createFileDataStore(path.join(root, 'data.json')), ownerId: 'demo',
-    storageRootDir: root, knowledgeExtractionMock: { gateway: mock.gateway, schedule() {}, logger: quietTaskLogger } });
+  const app = createAppContext({
+    dataStore: createFileDataStore(path.join(root, 'data.json')),
+    ownerId: 'demo',
+    storageRootDir: root,
+    knowledgeExtractionMock: { gateway: mock.gateway, schedule() {}, logger: quietTaskLogger }
+  });
   service = app.knowledgeExtractionTasks;
   const jobs = [];
   for (let index = 0; index < 3; index++) {
     const { input } = await createExtractionTaskSources(app, `-tracking-${index}`);
     jobs.push(await service.start(input));
   }
-  const first = service.run(jobs[0].jobId), second = service.run(jobs[1].jobId);
+  const first = service.run(jobs[0].jobId),
+    second = service.run(jobs[1].jobId);
   while (entered.length < 2) await new Promise(resolve => setImmediate(resolve));
   // 两个 direct run 占满槽位，第三个任务留在队列；idle 必须等待 active 而让出 IO。
   const idle = service.idle();
@@ -37,7 +47,8 @@ try {
 
   const { input } = await createExtractionTaskSources(app, '-tracking-close');
   const closingJob = await service.start(input);
-  const running = service.run(closingJob.jobId), stopped = assert.rejects(running);
+  const running = service.run(closingJob.jobId),
+    stopped = assert.rejects(running);
   while (entered.length < 4) await new Promise(resolve => setImmediate(resolve));
   const queued = await service.start((await createExtractionTaskSources(app, '-tracking-queued')).input);
   await service.close(); // 必须已等待 direct run 的持久化失败收尾。

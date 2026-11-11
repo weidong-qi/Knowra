@@ -16,13 +16,17 @@ const latestJob = host => jobRecords(host).at(-1);
 async function screenshot(page, name) {
   if (!process.env.KNOWRA_E2E_OUTPUT) return;
   fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
-  await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, `extraction-${name}.png`), animations: 'disabled' });
+  await page.screenshot({
+    path: path.join(process.env.KNOWRA_E2E_OUTPUT, `extraction-${name}.png`),
+    animations: 'disabled'
+  });
 }
 
 async function openAI(page, host, { navigate = true } = {}) {
   if (navigate) await page.goto(`${host.origin}/#/materials/notes/${host.note.id}`);
   await expect(page.locator('.ProseMirror')).toContainText('数据增强通过变换样本');
-  if (!await page.getByRole('tab', { name: 'AI', exact: true }).isVisible()) await page.getByRole('button', { name: '切换文档检查器' }).click();
+  if (!(await page.getByRole('tab', { name: 'AI', exact: true }).isVisible()))
+    await page.getByRole('button', { name: '切换文档检查器' }).click();
   await page.getByRole('tab', { name: 'AI', exact: true }).click();
   await expect(page.getByRole('button', { name: '分析整篇', exact: true })).toBeVisible();
 }
@@ -55,12 +59,19 @@ async function start(page, host, step = 'success') {
 async function withPage(t, options, run) {
   const host = await startExtractionWeb(options);
   let browser;
-  t.after(async () => { await browser?.close(); await host.close(); });
+  t.after(async () => {
+    await browser?.close();
+    await host.close();
+  });
   browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await withPageFailureDiagnostics(page, () => run(page, host), () => host.inspect());
+  await withPageFailureDiagnostics(
+    page,
+    () => run(page, host),
+    () => host.inspect()
+  );
   assert.deepEqual(errors, []);
 }
 
@@ -86,7 +97,10 @@ test('提炼页面默认关闭：仍可核对并保存真实范围，不产生�
 test('真实 Web Mock 提炼：关闭和刷新不取消，候选对照、个人编辑与人工确认落盘', { timeout: 75_000 }, async t => {
   await withPage(t, {}, async (page, host) => {
     const starts = [];
-    page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/ai/jobs') starts.push(request.postDataJSON()); });
+    page.on('request', request => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/ai/jobs')
+        starts.push(request.postDataJSON());
+    });
     await openAI(page, host);
     const editor = page.locator('.ProseMirror');
     await editor.click();
@@ -131,16 +145,22 @@ test('真实 Web Mock 提炼：关闭和刷新不取消，候选对照、个人�
     await expect(page.getByText(demoLabel, { exact: true })).toBeVisible();
     await page.getByRole('button', { name: '对照来源', exact: true }).click();
     const comparison = page.getByRole('dialog', { name: '来源对照', exact: true });
-    await expect(comparison.getByLabel('历史版本正文', { exact: true })).toContainText('数据增强通过变换样本增加训练变化。');
+    await expect(comparison.getByLabel('历史版本正文', { exact: true })).toContainText(
+      '数据增强通过变换样本增加训练变化。'
+    );
     await screenshot(page, 'source-comparison');
     await comparison.getByRole('button', { name: '关闭', exact: true }).click();
     await page.getByRole('button', { name: '编辑', exact: true }).click();
     const edit = page.getByRole('dialog', { name: '编辑知识', exact: true });
     await edit.getByLabel('核心陈述', { exact: true }).fill('人工修订：数据增强通过样本变换增加训练变化。');
     await edit.getByRole('button', { name: '保存', exact: true }).click();
-    await expect(page.getByRole('article', { name: '知识详情' })).toContainText('人工修订：数据增强通过样本变换增加训练变化。');
+    await expect(page.getByRole('article', { name: '知识详情' })).toContainText(
+      '人工修订：数据增强通过样本变换增加训练变化。'
+    );
     await page.reload();
-    await expect(page.getByRole('article', { name: '知识详情' })).toContainText('人工修订：数据增强通过样本变换增加训练变化。');
+    await expect(page.getByRole('article', { name: '知识详情' })).toContainText(
+      '人工修订：数据增强通过样本变换增加训练变化。'
+    );
     assert.equal(createFileDataStore(host.file).state.knowledgeItems[0].reviewStatus, 'candidate');
     assert.equal(host.calls.length, 1);
     await screenshot(page, 'candidate-edited');
@@ -185,14 +205,20 @@ test('真实 Web Mock 提炼：取消晚响应、显式重试、失效授权和�
     await expect(taskDialog(page).getByRole('button', { name: '重试任务', exact: true })).toBeEnabled();
     host.advance(300_001);
     let releaseRefresh, capturedRefresh;
-    const refreshHeld = new Promise(resolve => { releaseRefresh = resolve; });
-    const refreshReady = new Promise(resolve => { capturedRefresh = resolve; });
+    const refreshHeld = new Promise(resolve => {
+      releaseRefresh = resolve;
+    });
+    const refreshReady = new Promise(resolve => {
+      capturedRefresh = resolve;
+    });
     const refreshRoute = `**/api/ai/jobs/${expired}`;
     // Hold the real response so a fast local request cannot hide focus loss while pending.
     await page.route(refreshRoute, async route => {
       const response = await route.fetch();
       assert.equal(response.status(), 200);
-      capturedRefresh(); await refreshHeld; await route.fulfill({ response });
+      capturedRefresh();
+      await refreshHeld;
+      await route.fulfill({ response });
     });
     const refreshButton = taskDialog(page).getByRole('button', { name: '刷新任务', exact: true });
     try {
@@ -200,7 +226,9 @@ test('真实 Web Mock 提炼：取消晚响应、显式重试、失效授权和�
       await refreshReady;
       await expect(taskDialog(page).getByText('正在读取或提交任务…', { exact: true })).toBeVisible();
       await expect(refreshButton).toBeFocused();
-    } finally { releaseRefresh(); }
+    } finally {
+      releaseRefresh();
+    }
     await expect(taskDialog(page)).toContainText('本次授权或来源已失效');
     await expect(taskDialog(page).getByRole('button', { name: '重试任务', exact: true })).toHaveCount(0);
     await expect(refreshButton).toBeFocused();
@@ -233,12 +261,19 @@ test('真实 Web Mock 提炼：取消晚响应、显式重试、失效授权和�
 
 test('真实 Web Mock 提炼：关闭延迟读取后仍接纳新开始，旧列表不覆盖新任务', { timeout: 60_000 }, async t => {
   await withPage(t, {}, async (page, host) => {
-    let release, captured, delayed = false;
-    const hold = new Promise(resolve => { release = resolve; });
-    const ready = new Promise(resolve => { captured = resolve; });
+    let release,
+      captured,
+      delayed = false;
+    const hold = new Promise(resolve => {
+      release = resolve;
+    });
+    const ready = new Promise(resolve => {
+      captured = resolve;
+    });
     const starts = [];
     page.on('request', request => {
-      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/ai/jobs') starts.push(request.postDataJSON());
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/ai/jobs')
+        starts.push(request.postDataJSON());
     });
     await page.route('**/api/ai/jobs?**', async route => {
       if (delayed) return route.continue();
@@ -266,14 +301,19 @@ test('真实 Web Mock 提炼：关闭延迟读取后仍接纳新开始，旧列�
       await expect(taskDialog(page).getByRole('button', { name: '查看候选 1', exact: true })).toBeVisible();
       assert.equal(host.dataStore.state.analysisScopeSnapshots.length, 1);
       await screenshot(page, 'closed-read-new-start');
-    } finally { release(); }
+    } finally {
+      release();
+    }
   });
 });
 
 test('真实 Web Mock 提炼：服务端已创建但响应丢失，精确查询和刷新复用原任务', { timeout: 60_000 }, async t => {
   await withPage(t, {}, async (page, host) => {
-    let dropped = false, lookupDropped = false, submittedId;
-    const starts = [], lookups = [];
+    let dropped = false,
+      lookupDropped = false,
+      submittedId;
+    const starts = [],
+      lookups = [];
     page.on('request', request => {
       const url = new URL(request.url());
       if (url.pathname !== '/api/ai/jobs') return;
