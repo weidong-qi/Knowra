@@ -13,9 +13,20 @@ async function acceptance(app) {
   const k = app.http.knowledge;
   const space = await k.createDefaultKnowledgeSpace();
   const other = await k.createKnowledgeSpace({ name: '链接其他空间' });
-  const target = await k.createNote({ id: 'link-target', spaceId: space.id, title: '合成目标', rawMarkdown: '目标正文隐私边界', aiVisibility: 'private' });
+  const target = await k.createNote({
+    id: 'link-target',
+    spaceId: space.id,
+    title: '合成目标',
+    rawMarkdown: '目标正文隐私边界',
+    aiVisibility: 'private'
+  });
   const folder = await k.createFolder({ spaceId: space.id, name: '链接目标目录' });
-  const foreign = await k.createNote({ id: 'link-foreign', spaceId: other.id, title: '跨空间目标', rawMarkdown: '范围外' });
+  const foreign = await k.createNote({
+    id: 'link-foreign',
+    spaceId: other.id,
+    title: '跨空间目标',
+    rawMarkdown: '范围外'
+  });
   const first = createNoteLinkUrl(target.id, 'ref-first');
   const second = createNoteLinkUrl(target.id, 'ref-second');
   const raw = `首段 [原显示名字](${first}) 的上下文。\n\n另段 [原显示名字](${second}) 第二处。`;
@@ -53,8 +64,19 @@ async function acceptance(app) {
     assert.equal((await request(target.id)).backlinks.length, 0);
     await k.restoreNote({ id: source.id });
     assert.equal((await request(target.id)).backlinks[0].occurrences.length, 2);
-    await assert.rejects(async () => k.updateNote({ id: source.id }, { rawMarkdown: `[越界](${createNoteLinkUrl(foreign.id, 'ref-cross')})` }), { code: 'NOTE_LINK_TARGET_INVALID' });
-    await assert.rejects(async () => k.updateNote({ id: source.id }, { rawMarkdown: `[越界][ref]\n\n[ref]: ${createNoteLinkUrl(foreign.id, 'ref-cross')}\n[ref]: ${first}` }), { code: 'NOTE_LINK_TARGET_INVALID' });
+    await assert.rejects(
+      async () =>
+        k.updateNote({ id: source.id }, { rawMarkdown: `[越界](${createNoteLinkUrl(foreign.id, 'ref-cross')})` }),
+      { code: 'NOTE_LINK_TARGET_INVALID' }
+    );
+    await assert.rejects(
+      async () =>
+        k.updateNote(
+          { id: source.id },
+          { rawMarkdown: `[越界][ref]\n\n[ref]: ${createNoteLinkUrl(foreign.id, 'ref-cross')}\n[ref]: ${first}` }
+        ),
+      { code: 'NOTE_LINK_TARGET_INVALID' }
+    );
     await k.deleteNote({ id: target.id });
     await k.permanentlyDeleteNote({ id: target.id });
     assert.equal((await request(source.id)).outgoing[0].status, 'deleted');
@@ -65,40 +87,73 @@ async function acceptance(app) {
   });
 }
 
-export const noteLinkTests = [{
-  name: 'JSON HTTP：逐处反链、目标稳定身份、编辑删除恢复及当前空间约束',
-  async run() {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-note-links-'));
-    let app;
-    try {
-      app = createPersistentAppContext({ storageRootDir: root, ownerId: 'links-owner' });
-      await acceptance(app);
-      await app.close?.();
-      app = createPersistentAppContext({ storageRootDir: root, ownerId: 'links-owner' });
-      const relations = await app.http.knowledge.getNoteLinkRelations({ id: 'link-source' });
-      assert.equal(relations.outgoing[0].status, 'deleted');
-      assert.equal(relations.outgoing[0].occurrences.length, 2);
-    } finally { await app?.close?.(); fs.rmSync(root, { recursive: true, force: true }); }
+export const noteLinkTests = [
+  {
+    name: 'JSON HTTP：逐处反链、目标稳定身份、编辑删除恢复及当前空间约束',
+    async run() {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-note-links-'));
+      let app;
+      try {
+        app = createPersistentAppContext({ storageRootDir: root, ownerId: 'links-owner' });
+        await acceptance(app);
+        await app.close?.();
+        app = createPersistentAppContext({ storageRootDir: root, ownerId: 'links-owner' });
+        const relations = await app.http.knowledge.getNoteLinkRelations({ id: 'link-source' });
+        assert.equal(relations.outgoing[0].status, 'deleted');
+        assert.equal(relations.outgoing[0].occurrences.length, 2);
+      } finally {
+        await app?.close?.();
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  },
+  {
+    name: '关系读取先验证真实空间owner，客户端无法借链接穿越owner',
+    run() {
+      let readRelations = false;
+      const handlers = createKnowledgeHttpHandlers({
+        ownerId: 'current',
+        knowledgeModule: {
+          repositories: { knowledgeSpaceRepository: { findById: () => ({ userId: 'foreign' }) } },
+          noteService: {
+            getNote: () => ({ spaceId: 'foreign-space' }),
+            getNoteLinkRelations: () => {
+              readRelations = true;
+            }
+          }
+        }
+      });
+      assert.throws(() => handlers.getNoteLinkRelations({ id: 'foreign-note' }), { code: 'KNOWLEDGE_SPACE_NOT_FOUND' });
+      assert.equal(readRelations, false);
+    }
   }
-}, { name: '关系读取先验证真实空间owner，客户端无法借链接穿越owner', run() {
-  let readRelations = false;
-  const handlers = createKnowledgeHttpHandlers({ ownerId: 'current', knowledgeModule: {
-    repositories: { knowledgeSpaceRepository: { findById: () => ({ userId: 'foreign' }) } },
-    noteService: { getNote: () => ({ spaceId: 'foreign-space' }), getNoteLinkRelations: () => { readRelations = true; } }
-  } });
-  assert.throws(() => handlers.getNoteLinkRelations({ id: 'foreign-note' }), { code: 'KNOWLEDGE_SPACE_NOT_FOUND' });
-  assert.equal(readRelations, false);
-} }];
+];
 
-export const noteLinkPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABASE_URL && process.env.KNOWRA_SYNC_TEST_ALLOW_WRITES === '1' ? [{
-  name: '真实 PostgreSQL HTTP：逐处链接关系、持久化与删除恢复同 JSON',
-  async run() {
-    const database = await createPostgresTestDatabase();
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-note-links-pg-'));
-    let app;
-    try {
-      app = await createPostgresAppContext({ databaseUrl: database.databaseUrl, storageRootDir: root, ownerId: 'links-owner' });
-      await acceptance(app);
-    } finally { try { await app?.close(); } finally { await database.close(); fs.rmSync(root, { recursive: true, force: true }); } }
-  }
-}] : [];
+export const noteLinkPostgresTests =
+  process.env.KNOWRA_SYNC_TEST_DATABASE_URL && process.env.KNOWRA_SYNC_TEST_ALLOW_WRITES === '1'
+    ? [
+        {
+          name: '真实 PostgreSQL HTTP：逐处链接关系、持久化与删除恢复同 JSON',
+          async run() {
+            const database = await createPostgresTestDatabase();
+            const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-note-links-pg-'));
+            let app;
+            try {
+              app = await createPostgresAppContext({
+                databaseUrl: database.databaseUrl,
+                storageRootDir: root,
+                ownerId: 'links-owner'
+              });
+              await acceptance(app);
+            } finally {
+              try {
+                await app?.close();
+              } finally {
+                await database.close();
+                fs.rmSync(root, { recursive: true, force: true });
+              }
+            }
+          }
+        }
+      ]
+    : [];

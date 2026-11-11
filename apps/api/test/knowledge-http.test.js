@@ -25,7 +25,10 @@ export const knowledgeHttpTests = [
 
       assert.equal(created.userId, 'local-owner');
       assert.equal(created.id, 'space-local-owner');
-      assert.deepEqual(listed.map((space) => space.userId), ['local-owner']);
+      assert.deepEqual(
+        listed.map(space => space.userId),
+        ['local-owner']
+      );
     }
   },
   {
@@ -125,10 +128,7 @@ export const knowledgeHttpTests = [
       });
       handlers.deleteNote({ id: 'http-note-restore' });
 
-      const deleted = handlers.getNote(
-        { id: 'http-note-restore' },
-        { includeDeleted: true }
-      );
+      const deleted = handlers.getNote({ id: 'http-note-restore' }, { includeDeleted: true });
       const restored = handlers.restoreNote({ id: 'http-note-restore' });
 
       assert.equal(deleted.deleted, true);
@@ -153,10 +153,7 @@ export const knowledgeHttpTests = [
         spaceId: 'space-1'
       });
 
-      const updated = handlers.setFavorite(
-        { id: 'http-favorite-note' },
-        { favorite: true }
-      );
+      const updated = handlers.setFavorite({ id: 'http-favorite-note' }, { favorite: true });
       const favorites = handlers.listNotes({
         spaceId: 'space-1',
         favoriteOnly: true
@@ -366,8 +363,14 @@ export const knowledgeHttpTests = [
         limit: 1
       });
 
-      assert.deepEqual(listed.map((note) => note.title), ['Alpha', 'Beta']);
-      assert.deepEqual(searched.map((note) => note.title), ['Alpha']);
+      assert.deepEqual(
+        listed.map(note => note.title),
+        ['Alpha', 'Beta']
+      );
+      assert.deepEqual(
+        searched.map(note => note.title),
+        ['Alpha']
+      );
     }
   },
   {
@@ -395,10 +398,7 @@ export const knowledgeHttpTests = [
         spaceId: 'space-1',
         name: 'redis'
       });
-      const updatedTag = handlers.updateTag(
-        { id: 'http-tag-1' },
-        { name: 'cache', color: 'amber' }
-      );
+      const updatedTag = handlers.updateTag({ id: 'http-tag-1' }, { name: 'cache', color: 'amber' });
       handlers.deleteTag({ id: 'http-tag-1' });
 
       assert.equal(updatedFolder.name, 'Final Folder');
@@ -490,9 +490,7 @@ export const knowledgeHttpTests = [
       knowledgeModule.noteService.assignTagToNote('http-note-tag-remove', 'tag-a');
       knowledgeModule.noteService.assignTagToNote('http-note-tag-remove', 'tag-b');
 
-      const updated = handlers.removeTagFromNote(
-        { id: 'http-note-tag-remove', tagId: 'tag-a' }
-      );
+      const updated = handlers.removeTagFromNote({ id: 'http-note-tag-remove', tagId: 'tag-a' });
 
       assert.deepEqual(updated.tagIds, ['tag-b']);
     }
@@ -514,10 +512,7 @@ export const knowledgeHttpTests = [
         spaceId: 'space-1'
       });
 
-      const updated = handlers.setNoteTags(
-        { id: 'http-note-tag-set' },
-        { tagIds: ['tag-cache', 'tag-db'] }
-      );
+      const updated = handlers.setNoteTags({ id: 'http-note-tag-set' }, { tagIds: ['tag-cache', 'tag-db'] });
 
       assert.deepEqual(updated.tagIds, ['tag-cache', 'tag-db']);
     }
