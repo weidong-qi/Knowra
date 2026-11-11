@@ -159,7 +159,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: 'Note 保存会创建不可变且按内容哈希去重的 NoteVersion',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'note-phase2-version',
@@ -186,7 +186,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: 'KnowledgeItem 只有满足来源与内容门槛后才能确认',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'note-phase2-evidence',
@@ -229,7 +229,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: '笔记删除会使知识证据失效并阻止带正式证据的永久删除',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'note-phase2-delete',
@@ -256,7 +256,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: '手工来源知识单元可以在没有笔记证据时确认',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const created = knowledge.knowledgeItemService.createCandidate({
         title: '手工知识',
@@ -270,7 +270,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: 'KnowledgeItem create 拒绝重复客户端 ID 且不会覆盖原资产',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       knowledge.knowledgeItemService.createCandidate({
         id: 'phase32-duplicate-item',
@@ -295,7 +295,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: 'Note 同内容保存不会把正式 KnowledgeEvidence 标记为 stale',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'phase32-note-noop',
@@ -331,7 +331,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: 'KnowledgeEvidence 将来源定位健康与阅读标记生命周期分离',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'phase32-evidence-health-note',

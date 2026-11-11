@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.ts';
 import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.ts';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';

@@ -24,20 +24,21 @@ export interface KnowledgeEvidenceConstructorInput<
   RelationType = string,
   HeadingPath = unknown[],
   CreatedAt = string,
-  UpdatedAt = CreatedAt
+  UpdatedAt = CreatedAt,
+  SourceId = string | null
 > {
   id: string;
   knowledgeItemId: string;
   sourceType?: SourceType | 'manual';
-  sourceId?: string | null;
+  sourceId?: SourceId | null;
   noteId?: string | null;
   noteVersionId?: string | null;
   annotationId?: string | null;
   quoteText?: unknown;
   headingPath?: HeadingPath | unknown[];
   relationType?: RelationType | 'supports';
-  status?: string;
-  applicabilityStatus?: string;
+  status?: string | null;
+  applicabilityStatus?: string | null;
   createdAt?: CreatedAt | string;
   updatedAt?: UpdatedAt | CreatedAt | string;
 }
@@ -54,12 +55,13 @@ export class KnowledgeEvidence<
   RelationType = string | undefined,
   HeadingPath = unknown[] | undefined,
   CreatedAt = string | undefined,
-  UpdatedAt = CreatedAt
+  UpdatedAt = CreatedAt,
+  SourceId = string | null
 > {
   declare id: string;
   declare knowledgeItemId: string;
   declare sourceType: Exclude<SourceType, string | undefined> | KnowledgeEvidenceSourceType;
-  declare sourceId: string | null;
+  declare sourceId: Exclude<SourceId, undefined> | null;
   declare noteId: string | null;
   declare noteVersionId: string | null;
   declare annotationId: string | null;
@@ -86,15 +88,15 @@ export class KnowledgeEvidence<
     applicabilityStatus = status === 'invalid' ? 'needsReview' : 'active',
     createdAt = new Date().toISOString(),
     updatedAt = createdAt
-  }: KnowledgeEvidenceConstructorInput<SourceType, RelationType, HeadingPath, CreatedAt, UpdatedAt>) {
+  }: KnowledgeEvidenceConstructorInput<SourceType, RelationType, HeadingPath, CreatedAt, UpdatedAt, SourceId>) {
     if (!id?.trim() || !knowledgeItemId?.trim()) {
       throw new Error('KnowledgeEvidence identity is required');
     }
     if (
       !(SOURCE_TYPES as ReadonlySet<unknown>).has(sourceType) ||
-      !EVIDENCE_STATUSES.has(status) ||
+      !(EVIDENCE_STATUSES as ReadonlySet<unknown>).has(status) ||
       !(RELATION_TYPES as ReadonlySet<unknown>).has(relationType) ||
-      !APPLICABILITY_STATUSES.has(applicabilityStatus)
+      !(APPLICABILITY_STATUSES as ReadonlySet<unknown>).has(applicabilityStatus)
     ) {
       throw new Error('KnowledgeEvidence type or status is invalid');
     }

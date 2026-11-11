@@ -3,7 +3,7 @@ import type { KnowledgeItemDtoInput, KnowledgeEvidenceDtoInput } from './dto/kno
 import type { KnowledgeItemBaselineInput } from './knowledge-item-concurrency.ts';
 import type { NoteVersionRecord } from '../infrastructure/note-version-repository.ts';
 import type { ContentAnnotationRecord } from '../infrastructure/content-annotation-repository.ts';
-import type { KnowledgeItemServiceRecord, KnowledgeEvidenceServiceRecord } from './service-dependencies.ts';
+import type { KnowledgeItemRecord } from '../infrastructure/knowledge-item-repository.ts';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { matchesKnowledgeCandidateRequest } from './knowledge-candidate-retry.ts';
 import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from './knowledge-item-concurrency.ts';
@@ -36,7 +36,7 @@ export function createKnowledgeItemService(
   if (!repository || !evidenceRepository) throw new TypeError('KnowledgeItem repositories are required');
 
   function requireItem(id: string) {
-    const item = repository.findById(id) as KnowledgeItemServiceRecord | null;
+    const item = repository.findById(id);
     if (!item || item.deletedAt) throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
     return item;
   }
@@ -68,7 +68,7 @@ export function createKnowledgeItemService(
 
   function notifyIfInvalidated(
     previous: { reviewStatus?: string | null } | null | undefined,
-    next: { id: string; reviewStatus?: string | null; deletedAt?: KnowledgeItemServiceRecord['deletedAt'] } | null
+    next: { id: string; reviewStatus?: string | null; deletedAt?: KnowledgeItemRecord['deletedAt'] } | null
   ) {
     if (previous?.reviewStatus === 'confirmed' && (next?.reviewStatus !== 'confirmed' || next?.deletedAt)) {
       onItemInvalidated?.(next!.id);
@@ -337,7 +337,7 @@ export function createKnowledgeItemService(
     },
     retireEvidence(knowledgeItemId: string, evidenceId: string, input: KnowledgeItemBaselineInput = {}) {
       const currentItem = requireItem(knowledgeItemId);
-      const currentEvidence = evidenceRepository.findById(evidenceId) as KnowledgeEvidenceServiceRecord | null;
+      const currentEvidence = evidenceRepository.findById(evidenceId);
       if (!currentEvidence || currentEvidence.knowledgeItemId !== knowledgeItemId) {
         throw notFoundError('KNOWLEDGE_EVIDENCE_NOT_FOUND', 'KnowledgeEvidence not found');
       }
@@ -373,7 +373,7 @@ export function createKnowledgeItemService(
     },
     readoptEvidence(knowledgeItemId: string, evidenceId: string, input: KnowledgeItemBaselineInput = {}) {
       const item = requireItem(knowledgeItemId);
-      const current = evidenceRepository.findById(evidenceId) as KnowledgeEvidenceServiceRecord | null;
+      const current = evidenceRepository.findById(evidenceId);
       if (!current || current.knowledgeItemId !== knowledgeItemId)
         throw notFoundError('KNOWLEDGE_EVIDENCE_NOT_FOUND', 'KnowledgeEvidence not found');
       if (input.expectedUpdatedAt && input.expectedUpdatedAt !== current.updatedAt)
@@ -382,7 +382,9 @@ export function createKnowledgeItemService(
       if (
         current.status !== 'valid' ||
         (current.sourceType !== 'manual' &&
-          (!version || version.noteId !== current.noteId || !(version.content as string).includes(current.quoteText)))
+          (!version ||
+            version.noteId !== current.noteId ||
+            !((version.content as string).includes as (value: unknown) => boolean)(current.quoteText)))
       ) {
         throw conflictError('KNOWLEDGE_EVIDENCE_NOT_VERIFIABLE', '来源当前不可独立复核，不能重新采用。');
       }
@@ -396,7 +398,7 @@ export function createKnowledgeItemService(
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteId(noteId, status));
     },
     /** @param {string} annotationId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status */
-    markEvidenceByAnnotationId(annotationId: string, status: KnowledgeEvidence['status'] = 'invalid') {
+    markEvidenceByAnnotationId(annotationId: unknown, status: KnowledgeEvidence['status'] = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByAnnotationId(annotationId, status));
     },
     /** @param {string[]} annotationIds */
@@ -449,7 +451,7 @@ export function createKnowledgeItemService(
     },
     /** @param {string[]} noteVersionIds @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['sourceType']} [sourceType] */
     markEvidenceByNoteVersionIds(
-      noteVersionIds: string[],
+      noteVersionIds: unknown[],
       status: KnowledgeEvidence['status'] = 'stale',
       sourceType: KnowledgeEvidence['sourceType'] | null = null
     ) {

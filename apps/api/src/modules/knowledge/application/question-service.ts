@@ -210,7 +210,7 @@ export function createQuestionService(
     return changed;
   }
 
-  function markSourcesStale(sourceType: string, sourceIds: string[] = []) {
+  function markSourcesStale(sourceType: string, sourceIds: unknown[] = []) {
     return runTransaction(() => {
       const changedSources = questionSourceRepository.markBySourceIds(sourceType, sourceIds, 'stale');
       downgradeConfirmedQuestions(changedSources.map(source => source.questionId));

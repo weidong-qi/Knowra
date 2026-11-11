@@ -4,7 +4,7 @@ export const phase31WorkspaceQueryTests = [
   {
     name: 'Phase3.1 workspace queries return stable paginated knowledge and training DTOs',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'phase31-query-note',
@@ -51,7 +51,10 @@ export const phase31WorkspaceQueryTests = [
       assert.equal(itemPage.pagination.hasMore, false);
 
       const objectivePage = await knowledge.workspaceQueryService.listLearningObjectives({ hasQuestions: 'true' });
-      assert.deepEqual(objectivePage.items.map((entry) => entry.id), [objective.id]);
+      assert.deepEqual(
+        objectivePage.items.map(entry => entry.id),
+        [objective.id]
+      );
       const questionPage = await knowledge.workspaceQueryService.listQuestions({ learningObjectiveId: objective.id });
       assert.equal(questionPage.items[0].id, question.id);
       assert.equal(questionPage.items[0].primaryObjective.id, objective.id);
@@ -62,7 +65,7 @@ export const phase31WorkspaceQueryTests = [
   {
     name: 'Phase3.1 overview and review queue expose real coverage and stale-source work',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const item = knowledge.knowledgeItemService.createCandidate({
         id: 'phase31-review-item',
@@ -95,9 +98,9 @@ export const phase31WorkspaceQueryTests = [
       assert.equal(trainingOverview.review.staleSources, 1);
       assert.equal(trainingOverview.questions.total, 1);
       const queue = await knowledge.workspaceQueryService.listReviewQueue({ limit: 50 });
-      assert.ok(queue.items.some((entry) => entry.kind === 'question' && entry.id === question.id));
-      assert.ok(queue.items.some((entry) => entry.kind === 'learningObjective' && entry.id === objective.id) === false);
-      assert.ok(queue.items.every((entry) => entry.resourceId));
+      assert.ok(queue.items.some(entry => entry.kind === 'question' && entry.id === question.id));
+      assert.ok(queue.items.some(entry => entry.kind === 'learningObjective' && entry.id === objective.id) === false);
+      assert.ok(queue.items.every(entry => entry.resourceId));
     }
   }
 ];

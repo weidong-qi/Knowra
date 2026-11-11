@@ -47,7 +47,10 @@ function existingImport(existing: PdfNoteRecord, note: PdfNewNote) {
 export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgres }: PdfRepositoryOptions) {
   const repositories = knowledge.repositories;
   function assertBound(
-    note: Pick<PdfNoteRecord, 'contentKind' | 'spaceId' | 'pdfSource'>,
+    note: Pick<
+      import('../knowledge/infrastructure/note-repository.ts').NoteRecord,
+      'contentKind' | 'spaceId' | 'pdfSource'
+    >,
     annotation: PdfStoredAnnotation
   ) {
     if (

@@ -109,10 +109,10 @@ export function createFolderService({
     });
   }
 
-  function collectSubtreeIds(folderId: string | null | undefined) {
+  function collectSubtreeIds<Id extends string | null | undefined>(folderId: Id) {
     const allFolders = repository.list({ includeDeleted: true });
-    const ids = new Set([folderId]);
-    const queue = [folderId];
+    const ids = new Set<Id | string>([folderId]);
+    const queue: (Id | string)[] = [folderId];
 
     while (queue.length) {
       const currentId = queue.shift();
@@ -237,7 +237,7 @@ export function createFolderService({
 
       return buildNodes();
     },
-    getFolderSubtreeIds(folderId: string | null | undefined) {
+    getFolderSubtreeIds<Id extends string | null | undefined>(folderId: Id) {
       requireFolder(folderId);
       return collectSubtreeIds(folderId);
     }

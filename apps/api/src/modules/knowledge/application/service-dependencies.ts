@@ -17,7 +17,10 @@ import type {
   QuestionSourceRepository
 } from '../infrastructure/assessment-repository.ts';
 import type { KnowledgeItemRepository, KnowledgeItemRecord } from '../infrastructure/knowledge-item-repository.ts';
-import type { KnowledgeEvidenceRepository } from '../infrastructure/knowledge-evidence-repository.ts';
+import type {
+  KnowledgeEvidenceRepository,
+  KnowledgeEvidenceRecord
+} from '../infrastructure/knowledge-evidence-repository.ts';
 import type { ContentAnnotationRepository } from '../infrastructure/content-annotation-repository.ts';
 import type { NoteRepository } from '../infrastructure/note-repository.ts';
 import type { NoteVersionRepository } from '../infrastructure/note-version-repository.ts';
@@ -69,9 +72,12 @@ export type KnowledgeEvidenceServiceRecord = KnowledgeEvidence<
   CreateKnowledgeEvidenceDto['headingPath']
 >;
 export interface KnowledgeItemDependencies extends TransactionDependencies {
-  repository: Pick<KnowledgeItemRepository<KnowledgeItemServiceRecord>, 'findById' | 'list' | 'save'> &
-    Partial<Pick<KnowledgeItemRepository<KnowledgeItemServiceRecord>, 'create'>>;
-  evidenceRepository: Omit<KnowledgeEvidenceRepository<KnowledgeEvidenceServiceRecord>, 'deleteByKnowledgeItemId'>;
+  repository: Pick<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>, 'findById' | 'list' | 'save'> &
+    Partial<Pick<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>, 'create'>>;
+  evidenceRepository: Omit<
+    KnowledgeEvidenceRepository<KnowledgeEvidenceRecord<unknown, unknown>>,
+    'deleteByKnowledgeItemId'
+  >;
   noteVersionRepository?: Pick<NoteVersionRepository, 'findById'>;
   annotationRepository?: Pick<ContentAnnotationRepository, 'findById'>;
   noteRepository?: Pick<NoteRepository, 'findById'>;
@@ -99,7 +105,10 @@ export interface QuestionDependencies extends TransactionDependencies {
   knowledgeItemRepository?: { findById(id: unknown): KnowledgeItemRecord<unknown> | null };
   noteRepository?: Pick<NoteRepository, 'findById'>;
   noteVersionRepository?: Pick<NoteVersionRepository, 'findById'>;
-  knowledgeEvidenceRepository?: Pick<KnowledgeEvidenceRepository, 'findById'>;
+  knowledgeEvidenceRepository?: Pick<
+    KnowledgeEvidenceRepository<KnowledgeEvidenceRecord<unknown, unknown>>,
+    'findById'
+  >;
 }
 type VersionServiceMethods = 'findByNoteIdAndContentHash' | 'save' | 'findById' | 'list' | 'listIds' | 'listPage';
 export interface NoteVersionDependencies {

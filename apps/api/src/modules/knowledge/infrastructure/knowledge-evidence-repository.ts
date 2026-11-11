@@ -26,8 +26,8 @@ export interface KnowledgeEvidenceRecord<
 export interface KnowledgeEvidenceListOptions {
   knowledgeItemId?: string | null;
   noteId?: string | null;
-  noteVersionId?: string | null;
-  annotationId?: string | null;
+  noteVersionId?: unknown;
+  annotationId?: unknown;
 }
 
 // mark* 会原地改写这两个字段；任何读取及回调均不能承诺其输入字面量。
@@ -69,16 +69,16 @@ export interface KnowledgeEvidenceRepository<
     status: KnowledgeEvidence['status']
   ): StoredKnowledgeEvidenceRecord<Record>[];
   markByAnnotationId(
-    annotationId: string | null | undefined,
+    annotationId: unknown,
     status: KnowledgeEvidence['status']
   ): StoredKnowledgeEvidenceRecord<Record>[];
   markByNoteVersionId(
-    noteVersionId: string | null | undefined,
+    noteVersionId: unknown,
     status: KnowledgeEvidence['status'],
     sourceType?: KnowledgeEvidence['sourceType'] | '' | null
   ): StoredKnowledgeEvidenceRecord<Record>[];
   markByNoteVersionIds(
-    noteVersionIds: readonly string[],
+    noteVersionIds: readonly unknown[],
     status: KnowledgeEvidence['status'],
     sourceType?: KnowledgeEvidence['sourceType'] | '' | null
   ): StoredKnowledgeEvidenceRecord<Record>[];
@@ -174,7 +174,7 @@ export function createInMemoryKnowledgeEvidenceRepository<
       );
     },
     markByNoteVersionIds(noteVersionIds, status, sourceType = null) {
-      const ids = new Set<string | null | undefined>(noteVersionIds);
+      const ids = new Set<unknown>(noteVersionIds);
       return updateStatus(
         item => ids.has(item.noteVersionId) && (!sourceType || item.sourceType === sourceType),
         status

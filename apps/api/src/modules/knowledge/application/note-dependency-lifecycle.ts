@@ -1,74 +1,64 @@
 import { conflictError } from './knowledge-errors.ts';
 
+import type { NoteRecord } from '../infrastructure/note-repository.ts';
+import type { NoteVersionRecord } from '../infrastructure/note-version-repository.ts';
+import type { ContentAnnotationRecord } from '../infrastructure/content-annotation-repository.ts';
+import type { AnnotationReconcileContext } from './content-annotation-service.ts';
+
 export interface DependencyIdRecord {
   id?: unknown;
-}
-export interface DependencyVersionRecord extends DependencyIdRecord {
-  contentHash?: unknown;
-}
-export interface DependencyAnnotationRecord {
-  anchorStatus?: unknown;
 }
 export interface DependencyQuestionSource {
   sourceType?: unknown;
   sourceId?: unknown;
 }
-export interface DependencyScopeVersion {
-  noteId?: unknown;
-  noteVersionId?: unknown;
-}
 export interface DependencyScopeSnapshot {
-  noteVersions?: Pick<readonly DependencyScopeVersion[], 'some'> | null | undefined;
+  noteVersions?: unknown;
 }
 export interface NoteDependencyOptions {
   contentAnnotationService: {
-    reconcileForNote: (
-      noteId: unknown,
+    reconcileForNote(
+      noteId: string,
       contentHash: unknown,
-      annotationChange: unknown
-    ) => {
-      contentChangedAnnotationIds: {
-        flatMap: (
-          callback: (annotationId: unknown) => DependencyIdRecord | readonly DependencyIdRecord[]
-        ) => Pick<readonly DependencyIdRecord[], 'map'>;
-      };
-    };
+      annotationChange: AnnotationReconcileContext | null | undefined
+    ): { contentChangedAnnotationIds: unknown[] };
   };
-  contentAnnotationRepository: { findById: (id: unknown) => DependencyAnnotationRecord | null | undefined };
-  annotationIdentityShadow: { observe: (note: DependencyIdRecord, annotationChange: unknown) => unknown };
+  contentAnnotationRepository: { findById(id: unknown): ContentAnnotationRecord | null | undefined };
+  annotationIdentityShadow: {
+    observe(note: Pick<NoteRecord, 'id'>, annotationChange: AnnotationReconcileContext | null | undefined): unknown;
+  };
   knowledgeItemService: {
-    markEvidenceByAnnotationId: (
-      annotationId: unknown,
-      status: 'insufficient' | 'stale'
-    ) => DependencyIdRecord | readonly DependencyIdRecord[];
-    markEvidenceByNoteVersionIds: (
+    markEvidenceByAnnotationId(annotationId: unknown, status: 'insufficient' | 'stale'): readonly DependencyIdRecord[];
+    markEvidenceByNoteVersionIds(
       versionIds: unknown[],
       status: 'stale',
       sourceType: 'noteVersion'
-    ) => Pick<readonly DependencyIdRecord[], 'map'>;
-    markEvidenceByNoteId: (noteId: unknown, status: 'invalid') => Pick<readonly DependencyIdRecord[], 'map'>;
+    ): readonly DependencyIdRecord[];
+    markEvidenceByNoteId(noteId: string, status: 'invalid'): readonly DependencyIdRecord[];
   };
-  questionService: {
-    markSourcesStale: (sourceType: 'knowledgeEvidence' | 'noteVersion', sourceIds: unknown[]) => unknown;
-  };
+  questionService: { markSourcesStale(sourceType: 'knowledgeEvidence' | 'noteVersion', sourceIds: unknown[]): unknown };
   noteVersionService: {
-    listVersionIds: (options: { noteId: unknown }) => Pick<readonly unknown[], 'filter'>;
-    listVersions: (options: { noteId: unknown }) => Pick<readonly DependencyIdRecord[], 'map'>;
+    listVersionIds(options: { noteId: string }): unknown[];
+    listVersions(options: { noteId: string }): readonly DependencyIdRecord[];
   };
-  noteVersionRepository: { list: (options: { noteId: unknown }) => Pick<readonly DependencyIdRecord[], 'map'> };
-  knowledgeEvidenceRepository: { list: (options: { noteId: unknown }) => { readonly length: number } };
-  questionSourceRepository: { list: () => Pick<readonly DependencyQuestionSource[], 'some'> };
-  analysisScopeRepository: { list: () => Pick<readonly DependencyScopeSnapshot[], 'some'> };
-  coalescePreviousVersion: (
-    note: DependencyIdRecord,
-    version: DependencyVersionRecord,
-    annotationChange: unknown
-  ) => unknown;
+  noteVersionRepository: { list(options: { noteId: string }): readonly DependencyIdRecord[] };
+  knowledgeEvidenceRepository: { list(options: { noteId: string }): { readonly length: number } };
+  questionSourceRepository: { list(): readonly DependencyQuestionSource[] };
+  analysisScopeRepository: { list(): readonly DependencyScopeSnapshot[] };
+  coalescePreviousVersion(
+    note: Pick<NoteRecord, 'id'>,
+    version: NoteVersionRecord,
+    annotationChange: AnnotationReconcileContext | null | undefined
+  ): unknown;
 }
 export interface NoteDependencyLifecycle {
-  onNoteContentChanged: (note: DependencyIdRecord, version: DependencyVersionRecord, annotationChange: unknown) => void;
-  onNoteDeleted: (noteId: unknown) => void;
-  onBeforePermanentDelete: (noteId: unknown) => void;
+  onNoteContentChanged(
+    note: Pick<NoteRecord, 'id'>,
+    version: NoteVersionRecord,
+    annotationChange: AnnotationReconcileContext | null | undefined
+  ): void;
+  onNoteDeleted(noteId: string): void;
+  onBeforePermanentDelete(noteId: string): void;
 }
 
 /** 笔记变更的同步依赖级联；由原笔记服务的事务包裹，不另开事务。 */
@@ -141,7 +131,12 @@ export function createNoteDependencyLifecycle({
         analysisScopeRepository
           .list()
           .some(snapshot =>
-            snapshot.noteVersions?.some(version => version.noteId === noteId || versionIds.has(version.noteVersionId))
+            (
+              snapshot.noteVersions as
+                | { some(callback: (version: { noteId?: unknown; noteVersionId?: unknown }) => boolean): boolean }
+                | null
+                | undefined
+            )?.some(version => version.noteId === noteId || versionIds.has(version.noteVersionId))
           )
       ) {
         throw conflictError(

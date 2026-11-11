@@ -6,7 +6,7 @@ import {
 } from '../src/modules/knowledge/application/content-annotation-service.ts';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.ts';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createAsyncContentAnnotationService } from '../src/modules/knowledge/application/postgres-async/content-annotation-service.ts';
 import { resolveLegacyAnnotationAnchor } from '../src/modules/knowledge/application/legacy-annotation-anchor.ts';
 import {

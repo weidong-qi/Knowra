@@ -1,5 +1,8 @@
 import type { SnapshotDependencies, SnapshotRepositories } from './mcp-read-snapshot-types.ts';
-import type { KnowledgeItemRepository } from '../knowledge/infrastructure/knowledge-item-repository.ts';
+import type {
+  KnowledgeItemRepository,
+  KnowledgeItemRecord
+} from '../knowledge/infrastructure/knowledge-item-repository.ts';
 import type { KnowledgeArtifactProvenanceRepository } from '../knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { ProposalInput } from './boundary-types.ts';
@@ -9,8 +12,8 @@ type Awaitable<T> = T | Promise<T>;
 export interface McpKnowledgeRepositories extends SnapshotRepositories {
   knowledgeItemRepository: SnapshotRepositories['knowledgeItemRepository'] & {
     list: (
-      ...args: Parameters<KnowledgeItemRepository['list']>
-    ) => Awaitable<ReturnType<KnowledgeItemRepository['list']>>;
+      ...args: Parameters<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>['list']>
+    ) => Awaitable<ReturnType<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>['list']>>;
   };
   knowledgeArtifactProvenanceRepository: SnapshotRepositories['knowledgeArtifactProvenanceRepository'] & {
     list: (

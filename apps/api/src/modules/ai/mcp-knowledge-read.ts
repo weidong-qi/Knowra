@@ -165,7 +165,7 @@ export function createMcpKnowledgeReadService({
         throw unavailable();
       return version;
     }
-    const evidenceById = new Map<string, KnowledgeEvidenceRecord>();
+    const evidenceById = new Map<string, KnowledgeEvidenceRecord<unknown, unknown>>();
     for (const evidence of state.evidence) {
       if (
         !id(evidence.id) ||

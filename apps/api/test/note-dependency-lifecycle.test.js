@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createNoteDependencyLifecycle } from '../src/modules/knowledge/application/note-dependency-lifecycle.ts';
 import { createAsyncNoteDependencyLifecycle } from '../src/modules/knowledge/application/postgres-async/note-dependency-lifecycle.ts';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.ts';
 import {
   legacyNoteDependencyLifecycle,

@@ -29,7 +29,8 @@ import {
 const refuse: (code: string, message: string, status?: number) => never = (code, message, status = 409) => {
   throw createAppError(code, message, status);
 };
-const normalized = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
+// 历史记录缺少正文时仍由原 normalize 调用抛错，不把读取结果伪装成完整知识点。
+const normalized = (value: string | undefined) => value!.normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase();
 
 /**
  * 受信宿主的 Agent 知识候选保存入口：全部候选、证据与来源摘要在一次核心操作事务内提交，

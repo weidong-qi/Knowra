@@ -1,5 +1,7 @@
 import type { PrismaClient, Prisma } from '@prisma/client';
 import type { PdfAnnotation, PdfSource } from '@study-accelerator/shared/pdf';
+import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
+import type { FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
 import type { Note, NoteConstructorInput } from '../knowledge/domain/note.ts';
 import type { LocalAttachmentRecord } from '../../infrastructure/local-attachment-types.ts';
 import type { createMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
@@ -50,14 +52,17 @@ export interface PdfDataStore {
   prepareImport(snapshot: PdfSnapshot): PdfSnapshot;
   commitImport(snapshot: PdfSnapshot): object;
 }
+export type PdfNoteRead = Pick<NoteRecord, 'id' | 'spaceId' | 'contentKind' | 'pdfSource' | 'deleted'>;
 export interface PdfKnowledge {
   repositories: {
     noteRepository: {
-      findById(id: string): Awaitable<PdfNoteRecord | null | undefined>;
-      list(input: { spaceId: string }): Awaitable<PdfNoteRecord[]>;
+      findById(id: string): Awaitable<PdfNoteRead | null | undefined>;
+      list(input: { spaceId: string }): Awaitable<PdfNoteRead[]>;
     };
     knowledgeSpaceRepository: { findById(id: string | null | undefined): Awaitable<PdfSpace | null | undefined> };
-    folderRepository: { findById(id: string): Awaitable<PdfFolder | null | undefined> };
+    folderRepository: {
+      findById(id: string): Awaitable<Pick<FolderRecord, 'id' | 'spaceId' | 'deletedAt'> | null | undefined>;
+    };
   };
   noteService: {
     createNote(

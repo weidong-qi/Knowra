@@ -6,7 +6,7 @@ import { createLocalPurgeTaskReader } from './infrastructure/asset-purge-task-st
 import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createKnowledgeModule } from './modules/knowledge/index.js';
+import { createKnowledgeModule } from './modules/knowledge/index.ts';
 import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.ts';
 import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.ts';
 import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-handlers.ts';

@@ -4,7 +4,7 @@ export const knowledgeModuleTests = [
   {
     name: 'createKnowledgeModule exposes core services',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
 
       const module = createKnowledgeModule();
 
@@ -19,7 +19,7 @@ export const knowledgeModuleTests = [
   {
     name: 'strict knowledge module validates note references and space boundaries',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const module = createKnowledgeModule({ enforceReferences: true });
 
       module.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'owner-a' });
@@ -36,46 +36,41 @@ export const knowledgeModuleTests = [
       });
 
       assert.throws(
-        () => module.folderService.createFolder({
-          name: 'Unknown space folder',
-          spaceId: 'space-missing'
-        }),
-        (error) => (
-          error.statusCode === 422
-          && error.code === 'FOLDER_SPACE_NOT_FOUND'
-        )
+        () =>
+          module.folderService.createFolder({
+            name: 'Unknown space folder',
+            spaceId: 'space-missing'
+          }),
+        error => error.statusCode === 422 && error.code === 'FOLDER_SPACE_NOT_FOUND'
       );
       assert.throws(
-        () => module.tagService.createTag({
-          name: 'Unknown space tag',
-          spaceId: 'space-missing'
-        }),
-        (error) => (
-          error.statusCode === 422
-          && error.code === 'TAG_SPACE_NOT_FOUND'
-        )
+        () =>
+          module.tagService.createTag({
+            name: 'Unknown space tag',
+            spaceId: 'space-missing'
+          }),
+        error => error.statusCode === 422 && error.code === 'TAG_SPACE_NOT_FOUND'
       );
       assert.throws(
-        () => module.noteService.createNote({
-          title: 'Missing folder',
-          rawMarkdown: 'body',
-          spaceId: 'space-owner-a',
-          folderId: 'folder-missing'
-        }),
-        (error) => error.statusCode === 422 && error.code === 'NOTE_FOLDER_NOT_FOUND'
+        () =>
+          module.noteService.createNote({
+            title: 'Missing folder',
+            rawMarkdown: 'body',
+            spaceId: 'space-owner-a',
+            folderId: 'folder-missing'
+          }),
+        error => error.statusCode === 422 && error.code === 'NOTE_FOLDER_NOT_FOUND'
       );
       assert.throws(
-        () => module.noteService.createNote({
-          title: 'Cross-space tag',
-          rawMarkdown: 'body',
-          spaceId: 'space-owner-a',
-          folderId: 'folder-owner-a',
-          tagIds: ['tag-owner-b']
-        }),
-        (error) => (
-          error.statusCode === 422
-          && error.code === 'NOTE_TAG_SPACE_MISMATCH'
-        )
+        () =>
+          module.noteService.createNote({
+            title: 'Cross-space tag',
+            rawMarkdown: 'body',
+            spaceId: 'space-owner-a',
+            folderId: 'folder-owner-a',
+            tagIds: ['tag-owner-b']
+          }),
+        error => error.statusCode === 422 && error.code === 'NOTE_TAG_SPACE_MISMATCH'
       );
     }
   }

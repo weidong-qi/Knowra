@@ -4,7 +4,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers enforce the server owner and ignore client user ids',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -34,7 +34,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can create and list notes',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -60,7 +60,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can fetch a full note detail',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -83,7 +83,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers return compact note summaries and search ids on request',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const handlers = createKnowledgeHttpHandlers({
@@ -113,7 +113,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can restore deleted notes and read them with includeDeleted',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -139,7 +139,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can set favorite status on a note',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -167,7 +167,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers support batch delete and batch tag assignment',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -205,7 +205,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can assign one tag to one note',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule: createKnowledgeModule() });
@@ -224,7 +224,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can return linked notes for a note detail',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -254,7 +254,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can import markdown notes',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -274,7 +274,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can batch import markdown notes',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -303,7 +303,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can search notes through query input',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -329,7 +329,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers pass sort options to note listing and search',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -376,7 +376,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can update and delete folders and tags',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -410,7 +410,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can return a nested folder tree',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -437,7 +437,7 @@ export const knowledgeHttpTests = [
   {
     name: 'deleting folders and tags cleans up note associations',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -474,7 +474,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can remove a tag from a note directly',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
@@ -498,7 +498,7 @@ export const knowledgeHttpTests = [
   {
     name: 'knowledge handlers can replace note tags in one operation',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();

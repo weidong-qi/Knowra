@@ -22,7 +22,8 @@ interface AnnotationServiceDependencies {
   noteVersionRepository?: Pick<NonNullable<ContentAnnotationDependencies['noteVersionRepository']>, 'findById'> | null;
   revisionRepository?: { save(record: AnnotationRevisionWrite): object } | null;
   onSourceChanged?: ContentAnnotationDependencies['onSourceChanged'] | null;
-  exclusionRepository?: ContentAnnotationDependencies['exclusionRepository'];
+  // 旧排除入口已移除，装配仍可传入，但本服务不读取或调用它。
+  exclusionRepository?: object;
 }
 /** 修订记录保留仓储原值，不把历史字段当成已通过领域校验。 */
 export interface AnnotationRevisionWrite {
@@ -203,7 +204,7 @@ export function createContentAnnotationService({
       throw legacyAnnotationRemoved();
     },
     // 不恢复旧锚点跟随，只在旧来源无法确认时保守降级。
-    reconcileForNote(noteId: string, _contentHash: string, context: AnnotationReconcileContext | null = null) {
+    reconcileForNote(noteId: string, _contentHash: unknown, context: AnnotationReconcileContext | null = null) {
       const rows = repository
         .list({ noteId, includeDeleted: true })
         .filter(row => row.schemaVersion !== INLINE_ANNOTATION_SCHEMA);

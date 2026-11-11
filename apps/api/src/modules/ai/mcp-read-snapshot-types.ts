@@ -2,8 +2,14 @@ import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { NoteRecord, NoteRepository } from '../knowledge/infrastructure/note-repository.ts';
 import type { FolderRepository } from '../knowledge/infrastructure/folder-repository.ts';
 import type { KnowledgeSpaceRepository } from '../knowledge/infrastructure/knowledge-space-repository.ts';
-import type { KnowledgeItemRepository } from '../knowledge/infrastructure/knowledge-item-repository.ts';
-import type { KnowledgeEvidenceRepository } from '../knowledge/infrastructure/knowledge-evidence-repository.ts';
+import type {
+  KnowledgeItemRepository,
+  KnowledgeItemRecord
+} from '../knowledge/infrastructure/knowledge-item-repository.ts';
+import type {
+  KnowledgeEvidenceRepository,
+  KnowledgeEvidenceRecord
+} from '../knowledge/infrastructure/knowledge-evidence-repository.ts';
 import type { KnowledgeArtifactProvenanceRepository } from '../knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
 import type { ContentAnnotationRepository } from '../knowledge/infrastructure/content-annotation-repository.ts';
 import type { NoteVersionRepository, NoteVersionRecord } from '../knowledge/infrastructure/note-version-repository.ts';
@@ -16,8 +22,10 @@ export interface SnapshotRepositories {
   noteRepository: AsyncMethods<Pick<NoteRepository, 'findById' | 'list'>>;
   folderRepository: AsyncMethods<Pick<FolderRepository, 'findById' | 'list'>>;
   knowledgeSpaceRepository: AsyncMethods<Pick<KnowledgeSpaceRepository, 'findById'>>;
-  knowledgeItemRepository: AsyncMethods<Pick<KnowledgeItemRepository, 'findById'>>;
-  knowledgeEvidenceRepository: AsyncMethods<Pick<KnowledgeEvidenceRepository, 'list'>>;
+  knowledgeItemRepository: AsyncMethods<Pick<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>, 'findById'>>;
+  knowledgeEvidenceRepository: AsyncMethods<
+    Pick<KnowledgeEvidenceRepository<KnowledgeEvidenceRecord<unknown, unknown>>, 'list'>
+  >;
   knowledgeArtifactProvenanceRepository: AsyncMethods<Pick<KnowledgeArtifactProvenanceRepository, 'findByArtifactId'>>;
   noteVersionRepository: AsyncMethods<Pick<NoteVersionRepository, 'findById' | 'findByNoteIdAndContentHash'>>;
   contentAnnotationRepository?: AsyncMethods<Pick<ContentAnnotationRepository, 'findById'>>;

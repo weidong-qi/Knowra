@@ -56,7 +56,64 @@ import { createWorkspaceQueryService } from './application/workspace-query-servi
 import { bindLocalServiceTransactions } from './application/local-service-transactions.ts';
 import { conflictError, validationError } from './application/knowledge-errors.ts';
 
-export function createKnowledgeModule(options = {}) {
+import type { NoteRecord } from './infrastructure/note-repository.ts';
+import type { NoteVersionRecord } from './infrastructure/note-version-repository.ts';
+import type {
+  LocalTrainingAssetDependencies,
+  TrainingPurgeInput
+} from './application/training-asset-lifecycle-types.ts';
+import type { SiblingNameInput } from './application/postgres-async/service-dependencies.ts';
+import type { AnnotationReconcileContext } from './application/content-annotation-service.ts';
+import type { FolderDeletionPackage } from './domain/folder.ts';
+
+export interface KnowledgeModuleOptions {
+  noteRepository?: ReturnType<typeof createInMemoryNoteRepository> | null;
+  folderRepository?: ReturnType<typeof createInMemoryFolderRepository> | null;
+  tagRepository?: ReturnType<typeof createInMemoryTagRepository> | null;
+  tagGroupRepository?: ReturnType<typeof createInMemoryTagGroupRepository> | null;
+  knowledgeSpaceRepository?: ReturnType<typeof createInMemoryKnowledgeSpaceRepository> | null;
+  contentAnnotationRepository?: ReturnType<typeof createInMemoryContentAnnotationRepository> | null;
+  pdfAnnotationRepository?: ReturnType<typeof createInMemoryPdfAnnotationRepository> | null;
+  annotationExclusionRepository?: ReturnType<typeof createInMemoryAnnotationExclusionRepository> | null;
+  annotationRevisionRepository?: ReturnType<typeof createInMemoryAnnotationRevisionRepository> | null;
+  analysisScopeRepository?: ReturnType<typeof createInMemoryAnalysisScopeRepository> | null;
+  noteVersionRepository?: ReturnType<typeof createInMemoryNoteVersionRepository> | null;
+  knowledgeItemRepository?: ReturnType<typeof createInMemoryKnowledgeItemRepository> | null;
+  knowledgeEvidenceRepository?: ReturnType<typeof createInMemoryKnowledgeEvidenceRepository> | null;
+  knowledgeArtifactProvenanceRepository?: ReturnType<typeof createInMemoryKnowledgeArtifactProvenanceRepository> | null;
+  learningObjectiveRepository?: ReturnType<typeof createInMemoryLearningObjectiveRepository> | null;
+  examProfileRepository?: ReturnType<typeof createInMemoryExamProfileRepository> | null;
+  examFocusRepository?: ReturnType<typeof createInMemoryExamFocusRepository> | null;
+  questionRepository?: ReturnType<typeof createInMemoryQuestionRepository> | null;
+  questionObjectiveRepository?: ReturnType<typeof createInMemoryQuestionObjectiveRepository> | null;
+  questionSourceRepository?: ReturnType<typeof createInMemoryQuestionSourceRepository> | null;
+  pdfAnnotations?: NonNullable<Parameters<typeof createInMemoryPdfAnnotationRepository>[0]>['records'];
+  annotationExclusions?: NonNullable<Parameters<typeof createInMemoryAnnotationExclusionRepository>[0]>['records'];
+  annotationRevisions?: NonNullable<Parameters<typeof createInMemoryAnnotationRevisionRepository>[0]>['records'];
+  analysisScopeSnapshots?: NonNullable<Parameters<typeof createInMemoryAnalysisScopeRepository>[0]>['records'];
+  noteVersions?: NonNullable<Parameters<typeof createInMemoryNoteVersionRepository>[0]>['records'];
+  knowledgeItems?: NonNullable<Parameters<typeof createInMemoryKnowledgeItemRepository>[0]>['records'];
+  knowledgeEvidence?: NonNullable<Parameters<typeof createInMemoryKnowledgeEvidenceRepository>[0]>['records'];
+  knowledgeArtifactProvenance?: NonNullable<
+    Parameters<typeof createInMemoryKnowledgeArtifactProvenanceRepository>[0]
+  >['records'];
+  learningObjectives?: NonNullable<Parameters<typeof createInMemoryLearningObjectiveRepository>[0]>['records'];
+  examProfiles?: NonNullable<Parameters<typeof createInMemoryExamProfileRepository>[0]>['records'];
+  examFocuses?: NonNullable<Parameters<typeof createInMemoryExamFocusRepository>[0]>['records'];
+  questions?: NonNullable<Parameters<typeof createInMemoryQuestionRepository>[0]>['records'];
+  questionObjectives?: NonNullable<Parameters<typeof createInMemoryQuestionObjectiveRepository>[0]>['records'];
+  questionSources?: NonNullable<Parameters<typeof createInMemoryQuestionSourceRepository>[0]>['records'];
+  enforceReferences?: boolean;
+  runTransaction?: <Result>(operation: () => Result) => Result;
+  getPurgeTombstone?: LocalTrainingAssetDependencies['getTombstone'];
+  readPurgeTaskState?: LocalTrainingAssetDependencies['readPurgeTaskState'];
+  getPurgeDatasetEpoch?: LocalTrainingAssetDependencies['getPurgeDatasetEpoch'];
+  noteVersionCoalescing?: { canDiscard?: (version: NoteVersionRecord) => boolean; windowMs?: number } | null;
+}
+type FolderDeleteInput = { mode?: string; destinationId?: string | null };
+type KnowledgePurgeInput = TrainingPurgeInput & { expectedUpdatedAt?: unknown };
+
+export function createKnowledgeModule(options: KnowledgeModuleOptions = {}) {
   const noteRepository = options.noteRepository ?? createInMemoryNoteRepository();
   const folderRepository = options.folderRepository ?? createInMemoryFolderRepository();
   const tagRepository = options.tagRepository ?? createInMemoryTagRepository();
@@ -111,11 +168,10 @@ export function createKnowledgeModule(options = {}) {
   const enforceReferences = options.enforceReferences ?? false;
   const runTransaction = options.runTransaction ?? (operation => operation());
 
-  function normalizeComparableName(value) {
+  function normalizeComparableName(value: unknown) {
     return String(value ?? '').trim();
   }
 
-  /** @param {{spaceId: string, parentId?: string, folderId?: string, title?: string, name?: string, currentFolderId?: string, currentNoteId?: string}} input */
   function assertSiblingNameAvailable({
     spaceId,
     parentId = null,
@@ -124,7 +180,7 @@ export function createKnowledgeModule(options = {}) {
     name,
     currentFolderId = null,
     currentNoteId = null
-  }) {
+  }: Omit<SiblingNameInput, 'spaceId'> & { spaceId?: string | null }) {
     const candidate = normalizeComparableName(name ?? title);
     if (!candidate) {
       return;
@@ -166,8 +222,8 @@ export function createKnowledgeModule(options = {}) {
     });
 
   const noteVersionService = createNoteVersionService({ repository: noteVersionRepository });
-  let learningObjectiveService = null;
-  let questionService = null;
+  let learningObjectiveService: ReturnType<typeof createLearningObjectiveService> | null = null;
+  let questionService: ReturnType<typeof createQuestionService> | null = null;
   const knowledgeItemService = createKnowledgeItemService({
     repository: knowledgeItemRepository,
     evidenceRepository: knowledgeEvidenceRepository,
@@ -262,7 +318,7 @@ export function createKnowledgeModule(options = {}) {
     exclusionRepository: annotationExclusionRepository,
     onSourceChanged: annotation => {
       const changed = knowledgeItemService.markEvidenceByAnnotationId(
-        /** @type {string} */ (annotation.id),
+        /** @type {string} */ annotation.id,
         annotation.anchorStatus === 'missing' ? 'insufficient' : 'stale'
       );
       questionService?.markSourcesStale(
@@ -282,10 +338,13 @@ export function createKnowledgeModule(options = {}) {
   });
   // 仅在调用方提供 canDiscard（桌面端用它确认版本尚未同步、未被 AI 等外部记录引用）时启用。
   const versionCoalescing = options.noteVersionCoalescing ?? null;
-  function isNoteVersionReferenced(version, noteId) {
-    const mentions = record => {
+  function isNoteVersionReferenced(version: NoteVersionRecord, noteId: string) {
+    const mentions = (record: object) => {
       const text = JSON.stringify(record);
-      return text.includes(version.id) || text.includes(version.contentHash);
+      return (
+        (text.includes as (value: unknown) => boolean)(version.id) ||
+        (text.includes as (value: unknown) => boolean)(version.contentHash)
+      );
     };
     const annotations = contentAnnotationRepository.list({ noteId, includeDeleted: true });
     const annotationIds = new Set(annotations.map(item => item.id));
@@ -300,7 +359,11 @@ export function createKnowledgeModule(options = {}) {
       analysisScopeRepository.list({ includeDeleted: true }).some(mentions)
     );
   }
-  function coalescePreviousVersion(note, version, annotationChange) {
+  function coalescePreviousVersion(
+    note: Pick<NoteRecord, 'id'>,
+    version: NoteVersionRecord,
+    annotationChange: AnnotationReconcileContext | null | undefined
+  ) {
     if (!versionCoalescing?.canDiscard) return;
     const versions = noteVersionRepository.list({ noteId: note.id });
     // 恢复已清理的私有副本时会生成同正文新 ID，也不能合并恢复前的正文。
@@ -379,12 +442,12 @@ export function createKnowledgeModule(options = {}) {
     }
   });
 
-  function deleteFolderAndCleanup(folderId, input = {}) {
+  function deleteFolderAndCleanup(folderId: string, input: FolderDeleteInput = {}) {
     return runTransaction(() => {
       const subtreeIds = folderService.getFolderSubtreeIds(folderId);
-      const root = folderRepository.findById(folderId);
+      const root = folderRepository.findById(folderId)!;
       const mode = input.mode;
-      if (!['keep', 'with-content'].includes(mode))
+      if (!(['keep', 'with-content'] as readonly (string | undefined)[]).includes(mode))
         throw validationError('FOLDER_DELETE_MODE_REQUIRED', '请选择保留并移动内容，或将内容一起移入回收站');
       const destinationId = Object.hasOwn(input, 'destinationId') ? input.destinationId : (root.parentId ?? null);
       if (mode === 'keep' && destinationId) {
@@ -399,7 +462,7 @@ export function createKnowledgeModule(options = {}) {
       }
       const notes = noteRepository
         .list({ spaceId: root.spaceId, includeDeleted: true })
-        .filter(note => subtreeIds.includes(note.folderId));
+        .filter(note => (subtreeIds as readonly (string | null | undefined)[]).includes(note.folderId));
       const packageId = `folder-${folderId}-${Date.now()}`;
       const noteIds = [];
       for (const note of notes.filter(note => !note.deleted)) {
@@ -412,12 +475,18 @@ export function createKnowledgeModule(options = {}) {
           noteIds.push(note.id);
         }
       }
-      const deletionPackage = { id: packageId, mode, folderIds: subtreeIds, noteIds, destinationId };
+      const deletionPackage = {
+        id: packageId,
+        mode: mode as FolderDeletionPackage['mode'],
+        folderIds: subtreeIds,
+        noteIds,
+        destinationId
+      };
       return { folders: folderService.trashFolder(folderId, deletionPackage), deletionPackage };
     });
   }
 
-  function restoreDeletedFolder(folderId) {
+  function restoreDeletedFolder(folderId: string) {
     return runTransaction(() => {
       const root = folderRepository.findById(folderId);
       const deletionPackage = root?.deletionPackage;
@@ -431,7 +500,7 @@ export function createKnowledgeModule(options = {}) {
     });
   }
 
-  function deleteTagAndCleanup(tagId) {
+  function deleteTagAndCleanup(tagId: string) {
     const tag = tagRepository.findById(tagId);
     if (tag?.isSystem) throw conflictError('SYSTEM_TAG_PROTECTED', 'System tags cannot be deleted');
     return runTransaction(() => {
@@ -440,7 +509,7 @@ export function createKnowledgeModule(options = {}) {
     });
   }
 
-  function mergeTags(sourceTagId, targetTagId) {
+  function mergeTags(sourceTagId: string, targetTagId: string) {
     const source = tagRepository.findById(sourceTagId);
     const target = tagRepository.findById(targetTagId);
     if (!source || !target) throw validationError('TAG_MERGE_TARGET_INVALID', 'Both tags must exist');
@@ -454,7 +523,7 @@ export function createKnowledgeModule(options = {}) {
     });
   }
 
-  function inspectKnowledgePurge(id) {
+  function inspectKnowledgePurge(id: string) {
     const item = knowledgeItemRepository.findById(id);
     return supplementPurgePreview(
       inspectKnowledgeItemPurge({
@@ -470,7 +539,7 @@ export function createKnowledgeModule(options = {}) {
     );
   }
 
-  function permanentlyDeleteKnowledgeItem(id, input = {}) {
+  function permanentlyDeleteKnowledgeItem(id: string, input: KnowledgePurgeInput = {}) {
     const { expectedUpdatedAt } = input;
     return runTransaction(() => {
       assertPurgeDatasetEpoch(input, options.getPurgeDatasetEpoch?.());
@@ -495,7 +564,7 @@ export function createKnowledgeModule(options = {}) {
       assertKnowledgeItemPurgeAllowed(preflight, expectedUpdatedAt);
       assertManualPurgeScope(
         'knowledgeItem',
-        knowledgeItemRepository.findById(id),
+        knowledgeItemRepository.findById(id)!,
         input,
         knowledgeArtifactProvenanceRepository.list({ artifactId: id })
       );
@@ -515,7 +584,7 @@ export function createKnowledgeModule(options = {}) {
     });
   }
 
-  function previewNoteVersionPrune(noteId) {
+  function previewNoteVersionPrune(noteId: string) {
     const note = noteRepository.findById(noteId);
     if (!note) throw validationError('NOTE_NOT_FOUND', '笔记不存在');
     return buildNoteVersionPrunePreview({
@@ -560,7 +629,7 @@ export function createKnowledgeModule(options = {}) {
     [examProfileService, ['get', 'list']],
     [examFocusService, ['get', 'list']],
     [questionService, ['getQuestion', 'listQuestions']]
-  ]) {
+  ] as const) {
     bindLocalServiceTransactions(service, runTransaction, reads);
   }
 

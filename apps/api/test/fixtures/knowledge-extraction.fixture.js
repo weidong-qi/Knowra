@@ -1,4 +1,4 @@
-import { createKnowledgeModule } from '../../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../../src/modules/knowledge/index.ts';
 import { prepareKnowledgeExtraction } from '../../src/modules/knowledge/application/knowledge-extraction-contract.ts';
 
 /** 全内存、无外部 AI 调用的可重复提炼验收资料。 */
