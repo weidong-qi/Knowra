@@ -504,7 +504,11 @@ export function createPostgresKnowledgeModule({
     getAnalysisScope: (...args) => directScopeService.getAnalysisScope(...args),
     createExclusion: scopeMutation('createExclusion'),
     deleteExclusion: scopeMutation('deleteExclusion'),
-    createAnalysisScope: scopeMutation('createAnalysisScope')
+    createAnalysisScope: scopeMutation('createAnalysisScope'),
+    /** @param {Parameters<typeof directScopeService.listAnalysisScopes>} args */
+    listAnalysisScopes: (...args) => directScopeService.listAnalysisScopes(...args),
+    trashAnalysisScope: scopeMutation('trashAnalysisScope'),
+    restoreAnalysisScope: scopeMutation('restoreAnalysisScope')
   };
 
   const noteService = createAsyncNoteService({

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { withCommandServer } from './command-search-http.test.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { buildJsonMigrationPlan, applyJsonMigration } from '../src/infrastructure/migration/json-to-postgres.ts';
@@ -21,7 +22,7 @@ async function fixture(operation) {
     return app;
   };
   try {
-    await operation({ open });
+    await operation({ open, database });
   } finally {
     try {
       for (const app of apps) await app.close();
@@ -37,6 +38,103 @@ async function fixture(operation) {
 
 export const reviewPostgresAcceptanceTests = process.env.KNOWRA_SYNC_TEST_DATABASE_URL
   ? [
+      {
+        name: '真实 PostgreSQL 分析范围 HTTP：列表、回收恢复、空间约束及修订冲突',
+        async run() {
+          await fixture(async ({ open, database }) => {
+            const app = await open('scope-http');
+            const space = await app.http.knowledge.createDefaultKnowledgeSpace();
+            const other = await app.http.knowledge.createKnowledgeSpace({ name: '另一合成空间' });
+            const stamp = new Date('2026-11-01T00:00:00.000Z');
+            const createScope = (id, deletedAt = null) =>
+              app.prisma.analysisScopeSnapshot.create({
+                data: {
+                  id,
+                  spaceId: space.id,
+                  mode: 'marked',
+                  inputHash: id,
+                  idempotencyKey: id,
+                  noteVersions: [],
+                  selections: [],
+                  segments: [],
+                  contextSegments: [],
+                  exclusions: [],
+                  omittedItems: [],
+                  annotationRevisions: [],
+                  summary: {},
+                  createdAt: stamp,
+                  updatedAt: stamp,
+                  deletedAt
+                }
+              });
+            const active = await createScope('scope-http-active');
+            const deleted = await createScope('scope-http-deleted', stamp);
+            await assert.rejects(
+              () =>
+                createPostgresAppContext({
+                  databaseUrl: database.databaseUrl,
+                  storageRootDir: path.join(os.tmpdir(), 'scope-foreign-owner'),
+                  ownerId: 'foreign-owner'
+                }),
+              error => error.code === 'OWNER_BOUNDARY_VIOLATION'
+            );
+            await withCommandServer(app, async baseUrl => {
+              const request = async (suffix, body) => {
+                const response = await fetch(
+                  `${baseUrl}/api/knowledge/analysis-scopes${suffix}`,
+                  body
+                    ? {
+                        method: 'POST',
+                        headers: { 'content-type': 'application/json' },
+                        body: JSON.stringify(body)
+                      }
+                    : {}
+                );
+                return { status: response.status, payload: await response.json() };
+              };
+              // 三个入口分别执行，旧装配会全部返回500；不能由第一个失败掩盖其余缺口。
+              const list = await request(`?spaceId=${space.id}`);
+              const trash = await request(`/${active.id}/trash`, {
+                spaceId: space.id,
+                expectedUpdatedAt: stamp.toISOString()
+              });
+              const restore = await request(`/${deleted.id}/restore`, {
+                spaceId: space.id,
+                expectedUpdatedAt: stamp.toISOString()
+              });
+              assert.deepEqual([list.status, trash.status, restore.status], [200, 200, 200]);
+              assert.deepEqual(
+                list.payload.data.map(row => row.id),
+                [active.id]
+              );
+              assert.ok(trash.payload.data.deletedAt);
+              assert.equal(restore.payload.data.deletedAt, null);
+              const stale = await request(`/${active.id}/restore`, {
+                spaceId: space.id,
+                expectedUpdatedAt: stamp.toISOString()
+              });
+              assert.equal(stale.status, 409);
+              assert.equal(stale.payload.error.code, 'ANALYSIS_SCOPE_UPDATE_CONFLICT');
+              const wrongSpace = await request(`/${active.id}/restore`, {
+                spaceId: other.id,
+                expectedUpdatedAt: trash.payload.data.updatedAt,
+                ownerId: 'demo'
+              });
+              assert.equal(wrongSpace.status, 404);
+              assert.equal(wrongSpace.payload.error.code, 'ANALYSIS_SCOPE_NOT_FOUND');
+              const restored = await request(`/${active.id}/restore`, {
+                spaceId: space.id,
+                expectedUpdatedAt: trash.payload.data.updatedAt
+              });
+              assert.equal(restored.status, 200);
+              assert.equal(restored.payload.data.deletedAt, null);
+              const after = await request(`?spaceId=${space.id}`);
+              assert.equal(after.payload.data.length, 2);
+              assert.deepEqual((await request(`?spaceId=${other.id}`)).payload.data, []);
+            });
+          });
+        }
+      },
       {
         name: '真实 PostgreSQL R04：分组迁移、快照往返、外键和替换事务回滚',
         async run() {
