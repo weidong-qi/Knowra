@@ -42,6 +42,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction-context.ts';
 import * as maps from '../knowledge/infrastructure/postgres/mappers.ts';
 import { appendChanges, createJournal, loadJournal, syncError } from './journal.ts';
+import { preserveDeviceRetirements } from './device-retirement.ts';
 import { createSyncService } from './service.ts';
 import { applyNoteOperation } from './local-provider.ts';
 
@@ -230,7 +231,11 @@ export function createPostgresSyncRuntime<Client extends SyncPostgresClient>(cli
             (exists!.payload as SyncJournalEpoch).epoch !== context.journal.epoch
               ? loadJournal(exists!.payload, after)
               : row && !exists
-                ? createJournal(after)
+                ? (() => {
+                    const replacement = createJournal(after);
+                    preserveDeviceRetirements(context.journal, replacement);
+                    return replacement;
+                  })()
                 : appendChanges(context.journal, before, after);
           // 日志载荷可达数十 MB：Prisma 的 Json 参数序列化比文本 ::jsonb 慢一个数量级，故用原生 SQL 整体替换。
           await tx.$executeRawUnsafe(

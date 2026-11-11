@@ -109,7 +109,7 @@ test('云端Mock摘要通过增量与逐页bootstrap到两SQLite端，原文编�
 });
 
 for (const reorderResponseKeys of [false, true])
-  test(`SQLite Mock上行同正文版本alias、scope与摘要不可变，丢确认重试后另一端仍可回读（${reorderResponseKeys ? 'JSONB式对象键序' : 'JSON原键序'}）`, async t => {
+  test(`SQLite Mock上行同正文版本alias、scope与摘要不可变，丢确认后暂停保全且另一端仍可回读（${reorderResponseKeys ? 'JSONB式对象键序' : 'JSON原键序'}）`, async t => {
     const cloud = await fixture(t, { reorderResponseKeys });
     let lose = true;
     const operations = [],
@@ -150,7 +150,7 @@ for (const reorderResponseKeys of [false, true])
     assert.equal(results[0].status, 200);
     assert.equal(results[0].body.data.status, 'accepted');
     assert.equal(lose, false);
-    assert.equal(a.engine.status().error?.code, 'SYNC_NETWORK_UNAVAILABLE');
+    assert.equal(a.engine.status().error?.code, 'SYNC_RESULT_UNCERTAIN');
     assert.deepEqual(meta(a, 'entityUpload'), operations[0]);
     assert.deepEqual(cloud.store.state.knowledgeArtifactProvenance, [record]);
     assert.deepEqual(cloud.store.state.analysisScopeSnapshots, [scope]);
@@ -165,16 +165,13 @@ for (const reorderResponseKeys of [false, true])
     assert.equal(accepted.status, 'found');
     assert.deepEqual(accepted.result, results[0].body.data);
     await a.engine.sync();
-    clean(a);
-    assert.equal(operations.length, 2);
-    assert.deepEqual(operations[1], operations[0]);
-    assert.equal(operations[0].operationId, operations[1].operationId);
-    assert.equal(requestHash(operations[1]), receiptInput.requestHash);
-    assert.deepEqual(results[1], results[0]);
-    assert.equal(meta(a, 'entityUpload'), null);
-    assert.equal(a.engine.status().pendingEntities, 0);
+    assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+    assert.equal(operations.length, 1);
+    assert.equal(requestHash(operations[0]), receiptInput.requestHash);
+    assert.deepEqual(meta(a, 'entityUpload'), operations[0]);
+    assert(a.engine.status().pendingEntities > 0);
     assert.equal(a.engine.status().entityConflict, null);
-    assert.equal(a.store.getStatus().pendingOperations, 0);
+    assert(a.store.getStatus().pendingOperations > 0);
     assertMinimalProvenanceTransport(operations[0].changes, record);
     assert.deepEqual(cloud.store.state.knowledgeArtifactProvenance, [record]);
     assert.deepEqual(cloud.store.state.analysisScopeSnapshots, [scope]);
@@ -236,7 +233,7 @@ test('旧notes-only引擎明确拒绝schema8，不清空本地修改或推进游
   assert.equal(workspace.knowledge.noteService.getNote(note.id).rawMarkdown, '保留');
 });
 
-test('schema6冻结批次以原hash查已接纳回执，保留后继编辑且只新请求加schema8', async t => {
+test('schema6冻结批次已有回执也不自动核销，保留原hash及后继编辑', async t => {
   const cloud = await fixture(t),
     device = cloud.device('upgrade');
   await device.connect();
@@ -259,10 +256,11 @@ test('schema6冻结批次以原hash查已接纳回执，保留后继编辑且只
   device.store.metadataTransaction(db => writeMeta(db, 'entityUpload', old));
   device.knowledge.noteService.updateNote(note.id, { rawMarkdown: '升级后的继续编辑' });
   await device.engine.sync();
-  clean(device);
-  assert.equal(cloud.store.state.notes.find(value => value.id === note.id).rawMarkdown, '升级后的继续编辑');
-  assert.equal(meta(device, 'entityUpload'), null);
-  assert.equal(device.engine.status().pendingEntities, 0);
+  assert.equal(device.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(device.knowledge.noteService.getNote(note.id).rawMarkdown, '升级后的继续编辑');
+  assert.equal(cloud.store.state.notes.find(value => value.id === note.id).rawMarkdown, '已提交版');
+  assert.deepEqual(meta(device, 'entityUpload'), old);
+  assert(device.engine.status().pendingEntities > 0);
   assert.equal(
     cloud.store.getSyncJournal().receipts[JSON.stringify([old.deviceId, old.operationId])].hash,
     requestHash(old)
@@ -285,14 +283,14 @@ test('旧冻结批次回执已裁剪时暂停，保留原operation/hash/outbox�
     outbox = device.store.readOutbox(),
     cursor = meta(device, 'cursor');
   await device.engine.sync();
-  assert.equal(device.engine.status().error.code, 'SYNC_LEGACY_OPERATION_UNRESOLVED');
+  assert.equal(device.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
   assert.deepEqual(meta(device, 'entityUpload'), old);
   assert.deepEqual(device.store.readOutbox(), outbox);
   assert.deepEqual(device.store.exportSnapshot().data, before.data);
   assert.equal(meta(device, 'cursor'), cursor);
 });
 
-test('旧冻结批次确知未接纳时只解除旧信封，新operation完整提交且不丢outbox', async t => {
+test('旧冻结批次回执缺席不能证明未接纳，不换operation且保留outbox', async t => {
   const cloud = await fixture(t),
     sent = [],
     device = cloud.device('not-accepted', (url, init) => {
@@ -309,14 +307,15 @@ test('旧冻结批次确知未接纳时只解除旧信封，新operation完整�
   delete old.entitySchemaVersion;
   delete old.capabilities;
   device.store.metadataTransaction(db => writeMeta(db, 'entityUpload', old));
+  const outbox = device.store.readOutbox();
   await device.engine.sync();
-  clean(device);
-  assert.equal(sent.length, 1);
-  assert.notEqual(sent[0].operationId, old.operationId);
-  assert.equal(sent[0].entitySchemaVersion, 9);
-  assert(sent[0].capabilities.includes('knowledge-provenance-v1'));
-  assert.equal(cloud.store.state.notes.find(value => value.id === note.id).rawMarkdown, note.rawMarkdown);
-  assert.equal(device.engine.status().pendingEntities, 0);
+  assert.equal(device.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(sent.length, 0);
+  assert.deepEqual(meta(device, 'entityUpload'), old);
+  assert.deepEqual(device.store.readOutbox(), outbox);
+  assert.equal(device.knowledge.noteService.getNote(note.id).rawMarkdown, note.rawMarkdown);
+  assert(!cloud.store.state.notes.some(value => value.id === note.id));
+  assert(device.engine.status().pendingEntities > 0);
 });
 
 test('升级前未确认批次遇资料库换代必须先暂停，不能bootstrap清除原请求或重编号', async t => {
@@ -337,7 +336,7 @@ test('升级前未确认批次遇资料库换代必须先暂停，不能bootstra
     cursor = meta(device, 'cursor');
   cloud.store.commitImport(cloud.store.exportSnapshot());
   await device.engine.sync();
-  assert.equal(device.engine.status().error.code, 'SYNC_LEGACY_OPERATION_UNRESOLVED');
+  assert.equal(device.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
   assert.deepEqual(meta(device, 'entityUpload'), old);
   assert.equal(meta(device, 'cursor'), cursor);
   assert.deepEqual(device.store.exportSnapshot().data, before.data);

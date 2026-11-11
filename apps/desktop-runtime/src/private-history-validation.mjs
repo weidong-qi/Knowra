@@ -1,3 +1,4 @@
+import { readAiSchemaVersion } from './sqlite-schema.mjs';
 import { validateSyncHistoryRows } from './sync-history.mjs';
 import { readPersonalTodoHistory } from './personal-todos/history-reader.mjs';
 import { DatabaseSync } from 'node:sqlite';
@@ -46,7 +47,7 @@ function validatePrivateHistorySchema(db, tables, version) {
   const metadata = db.prepare('SELECT key,value FROM metadata').all();
   if (metadata.some(row => typeof row.key !== 'string' || typeof row.value !== 'string')) invalid();
   const markers = new Map(metadata.map(row => [row.key, row.value]));
-  const required = requiredPrivateTables(version);
+  const required = requiredPrivateTables(readAiSchemaVersion(db, version));
   if (required.some(name => !tables.has(name))) invalid();
   for (const [marker, names] of Object.entries(extensionTables)) {
     const value = markers.get(marker);
@@ -57,7 +58,8 @@ function validatePrivateHistorySchema(db, tables, version) {
     ...Object.keys(extensionTables),
     'localDataSchemaVersion',
     'entitySyncVersion',
-    'deletionFactsVersion'
+    'deletionFactsVersion',
+    'aiSchemaVersion'
   ]);
   if (metadata.some(row => row.key.endsWith('Version') && !knownVersions.has(row.key))) invalid();
   if (markers.has('entitySyncVersion') && markers.get('entitySyncVersion') !== '2') invalid();
@@ -136,7 +138,8 @@ export function validatePrivateHistory(db, tables, version) {
       db.prepare('PRAGMA foreign_key_check').all().length
     )
       invalid();
-    const checked = validateTableShapes(db, tables, version);
+    const aiVersion = readAiSchemaVersion(db, version);
+    const checked = validateTableShapes(db, tables, aiVersion);
     const jobs = [];
     if (
       [...Object.values(AI_SQL_DEFINITIONS).map(definition => definition.table), 'ai_job_events', 'ai_actions'].some(
@@ -147,7 +150,7 @@ export function validatePrivateHistory(db, tables, version) {
         for (const row of db.prepare(`SELECT * FROM ${quote(table)}`).iterate()) {
           const record = decodeAiRow(
             kind,
-            kind === 'aiJob' && version === 4 ? { question: null, result_json: null, ...row } : row
+            kind === 'aiJob' && aiVersion === 4 ? { question: null, result_json: null, ...row } : row
           );
           if (kind === 'aiJob') jobs.push(record);
         }

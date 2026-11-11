@@ -37,6 +37,7 @@ export interface SyncPageQuery {
   cursor?: string;
   deviceId?: string;
   operationId?: string;
+  recoveryId?: string;
   datasetEpoch?: string;
   requestHash?: string;
   entitySchemaVersion?: string | number;
@@ -78,6 +79,8 @@ export interface SyncHttpService {
   status(): SyncAwaitable<object>;
   bootstrap(input: unknown): SyncAwaitable<object>;
   operationReceipt(input: SyncPageQuery): SyncAwaitable<object>;
+  deviceRetirement(input: SyncPageQuery): SyncAwaitable<object>;
+  retireDevice(input: unknown): SyncAwaitable<object>;
   snapshot(input: SyncPageQuery): SyncAwaitable<object>;
   releaseSnapshot(input: unknown): SyncAwaitable<object>;
   changes(input: SyncPageQuery): SyncAwaitable<object>;
