@@ -1,4 +1,5 @@
 import type * as Models from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { toDate, toIso } from './mappers.ts';
 import { createAppError } from '../../../../errors/app-error.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
@@ -13,20 +14,13 @@ interface DatesWriteInput extends CreatedWriteInput {
 interface ScopeWriteInput extends DatesWriteInput {
   deletedAt?: string | Date | null;
 }
-type CreatedWriteData<Input> = Omit<Input, 'createdAt'> & { createdAt: Date };
-type DatesWriteData<Input> = Omit<Input, 'createdAt' | 'updatedAt'> & { createdAt: Date; updatedAt: Date };
-type ScopeWriteData<Input> = Omit<Input, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};
 export interface AnnotationExclusionRepositoryOptions {
   db: {
     annotationExclusion: {
-      upsert<Input extends DatesWriteInput>(input: {
+      upsert(input: {
         where: { id: string };
-        create: DatesWriteData<Input>;
-        update: Omit<DatesWriteData<Input>, 'id' | 'createdAt'>;
+        create: Prisma.AnnotationExclusionUncheckedCreateInput;
+        update: Prisma.AnnotationExclusionUncheckedUpdateInput;
       }): PromiseLike<Models.AnnotationExclusion>;
       findUnique(input: { where: { id: string } }): PromiseLike<Models.AnnotationExclusion | null>;
       findMany(input: {
@@ -40,9 +34,7 @@ export interface AnnotationExclusionRepositoryOptions {
 export interface AnnotationRevisionRepositoryOptions {
   db: {
     annotationRevision: {
-      create<Input extends CreatedWriteInput>(input: {
-        data: CreatedWriteData<Input>;
-      }): PromiseLike<Models.AnnotationRevision>;
+      create(input: { data: Prisma.AnnotationRevisionUncheckedCreateInput }): PromiseLike<Models.AnnotationRevision>;
       findUnique(input: {
         where: { id: string } | { annotationId_revision: { annotationId: string; revision: number } };
       }): PromiseLike<Models.AnnotationRevision | null>;
@@ -56,8 +48,8 @@ export interface AnnotationRevisionRepositoryOptions {
 export interface AnalysisScopeRepositoryOptions {
   db: {
     analysisScopeSnapshot: {
-      create<Input extends ScopeWriteInput>(input: {
-        data: ScopeWriteData<Input>;
+      create(input: {
+        data: Prisma.AnalysisScopeSnapshotUncheckedCreateInput;
       }): PromiseLike<Models.AnalysisScopeSnapshot>;
       updateMany(input: {
         where: { id: string; updatedAt: Date };
@@ -75,16 +67,17 @@ export interface AnalysisScopeRepositoryOptions {
   };
 }
 
+// 原始记录的字段完整性和 JSON 可写性仍交给 Prisma；断言只位于原 SQL 操作输入。
 export function createPostgresAnnotationExclusionRepository({ db }: AnnotationExclusionRepositoryOptions) {
   return {
     save<Record extends DatesWriteInput>(record: Record) {
       const data = { ...record, createdAt: toDate(record.createdAt), updatedAt: toDate(record.updatedAt) };
       return withRepositoryErrors(async () =>
         mapDates(
-          await db.annotationExclusion.upsert<Record>({
+          await db.annotationExclusion.upsert({
             where: { id: record.id },
-            create: data,
-            update: omitCreateFields(data)
+            create: data as unknown as Prisma.AnnotationExclusionUncheckedCreateInput,
+            update: omitCreateFields(data) as Prisma.AnnotationExclusionUncheckedUpdateInput
           })
         )
       );
@@ -118,7 +111,12 @@ export function createPostgresAnnotationRevisionRepository({ db }: AnnotationRev
     save<Record extends CreatedWriteInput>(record: Record) {
       return withRepositoryErrors(async () =>
         mapCreated(
-          await db.annotationRevision.create<Record>({ data: { ...record, createdAt: toDate(record.createdAt) } })
+          await db.annotationRevision.create({
+            data: {
+              ...record,
+              createdAt: toDate(record.createdAt)
+            } as unknown as Prisma.AnnotationRevisionUncheckedCreateInput
+          })
         )
       );
     },
@@ -147,13 +145,13 @@ export function createPostgresAnalysisScopeRepository({ db }: AnalysisScopeRepos
     save<Record extends ScopeWriteInput>(record: Record) {
       return withRepositoryErrors(async () =>
         mapScope(
-          await db.analysisScopeSnapshot.create<Record>({
+          await db.analysisScopeSnapshot.create({
             data: {
               ...record,
               createdAt: toDate(record.createdAt),
               updatedAt: toDate(record.updatedAt ?? record.createdAt),
               deletedAt: record.deletedAt ? toDate(record.deletedAt) : null
-            }
+            } as unknown as Prisma.AnalysisScopeSnapshotUncheckedCreateInput
           })
         )
       );

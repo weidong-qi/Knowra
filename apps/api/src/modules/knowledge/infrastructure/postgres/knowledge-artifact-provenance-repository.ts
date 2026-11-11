@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { assertProvenanceWrite } from '../knowledge-artifact-provenance-repository.ts';
 import { mapKnowledgeArtifactProvenance } from './mappers.ts';
 import { dbKnowledgeArtifactProvenance } from '../../../../infrastructure/migration/db-mappers.ts';
@@ -16,20 +17,28 @@ export function createPostgresKnowledgeArtifactProvenanceRepository({ db }: Prov
       const data = dbKnowledgeArtifactProvenance(record);
       const existing = mapKnowledgeArtifactProvenance(
         await db.knowledgeArtifactProvenance.findUnique({
-          where: { artifactId: (record as RawProvenanceIdentity).artifactId }
+          where: { artifactId: (record as RawProvenanceIdentity).artifactId as string }
         })
       );
       assertProvenanceWrite(existing, record, { upgradeLegacy });
       if (existing?.provenanceHash === (record as RawProvenanceIdentity).provenanceHash) return existing;
-      if (!existing) return mapKnowledgeArtifactProvenance(await db.knowledgeArtifactProvenance.create({ data }));
+      // 映射保留领域 payload 的实际类型；仅在 SQL 调用处解释为 Prisma JSON 输入。
+      if (!existing)
+        return mapKnowledgeArtifactProvenance(
+          await db.knowledgeArtifactProvenance.create({
+            data: data as typeof data & { payload: Prisma.InputJsonValue }
+          })
+        );
       // Compare-and-swap prevents a second writer from replacing a concurrent recorded upgrade.
       const result = await db.knowledgeArtifactProvenance.updateMany({
         where: { id: existing.id, state: 'legacy-unavailable', provenanceHash: existing.provenanceHash },
-        data
+        data: data as typeof data & { payload: Prisma.InputJsonValue }
       });
       if (result.count !== 1) {
         const current = mapKnowledgeArtifactProvenance(
-          await db.knowledgeArtifactProvenance.findUnique({ where: { id: (record as RawProvenanceIdentity).id } })
+          await db.knowledgeArtifactProvenance.findUnique({
+            where: { id: (record as RawProvenanceIdentity).id as string }
+          })
         );
         if (!current) throw createAppError('KNOWLEDGE_ARTIFACT_PROVENANCE_CONFLICT', '来源记录已被并发删除。', 409);
         assertProvenanceWrite(current, record);
@@ -43,13 +52,13 @@ export function createPostgresKnowledgeArtifactProvenanceRepository({ db }: Prov
     findById: (id: unknown) =>
       withRepositoryErrors(() =>
         db.knowledgeArtifactProvenance
-          .findUnique({ where: { id } })
+          .findUnique({ where: { id: id as string } })
           .then<KnowledgeArtifactProvenance | null>(mapKnowledgeArtifactProvenance)
       ),
     findByArtifactId: (artifactId: unknown) =>
       withRepositoryErrors(() =>
         db.knowledgeArtifactProvenance
-          .findUnique({ where: { artifactId } })
+          .findUnique({ where: { artifactId: artifactId as string } })
           .then<KnowledgeArtifactProvenance | null>(mapKnowledgeArtifactProvenance)
       ),
     list: ({ artifactId }: { artifactId?: string } = {}) =>
@@ -63,8 +72,9 @@ export function createPostgresKnowledgeArtifactProvenanceRepository({ db }: Prov
       ),
     deleteByKnowledgeItemId: (artifactId: unknown) =>
       withRepositoryErrors(async () => {
-        const rows = await db.knowledgeArtifactProvenance.findMany({ where: { artifactId } });
-        if (rows.length) await db.knowledgeArtifactProvenance.deleteMany({ where: { artifactId } });
+        const rows = await db.knowledgeArtifactProvenance.findMany({ where: { artifactId: artifactId as string } });
+        if (rows.length)
+          await db.knowledgeArtifactProvenance.deleteMany({ where: { artifactId: artifactId as string } });
         return rows.map(mapKnowledgeArtifactProvenance);
       })
   };

@@ -2,6 +2,7 @@ import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts'
 import type {
   ObjectiveRepositoryOptions,
   ObjectiveWriteInput,
+  ObjectiveWriteData,
   ObjectiveListOptions,
   ObjectiveWhere
 } from './assessment-repository-types.ts';
@@ -38,7 +39,7 @@ export function createPostgresLearningObjectiveRepository({ db }: ObjectiveRepos
       return withRepositoryErrors(() =>
         db.learningObjective
           .create({
-            data: toData(objective)
+            data: toData(objective) as ObjectiveWriteData
           })
           .then(mapLearningObjective)
       );
@@ -50,7 +51,7 @@ export function createPostgresLearningObjectiveRepository({ db }: ObjectiveRepos
           const { id, createdAt: _createdAt, ...update } = data;
           const result = await db.learningObjective.updateMany({
             where: { id, updatedAt: toDate(expectedUpdatedAt) },
-            data: update
+            data: update as Partial<ObjectiveWriteData>
           });
           if (result.count !== 1)
             throw createAppError(
@@ -65,11 +66,11 @@ export function createPostgresLearningObjectiveRepository({ db }: ObjectiveRepos
         db.learningObjective
           .upsert({
             where: { id: data.id },
-            create: data,
+            create: data as ObjectiveWriteData,
             update: (() => {
               const { id: _id, createdAt: _createdAt, ...rest } = data;
               return rest;
-            })()
+            })() as Partial<ObjectiveWriteData>
           })
           .then(mapLearningObjective)
       );
@@ -78,7 +79,7 @@ export function createPostgresLearningObjectiveRepository({ db }: ObjectiveRepos
     async findById(id: unknown) {
       return withRepositoryErrors(() =>
         db.learningObjective
-          .findUnique({ where: { id } })
+          .findUnique({ where: { id: id as string } })
           .then<SyncMappedEntityMap['learningObjectives'] | null>(mapLearningObjective)
       );
     },

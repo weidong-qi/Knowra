@@ -2,6 +2,7 @@ import { mapQuestion, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 import type {
   QuestionRepositoryOptions,
+  QuestionWriteData,
   QuestionWriteInput,
   QuestionListOptions,
   ReviewWhere
@@ -10,6 +11,7 @@ import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts'
 
 export function createPostgresQuestionRepository({ db }: QuestionRepositoryOptions) {
   if (!db?.question) throw new TypeError('PostgreSQL Question repository requires db.question');
+  // 原始输入仍交给 Prisma 校验，只在 SQL 调用处描述其目标类型。
   function toData(question: QuestionWriteInput) {
     return {
       id: question.id,
@@ -33,7 +35,7 @@ export function createPostgresQuestionRepository({ db }: QuestionRepositoryOptio
       return withRepositoryErrors(() =>
         db.question
           .create({
-            data: toData(question)
+            data: toData(question) as QuestionWriteData
           })
           .then(mapQuestion)
       );
@@ -44,18 +46,20 @@ export function createPostgresQuestionRepository({ db }: QuestionRepositoryOptio
         db.question
           .upsert({
             where: { id: data.id },
-            create: data,
+            create: data as QuestionWriteData,
             update: (() => {
               const { id: _id, createdAt: _createdAt, ...rest } = data;
               return rest;
-            })()
+            })() as Partial<QuestionWriteData>
           })
           .then(mapQuestion)
       );
     },
     async findById(id: unknown) {
       return withRepositoryErrors(() =>
-        db.question.findUnique({ where: { id } }).then<SyncMappedEntityMap['questions'] | null>(mapQuestion)
+        db.question
+          .findUnique({ where: { id: id as string } })
+          .then<SyncMappedEntityMap['questions'] | null>(mapQuestion)
       );
     },
     list({ reviewStatus, includeArchived = false, includeDeleted = false, limit }: QuestionListOptions = {}) {
@@ -71,7 +75,7 @@ export function createPostgresQuestionRepository({ db }: QuestionRepositoryOptio
       );
     },
     async delete(id: unknown) {
-      return withRepositoryErrors(() => db.question.delete({ where: { id } }).then(mapQuestion));
+      return withRepositoryErrors(() => db.question.delete({ where: { id: id as string } }).then(mapQuestion));
     },
     supportsAsync: true
   };

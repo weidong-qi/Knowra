@@ -1,8 +1,10 @@
+import type { Prisma } from '@prisma/client';
 import { mapKnowledgeEvidence, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 import type {
   EvidenceRepositoryOptions,
   EvidenceWriteInput,
+  EvidenceWriteData,
   EvidenceWhere
 } from './knowledge-graph-repository-types.ts';
 import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
@@ -39,7 +41,9 @@ export function createPostgresKnowledgeEvidenceRepository({ db }: EvidenceReposi
   async function mark(where: EvidenceWhere, status: string) {
     return withRepositoryErrors(async () => {
       const statusFilter = status === 'stale' ? { notIn: ['stale', 'invalid'] } : { not: status };
-      const rows = await db.knowledgeEvidence.findMany({ where: { ...where, status: statusFilter } });
+      const rows = await db.knowledgeEvidence.findMany({
+        where: { ...where, status: statusFilter } as Prisma.KnowledgeEvidenceWhereInput
+      });
       if (!rows.length) return [];
       await db.knowledgeEvidence.updateMany({
         where: { id: { in: rows.map(row => row.id) } },
@@ -53,7 +57,7 @@ export function createPostgresKnowledgeEvidenceRepository({ db }: EvidenceReposi
       return withRepositoryErrors(() =>
         db.knowledgeEvidence
           .create({
-            data: toData(evidence)
+            data: toData(evidence) as EvidenceWriteData
           })
           .then(mapKnowledgeEvidence)
       );
@@ -64,11 +68,11 @@ export function createPostgresKnowledgeEvidenceRepository({ db }: EvidenceReposi
         db.knowledgeEvidence
           .upsert({
             where: { id: data.id },
-            create: data,
+            create: data as EvidenceWriteData,
             update: (() => {
               const { id: _ignoredId, createdAt: _ignoredCreatedAt, ...updateData } = data;
               return updateData;
-            })()
+            })() as Partial<EvidenceWriteData>
           })
           .then(mapKnowledgeEvidence)
       );
@@ -76,14 +80,15 @@ export function createPostgresKnowledgeEvidenceRepository({ db }: EvidenceReposi
     async findById(id: unknown) {
       return withRepositoryErrors(() =>
         db.knowledgeEvidence
-          .findUnique({ where: { id } })
+          .findUnique({ where: { id: id as string } })
           .then<SyncMappedEntityMap['knowledgeEvidence'] | null>(mapKnowledgeEvidence)
       );
     },
     async deleteByKnowledgeItemId(knowledgeItemId: unknown) {
       return withRepositoryErrors(async () => {
-        const rows = await db.knowledgeEvidence.findMany({ where: { knowledgeItemId } });
-        if (rows.length) await db.knowledgeEvidence.deleteMany({ where: { knowledgeItemId } });
+        const rows = await db.knowledgeEvidence.findMany({ where: { knowledgeItemId: knowledgeItemId as string } });
+        if (rows.length)
+          await db.knowledgeEvidence.deleteMany({ where: { knowledgeItemId: knowledgeItemId as string } });
         return rows.map(mapKnowledgeEvidence);
       });
     },
@@ -91,7 +96,7 @@ export function createPostgresKnowledgeEvidenceRepository({ db }: EvidenceReposi
       return withRepositoryErrors(() =>
         db.knowledgeEvidence
           .findMany({
-            where: whereFor(options),
+            where: whereFor(options) as Prisma.KnowledgeEvidenceWhereInput,
             orderBy: { createdAt: 'asc' }
           })
           .then(rows => rows.map(mapKnowledgeEvidence))
