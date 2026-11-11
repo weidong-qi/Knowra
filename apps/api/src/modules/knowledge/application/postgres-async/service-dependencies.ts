@@ -138,9 +138,12 @@ export interface LearningObjectiveDependencies extends TransactionDependencies {
   onObjectiveInvalidated?:
     | ((
         id: string
-      ) => void | ReturnType<
-        ReturnType<typeof import('./question-service.ts').createAsyncQuestionService>['invalidateByObjectiveId']
-      >)
+      ) =>
+        | void
+        | Promise<void>
+        | ReturnType<
+            ReturnType<typeof import('./question-service.ts').createAsyncQuestionService>['invalidateByObjectiveId']
+          >)
     | null;
 }
 export interface AssessmentContextDependencies extends TransactionDependencies {
