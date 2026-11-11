@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { createAiConversationService } from './conversation-service.js';
+import type { createAiConversationService } from './conversation-service.ts';
 type ConversationRoutePort = Pick<
   ReturnType<typeof createAiConversationService>,
   | 'cancel'
@@ -39,11 +39,11 @@ export async function handleConversationRoute({
   try {
     if (request.method === 'GET') {
       if (!parts.length) {
-        sendJson(response, 200, { data: await conversation.list(url.searchParams.get('spaceId')) });
+        sendJson(response, 200, { data: await conversation.list(url.searchParams.get('spaceId') as string) });
         return true;
       }
       if (parts[0] === 'legacy-jobs' && parts.length === 1) {
-        sendJson(response, 200, { data: await conversation.legacyList(url.searchParams.get('spaceId')) });
+        sendJson(response, 200, { data: await conversation.legacyList(url.searchParams.get('spaceId') as string) });
         return true;
       }
       if (parts[0] === 'legacy-jobs' && parts.length === 2) {
@@ -74,12 +74,19 @@ export async function handleConversationRoute({
         throw createAppError('AI_REQUEST_REJECTED', '会话请求无效。', 403);
       }
       if (!parts.length) {
-        sendJson(response, 201, { data: await conversation.create(await parseBody(request, { limitBytes: 2048 })) });
+        sendJson(response, 201, {
+          data: await conversation.create(
+            (await parseBody(request, { limitBytes: 2048 })) as Parameters<ConversationRoutePort['create']>[0]
+          )
+        });
         return true;
       }
       if (parts.length === 2 && parts[1] === 'messages') {
         sendJson(response, 202, {
-          data: await conversation.submit(parts[0], await parseBody(request, { limitBytes: 125000 }))
+          data: await conversation.submit(
+            parts[0],
+            (await parseBody(request, { limitBytes: 125000 })) as Parameters<ConversationRoutePort['submit']>[1]
+          )
         });
         return true;
       }

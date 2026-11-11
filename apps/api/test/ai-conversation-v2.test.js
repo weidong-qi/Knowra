@@ -7,7 +7,7 @@ import { createPersistentAppContext } from '../src/app.factory.js';
 import { createServer } from '../src/server.js';
 import { aiRecords, insertAiRecords } from './ai-record-fixtures.js';
 import { createEmptyAiState } from '../src/modules/ai/record-state.ts';
-import { createJsonAiConversationStore } from '../src/modules/ai/conversation-store.js';
+import { createJsonAiConversationStore } from '../src/modules/ai/conversation-store.ts';
 import { aiAgentCheckpointTests } from './ai-agent-checkpoint.test.js';
 
 async function withStore(run) {

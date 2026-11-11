@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createPersistentAppContext } from '../src/app.factory.js';
-import { validateConversationRecord } from '../src/modules/ai/conversation-store.js';
+import { validateConversationRecord } from '../src/modules/ai/conversation-store.ts';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
 const priceProfile = {
   version: 'synthetic-v1',

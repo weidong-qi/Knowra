@@ -1,3 +1,99 @@
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type {
+  AiConversation,
+  AiConversationTurn,
+  AiConversationAttachment,
+  AiConversationModelAttempt,
+  AiConversationMessage,
+  AiConversationToolCall,
+  ValidatedConversationState
+} from './private-record-types.ts';
+import type { WriteIntent } from './note-write-intent.ts';
+
+export interface ConversationAdapter {
+  identity(): DatasetIdentity | Promise<DatasetIdentity>;
+  read(): ValidatedConversationState | Promise<ValidatedConversationState>;
+  write<Result>(
+    action: (state: ValidatedConversationState, identity: DatasetIdentity) => Result
+  ): Result | Promise<Result>;
+}
+interface ConversationStoreOptions {
+  now?: () => Date;
+}
+interface JsonConversationOptions {
+  getState(): ValidatedConversationState & DatasetIdentity;
+  runTransaction<Result>(action: () => Result): Result | Promise<Result>;
+  onChange(): void;
+}
+interface AttachmentStageInput {
+  ownerId: string;
+  conversationId: string;
+  uploadKey: string;
+  fileName: string;
+  mimeType: AiConversationAttachment['mimeType'];
+  size: number;
+  sha256: string;
+}
+interface AttachmentUpdateInput {
+  ownerId: string;
+  attachmentId: string;
+  expectedRevision: number;
+  patch: Partial<
+    Pick<
+      AiConversationAttachment,
+      | 'storageStatus'
+      | 'parseStatus'
+      | 'errorCode'
+      | 'parserVersion'
+      | 'parsedTextHash'
+      | 'segments'
+      | 'imageMetadata'
+      | 'cleanupStatus'
+      | 'removedAt'
+    >
+  >;
+}
+export interface TurnSubmission {
+  ownerId: string;
+  conversationId: string;
+  content: unknown;
+  idempotencyKey: string;
+  requestedPolicyId?: string | null;
+  writeIntent?: WriteIntent;
+}
+interface ToolCallInput {
+  callId: string;
+  toolName: AiConversationToolCall['toolName'];
+  argumentsJson: object;
+  maxCalls?: number;
+}
+interface ToolSettlement {
+  resultJson?: object | null;
+  sourceRefs?: AiConversationToolCall['sourceRefs'];
+  errorCode?: string | null;
+}
+interface ModelAttemptInput {
+  attemptId: string;
+  modelId: string;
+  payloadHash: string;
+  manifestId?: string | null;
+  grantId?: string | null;
+  reservedMicrounits: number;
+}
+interface AttemptUpdate {
+  generation?: number | null;
+  actualMicrounits?: number | null;
+  errorCode?: string | null;
+  modelResult?: object;
+}
+interface TurnCompletion {
+  content: string;
+  sourceRefs?: AiConversationMessage['sourceRefs'];
+  citations?: AiConversationMessage['citations'];
+  provenanceManifestId?: string | null;
+  sourceFree?: boolean;
+  finishReason?: AiConversationMessage['finishReason'];
+}
 import { readAnnotationToolHistory } from './annotation-history.ts';
 import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
@@ -27,42 +123,55 @@ export {
 } from './conversation-records.ts';
 
 /** 每次修改在私有存储事务中完成；适配器负责跨进程并发串行化。 */
-export function createAiConversationStore(adapter, { now = () => new Date() } = {}) {
+export function createAiConversationStore(
+  adapter: ConversationAdapter,
+  { now = () => new Date() }: ConversationStoreOptions = {}
+) {
   const stamp = () => now().toISOString();
   const read = () => adapter.read();
-  const write = action =>
+  const write = <Result>(action: (state: ValidatedConversationState, identity: DatasetIdentity) => Result) =>
     adapter.write((state, identity) => {
       const result = action(state, identity);
       validateConversationState(state);
       return result;
     });
-  const current = (record, identity) =>
+  const current = (record: DatasetIdentity, identity: DatasetIdentity) =>
     record.datasetId === identity.datasetId && record.datasetEpoch === identity.datasetEpoch;
-  const mustTurn = (state, turnId) =>
+  const mustTurn = (state: ValidatedConversationState, turnId: string) =>
     state.conversationTurns.find(row => row.turnId === turnId) ??
     conversationError('AI_TURN_NOT_FOUND', '会话任务不存在。');
-  const lease = (turn, identity, generation) => {
+  const lease = (turn: AiConversationTurn, identity: DatasetIdentity, generation: number | null) => {
     if (
       !current(turn, identity) ||
       turn.status !== 'running' ||
       turn.leaseGeneration !== generation ||
-      Date.parse(turn.leaseExpiresAt) <= now().getTime()
+      Date.parse(turn.leaseExpiresAt as string) <= now().getTime()
     ) {
       conversationError('AI_LEASE_STALE', '任务执行权已失效。');
     }
   };
-  const leaseEnd = (turn, leaseMs) =>
-    new Date(Math.min(now().getTime() + leaseMs, Date.parse(turn.executionStartedAt) + MAX_AGENT_RUN_MS)).toISOString();
+  const leaseEnd = (turn: AiConversationTurn, leaseMs: number) =>
+    new Date(
+      Math.min(now().getTime() + leaseMs, Date.parse(turn.executionStartedAt as string) + MAX_AGENT_RUN_MS)
+    ).toISOString();
   return {
-    async listAttachments(conversationId = null) {
+    async listAttachments(conversationId: string | null = null) {
       return (await read()).conversationAttachments.filter(
         row => conversationId === null || row.conversationId === conversationId
       );
     },
-    async getAttachment(id) {
+    async getAttachment(id: string) {
       return (await read()).conversationAttachments.find(row => row.attachmentId === id) ?? null;
     },
-    async stageAttachment({ ownerId, conversationId, uploadKey, fileName, mimeType, size, sha256 }) {
+    async stageAttachment({
+      ownerId,
+      conversationId,
+      uploadKey,
+      fileName,
+      mimeType,
+      size,
+      sha256
+    }: AttachmentStageInput) {
       return write((state, identity) => {
         const conversation = state.conversations.find(
           row => row.conversationId === conversationId && row.ownerId === ownerId
@@ -75,7 +184,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         );
         if (existing) {
           if (
-            ['fileName', 'mimeType', 'size', 'sha256'].some(
+            (['fileName', 'mimeType', 'size', 'sha256'] as const).some(
               key => existing[key] !== { fileName, mimeType, size, sha256 }[key]
             )
           ) {
@@ -120,7 +229,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return record;
       });
     },
-    async updateAttachment({ ownerId, attachmentId, expectedRevision, patch }) {
+    async updateAttachment({ ownerId, attachmentId, expectedRevision, patch }: AttachmentUpdateInput) {
       return write((state, identity) => {
         const row = state.conversationAttachments.find(
           item => item.attachmentId === attachmentId && item.ownerId === ownerId
@@ -154,51 +263,65 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return row;
       });
     },
-    peekTurn(id) {
+    peekTurn(id: string) {
       const value = adapter.read();
-      const find = state =>
+      const find = (state: ValidatedConversationState) =>
         structuredClone(validateConversationState(state).conversationTurns.find(row => row.turnId === id) ?? null);
-      return value?.then ? value.then(find) : find(value);
+      return (value as Promise<ValidatedConversationState>)?.then
+        ? (value as Promise<ValidatedConversationState>).then(find)
+        : find(value as ValidatedConversationState);
     },
     identity: () => adapter.identity(),
-    async listConversations(filter) {
+    async listConversations(filter: Partial<AiConversation>) {
       const state = await read();
-      return state.conversations.filter(row => Object.entries(filter).every(([key, value]) => row[key] === value));
+      return state.conversations.filter(row =>
+        Object.entries(filter).every(([key, value]) => row[key as keyof AiConversation] === value)
+      );
     },
-    async getConversation(id) {
+    async getConversation(id: string) {
       return (await read()).conversations.find(row => row.conversationId === id) ?? null;
     },
-    async getTurn(id) {
+    async getTurn(id: string) {
       return (await read()).conversationTurns.find(row => row.turnId === id) ?? null;
     },
-    async listTurns(conversationId = null) {
+    async listTurns(conversationId: string | null = null) {
       return (await read()).conversationTurns
         .filter(row => conversationId === null || row.conversationId === conversationId)
         .sort((a, b) => a.ordinal - b.ordinal);
     },
-    async listMessages(conversationId, afterSequence = 0, limit = 50) {
+    async listMessages(conversationId: string, afterSequence = 0, limit = 50) {
       return (await read()).conversationMessages
         .filter(row => row.conversationId === conversationId && row.sequence > afterSequence)
         .sort((a, b) => a.sequence - b.sequence)
         .slice(0, limit);
     },
-    async listAnnotationHistory(turnId) {
+    async listAnnotationHistory(turnId: string) {
       return (await read()).conversationToolCalls
         .filter(call => call.turnId === turnId)
         .map(readAnnotationToolHistory)
         .filter(Boolean);
     },
-    async listToolCalls(turnId) {
+    async listToolCalls(turnId: string) {
       return (await read()).conversationToolCalls
         .filter(row => row.turnId === turnId)
         .sort((a, b) => a.ordinal - b.ordinal);
     },
-    async listModelAttempts(turnId = null) {
+    async listModelAttempts(turnId: string | null = null) {
       return (await read()).conversationModelAttempts
         .filter(row => turnId === null || row.turnId === turnId)
         .sort((a, b) => a.ordinal - b.ordinal);
     },
-    async createConversation({ ownerId, spaceId, actorId, conversationId = randomUUID() }) {
+    async createConversation({
+      ownerId,
+      spaceId,
+      actorId,
+      conversationId = randomUUID()
+    }: {
+      ownerId: string;
+      spaceId: string;
+      actorId: string;
+      conversationId?: string;
+    }) {
       return write((state, identity) => {
         const existing = state.conversations.find(row => row.conversationId === conversationId);
         if (existing) {
@@ -230,7 +353,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
       idempotencyKey,
       requestedPolicyId = null,
       writeIntent = undefined
-    }) {
+    }: TurnSubmission) {
       return write((state, identity) => {
         const conversation = state.conversations.find(row => row.conversationId === conversationId);
         if (!conversation || conversation.ownerId !== ownerId)
@@ -333,7 +456,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return turn;
       });
     },
-    async claimTurn(turnId, leaseMs = 60_000, { mode = 'resume' } = {}) {
+    async claimTurn(turnId: string, leaseMs = 60_000, { mode = 'resume' }: { mode?: string } = {}) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         if (!current(turn, identity) || !['staged', 'interrupted', 'failed'].includes(turn.status))
@@ -349,10 +472,13 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
             state.conversationModelAttempts.filter(row => row.turnId === turnId),
             turn.checkpoint,
             state.conversationToolCalls.filter(row => row.turnId === turnId).length
-          );
+          ) as NonNullable<AiConversationTurn['checkpoint']>;
         if (!Number.isSafeInteger(leaseMs) || leaseMs < 1000 || leaseMs > 300000)
           conversationError('AI_REQUEST_INVALID', '执行租期无效。');
-        if (turn.executionStartedAt && now().getTime() >= Date.parse(turn.executionStartedAt) + MAX_AGENT_RUN_MS) {
+        if (
+          turn.executionStartedAt &&
+          now().getTime() >= Date.parse(turn.executionStartedAt as string) + MAX_AGENT_RUN_MS
+        ) {
           conversationError('AI_RUN_LIMIT', '本轮任务的总执行时间已达到上限，请提交新一轮任务。');
         }
         turn.executionStartedAt ??= stamp();
@@ -365,11 +491,13 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return turn;
       });
     },
-    async saveCheckpoint(turnId, generation, checkpoint) {
+    async saveCheckpoint(turnId: string, generation: number, checkpoint: unknown) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
-        const next = validateAgentCheckpoint(checkpoint, turn.checkpoint);
+        const next = validateAgentCheckpoint(checkpoint, turn.checkpoint) as NonNullable<
+          AiConversationTurn['checkpoint']
+        >;
         const attempts = state.conversationModelAttempts.filter(row => row.turnId === turnId);
         if (
           next.handledAttemptOrdinal > attempts.length ||
@@ -383,7 +511,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return turn;
       });
     },
-    async rejectModelResult(turnId, generation, attemptOrdinal, errorCode) {
+    async rejectModelResult(turnId: string, generation: number, attemptOrdinal: number, errorCode: string) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -405,7 +533,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return attempt;
       });
     },
-    async setPhase(turnId, generation, phase) {
+    async setPhase(turnId: string, generation: number, phase: AiConversationTurn['phase']) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -416,7 +544,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return turn;
       });
     },
-    async renewLease(turnId, generation, leaseMs = 300_000) {
+    async renewLease(turnId: string, generation: number, leaseMs = 300_000) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -431,7 +559,11 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
       });
     },
     // maxCalls：宿主按回合类型放宽的工具次数上限（提炼知识点回合），默认 6，硬顶 14，恢复不会重置计数。
-    async appendToolCall(turnId, generation, { callId, toolName, argumentsJson, maxCalls = 6 }) {
+    async appendToolCall(
+      turnId: string,
+      generation: number,
+      { callId, toolName, argumentsJson, maxCalls = 6 }: ToolCallInput
+    ) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -479,7 +611,12 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return record;
       });
     },
-    async settleToolCall(turnId, generation, callId, { resultJson = null, sourceRefs = [], errorCode = null }) {
+    async settleToolCall(
+      turnId: string,
+      generation: number,
+      callId: string,
+      { resultJson = null, sourceRefs = [], errorCode = null }: ToolSettlement
+    ) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -496,7 +633,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return call;
       });
     },
-    async bindToolResultManifest(turnId, generation, callId, manifestId) {
+    async bindToolResultManifest(turnId: string, generation: number, callId: string, manifestId: string) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -515,7 +652,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return call;
       });
     },
-    async createModelAttempt(turnId, generation, input) {
+    async createModelAttempt(turnId: string, generation: number, input: ModelAttemptInput) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -559,15 +696,17 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
       });
     },
     async advanceModelAttempt(
-      attemptId,
-      status,
-      { generation = null, actualMicrounits = null, errorCode = null, modelResult = undefined } = {}
+      attemptId: string,
+      status: AiConversationModelAttempt['status'],
+      { generation = null, actualMicrounits = null, errorCode = null, modelResult = undefined }: AttemptUpdate = {}
     ) {
       return write((state, identity) => {
         const attempt = state.conversationModelAttempts.find(row => row.attemptId === attemptId);
         if (!attempt || !current(attempt, identity)) conversationError('AI_ATTEMPT_NOT_FOUND', '模型尝试不存在。');
         const turn = mustTurn(state, attempt.turnId);
-        const transitions = {
+        const transitions: Partial<
+          Record<AiConversationModelAttempt['status'], AiConversationModelAttempt['status'][]>
+        > = {
           prepared: ['reserved', 'unknown', 'released'],
           reserved: ['sent', 'unknown', 'released'],
           sent: ['settled', 'unknown']
@@ -590,12 +729,13 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         if (!transitions[attempt.status]?.includes(status))
           conversationError('AI_ATTEMPT_CONFLICT', '模型尝试状态不可变更。');
         if (['reserved', 'sent'].includes(status)) lease(turn, identity, generation);
-        if (status === 'settled' && (!Number.isSafeInteger(actualMicrounits) || actualMicrounits < 0)) {
+        if (status === 'settled' && (!Number.isSafeInteger(actualMicrounits) || (actualMicrounits as number) < 0)) {
           conversationError('AI_RECORD_INVALID', '实际费用无效。');
         }
         attempt.status = status;
         attempt.actualMicrounits = actualMicrounits;
-        if (modelResult !== undefined) attempt.modelResult = structuredClone(modelResult);
+        if (modelResult !== undefined)
+          attempt.modelResult = structuredClone(modelResult) as NonNullable<AiConversationModelAttempt['modelResult']>;
         attempt.errorCode = errorCode;
         attempt.updatedAt = stamp();
         validateConversationRecord('aiConversationModelAttempt', attempt);
@@ -603,8 +743,8 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
       });
     },
     async completeTurn(
-      turnId,
-      generation,
+      turnId: string,
+      generation: number,
       {
         content,
         sourceRefs = [],
@@ -612,7 +752,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         provenanceManifestId = null,
         sourceFree = false,
         finishReason = 'stop'
-      }
+      }: TurnCompletion
     ) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
@@ -665,11 +805,12 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         turn.phase = 'finished';
         turn.leaseExpiresAt = null;
         turn.updatedAt = time;
-        state.conversations.find(row => row.conversationId === turn.conversationId).updatedAt = time;
+        (state.conversations.find(row => row.conversationId === turn.conversationId) as AiConversation).updatedAt =
+          time;
         return { turn, message };
       });
     },
-    async failTurn(turnId, generation, errorCode) {
+    async failTurn(turnId: string, generation: number, errorCode: string) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         lease(turn, identity, generation);
@@ -682,7 +823,7 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
         return turn;
       });
     },
-    async cancelTurn(turnId) {
+    async cancelTurn(turnId: string) {
       return write((state, identity) => {
         const turn = mustTurn(state, turnId);
         if (!current(turn, identity)) conversationError('AI_DATASET_STALE', '历史任务不可操作。');
@@ -697,12 +838,12 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
     },
     async recoverInterrupted() {
       return write((state, identity) => {
-        const recovered = [];
+        const recovered: string[] = [];
         for (const turn of state.conversationTurns) {
           if (
             current(turn, identity) &&
             turn.status === 'running' &&
-            Date.parse(turn.leaseExpiresAt) <= now().getTime()
+            Date.parse(turn.leaseExpiresAt as string) <= now().getTime()
           ) {
             turn.status = 'interrupted';
             turn.leaseExpiresAt = null;
@@ -716,7 +857,10 @@ export function createAiConversationStore(adapter, { now = () => new Date() } = 
   };
 }
 
-export function createJsonAiConversationStore({ getState, runTransaction, onChange }, options) {
+export function createJsonAiConversationStore(
+  { getState, runTransaction, onChange }: JsonConversationOptions,
+  options?: ConversationStoreOptions
+) {
   const read = () => validateConversationState(getState());
   const signature = () =>
     JSON.stringify(

@@ -749,11 +749,15 @@ export function createAiAgentWorker({
     ) {
       const matched = await access.matchCatalogFolders({ grantId: grant.grantId, text: user.content }).catch(() => []);
       const ranked = rankHighlights ? { sortBy: 'annotations', limit: 10 } : {};
+      /** @type {[import('./private-record-types.ts').AiConversationToolCall['toolName'], object][]} */
       const plans = matched.length
-        ? matched.map(item => [
-            'notes_list',
-            { folderId: item.folderId, ...(rankHighlights ? { ...ranked, recursive: true } : {}) }
-          ])
+        ? matched.map(
+            item =>
+              /** @type {['notes_list', object]} */ ([
+                'notes_list',
+                { folderId: item.folderId, ...(rankHighlights ? { ...ranked, recursive: true } : {}) }
+              ])
+          )
         : rankHighlights
           ? [['notes_list', ranked]]
           : [['folders_list', {}]];
@@ -790,6 +794,7 @@ export function createAiAgentWorker({
         maxCalls: maxTools
       });
       try {
+        /** @type {NonNullable<import('./private-record-types.ts').AiConversationToolCall['resultJson']>} */
         const initial =
           initialCall.status === 'succeeded'
             ? { ...initialCall.resultJson, hits: initialCall.resultJson.hits }

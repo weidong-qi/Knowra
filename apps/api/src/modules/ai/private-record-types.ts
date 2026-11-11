@@ -142,7 +142,16 @@ export interface AiConversationToolCall extends RecordBoundary {
     | 'folders_list'
     | 'notes_list';
   argumentsJson: object;
-  resultJson: object | null;
+  resultJson:
+    | (object & {
+        actionId?: string;
+        hits?: Pick<import('./keyword-search.ts').SearchHit, 'noteId' | 'title' | 'ref' | 'text'>[];
+        inspected?: number;
+        truncated?: boolean;
+        mode?: string;
+        fallbackReason?: string;
+      })
+    | null;
   provenanceManifestId: string | null;
   status: 'requested' | 'succeeded' | 'failed';
   sourceRefs: import('./access-service-types.ts').SourceReference[];
@@ -153,7 +162,7 @@ export interface AiConversationToolCall extends RecordBoundary {
 export interface AiConversationModelAttempt extends RecordBoundary {
   responseRejectedCode?: string | null;
   responseRejectedAt?: string;
-  modelResult?: object;
+  modelResult?: ReturnType<typeof import('./agent-checkpoint.ts').validateDurableModelResult>;
   kind: 'aiConversationModelAttempt';
   attemptId: string;
   conversationId: string;

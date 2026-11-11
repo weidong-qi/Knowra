@@ -7,6 +7,7 @@ import type {
   ConversationIndexRecord,
   ConversationCollection
 } from './private-store-types.ts';
+import type { ValidatedConversationState } from './private-record-types.ts';
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import { randomUUID } from 'node:crypto';
 import {
@@ -16,7 +17,8 @@ import {
   validateConversationRecord,
   validateConversationState
 } from './conversation-records.ts';
-import { createAiConversationStore } from './conversation-store.js';
+import type { ConversationAdapter } from './conversation-store.ts';
+import { createAiConversationStore } from './conversation-store.ts';
 import { hashRecord } from './record-contract.ts';
 
 const retryable = (error: AiSqlError | null | undefined) =>
@@ -29,7 +31,7 @@ export function createPostgresAiConversationStore(
 ) {
   if (!client?.$transaction || !repository || !ownerId)
     throw new TypeError('PostgreSQL AI conversation store needs client, repository and owner');
-  async function load(db: PrivateSqlTransaction): Promise<ConversationState> {
+  async function load(db: PrivateSqlTransaction): Promise<ValidatedConversationState> {
     const state: ConversationState = emptyConversationState();
     for (const row of await db.$queryRawUnsafe<ConversationSqlRow[]>(
       'SELECT * FROM ai_conversation_records WHERE owner_id = $1',
@@ -39,7 +41,7 @@ export function createPostgresAiConversationStore(
       if (!definition) throw new Error('AI 会话记录类型无效。');
       const record: ConversationIndexRecord = validateConversationRecord(row.kind, JSON.parse(row.record_json));
       if (
-        record[definition.id as keyof ConversationIndexRecord] !== row.record_id ||
+        (record as ConversationIndexRecord)[definition.id as keyof ConversationIndexRecord] !== row.record_id ||
         record.ownerId !== row.owner_id ||
         record.datasetId !== row.dataset_id ||
         record.datasetEpoch !== row.dataset_epoch ||
@@ -56,7 +58,8 @@ export function createPostgresAiConversationStore(
     {
       identity: () => repository.identity(),
       read: () => load(client),
-      async write<Result>(action: (state: ConversationState, identity: DatasetIdentity) => Result) {
+      // 第四次失败必抛出，保留原重试循环；适配器返回类型排除不可达的隐式结束。
+      write: (async <Result>(action: (state: ValidatedConversationState, identity: DatasetIdentity) => Result) => {
         for (let attempt = 0; attempt < 4; attempt += 1) {
           try {
             return await client.$transaction(
@@ -80,7 +83,7 @@ export function createPostgresAiConversationStore(
                 for (const [kind, definition] of Object.entries(CONVERSATION_KINDS)) {
                   for (const record of state[definition.collection as ConversationCollection])
                     previous.set(
-                      `${kind}:${record[definition.id as keyof ConversationIndexRecord]}`,
+                      `${kind}:${(record as ConversationIndexRecord)[definition.id as keyof ConversationIndexRecord]}`,
                       hashRecord(record)
                     );
                 }
@@ -88,7 +91,9 @@ export function createPostgresAiConversationStore(
                 for (const [kind, definition] of Object.entries(CONVERSATION_KINDS)) {
                   for (const record of state[definition.collection as ConversationCollection]) {
                     if (record.ownerId !== ownerId) throw new Error('AI 会话 owner 不匹配。');
-                    const recordId = record[definition.id as keyof ConversationIndexRecord],
+                    const recordId = (record as ConversationIndexRecord)[
+                        definition.id as keyof ConversationIndexRecord
+                      ],
                       recordHash = hashRecord(record);
                     if (previous.get(`${kind}:${recordId}`) === recordHash) continue;
                     const changed = await db.$executeRawUnsafe(
@@ -122,7 +127,7 @@ export function createPostgresAiConversationStore(
             if (!retryable(error as AiSqlError | null | undefined) || attempt === 3) throw error;
           }
         }
-      }
+      }) as ConversationAdapter['write']
     },
     options
   );
