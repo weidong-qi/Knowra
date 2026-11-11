@@ -5,7 +5,7 @@ import {
   withInlineAnnotations
 } from './application/inline-annotations.js';
 import { createAsyncNoteDependencyLifecycle } from './application/postgres-async/note-dependency-lifecycle.js';
-import { createAsyncSpaceAssetLifecycle } from './application/postgres-async/space-asset-lifecycle.js';
+import { createAsyncSpaceAssetLifecycle } from './application/postgres-async/space-asset-lifecycle.ts';
 import { createPostgresPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createAsyncNavigationReferencePolicy } from './application/postgres-async/navigation-reference-policy.js';
 import {
@@ -13,7 +13,7 @@ import {
   supplementPurgePreview,
   assertPurgeDatasetEpoch,
   assertManualPurgeScope
-} from './application/asset-purge-guard.js';
+} from './application/asset-purge-guard.ts';
 import { createAsyncNoteService } from './application/postgres-async/note-service.js';
 import { createAsyncFolderService } from './application/postgres-async/folder-service.ts';
 import { createAsyncTagService } from './application/postgres-async/tag-service.ts';

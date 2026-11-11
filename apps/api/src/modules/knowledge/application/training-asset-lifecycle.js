@@ -4,7 +4,7 @@ import {
   supplementPurgePreview,
   assertPurgeDatasetEpoch,
   assertManualPurgeScope
-} from './asset-purge-guard.js';
+} from './asset-purge-guard.ts';
 import { createAppError } from '../../../errors/app-error.js';
 
 const TYPES = Object.freeze({
@@ -277,14 +277,12 @@ export function createLocalTrainingAssetLifecycle({
           }))
       );
       references.push(
-        ...repositories.questionObjectiveRepository
-          .listByObjectiveId(id)
-          .map(record => ({
-            collection: 'questionObjectives',
-            id: record.id,
-            action: 'rebind-question-objective',
-            relatedAsset: { kind: 'question', id: record.questionId }
-          }))
+        ...repositories.questionObjectiveRepository.listByObjectiveId(id).map(record => ({
+          collection: 'questionObjectives',
+          id: record.id,
+          action: 'rebind-question-objective',
+          relatedAsset: { kind: 'question', id: record.questionId }
+        }))
       );
       references.push(
         ...repositories.questionSourceRepository

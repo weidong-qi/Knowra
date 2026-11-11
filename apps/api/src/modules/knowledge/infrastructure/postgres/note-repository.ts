@@ -16,7 +16,8 @@ import {
 
 interface NoteSaveInput extends NoteWriteInput {
   id: string;
-  tagIds?: string[] | null;
+  // DTO/引用策略保留传入标签原值，写入适配器沿用既有去重和数据库校验。
+  tagIds?: unknown[] | null;
 }
 /** list/count 接收尚未校验的 HTTP 查询字段，转换仍由原 helper 执行。 */
 interface NoteListOptions {

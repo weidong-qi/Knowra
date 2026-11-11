@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { createSpaceAssetLifecycle } from '../src/modules/knowledge/application/space-asset-lifecycle.js';
-import { createAsyncSpaceAssetLifecycle } from '../src/modules/knowledge/application/postgres-async/space-asset-lifecycle.js';
+import { createSpaceAssetLifecycle } from '../src/modules/knowledge/application/space-asset-lifecycle.ts';
+import { createAsyncSpaceAssetLifecycle } from '../src/modules/knowledge/application/postgres-async/space-asset-lifecycle.ts';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.js';
 import { buildDefaultTagGroups } from '../src/modules/knowledge/domain/default-tag-groups.ts';
