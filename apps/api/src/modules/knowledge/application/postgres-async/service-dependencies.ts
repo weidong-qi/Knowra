@@ -96,11 +96,11 @@ interface NoteTransactionContext extends Partial<PostgresRepositories> {
   onNoteContentChanged?: (
     note: SavedNote,
     version: NoteVersion,
-    change: ReturnType<typeof import('../annotation-change-context.ts').prepareAnnotationChange>
+    change: ReturnType<typeof import('../annotation-change-context.ts').prepareAnnotationChange> | null
   ) => void | Promise<void | AnnotationReconciliation>;
   onNoteIdentityChanged?: (
     note: SavedNote,
-    change: ReturnType<typeof import('../annotation-change-context.ts').prepareAnnotationChange>
+    change: ReturnType<typeof import('../annotation-change-context.ts').prepareAnnotationChange> | null
   ) => void | AnnotationRecord[] | Promise<void | AnnotationRecord[]>;
   onNoteDeleted?: (
     id: string

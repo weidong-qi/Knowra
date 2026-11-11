@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { buildCreateNoteDto, buildUpdateNoteDto } from '../../api/src/modules/knowledge/application/dto/note.dto.ts';
 import { applyNoteOperation } from '../../api/src/modules/sync/local-provider.ts';
 import { assertSyncContract, syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
-import { createNoteService } from '../../api/src/modules/knowledge/application/note-service.js';
+import { createNoteService } from '../../api/src/modules/knowledge/application/note-service.ts';
 import { noteContent } from '../../api/src/modules/sync/journal.ts';
 import {
   applyEntityRemote,

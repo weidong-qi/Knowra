@@ -7,6 +7,39 @@ import { conflictError, notFoundError, validationError } from './knowledge-error
 import { createNoteAssociationOperations } from './note-association-operations.ts';
 import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from './note-link-relations.ts';
 
+import type { NoteRecord, NoteRepository, NoteListOptions } from '../infrastructure/note-repository.ts';
+import type { ContentAnnotationRepository } from '../infrastructure/content-annotation-repository.ts';
+import type { NoteDtoInput, CreateNoteDto, UpdateNoteDto } from './dto/note.dto.ts';
+import type { NoteVersionRecord } from '../infrastructure/note-version-repository.ts';
+import type { NavigationReferencePolicy } from './navigation-reference-policy.ts';
+import type { SiblingNameInput } from './postgres-async/service-dependencies.ts';
+type AnnotationChange = ReturnType<typeof prepareAnnotationChange>;
+export interface NoteServiceInput extends NoteDtoInput {
+  annotationMapping?: Parameters<typeof prepareAnnotationChange>[2];
+}
+// DTO 边界视图沿用 Note/仓储契约；正文和标题由原 DTO 校验，其余值仍原样透传。
+export type CreateNoteDtoView = Omit<CreateNoteDto<NoteServiceInput>, 'contentKind' | 'pdfSource'> &
+  Pick<NoteRecord, 'title' | 'rawMarkdown' | 'tagIds' | 'aiVisibility' | 'contentKind' | 'pdfSource'>;
+export type UpdateNoteDtoView = UpdateNoteDto<NoteServiceInput> &
+  Partial<Pick<NoteRecord, 'title' | 'rawMarkdown' | 'tagIds' | 'aiVisibility'>>;
+interface NoteServiceDependencies {
+  repository?: NoteRepository;
+  validateSiblingNameConflict?:
+    ((input: Omit<SiblingNameInput, 'spaceId'> & { spaceId?: string | null }) => void) | null;
+  validateNoteReferences?: NavigationReferencePolicy['assertNoteReferences'] | null;
+  normalizeTagIds?: NavigationReferencePolicy['normalizeTagIds'];
+  noteVersionService?: { ensureForNote(note: NoteRecord): NoteVersionRecord } | null;
+  annotationRepository?: Pick<ContentAnnotationRepository, 'list'> | null;
+  runTransaction?: <Result>(operation: () => Result) => Result;
+  onNoteContentChanged?:
+    ((note: NoteRecord, version: NoteVersionRecord, change: AnnotationChange | null) => void) | null;
+  onNoteDeleted?: ((id: string) => void) | null;
+  onBeforePermanentDelete?: ((id: string) => void) | null;
+}
+type NoteOptions = { includeDeleted?: boolean };
+type ListOptions = NoteListOptions & { summaryOnly?: boolean | string };
+type ReferenceFields = Pick<NoteRecord, 'spaceId' | 'folderId'> & { tagIds?: unknown[] };
+
 export function createNoteService({
   repository = createInMemoryNoteRepository(),
   validateSiblingNameConflict = null,
@@ -18,8 +51,14 @@ export function createNoteService({
   onNoteContentChanged = null,
   onNoteDeleted = null,
   onBeforePermanentDelete = null
-} = {}) {
-  function persistNote(note, { createVersion = false, annotationChange = null } = {}) {
+}: NoteServiceDependencies = {}) {
+  function persistNote(
+    note: NoteRecord,
+    {
+      createVersion = false,
+      annotationChange = null
+    }: { createVersion?: boolean; annotationChange?: AnnotationChange | null } = {}
+  ) {
     return runTransaction(() => {
       const saved = repository.save(note);
       if (createVersion && noteVersionService && note.contentKind !== 'pdf') {
@@ -29,7 +68,7 @@ export function createNoteService({
       return saved;
     });
   }
-  function requireNote(noteId, options = {}) {
+  function requireNote(noteId: string, options: NoteOptions = {}) {
     const note = repository.findById(noteId);
 
     if (!note) {
@@ -43,21 +82,21 @@ export function createNoteService({
     return note;
   }
 
-  function requireNoteIds(noteIds) {
+  function requireNoteIds(noteIds: unknown): string[] {
     if (!Array.isArray(noteIds) || noteIds.length === 0) {
       throw validationError('NOTE_IDS_REQUIRED', 'noteIds must contain at least one note id');
     }
 
-    return noteIds;
+    return noteIds as string[];
   }
 
-  function assertNewNoteId(noteId) {
+  function assertNewNoteId(noteId: string) {
     if (repository.findById(noteId)) {
       throw conflictError('NOTE_ID_CONFLICT', 'A note with the same id already exists');
     }
   }
 
-  function assertReferences(note) {
+  function assertReferences(note: ReferenceFields) {
     validateNoteReferences?.({
       spaceId: note.spaceId,
       folderId: note.folderId ?? null,
@@ -65,7 +104,7 @@ export function createNoteService({
     });
   }
 
-  function assertPermanentDeletionAllowed(noteIds) {
+  function assertPermanentDeletionAllowed(noteIds: string[]) {
     noteIds.forEach(noteId => onBeforePermanentDelete?.(noteId));
   }
 
@@ -74,12 +113,12 @@ export function createNoteService({
     requireNote,
     requireNoteIds,
     assertReferences,
-    normalizeTagIds
+    normalizeTagIds: normalizeTagIds as (ids: unknown[] | undefined) => string[]
   });
 
   return {
-    createNote(input) {
-      const dto = buildCreateNoteDto(input);
+    createNote(input: NoteServiceInput) {
+      const dto = buildCreateNoteDto(input) as CreateNoteDtoView;
       addedNoteLinkTargets(dto.rawMarkdown).forEach(id => assertNoteLinkTarget(repository.findById(id), dto.spaceId));
       assertNewNoteId(dto.id);
       assertReferences(dto);
@@ -92,23 +131,23 @@ export function createNoteService({
       const note = new Note(dto);
       return persistNote(note, { createVersion: true });
     },
-    importMarkdown(input) {
+    importMarkdown(input: NoteServiceInput) {
       return this.createNote({
         ...input,
         sourceType: input.sourceType ?? 'markdown-import'
       });
     },
-    importMarkdownBatch(items = []) {
+    importMarkdownBatch(items: NoteServiceInput[] = []) {
       if (!Array.isArray(items) || items.length === 0) {
         throw validationError('MARKDOWN_IMPORT_ITEMS_REQUIRED', 'Markdown import batch must contain at least one item');
       }
 
       return items.map(item => this.importMarkdown(item));
     },
-    getNote(noteId, options = {}) {
+    getNote(noteId: string, options: NoteOptions = {}) {
       return requireNote(noteId, options);
     },
-    getLinkedNotes(noteId) {
+    getLinkedNotes(noteId: string) {
       const note = requireNote(noteId, { includeDeleted: true });
       const internalLinks = Array.isArray(note.internalLinks) ? note.internalLinks : [];
       const linkedNotes = [];
@@ -123,15 +162,15 @@ export function createNoteService({
 
       return linkedNotes;
     },
-    getNoteLinkRelations(noteId) {
+    getNoteLinkRelations(noteId: string) {
       const note = requireNote(noteId);
       return buildNoteLinkRelations(note, repository.list({ spaceId: note.spaceId, includeDeleted: true }));
     },
-    updateNote(noteId, updates) {
+    updateNote(noteId: string, updates: NoteServiceInput) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       if (currentNote.contentKind === 'pdf' && updates.rawMarkdown !== undefined)
         throw validationError('PDF_IMMUTABLE', 'PDF 原文件不能作为 Markdown 正文修改。');
-      const dto = buildUpdateNoteDto(updates);
+      const dto = buildUpdateNoteDto(updates) as UpdateNoteDtoView;
       if (dto.rawMarkdown !== undefined)
         addedNoteLinkTargets(dto.rawMarkdown, currentNote.rawMarkdown).forEach(id =>
           assertNoteLinkTarget(repository.findById(id), dto.spaceId ?? currentNote.spaceId)
@@ -140,7 +179,7 @@ export function createNoteService({
       if (
         dto.expectedUpdatedAt &&
         dto.expectedUpdatedAt !==
-          new /** @type {new (value: unknown) => Date} */ (Date)(currentNote.updatedAt).toISOString()
+          new (Date as new (value: NoteRecord['updatedAt']) => Date)(currentNote.updatedAt).toISOString()
       ) {
         throw conflictError('NOTE_UPDATE_CONFLICT', 'Note has changed since it was loaded');
       }
@@ -187,7 +226,7 @@ export function createNoteService({
         createVersion: dto.rawMarkdown !== undefined && dto.rawMarkdown !== currentNote.rawMarkdown
       });
     },
-    deleteNote(noteId) {
+    deleteNote(noteId: string) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       if (currentNote.deleted) return currentNote;
       const deletedAt = new Date().toISOString();
@@ -211,12 +250,12 @@ export function createNoteService({
         return saved;
       });
     },
-    deleteNotes(noteIds) {
+    deleteNotes(noteIds: unknown) {
       const validatedIds = requireNoteIds(noteIds);
       validatedIds.forEach(noteId => requireNote(noteId, { includeDeleted: true }));
       return validatedIds.map(noteId => this.deleteNote(noteId));
     },
-    restoreNote(noteId) {
+    restoreNote(noteId: string) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       if (!currentNote.deleted) return currentNote;
       validateSiblingNameConflict?.({
@@ -235,7 +274,7 @@ export function createNoteService({
 
       return repository.save(restoredNote);
     },
-    permanentlyDeleteNote(noteId) {
+    permanentlyDeleteNote(noteId: string) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       if (!currentNote.deleted) {
         throw conflictError('NOTE_NOT_IN_RECYCLE_BIN', 'Note must be in recycle bin before permanent delete');
@@ -250,7 +289,7 @@ export function createNoteService({
         return deletedNote;
       });
     },
-    emptyRecycleBin(spaceId = null) {
+    emptyRecycleBin(spaceId: string | null = null) {
       return runTransaction(() => {
         const recycleBinNotes = repository.list({ includeDeleted: true, spaceId }).filter(note => note.deleted);
         assertPermanentDeletionAllowed(recycleBinNotes.map(note => note.id));
@@ -266,7 +305,7 @@ export function createNoteService({
         };
       });
     },
-    setFavorite(noteId, favorite = true) {
+    setFavorite(noteId: string, favorite: unknown = true) {
       const currentNote = requireNote(noteId, { includeDeleted: true });
       const updatedNote = new Note({
         ...currentNote,
@@ -279,7 +318,7 @@ export function createNoteService({
       return updatedNote;
     },
     ...associationOperations,
-    listNotes(options = {}) {
+    listNotes(options: ListOptions = {}) {
       const notes = repository.list(options);
       return options.summaryOnly === true || options.summaryOnly === 'true' ? notes.map(createNoteSummary) : notes;
     }

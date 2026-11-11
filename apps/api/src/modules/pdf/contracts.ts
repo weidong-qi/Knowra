@@ -59,7 +59,14 @@ export interface PdfKnowledge {
     knowledgeSpaceRepository: { findById(id: string | null | undefined): Awaitable<PdfSpace | null | undefined> };
     folderRepository: { findById(id: string): Awaitable<PdfFolder | null | undefined> };
   };
-  noteService: { createNote(note: PdfNewNote): Awaitable<PdfNoteRecord> };
+  noteService: {
+    createNote(
+      note: PdfNewNote
+    ): Awaitable<
+      | import('../knowledge/infrastructure/note-repository.ts').NoteRecord
+      | import('../sync/postgres-state-types.ts').SyncMappedEntityMap['notes']
+    >;
+  };
 }
 export interface PdfPostgres {
   buildNoteData: typeof buildNoteData;
