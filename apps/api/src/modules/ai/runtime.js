@@ -3,7 +3,7 @@ import { wrapHandlersWithMaintenanceGate } from '../../infrastructure/maintenanc
 import { createNoteActionService } from './action-service.ts';
 import { createAiGateway } from './gateway.ts';
 import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.ts';
-import { createIsolatedDeepSeekAdapter } from './isolated-provider.js';
+import { createIsolatedDeepSeekAdapter } from './isolated-provider.ts';
 import { createAiWorker } from './worker.ts';
 import { createIsolatedAiWorker } from './isolated-worker.js';
 import { createAiReadContextService } from './read-context-service.ts';

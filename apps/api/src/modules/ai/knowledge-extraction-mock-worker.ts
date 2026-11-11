@@ -1,4 +1,4 @@
-import { AI_PROCESS_LIMITS } from './isolated-provider.js';
+import { AI_PROCESS_LIMITS } from './isolated-provider.ts';
 import {
   assertMockGateway,
   EXTRACTION_MOCK_PROFILE as profile,

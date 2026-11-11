@@ -16,7 +16,7 @@ import {
 } from '../src/modules/ai/translation-service.ts';
 import { createAiGateway } from '../src/modules/ai/gateway.ts';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
-import { AI_PROCESS_LIMITS, createIsolatedDeepSeekAdapter } from '../src/modules/ai/isolated-provider.js';
+import { AI_PROCESS_LIMITS, createIsolatedDeepSeekAdapter } from '../src/modules/ai/isolated-provider.ts';
 
 const priceProfile = {
   version: 'translation-synthetic-v1',

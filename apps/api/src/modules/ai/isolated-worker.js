@@ -1,7 +1,7 @@
 import { fork } from 'node:child_process';
 import { hashRecord } from './record-contract.ts';
 import { createAiWorker } from './worker.ts';
-import { AI_PROCESS_LIMITS } from './isolated-provider.js';
+import { AI_PROCESS_LIMITS } from './isolated-provider.ts';
 import { watchChildResources } from './process-resource-guard.ts';
 import { createAiRecoveryScope } from './recovery-scope.ts';
 

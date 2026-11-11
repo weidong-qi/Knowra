@@ -5,7 +5,7 @@ import path from 'node:path';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createServer } from '../src/server.js';
 import { createOptionalAiRuntime, createUnavailableAiRuntime } from '../src/modules/ai/runtime.js';
-import { AI_PROCESS_LIMITS, createIsolatedDeepSeekAdapter } from '../src/modules/ai/isolated-provider.js';
+import { AI_PROCESS_LIMITS, createIsolatedDeepSeekAdapter } from '../src/modules/ai/isolated-provider.ts';
 import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.js';
 import { aiRecords } from './ai-record-fixtures.js';
 import { beijingDay } from '../src/modules/ai/budget-ledger.ts';
