@@ -1,6 +1,5 @@
 import type { PurgeTaskState } from '../../../infrastructure/purge-task-types.ts';
 import type {
-  AssessmentListOptions,
   LearningObjectiveRecord,
   ExamProfileRecord,
   ExamFocusRecord,
@@ -24,7 +23,12 @@ interface AssetRepository<Async extends boolean> {
   delete(id: unknown): Result<object | number | null | undefined, Async>;
 }
 interface FocusRepository<Async extends boolean> extends AssetRepository<Async> {
-  list(options: AssessmentListOptions): Result<ExamFocusRecord[], Async>;
+  list(options: {
+    examProfileId?: string;
+    learningObjectiveId?: string;
+    includeArchived?: boolean;
+    includeDeleted?: boolean;
+  }): Result<ExamFocusRecord[], Async>;
 }
 interface ObjectiveLinks<Async extends boolean> {
   listByObjectiveId(id: unknown): Result<QuestionObjectiveRecord[], Async>;

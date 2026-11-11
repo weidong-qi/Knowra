@@ -1,11 +1,12 @@
+import type { AnnotationReconcileContext } from '../content-annotation-service.ts';
 import { conflictError } from '../knowledge-errors.ts';
 
 export type MaybePromise<Value> = Value | PromiseLike<Value>;
 export interface DependencyIdRecord {
-  id?: unknown;
+  id: string;
 }
 export interface DependencyVersionRecord extends DependencyIdRecord {
-  contentHash?: unknown;
+  contentHash: string;
 }
 export interface DependencyAnnotationRecord {
   anchorStatus?: unknown;
@@ -24,54 +25,54 @@ export interface DependencyScopeSnapshot {
 export interface AsyncNoteDependencyOptions {
   createAnnotationService: () => {
     reconcileForNote: (
-      noteId: unknown,
-      contentHash: unknown,
-      annotationChange: unknown
-    ) => MaybePromise<{ contentChangedAnnotationIds: Iterable<unknown> }>;
+      noteId: string,
+      contentHash: string,
+      annotationChange: AnnotationReconcileContext | null | undefined
+    ) => MaybePromise<{ contentChangedAnnotationIds: Iterable<string> }>;
   };
   contentAnnotationRepository: {
-    findById: (id: unknown) => MaybePromise<DependencyAnnotationRecord | null | undefined>;
+    findById: (id: string) => MaybePromise<DependencyAnnotationRecord | null | undefined>;
   };
   noteVersionRepository: {
-    listIds: (options: { noteId: unknown }) => MaybePromise<Pick<readonly unknown[], 'filter'>>;
-    list: (options: { noteId: unknown }) => MaybePromise<Pick<readonly DependencyIdRecord[], 'map'>>;
+    listIds: (options: { noteId: string }) => MaybePromise<Pick<readonly string[], 'filter'>>;
+    list: (options: { noteId: string }) => MaybePromise<Pick<readonly DependencyIdRecord[], 'map'>>;
   };
   knowledgeEvidenceRepository: {
-    list: (options: { noteId: unknown }) => MaybePromise<{ readonly length: number }>;
+    list: (options: { noteId: string }) => MaybePromise<{ readonly length: number }>;
   };
   questionSourceRepository: {
     list: () => MaybePromise<Pick<readonly DependencyQuestionSource[], 'some'>>;
   };
   analysisScopeRepository: {
-    list: () => MaybePromise<Pick<readonly DependencyScopeSnapshot[], 'some'>>;
+    list: () => MaybePromise<Pick<readonly { noteVersions?: unknown }[], 'some'>>;
   };
   knowledgeItemService: {
     markEvidenceByAnnotationId: (
-      annotationId: unknown,
+      annotationId: string,
       status: 'insufficient' | 'stale'
     ) => MaybePromise<Iterable<DependencyIdRecord>>;
     markEvidenceByNoteVersionIds: (
-      versionIds: unknown[],
+      versionIds: string[],
       status: 'stale',
       sourceType: 'noteVersion'
     ) => MaybePromise<Pick<readonly DependencyIdRecord[], 'map'>>;
     markEvidenceByNoteId: (
-      noteId: unknown,
+      noteId: string,
       status: 'invalid'
     ) => MaybePromise<Pick<readonly DependencyIdRecord[], 'map'>>;
   };
   questionService: {
-    markSourcesStale: (sourceType: 'knowledgeEvidence' | 'noteVersion', sourceIds: unknown[]) => unknown;
+    markSourcesStale: (sourceType: 'knowledgeEvidence' | 'noteVersion', sourceIds: string[]) => unknown;
   };
 }
 export interface AsyncNoteDependencyLifecycle {
   onNoteContentChanged: (
     note: DependencyIdRecord,
     version: DependencyVersionRecord,
-    annotationChange: unknown
+    annotationChange: AnnotationReconcileContext | null | undefined
   ) => Promise<void>;
-  onNoteDeleted: (noteId: unknown) => Promise<void>;
-  onBeforePermanentDelete: (noteId: unknown) => Promise<void>;
+  onNoteDeleted: (noteId: string) => Promise<void>;
+  onBeforePermanentDelete: (noteId: string) => Promise<void>;
 }
 
 /** 只使用调用者装配的事务内依赖；标注服务仍在正文变更时惰性创建。 */
@@ -139,7 +140,7 @@ export function createAsyncNoteDependencyLifecycle({
         );
       }
       const versions = await noteVersionRepository.list({ noteId });
-      const versionIds = new Set(versions.map(version => version.id));
+      const versionIds = new Set<unknown>(versions.map(version => version.id));
       const sources = await questionSourceRepository.list();
       if (sources.some(source => source.sourceType === 'noteVersion' && versionIds.has(source.sourceId))) {
         throw conflictError(
@@ -150,7 +151,9 @@ export function createAsyncNoteDependencyLifecycle({
       const snapshots = await analysisScopeRepository.list();
       if (
         snapshots.some(snapshot =>
-          snapshot.noteVersions?.some(version => version.noteId === noteId || versionIds.has(version.noteVersionId))
+          (snapshot.noteVersions as DependencyScopeSnapshot['noteVersions'])?.some(
+            version => version.noteId === noteId || versionIds.has(version.noteVersionId)
+          )
         )
       ) {
         throw conflictError(
