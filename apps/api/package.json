@@ -10,7 +10,7 @@
     "prisma:validate": "npx prisma validate --schema ../../prisma/schema.prisma",
     "prisma:generate": "npx prisma generate --schema ../../prisma/schema.prisma",
     "prisma:migrate:deploy": "npx prisma migrate deploy --schema ../../prisma/schema.prisma",
-    "typecheck:migrated": "tsc -p tsconfig.migrated.json"
+    "typecheck:migrated": "npm run typecheck"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
