@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { AppError } from '../../../../errors/app-error.ts';
-import type { NoteRow, NoteWriteData, NoteWriteInput } from './mappers.ts';
+import type { NoteRow, NoteWriteInput } from './mappers.ts';
 import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
 import { buildNoteData, mapNote, toDate } from './mappers.ts';
 import {
@@ -36,7 +36,7 @@ interface NoteListOptions {
   limit?: unknown;
 }
 interface NoteQuery {
-  where: Partial<ReturnType<typeof buildNoteWhere>> & { id?: { in: Prisma.JsonValue[] } };
+  where: Prisma.NoteWhereInput;
   orderBy?: ReturnType<typeof buildNoteOrderBy>;
   skip?: number;
   take?: number;
@@ -44,19 +44,16 @@ interface NoteQuery {
 }
 interface NoteDelegate {
   findUnique(input: { where: { id: string }; include?: { noteTags: boolean } }): PromiseLike<NoteRow | null>;
-  create<Input extends NoteWriteInput>(input: { data: NoteWriteData<Input> }): PromiseLike<NoteRow>;
-  update<Input extends NoteWriteInput>(input: {
-    where: { id: string };
-    data: Omit<NoteWriteData<Input>, 'id'>;
-  }): PromiseLike<NoteRow>;
-  updateMany<Input extends NoteWriteInput>(input: {
+  create(input: { data: Prisma.NoteUncheckedCreateInput }): PromiseLike<NoteRow>;
+  update(input: { where: { id: string }; data: Prisma.NoteUncheckedUpdateManyInput }): PromiseLike<NoteRow>;
+  updateMany(input: {
     where: { id: string; updatedAt: Date };
-    data: Omit<NoteWriteData<Input>, 'id'>;
+    data: Prisma.NoteUncheckedUpdateManyInput;
   }): PromiseLike<{ count: number }>;
   findMany(input: NoteQuery): PromiseLike<NoteRow[]>;
   delete(input: { where: { id: string }; include: { noteTags: boolean } }): PromiseLike<NoteRow>;
   deleteMany(input: { where: { id: { in: string[] } } }): PromiseLike<{ count: number }>;
-  count(input: { where: ReturnType<typeof buildNoteWhere> }): PromiseLike<number>;
+  count(input: { where: Prisma.NoteWhereInput }): PromiseLike<number>;
 }
 interface NoteTransaction {
   note: Pick<NoteDelegate, 'findUnique' | 'create' | 'update' | 'updateMany'>;
@@ -82,6 +79,8 @@ export function createPostgresNoteRepository({ db }: NoteRepositoryOptions) {
     ) {
       return withRepositoryErrors(
         async () => {
+          // 原始投影不是已校验的写记录；Prisma 仍在原调用位置拒绝非法字段。
+          // 只在该写边界指定 SDK 输入，不能反向把读取记录或整个 client 声明为可写。
           const data = buildNoteData(note);
           const saveOperation = async (tx: NoteTransaction) => {
             const exists = await tx.note.findUnique({ where: { id: data.id as Input['id'] } });
@@ -89,12 +88,12 @@ export function createPostgresNoteRepository({ db }: NoteRepositoryOptions) {
               data.updatedAt = new Date(Math.max(data.updatedAt.getTime(), new Date(exists.updatedAt).getTime() + 1));
               const { id: _ignoredId, ...updateData } = data;
               if (expectedUpdatedAt) {
-                const result = await tx.note.updateMany<Input>({
+                const result = await tx.note.updateMany({
                   where: {
                     id: data.id as Input['id'],
                     updatedAt: toDate(expectedUpdatedAt)
                   },
-                  data: updateData
+                  data: updateData as Prisma.NoteUncheckedUpdateManyInput
                 });
                 if (result.count !== 1) {
                   // 保留既有数据库冲突 Error 的运行原型与字段赋值顺序。
@@ -103,10 +102,13 @@ export function createPostgresNoteRepository({ db }: NoteRepositoryOptions) {
                   throw conflict;
                 }
               } else {
-                await tx.note.update<Input>({ where: { id: data.id as Input['id'] }, data: updateData });
+                await tx.note.update({
+                  where: { id: data.id as Input['id'] },
+                  data: updateData as Prisma.NoteUncheckedUpdateManyInput
+                });
               }
             } else {
-              await tx.note.create<Input>({ data });
+              await tx.note.create({ data: data as Prisma.NoteUncheckedCreateInput });
             }
             await replaceNoteTags(tx, data.id, note.tagIds ?? []);
             const saved = await tx.note.findUnique({
@@ -140,7 +142,7 @@ export function createPostgresNoteRepository({ db }: NoteRepositoryOptions) {
       return withRepositoryErrors(async () =>
         (
           await db.note.findMany({
-            where: { id: { in: [...new Set(noteIds)] } },
+            where: { id: { in: [...new Set(noteIds)] as string[] } },
             include: noteWithTags
           })
         ).map(mapNote)
@@ -159,7 +161,7 @@ export function createPostgresNoteRepository({ db }: NoteRepositoryOptions) {
     async list(options: NoteListOptions = {}) {
       return withRepositoryErrors(async () => {
         const query: NoteQuery = {
-          where: buildNoteWhere(options),
+          where: buildNoteWhere(options) as Prisma.NoteWhereInput,
           orderBy: buildNoteOrderBy(options),
           skip: normalizeOffset(options.offset),
           include: noteWithTags
@@ -192,7 +194,7 @@ export function createPostgresNoteRepository({ db }: NoteRepositoryOptions) {
     async count(options: NoteListOptions = {}) {
       return withRepositoryErrors(() =>
         db.note.count({
-          where: buildNoteWhere(options)
+          where: buildNoteWhere(options) as Prisma.NoteWhereInput
         })
       );
     },

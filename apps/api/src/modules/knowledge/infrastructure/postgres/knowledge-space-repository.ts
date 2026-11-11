@@ -7,6 +7,7 @@ export function createPostgresKnowledgeSpaceRepository({ db }: SpaceRepositoryOp
     throw new TypeError('PostgreSQL space repository requires db.knowledgeSpace');
   }
 
+  // 原始字段仍由 Prisma 校验；以下断言只描述 SQL 输入，不增加转换或提前拒绝。
   return {
     async save(space: SpaceWriteInput) {
       const data = {
@@ -38,16 +39,18 @@ export function createPostgresKnowledgeSpaceRepository({ db }: SpaceRepositoryOp
       return withRepositoryErrors(async () =>
         mapSpace(
           await db.knowledgeSpace.findUnique({
-            where: { id: spaceId }
+            where: { id: spaceId as string }
           })
         )
       );
     },
     async delete(spaceId: unknown) {
-      return withRepositoryErrors(async () => mapSpace(await db.knowledgeSpace.delete({ where: { id: spaceId } })));
+      return withRepositoryErrors(async () =>
+        mapSpace(await db.knowledgeSpace.delete({ where: { id: spaceId as string } }))
+      );
     },
     async list(options: SpaceListOptions = {}) {
-      const where = options.userId ? { userId: options.userId } : {};
+      const where = options.userId ? { userId: options.userId as string } : {};
       return withRepositoryErrors(async () =>
         (
           await db.knowledgeSpace.findMany({

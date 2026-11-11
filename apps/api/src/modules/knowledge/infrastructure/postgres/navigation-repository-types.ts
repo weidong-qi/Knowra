@@ -1,4 +1,5 @@
 import type * as Models from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 export interface NavigationDates {
   createdAt?: unknown;
@@ -56,13 +57,13 @@ export type FolderWriteData = StoredDates & {
   pathCache: string;
   sortOrder: number;
   deletedAt: Date | null;
-  deletionPackage: unknown;
+  deletionPackage: Prisma.InputJsonValue | Prisma.NullTypes.DbNull;
 };
 export type TagWriteData = StoredDates & {
   id: string;
   spaceId: string;
   name: string;
-  color: unknown;
+  color: string;
   groupId: string | null;
   code: string | null;
   isSystem: boolean;
@@ -73,7 +74,7 @@ export type TagGroupWriteData = StoredDates & {
   spaceId: string;
   name: string;
   code: string | null;
-  selectionMode: unknown;
+  selectionMode: string | undefined;
   isSystem: boolean;
   sortOrder: number;
 };
@@ -92,30 +93,30 @@ export interface FolderListOptions extends NavigationListOptions {
   includeDeleted?: unknown;
 }
 export interface SpaceWhere {
-  userId?: unknown;
+  userId?: string;
 }
 export interface FolderWhere {
-  spaceId?: unknown;
+  spaceId?: string;
   deletedAt?: null;
 }
 export interface TagWhere {
-  spaceId?: unknown;
-  id?: { in: unknown[] };
+  spaceId?: string;
+  id?: { in: string[] };
 }
 export interface GroupWhere {
-  spaceId?: unknown;
+  spaceId?: string;
 }
 
-/** 写入保留原投影；实际 SDK 仍验证这些值，并可能原样拒绝。 */
+/** 数据库端口只接受 Prisma 可写字段；原始输入在调用边界保留 SDK 校验时序。 */
 export interface NavigationDelegate<Row, Data, Where> {
   upsert(input: { where: { id: string }; create: Data; update: Partial<Data> }): PromiseLike<Row>;
-  findUnique(input: { where: { id: unknown } }): PromiseLike<Row | null>;
-  delete(input: { where: { id: unknown } }): PromiseLike<Row>;
+  findUnique(input: { where: { id: string } }): PromiseLike<Row | null>;
+  delete(input: { where: { id: string } }): PromiseLike<Row>;
   findMany(input: { where: Where; orderBy?: NavigationOrder | NavigationOrder[] }): PromiseLike<Row[]>;
 }
 export interface TagGroupDelegate extends NavigationDelegate<Models.TagGroup, TagGroupWriteData, GroupWhere> {
   create(input: { data: TagGroupWriteData }): PromiseLike<Models.TagGroup>;
-  update(input: { where: { id: unknown }; data: { spaceId: unknown } }): PromiseLike<Models.TagGroup>;
+  update(input: { where: { id: string }; data: { spaceId: string } }): PromiseLike<Models.TagGroup>;
 }
 export interface SpaceRepositoryOptions {
   db: { knowledgeSpace: NavigationDelegate<Models.KnowledgeSpace, SpaceWriteData, SpaceWhere> };
