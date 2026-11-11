@@ -1,18 +1,30 @@
-import { assertCommandSearchOwner, commandSearchInput, commandSearchResults } from './command-note-search.js';
+import { assertCommandSearchOwner, commandSearchInput, commandSearchResults } from './command-note-search.ts';
 
-function normalizeQuery(value) {
+import type { NoteListOptions } from '../infrastructure/note-repository.ts';
+import type { KnowledgeSpaceRecord } from '../infrastructure/knowledge-space-repository.ts';
+import type { CommandSearchRequest, CommandSearchNote } from './command-note-search.ts';
+
+export type SearchNotesOptions = NoteListOptions & { query?: string | null };
+export interface SearchServiceDependencies<Listed extends CommandSearchNote[]> {
+  listNotes: (options: NoteListOptions) => Listed;
+  findKnowledgeSpace: (spaceId: string) => Pick<KnowledgeSpaceRecord, 'userId'> | null | undefined;
+}
+
+function normalizeQuery(value: string | null | undefined) {
   return value?.trim().toLowerCase() || '';
 }
 
-export function createSearchService({ listNotes, findKnowledgeSpace }) {
+export function createSearchService<Listed extends CommandSearchNote[]>({
+  listNotes,
+  findKnowledgeSpace
+}: SearchServiceDependencies<Listed>) {
   const service = {
-    searchCommandNotes(input, ownerId) {
+    searchCommandNotes(input: CommandSearchRequest | undefined, ownerId: string | undefined) {
       const scoped = commandSearchInput(input);
       assertCommandSearchOwner(findKnowledgeSpace(scoped.spaceId), ownerId);
       const notes = service.searchNotes({ ...scoped, includeDeleted: false, deletedOnly: false });
       return commandSearchResults(notes, scoped);
     },
-    /** @param {import('../infrastructure/note-repository.ts').NoteListOptions & { query?: string }} options */
     searchNotes({
       query,
       spaceId,
@@ -28,7 +40,7 @@ export function createSearchService({ listNotes, findKnowledgeSpace }) {
       includeDeleted,
       deletedOnly,
       favoriteOnly
-    }) {
+    }: SearchNotesOptions) {
       const normalizedQuery = normalizeQuery(query);
 
       if (!normalizedQuery) {
@@ -49,7 +61,7 @@ export function createSearchService({ listNotes, findKnowledgeSpace }) {
       }).filter(note => {
         const haystack = `${note.title} ${note.plainText}`.toLowerCase();
         return haystack.includes(normalizedQuery);
-      });
+      }) as Listed[number][];
 
       const start = offset ? Number(offset) : 0;
 

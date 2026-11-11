@@ -12,13 +12,14 @@ import type { ContentAnnotationRepository } from '../infrastructure/content-anno
 import type { NoteRepository } from '../infrastructure/note-repository.ts';
 import type { NoteVersionRepository } from '../infrastructure/note-version-repository.ts';
 import type { ContentAnchor } from '@study-accelerator/content-anchor';
+import type { CreateLearningObjectiveDto } from './dto/learning-objective.dto.ts';
 import type { LearningObjective } from '../domain/learning-objective.ts';
 import type { ExamProfile } from '../domain/exam-profile.ts';
 import type { ExamFocus } from '../domain/exam-focus.ts';
 import type { Question } from '../domain/question.ts';
 
 interface TransactionDependencies {
-  getTombstone?: (collection: string, id: string) => object | null;
+  getTombstone?: ((collection: string, id: string) => object | null) | null;
   runTransaction?: <T>(operation: () => T) => T;
 }
 export interface AssessmentWritePort<Record, Result = Record> {
@@ -26,14 +27,27 @@ export interface AssessmentWritePort<Record, Result = Record> {
   save: (record: Record) => Result;
 }
 export interface AssessmentContextDependencies extends TransactionDependencies {
-  examProfileRepository?: AssessmentCollectionRepository<ExamProfile<unknown, unknown>>;
-  examFocusRepository?: ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>;
-  learningObjectiveRepository?: AssessmentCollectionRepository<LearningObjective>;
+  examProfileRepository?: Pick<
+    AssessmentCollectionRepository<ExamProfile<unknown, unknown>>,
+    'findById' | 'list' | 'save'
+  > &
+    Partial<Pick<AssessmentCollectionRepository<ExamProfile<unknown, unknown>>, 'create'>>;
+  examFocusRepository?: Pick<ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>, 'findById' | 'list' | 'save'> &
+    Partial<Pick<ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>, 'create'>>;
+  learningObjectiveRepository?: Pick<AssessmentCollectionRepository<LearningObjective>, 'findById'>;
 }
+export type LearningObjectiveServiceRecord = LearningObjective<
+  CreateLearningObjectiveDto['actionVerb'],
+  CreateLearningObjectiveDto['cognitiveLevel'],
+  CreateLearningObjectiveDto['difficultyHint'],
+  CreateLearningObjectiveDto['createdAt'],
+  CreateLearningObjectiveDto['updatedAt']
+>;
 export interface LearningObjectiveDependencies extends TransactionDependencies {
-  repository?: AssessmentCollectionRepository<LearningObjective>;
+  repository?: Pick<AssessmentCollectionRepository<LearningObjectiveServiceRecord>, 'findById' | 'list' | 'save'> &
+    Partial<Pick<AssessmentCollectionRepository<LearningObjectiveServiceRecord>, 'create'>>;
   knowledgeItemRepository?: Pick<KnowledgeItemRepository, 'findById'>;
-  onObjectiveInvalidated?: (id: string) => void;
+  onObjectiveInvalidated?: ((id: string) => void) | null;
 }
 export interface KnowledgeItemDependencies extends TransactionDependencies {
   repository?: KnowledgeItemRepository<KnowledgeItem>;

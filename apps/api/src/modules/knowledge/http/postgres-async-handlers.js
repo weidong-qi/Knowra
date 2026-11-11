@@ -1,4 +1,4 @@
-import { assertCommandSearchOwner } from '../application/command-note-search.js';
+import { assertCommandSearchOwner } from '../application/command-note-search.ts';
 
 export function createPostgresKnowledgeHttpHandlers({ knowledgeModule, noteDeletionCoordinator, ownerId = 'demo' }) {
   const {

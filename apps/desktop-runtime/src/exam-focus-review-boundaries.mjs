@@ -3,7 +3,7 @@ import { sameEntity, syncReferencesFor, WRITABLE_COLLECTIONS } from '../../api/s
 import {
   assertLearningObjectiveConfirmable,
   assertKnowledgeItemConfirmable
-} from '../../api/src/modules/knowledge/application/formal-asset-validation.js';
+} from '../../api/src/modules/knowledge/application/formal-asset-validation.ts';
 import {
   createEmptyLocalState,
   createPersistedLocalDocument,

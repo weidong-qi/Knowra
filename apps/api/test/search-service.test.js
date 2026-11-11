@@ -5,7 +5,7 @@ export const searchServiceTests = [
     name: 'searchNotes finds notes by keyword in title and plain text',
     async run() {
       const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
-      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.js');
+      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.ts');
 
       const noteService = createNoteService();
       noteService.createNote({
@@ -40,7 +40,7 @@ export const searchServiceTests = [
     name: 'searchNotes filters by folderId within a space',
     async run() {
       const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
-      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.js');
+      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.ts');
 
       const noteService = createNoteService();
       noteService.createNote({
@@ -76,7 +76,7 @@ export const searchServiceTests = [
     name: 'searchNotes excludes soft-deleted notes',
     async run() {
       const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
-      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.js');
+      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.ts');
 
       const noteService = createNoteService();
       noteService.createNote({
@@ -104,7 +104,7 @@ export const searchServiceTests = [
     name: 'searchNotes filters by tagId within a space',
     async run() {
       const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
-      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.js');
+      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.ts');
 
       const noteService = createNoteService();
       noteService.createNote({
@@ -143,7 +143,7 @@ export const searchServiceTests = [
     name: 'searchNotes can search inside recycle bin when deletedOnly is enabled',
     async run() {
       const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
-      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.js');
+      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.ts');
 
       const noteService = createNoteService();
       noteService.createNote({
@@ -174,7 +174,7 @@ export const searchServiceTests = [
     name: 'searchNotes can filter to favorite notes only',
     async run() {
       const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
-      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.js');
+      const { createSearchService } = await import('../src/modules/knowledge/application/search-service.ts');
 
       const noteService = createNoteService();
       noteService.createNote({

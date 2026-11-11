@@ -1,41 +1,48 @@
 import { LearningObjective } from '../../domain/learning-objective.ts';
 import { buildCreateLearningObjectiveDto, buildUpdateLearningObjectiveDto } from '../dto/learning-objective.dto.ts';
-import { assertLearningObjectiveConfirmable } from '../formal-asset-validation.js';
+import { assertLearningObjectiveConfirmable } from '../formal-asset-validation.ts';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 
 import {
   assertLearningObjectiveBaseline,
   nextLearningObjectiveTimestamp,
   withLearningObjectiveReviewErrors
-} from '../learning-objective-concurrency.js';
+} from '../learning-objective-concurrency.ts';
 
-/** @param {import('./service-dependencies.ts').LearningObjectiveDependencies} dependencies */
+import type { LearningObjectiveDependencies } from './service-dependencies.ts';
+import type { LearningObjectiveDtoInput } from '../dto/learning-objective.dto.ts';
+import type { LearningObjectiveReviewInput } from '../learning-objective-concurrency.ts';
+type ObjectiveRepository = NonNullable<LearningObjectiveDependencies['repository']>;
+type ObjectiveRecord = NonNullable<Awaited<ReturnType<ObjectiveRepository['findById']>>>;
+type ObjectiveWrite = Parameters<ObjectiveRepository['save']>[0];
+type ObjectiveInput = LearningObjectiveDtoInput & LearningObjectiveReviewInput;
+
 export function createAsyncLearningObjectiveService({
   repository,
   knowledgeItemRepository,
   getTombstone = null,
   onObjectiveInvalidated = null,
   runTransaction = operation => operation()
-} = {}) {
+}: LearningObjectiveDependencies = {}) {
   if (!repository || !knowledgeItemRepository) throw new TypeError('Async LearningObjective repositories are required');
 
-  async function requireObjective(id, { includeArchived = false, lock = false } = {}) {
+  async function requireObjective(id: string, { includeArchived = false, lock = false } = {}) {
     if (lock) {
-      const initial = await repository.findById(id);
+      const initial = await repository!.findById(id);
       if (initial) {
         // 所有审阅写入按父知识→目标加锁，与父知识失效传播顺序一致。
-        await knowledgeItemRepository.lockById?.(initial.knowledgeItemId);
-        await repository.lockById?.(id);
+        await knowledgeItemRepository!.lockById?.(initial.knowledgeItemId);
+        await repository!.lockById?.(id);
       }
     }
-    const objective = await repository.findById(id);
+    const objective = await repository!.findById(id);
     if (!objective || objective.deletedAt || (!includeArchived && objective.reviewStatus === 'archived'))
       throw notFoundError('LEARNING_OBJECTIVE_NOT_FOUND', 'LearningObjective not found');
     return objective;
   }
 
-  async function requireKnowledgeItem(id, { confirmed = false } = {}) {
-    const item = await knowledgeItemRepository.findById(id);
+  async function requireKnowledgeItem(id: string, { confirmed = false } = {}) {
+    const item = await knowledgeItemRepository!.findById(id);
     if (!item || item.deletedAt || item.reviewStatus === 'archived')
       throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
     if (confirmed && item.reviewStatus !== 'confirmed')
@@ -46,31 +53,36 @@ export function createAsyncLearningObjectiveService({
     return item;
   }
 
-  async function assertConfirmable(objective) {
-    const item = await knowledgeItemRepository.findById(objective.knowledgeItemId);
+  async function assertConfirmable(
+    objective: Pick<ObjectiveRecord, 'knowledgeItemId' | 'objective' | 'actionVerb' | 'cognitiveLevel'>
+  ) {
+    const item = await knowledgeItemRepository!.findById(objective.knowledgeItemId);
     return assertLearningObjectiveConfirmable(objective, item);
   }
 
-  async function assertObjectiveIdAvailable(id) {
+  async function assertObjectiveIdAvailable(id: string) {
     if (await getTombstone?.('learningObjectives', id))
       throw conflictError('LEARNING_OBJECTIVE_ID_DELETED', '已清理的学习目标 ID 不能复用');
-    if (await repository.findById(id)) {
+    if (await repository!.findById(id)) {
       throw conflictError('LEARNING_OBJECTIVE_ID_CONFLICT', 'A LearningObjective with the same id already exists');
     }
   }
 
-  async function saveNew(targetRepository, objective) {
+  async function saveNew(targetRepository: Pick<ObjectiveRepository, 'create' | 'save'>, objective: ObjectiveWrite) {
     return targetRepository.create ? targetRepository.create(objective) : targetRepository.save(objective);
   }
 
-  async function notifyIfInvalidated(previous, next) {
+  async function notifyIfInvalidated(
+    previous: Pick<ObjectiveRecord, 'reviewStatus'> | null | undefined,
+    next: Pick<ObjectiveRecord, 'id' | 'reviewStatus'> | null
+  ) {
     if (previous?.reviewStatus === 'confirmed' && next?.reviewStatus !== 'confirmed') {
-      await onObjectiveInvalidated?.(next.id);
+      await onObjectiveInvalidated?.(next!.id);
     }
   }
 
   const service = {
-    async createCandidate(input = {}) {
+    async createCandidate(input: ObjectiveInput = {}) {
       const dto = buildCreateLearningObjectiveDto(input);
       await knowledgeItemRepository.lockById?.(dto.knowledgeItemId);
       const item = await requireKnowledgeItem(dto.knowledgeItemId, {
@@ -82,13 +94,13 @@ export function createAsyncLearningObjectiveService({
         saveNew(learningObjectiveRepository, new LearningObjective({ ...dto, id: dto.id }))
       );
     },
-    getObjective: id => requireObjective(id, { includeArchived: true }),
-    listObjectives: (options = {}) => repository.list(options),
-    async updateObjective(id, input = {}) {
+    getObjective: (id: string) => requireObjective(id, { includeArchived: true }),
+    listObjectives: (options: Parameters<ObjectiveRepository['list']>[0] = {}) => repository.list(options),
+    async updateObjective(id: string, input: ObjectiveInput = {}) {
       const current = await requireObjective(id, { lock: true });
       assertLearningObjectiveBaseline(current, await requireKnowledgeItem(current.knowledgeItemId), input);
       const dto = buildUpdateLearningObjectiveDto(input);
-      const changed = Object.keys(dto).some(field => dto[field] !== current[field]);
+      const changed = (Object.keys(dto) as (keyof typeof dto)[]).some(field => dto[field] !== current[field]);
       const next = await repository.save(
         new LearningObjective({
           ...current,
@@ -101,7 +113,7 @@ export function createAsyncLearningObjectiveService({
       await notifyIfInvalidated(current, next);
       return next;
     },
-    async confirmObjective(id, input = {}) {
+    async confirmObjective(id: string, input: ObjectiveInput = {}) {
       const current = await requireObjective(id, { lock: true });
       assertLearningObjectiveBaseline(current, await requireKnowledgeItem(current.knowledgeItemId), input);
       await assertConfirmable(current);
@@ -115,7 +127,7 @@ export function createAsyncLearningObjectiveService({
         { expectedUpdatedAt: current.updatedAt }
       );
     },
-    async requestRevision(id, reviewNote = null) {
+    async requestRevision(id: string, reviewNote: string | null = null) {
       const current = await requireObjective(id, { lock: true });
       const next = await repository.save(
         new LearningObjective({
@@ -129,7 +141,7 @@ export function createAsyncLearningObjectiveService({
       await notifyIfInvalidated(current, next);
       return next;
     },
-    async archive(id) {
+    async archive(id: string) {
       const current = await requireObjective(id, { lock: true });
       const next = await repository.save(
         new LearningObjective({
@@ -142,7 +154,7 @@ export function createAsyncLearningObjectiveService({
       await notifyIfInvalidated(current, next);
       return next;
     },
-    async restore(id) {
+    async restore(id: string) {
       const current = await requireObjective(id, { includeArchived: true, lock: true });
       if (current.reviewStatus !== 'archived') return current;
       return repository.save(
@@ -154,7 +166,7 @@ export function createAsyncLearningObjectiveService({
         { expectedUpdatedAt: current.updatedAt }
       );
     },
-    async invalidateByKnowledgeItemId(knowledgeItemId) {
+    async invalidateByKnowledgeItemId(knowledgeItemId: string) {
       await knowledgeItemRepository.lockById?.(knowledgeItemId);
       const objectives = await repository.list({
         knowledgeItemId,
@@ -180,9 +192,13 @@ export function createAsyncLearningObjectiveService({
     },
     assertConfirmable
   };
-  for (const method of ['createCandidate', 'updateObjective', 'confirmObjective']) {
-    const operation = service[method];
-    service[method] = (...args) =>
+  type ReviewMethod = 'createCandidate' | 'updateObjective' | 'confirmObjective';
+  type ReviewOperation = (
+    ...args: Parameters<(typeof service)[ReviewMethod]>
+  ) => ReturnType<(typeof service)[ReviewMethod]>;
+  for (const method of ['createCandidate', 'updateObjective', 'confirmObjective'] as const) {
+    const operation = service[method] as ReviewOperation;
+    (service as Record<ReviewMethod, ReviewOperation>)[method] = (...args) =>
       withLearningObjectiveReviewErrors(method === 'createCandidate' ? args[0] : args[1], () => operation(...args), {
         hasObjective: method !== 'createCandidate'
       });

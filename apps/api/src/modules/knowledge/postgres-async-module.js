@@ -24,7 +24,7 @@ import { createAsyncNoteVersionService } from './application/note-version-servic
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.js';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
-import { createAsyncSearchService } from './application/postgres-async/search-service.js';
+import { createAsyncSearchService } from './application/postgres-async/search-service.ts';
 import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.ts';
 import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.ts';
 import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.ts';
@@ -48,14 +48,14 @@ import { createAsyncAnnotationScopeService } from './application/postgres-async/
 import { createPostgresKnowledgeSpaceRepository } from './infrastructure/postgres/knowledge-space-repository.ts';
 import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-group-repository.ts';
 import { createPostgresTagRepository } from './infrastructure/postgres/tag-repository.ts';
-import { createAsyncLearningObjectiveService } from './application/postgres-async/learning-objective-service.js';
-import { createAsyncAssessmentContextService } from './application/postgres-async/assessment-context-service.js';
+import { createAsyncLearningObjectiveService } from './application/postgres-async/learning-objective-service.ts';
+import { createAsyncAssessmentContextService } from './application/postgres-async/assessment-context-service.ts';
 import { createAsyncQuestionService } from './application/postgres-async/question-service.js';
 import { createTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
 import { createWorkspaceQueryService } from './application/workspace-query-service.js';
 import { conflictError, validationError } from './application/knowledge-errors.js';
 import { withPostgresErrors } from '../../infrastructure/postgres-errors.ts';
-import { withLearningObjectiveReviewErrors } from './application/learning-objective-concurrency.js';
+import { withLearningObjectiveReviewErrors } from './application/learning-objective-concurrency.ts';
 
 /** @param {import('./application/postgres-async/service-dependencies.ts').PostgresModuleDependencies} dependencies */
 export function createPostgresKnowledgeModule({

@@ -18,7 +18,7 @@ import { QuestionSource } from '../knowledge/domain/question-source.ts';
 import {
   assertLearningObjectiveConfirmable,
   assertQuestionConfirmable
-} from '../knowledge/application/formal-asset-validation.js';
+} from '../knowledge/application/formal-asset-validation.ts';
 import { buildCreateExamProfileDto, buildUpdateExamFocusDto } from '../knowledge/application/dto/assessment.dto.ts';
 import { TRAINING_COLLECTIONS, sameEntity } from './entity-contract.ts';
 import { syncError } from './journal.ts';

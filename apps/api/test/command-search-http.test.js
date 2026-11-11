@@ -8,7 +8,7 @@ import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.js';
 import { createPostgresKnowledgeHttpHandlers } from '../src/modules/knowledge/http/postgres-async-handlers.js';
-import { createAsyncSearchService } from '../src/modules/knowledge/application/postgres-async/search-service.js';
+import { createAsyncSearchService } from '../src/modules/knowledge/application/postgres-async/search-service.ts';
 import { createServer } from '../src/server.js';
 
 export const COMMAND_OWNER = 'command-owner';

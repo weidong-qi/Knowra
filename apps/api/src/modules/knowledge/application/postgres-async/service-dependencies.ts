@@ -108,10 +108,12 @@ interface NoteTransactionContext extends Partial<PostgresRepositories> {
   onBeforePermanentDelete?: (id: string) => void | Promise<void>;
 }
 interface TransactionDependencies {
-  getTombstone?: (
-    collection: string,
-    id: string
-  ) => { previousUpdatedAt?: string } | null | PromiseLike<{ previousUpdatedAt?: string } | null>;
+  getTombstone?:
+    | ((
+        collection: string,
+        id: string
+      ) => { previousUpdatedAt?: string } | null | PromiseLike<{ previousUpdatedAt?: string } | null>)
+    | null;
   runTransaction?: <T>(operation: (repositories?: NoteTransactionContext) => T | Promise<T>) => T | Promise<T>;
 }
 export interface KnowledgeItemDependencies extends TransactionDependencies {
@@ -123,18 +125,26 @@ export interface KnowledgeItemDependencies extends TransactionDependencies {
   onItemInvalidated?: (id: string) => void | Promise<void>;
 }
 export interface LearningObjectiveDependencies extends TransactionDependencies {
-  repository?: PostgresRepositories['learningObjectiveRepository'];
+  repository?: Pick<PostgresRepositories['learningObjectiveRepository'], 'findById' | 'list' | 'save'> &
+    Partial<Pick<PostgresRepositories['learningObjectiveRepository'], 'create' | 'lockById'>>;
   knowledgeItemRepository?: Pick<PostgresRepositories['knowledgeItemRepository'], 'findById'> &
     Partial<Pick<PostgresRepositories['knowledgeItemRepository'], 'lockById'>>;
-  onObjectiveInvalidated?: (id: string) => void | Promise<void | {
-    sources: import('../../../sync/postgres-state-types.ts').SyncMappedEntityMap['questionSources'][];
-    questions: import('../../domain/question.ts').Question[];
-  }>;
+  onObjectiveInvalidated?:
+    | ((id: string) => void | Promise<void | {
+        sources: import('../../../sync/postgres-state-types.ts').SyncMappedEntityMap['questionSources'][];
+        questions: import('../../domain/question.ts').Question[];
+      }>)
+    | null;
 }
 export interface AssessmentContextDependencies extends TransactionDependencies {
-  examProfileRepository?: PostgresRepositories['examProfileRepository'];
-  examFocusRepository?: PostgresRepositories['examFocusRepository'];
-  learningObjectiveRepository?: PostgresRepositories['learningObjectiveRepository'];
+  examProfileRepository?: Pick<PostgresRepositories['examProfileRepository'], 'findById' | 'list' | 'save'> &
+    Partial<Pick<PostgresRepositories['examProfileRepository'], 'create'>>;
+  examFocusRepository?: Pick<
+    PostgresRepositories['examFocusRepository'],
+    'findById' | 'list' | 'save' | 'findByProfileAndObjective'
+  > &
+    Partial<Pick<PostgresRepositories['examFocusRepository'], 'create'>>;
+  learningObjectiveRepository?: Pick<PostgresRepositories['learningObjectiveRepository'], 'findById'>;
 }
 export interface QuestionDependencies extends TransactionDependencies {
   repository?: PostgresRepositories['questionRepository'];

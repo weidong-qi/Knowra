@@ -10,7 +10,7 @@ import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import { createSqliteDataStore } from '../../desktop-runtime/src/sqlite-data-store.mjs';
-import { createAsyncLearningObjectiveService } from '../src/modules/knowledge/application/postgres-async/learning-objective-service.js';
+import { createAsyncLearningObjectiveService } from '../src/modules/knowledge/application/postgres-async/learning-objective-service.ts';
 import { createInMemoryLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/learning-objective-repository.js';
 import { createInMemoryKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/knowledge-item-repository.js';
 import { createPostgresLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/postgres/learning-objective-repository.ts';

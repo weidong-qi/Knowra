@@ -10,7 +10,7 @@ import {
   assertLearningObjectiveConfirmable,
   assertQuestionConfirmable,
   deriveQuestionSourceStatus
-} from '../modules/knowledge/application/formal-asset-validation.js';
+} from '../modules/knowledge/application/formal-asset-validation.ts';
 import { buildDefaultTagGroups } from '../modules/knowledge/domain/default-tag-groups.ts';
 import { validateKnowledgeArtifactProvenanceRelations } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import { resolveAnalysisScopeNoteVersion } from '../modules/knowledge/domain/analysis-scope-version-alias.ts';

@@ -14,7 +14,7 @@ import {
   buildCreateKnowledgeItemDto,
   buildCreateKnowledgeEvidenceDto
 } from '../knowledge/application/dto/knowledge-item.dto.ts';
-import { assertKnowledgeItemConfirmable } from '../knowledge/application/formal-asset-validation.js';
+import { assertKnowledgeItemConfirmable } from '../knowledge/application/formal-asset-validation.ts';
 import { sameEntity } from './entity-contract.ts';
 import { syncError } from './journal.ts';
 
