@@ -1,6 +1,6 @@
 import { mergeTodoChanges } from '../../../../../packages/web-core/src/personal-todos/index.ts';
 import { mapPersonalTodo } from '../knowledge/infrastructure/postgres/mappers.ts';
-import { dbPersonalTodo } from '../../infrastructure/migration/db-mappers.js';
+import { dbPersonalTodo } from '../../infrastructure/migration/db-mappers.ts';
 import { createAppError } from '../../errors/app-error.ts';
 import { todoCollectionErrors } from '../../../../../packages/web-core/src/personal-todos/validation.ts';
 import type * as Models from '@prisma/client';

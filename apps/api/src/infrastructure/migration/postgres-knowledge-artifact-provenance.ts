@@ -1,6 +1,8 @@
+import type { Prisma } from '@prisma/client';
+import type { ProvenanceMigrationClient } from './provenance-types.ts';
 import { createAppError } from '../../errors/app-error.js';
-import { backfillKnowledgeArtifactProvenance } from './knowledge-artifact-provenance-backfill.js';
-import { dbKnowledgeArtifactProvenance } from './db-mappers.js';
+import { backfillKnowledgeArtifactProvenance } from './knowledge-artifact-provenance-backfill.ts';
+import { dbKnowledgeArtifactProvenance } from './db-mappers.ts';
 import {
   mapKnowledgeItem,
   mapKnowledgeEvidence,
@@ -12,11 +14,7 @@ import { validateKnowledgeArtifactProvenanceRelations } from '../../modules/know
 import { knowledgeExtractionCommitKey } from '../../modules/ai/knowledge-extraction-commit-contract.ts';
 
 /** 调用方提供核心 syncRuntime 事务；迁移数据、journal 与完成标记一次提交。 */
-/**
- * @param {import('./provenance-types.ts').ProvenanceMigrationClient} db
- * @param {string} ownerId
- */
-export async function migratePostgresKnowledgeArtifactProvenance(db, ownerId) {
+export async function migratePostgresKnowledgeArtifactProvenance(db: ProvenanceMigrationClient, ownerId: string) {
   return db.$transaction(async tx => {
     const migrations = await tx.$queryRawUnsafe('SELECT version FROM knowledge_artifact_provenance_migrations');
     if (migrations.some(row => row.version !== 1))
@@ -59,10 +57,10 @@ export async function migratePostgresKnowledgeArtifactProvenance(db, ownerId) {
       }
     });
     // 原始 JSON 仅提供可选字段视图，不把它视为已校验的同步日志。
-    const getTombstone = (collection, id) =>
-      /** @type {{ tombstones?: Record<string, import('@prisma/client').Prisma.JsonValue | undefined> } | null} */ (
-        journal?.payload
-      )?.tombstones?.[JSON.stringify([collection, id])];
+    const getTombstone = (collection: string, id: string) =>
+      (journal?.payload as { tombstones?: Record<string, Prisma.JsonValue | undefined> } | null)?.tombstones?.[
+        JSON.stringify([collection, id])
+      ];
     const stats = backfillKnowledgeArtifactProvenance(state, { receipts, getTombstone });
     const previous = new Map(records.map(record => [record.id, record.provenanceHash]));
     for (const record of state.knowledgeArtifactProvenance) {

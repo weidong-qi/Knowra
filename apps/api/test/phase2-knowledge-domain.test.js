@@ -119,7 +119,7 @@ export const phase2KnowledgeDomainTests = [
   {
     name: 'JSON 迁移会保留 NoteVersion、KnowledgeItem 与 KnowledgeEvidence 关系',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const content = '迁移来源';
       const versionId = 'version-phase2-migration';
       const itemId = 'item-phase2-migration';

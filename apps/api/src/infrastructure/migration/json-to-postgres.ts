@@ -1,8 +1,12 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { JsonMigrationOptions, ApplyJsonMigrationOptions } from './migration-types.ts';
+import type { MigrationPlan, MigrationSourceState, MigrationUser } from './migration-records.ts';
+import type { MigrationTransaction } from './migration-client.ts';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import { LOCAL_DATA_SCHEMA_VERSION, validateLocalSnapshot, validatePersistedLocalState } from '../local-data-schema.js';
-import { createMigrationReport } from './migration-report.js';
+import { createMigrationReport } from './migration-report.ts';
 import {
   dbAnnotation,
   dbAnnotationExclusion,
@@ -26,7 +30,7 @@ import {
   dbTag,
   dbTagGroup,
   dbUser
-} from './db-mappers.js';
+} from './db-mappers.ts';
 import {
   checksumPlan,
   transformAnnotation,
@@ -46,7 +50,7 @@ import {
   transformTag,
   transformTagGroup,
   validateDatabaseConstraints
-} from './json-transformers.js';
+} from './json-transformers.ts';
 import { createPostgresAdvisoryLock } from '../postgres-advisory-lock.ts';
 import { findInsecureImageUrls } from '../../modules/knowledge/application/note-content-policy.js';
 import { createJournal, loadJournal, syncKey } from '../../modules/sync/journal.ts';
@@ -54,7 +58,7 @@ import { preserveDeviceRetirements } from '../../modules/sync/device-retirement.
 import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts
-} from './knowledge-artifact-provenance-backfill.js';
+} from './knowledge-artifact-provenance-backfill.ts';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import { mapKnowledgeArtifactProvenance } from '../../modules/knowledge/infrastructure/postgres/mappers.ts';
 
@@ -81,7 +85,7 @@ const syncPlanCollections = Object.freeze({
   annotationRevisions: 'annotationRevisions',
   analysisScopeSnapshots: 'analysisScopeSnapshots',
   personalTodos: 'personalTodos'
-});
+} as const);
 const syncDbModels = Object.freeze({
   spaces: 'knowledgeSpace',
   folders: 'folder',
@@ -105,12 +109,12 @@ const syncDbModels = Object.freeze({
   annotationRevisions: 'annotationRevision',
   analysisScopeSnapshots: 'analysisScopeSnapshot',
   personalTodos: 'personalTodo'
-});
+} as const);
 
-export function loadJsonMigrationSource(filePath) {
+export function loadJsonMigrationSource(filePath: string) {
   const absolutePath = path.resolve(filePath);
   const raw = fs.readFileSync(absolutePath, 'utf8');
-  let parsed;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
@@ -119,7 +123,6 @@ export function loadJsonMigrationSource(filePath) {
   return { absolutePath, raw, parsed };
 }
 
-/** @param {import('./migration-types.ts').JsonMigrationOptions} options */
 export function buildJsonMigrationPlan({
   input,
   sourceFile = null,
@@ -128,20 +131,22 @@ export function buildJsonMigrationPlan({
   fallbackTimestamp = new Date().toISOString(),
   allowMissingAttachments = false,
   ownerId = null
-} = {}) {
+}: JsonMigrationOptions = {}) {
   const reportTools = createMigrationReport({ sourceFile, storageRootDir });
   const { report } = reportTools;
-  let state;
+  let state: MigrationSourceState;
   try {
-    state = Object.hasOwn(input ?? {}, 'data') ? validateLocalSnapshot(input).data : validatePersistedLocalState(input);
-    if (!Object.hasOwn(input ?? {}, 'data') && (input.schemaVersion ?? 1) < LOCAL_DATA_SCHEMA_VERSION) {
+    state = (
+      Object.hasOwn(input ?? {}, 'data') ? validateLocalSnapshot(input).data : validatePersistedLocalState(input)
+    ) as MigrationSourceState;
+    if (!Object.hasOwn(input ?? {}, 'data') && (input!.schemaVersion ?? 1) < LOCAL_DATA_SCHEMA_VERSION) {
       backfillKnowledgeArtifactProvenance(state, {
-        receipts: legacyKnowledgeExtractionReceipts(input.knowledgeExtractionCommits),
-        getTombstone: (collection, id) => input.sync?.tombstones?.[syncKey(collection, id)]
+        receipts: legacyKnowledgeExtractionReceipts(input!.knowledgeExtractionCommits),
+        getTombstone: (collection, id) => input!.sync?.tombstones?.[syncKey(collection, id)]
       });
     }
   } catch (error) {
-    reportTools.error(error.code ?? 'MIGRATION_SOURCE_INVALID', error.message);
+    reportTools.error((error as Partial<AppError>).code ?? 'MIGRATION_SOURCE_INVALID', (error as Error).message);
     return { plan: null, report: reportTools.finish(), canApply: false };
   }
 
@@ -159,7 +164,7 @@ export function buildJsonMigrationPlan({
       );
     }
   }
-  const plan = {
+  const plan: MigrationPlan = {
     users: [],
     spaces: state.spaces.map(space => transformSpace(space, fallbackTimestamp)),
     folders: state.folders.map(folder => transformFolder(folder, fallbackTimestamp)),
@@ -202,7 +207,7 @@ export function buildJsonMigrationPlan({
     attachments: []
   };
 
-  const users = new Map();
+  const users = new Map<string, MigrationUser>();
   for (const space of plan.spaces) {
     if (!users.has(space.userId)) {
       users.set(space.userId, {
@@ -242,7 +247,7 @@ export function buildJsonMigrationPlan({
     }
   }
   plan.users = [...users.values()];
-  const versionsByNoteAndHash = new Map();
+  const versionsByNoteAndHash = new Map<string, MigrationPlan['noteVersions'][number]>();
   for (const note of plan.notes) {
     const versions = state.noteVersions.filter(version => version.noteId === note.id);
     const sourceVersions =
@@ -289,7 +294,7 @@ export function buildJsonMigrationPlan({
   const versionById = new Map(plan.noteVersions.map(version => [version.id, version]));
   plan.knowledgeEvidence = plan.knowledgeEvidence.map(evidence => {
     const annotation = evidence.annotationId ? annotationById.get(evidence.annotationId) : null;
-    const resolvedVersionId = versionAliases.get(evidence.noteVersionId) ?? evidence.noteVersionId;
+    const resolvedVersionId = versionAliases.get(evidence.noteVersionId as string) ?? evidence.noteVersionId;
     const version = resolvedVersionId ? versionById.get(resolvedVersionId) : null;
     return {
       ...evidence,
@@ -307,11 +312,11 @@ export function buildJsonMigrationPlan({
   });
   plan.annotationExclusions = plan.annotationExclusions.map(record => ({
     ...record,
-    noteVersionId: versionAliases.get(record.noteVersionId) ?? record.noteVersionId
+    noteVersionId: versionAliases.get(record.noteVersionId as string) ?? record.noteVersionId
   }));
   plan.questionSources = plan.questionSources.map(record =>
     record.sourceType === 'noteVersion'
-      ? { ...record, sourceId: versionAliases.get(record.sourceId) ?? record.sourceId }
+      ? { ...record, sourceId: versionAliases.get(record.sourceId as string) ?? record.sourceId }
       : record
   );
   plan.noteTags = plan.notes.flatMap(note => note.tagIds.map(tagId => ({ noteId: note.id, tagId })));
@@ -354,7 +359,7 @@ export function buildJsonMigrationPlan({
     'pdfAnnotations',
     'attachments',
     'personalTodos'
-  ]) {
+  ] as const) {
     reportTools.count(collection, plan[collection].length);
   }
   report.checksum = checksumPlan(plan);
@@ -366,22 +371,20 @@ export function buildJsonMigrationPlan({
   };
 }
 
-/** @param {import('./migration-types.ts').ApplyJsonMigrationOptions} options */
 export async function applyJsonMigration({
   client,
   plan,
   report,
   requireEmptyTarget = true,
   replaceExisting = false
-} = {}) {
+}: ApplyJsonMigrationOptions = {}) {
   if (!client) throw new TypeError('JSON migration requires a Prisma client');
   if (!plan || report?.errors?.length) {
     throw createAppError('MIGRATION_PRECHECK_FAILED', 'JSON migration preflight did not pass', 422, { report });
   }
   const targetOwnerId = plan.users[0]?.id ?? 'demo';
 
-  /** @param {import('./migration-client.ts').MigrationTransaction} tx */
-  const applyPlan = async tx => {
+  const applyPlan = async (tx: MigrationTransaction) => {
     const existingProvenance = await tx.knowledgeArtifactProvenance.findMany();
     assertNoKnowledgeArtifactProvenanceDowngrade(
       { knowledgeArtifactProvenance: existingProvenance.map(mapKnowledgeArtifactProvenance) },
@@ -490,7 +493,8 @@ export async function applyJsonMigration({
         Object.entries(syncPlanCollections).map(([collection, source]) => [collection, plan[source] ?? []])
       );
       const previous = normalizedJournals.find(row => row.ownerId === targetOwnerId);
-      const journal = createJournal(state);
+      // 初建日志只读取记录 ID，不将旧快照日期断言为规范时间。
+      const journal = createJournal(state as Record<string, { id: string }[]>);
       if (previous) preserveDeviceRetirements(previous.payload, journal);
       journal.tombstones = structuredClone(previous?.payload?.tombstones ?? {});
       for (const [key, tombstone] of Object.entries(journal.tombstones)) journal.revisions[key] = tombstone.revision;
@@ -503,13 +507,13 @@ export async function applyJsonMigration({
   } else {
     await applyPlan(client);
   }
-  report.status = 'applied';
-  report.appliedAt = new Date().toISOString();
-  return report;
+  // report 缺失时保留原成功写入后的属性访问行为；前检仍只拒绝 plan/已报告错误。
+  report!.status = 'applied';
+  report!.appliedAt = new Date().toISOString();
+  return report!;
 }
 
-/** @param {import('./migration-client.ts').MigrationTransaction} client */
-export async function assertEmptyTarget(client) {
+export async function assertEmptyTarget(client: MigrationTransaction) {
   const models = [
     'user',
     'personalTodo',
@@ -535,7 +539,7 @@ export async function assertEmptyTarget(client) {
     'question',
     'questionObjective',
     'questionSource'
-  ];
+  ] as const;
   for (const model of models) {
     const count = await client[model].count();
     if (count > 0) {

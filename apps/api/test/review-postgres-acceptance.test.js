@@ -5,7 +5,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
-import { buildJsonMigrationPlan, applyJsonMigration } from '../src/infrastructure/migration/json-to-postgres.js';
+import { buildJsonMigrationPlan, applyJsonMigration } from '../src/infrastructure/migration/json-to-postgres.ts';
 
 async function fixture(operation) {
   const database = await createPostgresTestDatabase();

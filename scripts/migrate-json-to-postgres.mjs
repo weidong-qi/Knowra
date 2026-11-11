@@ -6,7 +6,7 @@ import {
   applyJsonMigration,
   buildJsonMigrationPlan,
   loadJsonMigrationSource
-} from '../apps/api/src/infrastructure/migration/json-to-postgres.js';
+} from '../apps/api/src/infrastructure/migration/json-to-postgres.ts';
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(scriptsDirectory, '..');

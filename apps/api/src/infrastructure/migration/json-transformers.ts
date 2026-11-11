@@ -1,3 +1,6 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { MigrationSourceMap, MigrationPlan, MigrationAttachmentOptions } from './migration-records.ts';
+import type { MigrationReportTools } from './migration-report.ts';
 import { stripKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import crypto from 'node:crypto';
 import { validateKnowledgeArtifactProvenanceRelations } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
@@ -12,7 +15,7 @@ import {
   toPortablePath
 } from '../local-attachment-store-utils.ts';
 
-export function transformSpace(space, fallbackTimestamp) {
+export function transformSpace(space: MigrationSourceMap['spaces'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(space.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...space,
@@ -23,7 +26,7 @@ export function transformSpace(space, fallbackTimestamp) {
   };
 }
 
-export function transformFolder(folder, fallbackTimestamp) {
+export function transformFolder(folder: MigrationSourceMap['folders'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(folder.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...folder,
@@ -37,7 +40,7 @@ export function transformFolder(folder, fallbackTimestamp) {
   };
 }
 
-export function transformTagGroup(group, fallbackTimestamp) {
+export function transformTagGroup(group: MigrationSourceMap['tagGroups'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(group.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...group,
@@ -50,7 +53,7 @@ export function transformTagGroup(group, fallbackTimestamp) {
   };
 }
 
-export function transformTag(tag, fallbackTimestamp) {
+export function transformTag(tag: MigrationSourceMap['tags'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(tag.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...tag,
@@ -64,8 +67,11 @@ export function transformTag(tag, fallbackTimestamp) {
   };
 }
 
-/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
-export function transformNote(note, fallbackTimestamp, reportTools) {
+export function transformNote(
+  note: MigrationSourceMap['notes'],
+  fallbackTimestamp: string,
+  reportTools: MigrationReportTools
+) {
   const createdAt = normalizeTimestamp(note.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   const expectedHash = sha256(String(note.rawMarkdown ?? ''));
   if (!note.createdAt)
@@ -106,11 +112,14 @@ export function transformNote(note, fallbackTimestamp, reportTools) {
   };
 }
 
-/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
-export function transformAnnotation(annotation, fallbackTimestamp, reportTools) {
+export function transformAnnotation(
+  annotation: MigrationSourceMap['contentAnnotations'],
+  fallbackTimestamp: string,
+  reportTools: MigrationReportTools
+) {
   const createdAt = normalizeTimestamp(annotation.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   const schemaVersion = Number(annotation.schemaVersion ?? 1);
-  const requiredFields = ['anchorFingerprint', 'noteContentHash', 'idempotencyKey'];
+  const requiredFields = ['anchorFingerprint', 'noteContentHash', 'idempotencyKey'] as const;
   requiredFields.forEach(field => {
     if (!String(annotation[field] ?? '').trim()) {
       reportTools.error('ANNOTATION_FIELD_MISSING', `Annotation ${annotation.id} is missing ${field}`, {
@@ -172,7 +181,11 @@ export function transformAnnotation(annotation, fallbackTimestamp, reportTools) 
   };
 }
 
-export function transformNoteVersion(version, fallbackTimestamp, reportTools) {
+export function transformNoteVersion(
+  version: MigrationSourceMap['noteVersions'],
+  fallbackTimestamp: string,
+  reportTools: MigrationReportTools
+) {
   const createdAt = normalizeTimestamp(version.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   if (!version.createdAt)
     reportTools.repair(
@@ -197,8 +210,11 @@ export function transformNoteVersion(version, fallbackTimestamp, reportTools) {
   };
 }
 
-/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
-export function transformKnowledgeItem(item, fallbackTimestamp, reportTools) {
+export function transformKnowledgeItem(
+  item: MigrationSourceMap['knowledgeItems'],
+  fallbackTimestamp: string,
+  reportTools: MigrationReportTools
+) {
   const createdAt = normalizeTimestamp(item.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...item,
@@ -215,7 +231,10 @@ export function transformKnowledgeItem(item, fallbackTimestamp, reportTools) {
   };
 }
 
-export function transformKnowledgeEvidence(evidence, fallbackTimestamp) {
+export function transformKnowledgeEvidence(
+  evidence: MigrationSourceMap['knowledgeEvidence'],
+  fallbackTimestamp: string
+) {
   const createdAt = normalizeTimestamp(evidence.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...evidence,
@@ -235,7 +254,10 @@ export function transformKnowledgeEvidence(evidence, fallbackTimestamp) {
   };
 }
 
-export function transformLearningObjective(objective, fallbackTimestamp) {
+export function transformLearningObjective(
+  objective: MigrationSourceMap['learningObjectives'],
+  fallbackTimestamp: string
+) {
   const createdAt = normalizeTimestamp(objective.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...objective,
@@ -252,7 +274,7 @@ export function transformLearningObjective(objective, fallbackTimestamp) {
   };
 }
 
-export function transformExamProfile(profile, fallbackTimestamp) {
+export function transformExamProfile(profile: MigrationSourceMap['examProfiles'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(profile.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...profile,
@@ -273,7 +295,7 @@ export function transformExamProfile(profile, fallbackTimestamp) {
   };
 }
 
-export function transformExamFocus(focus, fallbackTimestamp) {
+export function transformExamFocus(focus: MigrationSourceMap['examFocuses'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(focus.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...focus,
@@ -289,7 +311,7 @@ export function transformExamFocus(focus, fallbackTimestamp) {
   };
 }
 
-export function transformQuestion(question, fallbackTimestamp) {
+export function transformQuestion(question: MigrationSourceMap['questions'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(question.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...question,
@@ -309,7 +331,10 @@ export function transformQuestion(question, fallbackTimestamp) {
   };
 }
 
-export function transformQuestionObjective(relation, fallbackTimestamp) {
+export function transformQuestionObjective(
+  relation: MigrationSourceMap['questionObjectives'],
+  fallbackTimestamp: string
+) {
   return {
     ...relation,
     isPrimary: Boolean(relation.isPrimary),
@@ -318,7 +343,7 @@ export function transformQuestionObjective(relation, fallbackTimestamp) {
   };
 }
 
-export function transformQuestionSource(source, fallbackTimestamp) {
+export function transformQuestionSource(source: MigrationSourceMap['questionSources'], fallbackTimestamp: string) {
   const createdAt = normalizeTimestamp(source.createdAt ?? fallbackTimestamp, fallbackTimestamp);
   return {
     ...source,
@@ -334,7 +359,7 @@ export function transformQuestionSource(source, fallbackTimestamp) {
 }
 
 export function transformAttachment(
-  attachment,
+  attachment: MigrationSourceMap['attachments'],
   {
     storageRootDir,
     uploadsDir = path.join(storageRootDir, process.env.STORAGE_UPLOADS_DIR || 'storage/uploads'),
@@ -342,7 +367,7 @@ export function transformAttachment(
     allowMissingAttachments,
     fallbackTimestamp,
     reportTools
-  }
+  }: MigrationAttachmentOptions
 ) {
   if (!noteIds.has(attachment.noteId)) {
     reportTools.error('ATTACHMENT_NOTE_NOT_FOUND', `Attachment references unknown note: ${attachment.id}`, {
@@ -408,16 +433,18 @@ export function transformAttachment(
   };
 }
 
-export function checksumPlan(plan) {
+export function checksumPlan(plan: MigrationPlan) {
   return sha256(JSON.stringify(plan, (_, value) => (value === undefined ? null : value)));
 }
 
-/** @param {import('./migration-report.ts').MigrationReportTools} reportTools */
-export function validateDatabaseConstraints(plan, reportTools) {
+export function validateDatabaseConstraints(plan: MigrationPlan, reportTools: MigrationReportTools) {
   try {
     validateKnowledgeArtifactProvenanceRelations(plan);
   } catch (error) {
-    reportTools.error(error.code ?? 'KNOWLEDGE_ARTIFACT_PROVENANCE_INVALID', error.message);
+    reportTools.error(
+      (error as Partial<AppError>).code ?? 'KNOWLEDGE_ARTIFACT_PROVENANCE_INVALID',
+      (error as Error).message
+    );
   }
   assertUniqueBy(
     plan.tagGroups,
@@ -611,7 +638,13 @@ export function validateDatabaseConstraints(plan, reportTools) {
   }
 }
 
-function assertUniqueBy(items, keyOf, code, message, reportTools) {
+function assertUniqueBy<Item>(
+  items: Item[],
+  keyOf: (item: Item) => string,
+  code: string,
+  message: string,
+  reportTools: MigrationReportTools
+) {
   const seen = new Set();
   for (const item of items) {
     const key = keyOf(item);
@@ -620,7 +653,11 @@ function assertUniqueBy(items, keyOf, code, message, reportTools) {
   }
 }
 
-function resolveAttachmentPath(attachment, storageRootDir, uploadsDir) {
+function resolveAttachmentPath(
+  attachment: MigrationSourceMap['attachments'],
+  storageRootDir: string,
+  uploadsDir: string
+) {
   const storagePath = String(attachment.storagePath ?? '').trim();
   if (!storagePath) {
     return attachmentPathError(null, 'ATTACHMENT_PATH_MISSING', 'Attachment storagePath is required for migration');
@@ -676,7 +713,7 @@ function resolveAttachmentPath(attachment, storageRootDir, uploadsDir) {
       );
     }
   } catch (error) {
-    if (error.code !== 'ENOENT') {
+    if ((error as Partial<AppError>).code !== 'ENOENT') {
       throw error;
     }
   }
@@ -684,14 +721,14 @@ function resolveAttachmentPath(attachment, storageRootDir, uploadsDir) {
   return { filePath: resolvedFilePath, error: null };
 }
 
-function attachmentPathError(filePath, code, message) {
+function attachmentPathError(filePath: string | null, code: string, message: string) {
   return {
     filePath,
     error: { code, message }
   };
 }
 
-function isSafeAttachmentFile(filePath, uploadsDir) {
+function isSafeAttachmentFile(filePath: string | null, uploadsDir: string): filePath is string {
   if (!filePath || !isPathWithin(uploadsDir, filePath)) {
     return false;
   }
@@ -700,7 +737,7 @@ function isSafeAttachmentFile(filePath, uploadsDir) {
   try {
     stats = fs.lstatSync(filePath);
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if ((error as Partial<AppError>).code === 'ENOENT') {
       return false;
     }
     throw error;
@@ -712,14 +749,14 @@ function isSafeAttachmentFile(filePath, uploadsDir) {
   try {
     return isPathWithin(fs.realpathSync(uploadsDir), fs.realpathSync(filePath));
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if ((error as Partial<AppError>).code === 'ENOENT') {
       return false;
     }
     throw error;
   }
 }
 
-function isPathWithin(rootPath, targetPath) {
+function isPathWithin(rootPath: string, targetPath: string) {
   const relativePath = path.relative(path.resolve(rootPath), path.resolve(targetPath));
   return (
     relativePath === '' ||
@@ -727,12 +764,12 @@ function isPathWithin(rootPath, targetPath) {
   );
 }
 
-function normalizeTimestamp(value, fallback) {
-  const date = new Date(value ?? fallback);
+function normalizeTimestamp(value: unknown, fallback: string) {
+  const date = new Date((value ?? fallback) as string);
   return Number.isNaN(date.getTime()) ? new Date(fallback).toISOString() : date.toISOString();
 }
 
-function extractInternalLinks(markdown) {
+function extractInternalLinks(markdown: unknown) {
   return [
     ...new Set(
       (String(markdown ?? '').match(/\[\[([^\]]+)\]\]/g) ?? []).map(value => value.slice(2, -2).trim()).filter(Boolean)
@@ -740,7 +777,7 @@ function extractInternalLinks(markdown) {
   ];
 }
 
-function stripMarkdown(markdown) {
+function stripMarkdown(markdown: unknown) {
   return stripKnowraMarks(String(markdown ?? ''))
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
@@ -752,6 +789,6 @@ function stripMarkdown(markdown) {
     .trim();
 }
 
-function sha256(value) {
+function sha256(value: string | Buffer) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }

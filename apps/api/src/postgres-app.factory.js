@@ -1,5 +1,5 @@
 import { buildNoteData, mapNote } from './modules/knowledge/infrastructure/postgres/mappers.ts';
-import { buildJsonMigrationPlan, applyJsonMigration } from './infrastructure/migration/json-to-postgres.js';
+import { buildJsonMigrationPlan, applyJsonMigration } from './infrastructure/migration/json-to-postgres.ts';
 import { createPdfService } from './modules/pdf/service.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createPostgresPurgeTaskReader } from './infrastructure/asset-purge-task-state.ts';
@@ -28,7 +28,7 @@ import { createPostgresNoteVersionRepository } from './modules/knowledge/infrast
 import { createPostgresKnowledgeItemRepository } from './modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createPostgresKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-evidence-repository.ts';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
-import { migratePostgresKnowledgeArtifactProvenance } from './infrastructure/migration/postgres-knowledge-artifact-provenance.js';
+import { migratePostgresKnowledgeArtifactProvenance } from './infrastructure/migration/postgres-knowledge-artifact-provenance.ts';
 import { createPostgresLearningObjectiveRepository } from './modules/knowledge/infrastructure/postgres/learning-objective-repository.ts';
 import { createPostgresExamProfileRepository } from './modules/knowledge/infrastructure/postgres/exam-profile-repository.ts';
 import { createPostgresExamFocusRepository } from './modules/knowledge/infrastructure/postgres/exam-focus-repository.ts';

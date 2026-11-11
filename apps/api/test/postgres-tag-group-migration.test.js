@@ -6,7 +6,7 @@ import {
   buildJsonMigrationPlan,
   applyJsonMigration,
   assertEmptyTarget
-} from '../src/infrastructure/migration/json-to-postgres.js';
+} from '../src/infrastructure/migration/json-to-postgres.ts';
 import { createPostgresSnapshotService } from '../src/infrastructure/postgres-snapshot-service.js';
 import { createLocalAttachmentFileManager } from '../src/infrastructure/local-attachment-file-manager.ts';
 import { validateLocalSnapshot } from '../src/infrastructure/local-data-schema.js';

@@ -35,7 +35,7 @@ import { createSyncCoreOperationStore } from './core-operation-store.ts';
 import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts
-} from './migration/knowledge-artifact-provenance-backfill.js';
+} from './migration/knowledge-artifact-provenance-backfill.ts';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import {
   appendChanges,

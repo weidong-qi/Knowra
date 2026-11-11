@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createEmptyLocalState, validateLocalSnapshot } from '../../../../apps/api/src/infrastructure/local-data-schema.js';
 import { createPostgresSnapshotService } from '../../../../apps/api/src/infrastructure/postgres-snapshot-service.js';
-import { buildJsonMigrationPlan } from '../../../../apps/api/src/infrastructure/migration/json-to-postgres.js';
+import { buildJsonMigrationPlan } from '../../../../apps/api/src/infrastructure/migration/json-to-postgres.ts';
 import { isPostgresMutation } from '../../../../apps/api/src/infrastructure/postgres-advisory-lock.ts';
 const data=createEmptyLocalState();
 data.spaces=[{id:'space-review',userId:'review',name:'Review'}];

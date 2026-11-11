@@ -8,7 +8,7 @@ import {
   KNOWLEDGE_EXTRACTION_PROMPT_VERSION
 } from './knowledge-extraction-gateway.ts';
 import { validateKnowledgeExtractionCommit } from './knowledge-extraction-commit-contract.ts';
-import { createKnowledgeArtifactProvenanceFromReceipt } from '../../infrastructure/migration/knowledge-artifact-provenance-backfill.js';
+import { createKnowledgeArtifactProvenanceFromReceipt } from '../../infrastructure/migration/knowledge-artifact-provenance-backfill.ts';
 import { isAiReadableNote } from './note-privacy.js';
 import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.ts';
 
