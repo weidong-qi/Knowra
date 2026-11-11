@@ -52,6 +52,7 @@ export function createConversationAttachmentService({
     checkOpen();
     return operation();
   };
+  /** @template Result @param {() => Result | PromiseLike<Result>} operation @returns {Promise<Result>} */
   const run = operation => {
     if (!accepting) return Promise.reject(createAppError('AI_ATTACHMENT_CLOSED', '附件服务已关闭。', 503));
     const pending = Promise.resolve().then(operation);
