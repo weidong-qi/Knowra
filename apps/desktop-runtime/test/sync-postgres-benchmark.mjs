@@ -25,7 +25,7 @@ async function rowsRead(prisma, schema) {
 for (const size of sizes.length ? sizes : [200, 1000]) {
   const database = await createPostgresTestDatabase();
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-pg-bench-'));
-  const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.js');
+  const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.ts');
   const cloud = await createPostgresAppContext({
     databaseUrl: database.databaseUrl,
     uploadsDir: path.join(root, 'uploads'),

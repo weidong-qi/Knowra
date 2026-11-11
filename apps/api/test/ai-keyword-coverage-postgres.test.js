@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { createPostgresAppContext } from '../src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../src/postgres-app.factory.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';

@@ -56,7 +56,7 @@ async function fixture(t, { delayed = false } = {}) {
   database = await createPostgresTestDatabase();
   assert.match(database.schema, /^knowra_test_[a-f0-9]{32}$/);
   // 缺少任一测试环境变量时连生产模块和 Prisma 都不加载，也不启动 HTTP 服务。
-  const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.js');
+  const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.ts');
   const { createServer } = await import('../../api/src/server.js');
   const { createAttachmentTransfer } = await import('../../api/src/modules/sync/attachment-transfer.ts');
   const { createSyncEngine } = await import('../src/sync-engine.mjs');

@@ -1,69 +1,16 @@
-/** A bounded static contract, not runtime validation of dynamic JavaScript values. */
-export type Awaitable<Value> = Value | PromiseLike<Value>;
-export type DeletionValue = object | null | undefined;
-export interface CleanupValue {
-  readonly length: unknown;
-}
-export interface NoteView {
-  readonly id?: unknown;
-  readonly deleted?: unknown;
-}
-export interface NoteIds extends Iterable<unknown, unknown, unknown> {
-  readonly length: unknown;
-  some: (callback: (id: unknown) => unknown) => unknown;
-  includes: (id: unknown) => unknown;
-}
-export interface NoteList {
-  filter: (callback: (note: NoteView) => unknown) => {
-    map: (callback: (note: NoteView) => unknown) => NoteIds;
-  };
-}
-export interface AttachmentView {
-  readonly id?: unknown;
-  readonly noteId?: unknown;
-  readonly storagePath?: unknown;
-  readonly fileName?: unknown;
-}
-export interface AttachmentList extends Iterable<AttachmentView, unknown, unknown> {
-  readonly length: unknown;
-  map: (
-    callback: (attachment: AttachmentView) => readonly [unknown, string]
-  ) => Iterable<readonly [unknown, string], unknown, unknown>;
-  some: (callback: (attachment: AttachmentView) => unknown) => unknown;
-}
-export interface AttachmentFilterable {
-  filter: (callback: (attachment: AttachmentView) => unknown) => AttachmentList;
-}
-export interface ReferenceView {
-  readonly collection: string;
-  readonly id?: unknown;
-  readonly noteId?: unknown;
-}
-export interface PreflightView {
-  readonly references: {
-    filter: (callback: (reference: ReferenceView) => unknown) => { readonly length: unknown };
-  };
-}
-export interface AttachmentStore {
-  listAttachments?: (() => Awaitable<AttachmentFilterable | null | undefined>) | null | undefined;
-  inspectAttachmentDeletion: (id: unknown) => Awaitable<PreflightView>;
-  prepareAttachmentCleanup?: ((attachments: AttachmentList) => unknown) | null | undefined;
-  removeDetachedAttachmentFiles?:
-    ((attachments: AttachmentList) => Awaitable<CleanupValue | null | undefined>) | null | undefined;
-}
+import type { createPostgresAttachmentStore } from '../../../../infrastructure/postgres-attachment-store.ts';
+import type { createAsyncNoteService } from './note-service.ts';
+import type { createPostgresNoteRepository } from '../../infrastructure/postgres/note-repository.ts';
+type Awaitable<Value> = Value | PromiseLike<Value>;
+type AttachmentStore = ReturnType<typeof createPostgresAttachmentStore>;
+type AttachmentList = Awaited<ReturnType<AttachmentStore['listAttachments']>>;
+type CleanupValue = Awaited<ReturnType<AttachmentStore['removeDetachedAttachmentFiles']>>;
 export interface AsyncNoteDeletionOptions {
-  noteService: {
-    permanentlyDeleteNote: (noteId: unknown) => Awaitable<DeletionValue>;
-    emptyRecycleBin: (spaceId: unknown) => Awaitable<DeletionValue>;
-  };
-  noteRepository: { list: (options: { includeDeleted: true; spaceId: unknown }) => Awaitable<NoteList> };
-  attachmentStore: AttachmentStore;
-  runTransaction?: (<Value>(operation: () => Promise<Value>) => Awaitable<Value>) | undefined;
-}
-/** Async return/spread may assimilate dynamic then properties, so the resolved result is deliberately unknown. */
-export interface AsyncNoteDeletionCoordinator {
-  permanentlyDeleteNote: (noteId: unknown) => Promise<unknown>;
-  emptyRecycleBin: (spaceId?: unknown) => Promise<unknown>;
+  noteService: Pick<ReturnType<typeof createAsyncNoteService>, 'permanentlyDeleteNote' | 'emptyRecycleBin'>;
+  noteRepository: Pick<ReturnType<typeof createPostgresNoteRepository>, 'list'>;
+  attachmentStore: Pick<AttachmentStore, 'inspectAttachmentDeletion'> &
+    Partial<Pick<AttachmentStore, 'listAttachments' | 'prepareAttachmentCleanup' | 'removeDetachedAttachmentFiles'>>;
+  runTransaction?: <Value>(operation: () => Promise<Value>) => Awaitable<Value>;
 }
 
 import { createAppError } from '../../../../errors/app-error.ts';
@@ -73,8 +20,8 @@ export function createAsyncNoteDeletionCoordinator({
   noteRepository,
   attachmentStore,
   runTransaction = operation => operation()
-}: AsyncNoteDeletionOptions): AsyncNoteDeletionCoordinator {
-  async function collectAttachments(noteIds: Iterable<unknown, unknown, unknown>): Promise<AttachmentList> {
+}: AsyncNoteDeletionOptions) {
+  async function collectAttachments(noteIds: Iterable<string>): Promise<AttachmentList> {
     const noteIdSet = new Set(noteIds);
     const attachments = (await attachmentStore?.listAttachments?.()) ?? [];
     return attachments.filter(attachment => noteIdSet.has(attachment.noteId));
@@ -82,7 +29,7 @@ export function createAsyncNoteDeletionCoordinator({
 
   async function assertNoRetainedAttachmentReferences(
     attachments: AttachmentList,
-    noteIds: Iterable<unknown, unknown, unknown>
+    noteIds: Iterable<string>
   ): Promise<void> {
     const noteIdSet = new Set(noteIds);
     for (const attachment of attachments) {
@@ -114,7 +61,7 @@ export function createAsyncNoteDeletionCoordinator({
     }
   }
 
-  async function permanentlyDeleteNote(noteId: unknown): Promise<unknown> {
+  async function permanentlyDeleteNote(noteId: string) {
     const queuedAttachments = await collectAttachments([noteId]);
     await attachmentStore?.prepareAttachmentCleanup?.(queuedAttachments);
     let detachedAttachments: AttachmentList = [];
@@ -128,7 +75,7 @@ export function createAsyncNoteDeletionCoordinator({
     return cleanup.length ? { ...deletedNote, attachmentCleanup: cleanup } : deletedNote;
   }
 
-  async function emptyRecycleBin(spaceId: unknown = null): Promise<unknown> {
+  async function emptyRecycleBin(spaceId: string | null = null) {
     const queuedNotes = await noteRepository.list({ includeDeleted: true, spaceId });
     const queuedNoteIds = queuedNotes.filter(note => note.deleted).map(note => note.id);
     const queuedAttachments = await collectAttachments(queuedNoteIds);

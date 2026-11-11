@@ -4,7 +4,7 @@ import { Readable } from 'node:stream';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { createAppContext } from '../../api/src/app.factory.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createServer } from '../../api/src/server.js';

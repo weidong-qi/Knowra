@@ -1,7 +1,7 @@
 import type { AppError } from '../../errors/app-error.ts';
 import type { JsonMigrationOptions, ApplyJsonMigrationOptions } from './migration-types.ts';
 import type { MigrationPlan, MigrationSourceState, MigrationUser } from './migration-records.ts';
-import type { MigrationTransaction } from './migration-client.ts';
+import type { MigrationTransaction, MigrationWriteOperation } from './migration-client.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createAppError } from '../../errors/app-error.ts';
@@ -448,14 +448,40 @@ export async function applyJsonMigration({
     if (plan.folders.length) await tx.folder.createMany({ data: plan.folders.map(dbFolder) });
     if (plan.tagGroups.length) await tx.tagGroup.createMany({ data: plan.tagGroups.map(dbTagGroup) });
     if (plan.tags.length) await tx.tag.createMany({ data: plan.tags.map(dbTag) });
-    if (plan.notes.length) await tx.note.createMany({ data: plan.notes.map(dbNote) });
+    if (plan.notes.length)
+      await (
+        tx.note.createMany as MigrationWriteOperation<typeof tx.note.createMany, { data: ReturnType<typeof dbNote>[] }>
+      )({ data: plan.notes.map(dbNote) });
     if (plan.noteVersions.length) await tx.noteVersion.createMany({ data: plan.noteVersions.map(dbNoteVersion) });
     if (plan.noteTags.length) await tx.noteTag.createMany({ data: plan.noteTags });
-    if (plan.annotations.length) await tx.contentAnnotation.createMany({ data: plan.annotations.map(dbAnnotation) });
+    if (plan.annotations.length)
+      await (
+        tx.contentAnnotation.createMany as MigrationWriteOperation<
+          typeof tx.contentAnnotation.createMany,
+          { data: ReturnType<typeof dbAnnotation>[] }
+        >
+      )({ data: plan.annotations.map(dbAnnotation) });
     if (plan.annotationExclusions.length)
-      await tx.annotationExclusion.createMany({ data: plan.annotationExclusions.map(dbAnnotationExclusion) });
+      await (
+        tx.annotationExclusion.createMany as MigrationWriteOperation<
+          typeof tx.annotationExclusion.createMany,
+          { data: ReturnType<typeof dbAnnotationExclusion>[] }
+        >
+      )({ data: plan.annotationExclusions.map(dbAnnotationExclusion) });
     if (plan.pdfAnnotations?.length)
-      await tx.pdfAnnotation.createMany({
+      await (
+        tx.pdfAnnotation.createMany as MigrationWriteOperation<
+          typeof tx.pdfAnnotation.createMany,
+          {
+            data: {
+              id: string;
+              noteId: string;
+              revision: number;
+              payload: import('@study-accelerator/shared/pdf').PdfAnnotation;
+            }[];
+          }
+        >
+      )({
         data: plan.pdfAnnotations.map(value => ({
           id: value.id,
           noteId: value.noteId,
@@ -464,28 +490,65 @@ export async function applyJsonMigration({
         }))
       });
     if (plan.annotationRevisions.length)
-      await tx.annotationRevision.createMany({ data: plan.annotationRevisions.map(dbAnnotationRevision) });
+      await (
+        tx.annotationRevision.createMany as MigrationWriteOperation<
+          typeof tx.annotationRevision.createMany,
+          { data: ReturnType<typeof dbAnnotationRevision>[] }
+        >
+      )({ data: plan.annotationRevisions.map(dbAnnotationRevision) });
     if (plan.analysisScopeSnapshots.length)
-      await tx.analysisScopeSnapshot.createMany({ data: plan.analysisScopeSnapshots.map(dbAnalysisScopeSnapshot) });
+      await (
+        tx.analysisScopeSnapshot.createMany as MigrationWriteOperation<
+          typeof tx.analysisScopeSnapshot.createMany,
+          { data: ReturnType<typeof dbAnalysisScopeSnapshot>[] }
+        >
+      )({ data: plan.analysisScopeSnapshots.map(dbAnalysisScopeSnapshot) });
     if (plan.knowledgeItems.length)
       await tx.knowledgeItem.createMany({ data: plan.knowledgeItems.map(dbKnowledgeItem) });
     if (plan.knowledgeEvidence.length)
       await tx.knowledgeEvidence.createMany({ data: plan.knowledgeEvidence.map(dbKnowledgeEvidence) });
     if (plan.knowledgeArtifactProvenance.length)
-      await tx.knowledgeArtifactProvenance.createMany({
+      await (
+        tx.knowledgeArtifactProvenance.createMany as MigrationWriteOperation<
+          typeof tx.knowledgeArtifactProvenance.createMany,
+          { data: ReturnType<typeof dbKnowledgeArtifactProvenance>[] }
+        >
+      )({
         data: plan.knowledgeArtifactProvenance.map(dbKnowledgeArtifactProvenance)
       });
     if (plan.learningObjectives.length)
       await tx.learningObjective.createMany({ data: plan.learningObjectives.map(dbLearningObjective) });
-    if (plan.examProfiles.length) await tx.examProfile.createMany({ data: plan.examProfiles.map(dbExamProfile) });
+    if (plan.examProfiles.length)
+      await (
+        tx.examProfile.createMany as MigrationWriteOperation<
+          typeof tx.examProfile.createMany,
+          { data: ReturnType<typeof dbExamProfile>[] }
+        >
+      )({ data: plan.examProfiles.map(dbExamProfile) });
     if (plan.examFocuses.length) await tx.examFocus.createMany({ data: plan.examFocuses.map(dbExamFocus) });
-    if (plan.questions.length) await tx.question.createMany({ data: plan.questions.map(dbQuestion) });
+    if (plan.questions.length)
+      await (
+        tx.question.createMany as MigrationWriteOperation<
+          typeof tx.question.createMany,
+          { data: ReturnType<typeof dbQuestion>[] }
+        >
+      )({ data: plan.questions.map(dbQuestion) });
     if (plan.questionObjectives.length)
       await tx.questionObjective.createMany({ data: plan.questionObjectives.map(dbQuestionObjective) });
     if (plan.questionSources.length)
-      await tx.questionSource.createMany({ data: plan.questionSources.map(dbQuestionSource) });
+      await (
+        tx.questionSource.createMany as MigrationWriteOperation<
+          typeof tx.questionSource.createMany,
+          { data: ReturnType<typeof dbQuestionSource>[] }
+        >
+      )({ data: plan.questionSources.map(dbQuestionSource) });
     if (plan.attachments.length) {
-      await tx.attachment.createMany({ data: plan.attachments.map(dbAttachment) });
+      await (
+        tx.attachment.createMany as MigrationWriteOperation<
+          typeof tx.attachment.createMany,
+          { data: ReturnType<typeof dbAttachment>[] }
+        >
+      )({ data: plan.attachments.map(dbAttachment) });
     }
     if (plan.personalTodos.length) await tx.personalTodo.createMany({ data: plan.personalTodos.map(dbPersonalTodo) });
     if (tx.syncJournal) {
@@ -498,7 +561,12 @@ export async function applyJsonMigration({
       if (previous) preserveDeviceRetirements(previous.payload, journal);
       journal.tombstones = structuredClone(previous?.payload?.tombstones ?? {});
       for (const [key, tombstone] of Object.entries(journal.tombstones)) journal.revisions[key] = tombstone.revision;
-      await tx.syncJournal.create({ data: { ownerId: targetOwnerId, payload: journal } });
+      await (
+        tx.syncJournal.create as MigrationWriteOperation<
+          typeof tx.syncJournal.create,
+          { data: { ownerId: string; payload: ReturnType<typeof createJournal> } }
+        >
+      )({ data: { ownerId: targetOwnerId, payload: journal } });
     }
   };
   const advisoryLock = createPostgresAdvisoryLock(client);

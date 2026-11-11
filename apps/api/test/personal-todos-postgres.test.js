@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createPostgresAppContext } from '../src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../src/postgres-app.factory.ts';
 
 async function fixture(run) {
   const database = await createPostgresTestDatabase();

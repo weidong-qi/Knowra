@@ -75,6 +75,7 @@ export interface PdfKnowledge {
     ): Awaitable<
       | import('../knowledge/infrastructure/note-repository.ts').NoteRecord
       | import('../sync/postgres-state-types.ts').SyncMappedEntityMap['notes']
+      | null
     >;
   };
 }

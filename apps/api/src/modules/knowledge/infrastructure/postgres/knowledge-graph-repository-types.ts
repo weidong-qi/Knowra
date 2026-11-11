@@ -61,10 +61,10 @@ export interface QuestionListOptions {
   limit?: unknown;
 }
 export interface ItemListOptions {
-  reviewStatus?: string;
+  reviewStatus?: string | null;
   query?: unknown;
-  includeArchived?: boolean | string;
-  includeDeleted?: boolean | string;
+  includeArchived?: boolean | string | null;
+  includeDeleted?: boolean | string | null;
 }
 export interface ReviewWhere {
   reviewStatus?: string | { not: 'archived' };

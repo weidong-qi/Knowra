@@ -88,7 +88,7 @@ export const phase1PostgresTests = [
   {
     name: 'PostgreSQL app context is opt-in and can be assembled with an injected Prisma client',
     async run() {
-      const { createPostgresAppContext } = await import('../src/postgres-app.factory.js');
+      const { createPostgresAppContext } = await import('../src/postgres-app.factory.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-phase1-context-'));
       let ownerUpserts = 0;
       let provenanceSchemaChecks = 0;
@@ -706,7 +706,7 @@ export const phase1PostgresTests = [
   {
     name: 'PostgreSQL app context refuses a database containing a foreign owner',
     async run() {
-      const { createPostgresAppContext } = await import('../src/postgres-app.factory.js');
+      const { createPostgresAppContext } = await import('../src/postgres-app.factory.ts');
       let disconnectCalls = 0;
       const client = {
         user: {

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { createPostgresAppContext } from '../src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../src/postgres-app.factory.ts';
 import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-repository.ts';
 import { validateKnowledgeExtractionCommit } from '../src/modules/ai/knowledge-extraction-commit-contract.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';

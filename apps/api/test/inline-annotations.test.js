@@ -796,7 +796,7 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
         async run() {
           const { createPostgresTestDatabase } =
             await import('../../../scripts/test-support/postgres-test-database.mjs');
-          const { createPostgresAppContext } = await import('../src/postgres-app.factory.js');
+          const { createPostgresAppContext } = await import('../src/postgres-app.factory.ts');
           const root = mkdtempSync(path.join(tmpdir(), 'knowra-review-fix-pg-'));
           let database, app;
           try {
@@ -1134,7 +1134,7 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
         async run() {
           const { createPostgresTestDatabase } =
             await import('../../../scripts/test-support/postgres-test-database.mjs');
-          const { createPostgresAppContext } = await import('../src/postgres-app.factory.js');
+          const { createPostgresAppContext } = await import('../src/postgres-app.factory.ts');
           const root = mkdtempSync(path.join(tmpdir(), 'knowra-inline-pg-'));
           let database, app;
           try {
@@ -1191,7 +1191,7 @@ export const inlineAnnotationPostgresTests = process.env.KNOWRA_SYNC_TEST_DATABA
         async run() {
           const { createPostgresTestDatabase } =
             await import('../../../scripts/test-support/postgres-test-database.mjs');
-          const { createPostgresAppContext } = await import('../src/postgres-app.factory.js');
+          const { createPostgresAppContext } = await import('../src/postgres-app.factory.ts');
           const root = mkdtempSync(path.join(tmpdir(), 'knowra-inline-prune-pg-'));
           let database, app;
           try {

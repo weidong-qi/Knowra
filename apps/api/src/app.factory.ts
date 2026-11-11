@@ -555,7 +555,7 @@ function ensureDataCollections(dataStore: AppContextOptions['dataStore'], collec
 }
 
 async function createPostgresAppContext(options: PersistentAppContextOptions) {
-  const { createPostgresAppContext: createContext } = await import('./postgres-app.factory.js');
+  const { createPostgresAppContext: createContext } = await import('./postgres-app.factory.ts');
   // 尚未迁移的 JS 入口只在此声明既有调用参数，不改变或伪造其返回形状。
   return (createContext as (options: PersistentAppContextOptions) => ReturnType<typeof createContext>)(options);
 }

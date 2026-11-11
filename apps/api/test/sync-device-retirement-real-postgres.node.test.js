@@ -61,7 +61,7 @@ async function fixture(t) {
   Object.assign(process.env, environment);
   database = await createPostgresTestDatabase();
   assert.match(database.schema, /^knowra_test_[a-f0-9]{32}$/);
-  const { createPostgresAppContext } = await import('../src/postgres-app.factory.js');
+  const { createPostgresAppContext } = await import('../src/postgres-app.factory.ts');
   const { syncContract } = await import('../src/modules/sync/protocol-contract.ts');
   const { noteContent, syncKey } = await import('../src/modules/sync/journal.ts');
   const { validateDeviceRetirements } = await import('../src/modules/sync/device-retirement.ts');

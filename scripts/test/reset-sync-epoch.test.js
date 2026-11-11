@@ -9,7 +9,7 @@ import { resetJournalKeepingTombstones, createJournal, syncKey } from '../../app
 import { syncContract } from '../../apps/api/src/modules/sync/protocol-contract.ts';
 import { createEmptyLocalState } from '../../apps/api/src/infrastructure/local-data-schema.ts';
 import { createPostgresTestDatabase } from '../test-support/postgres-test-database.mjs';
-import { createPostgresAppContext } from '../../apps/api/src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../../apps/api/src/postgres-app.factory.ts';
 import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../apps/api/src/app.factory.ts';
 

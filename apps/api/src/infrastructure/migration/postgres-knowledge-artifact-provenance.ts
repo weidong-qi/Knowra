@@ -1,5 +1,6 @@
+import type { MigrationWriteOperation } from './migration-client.ts';
 import type { Prisma } from '@prisma/client';
-import type { ProvenanceMigrationClient } from './provenance-types.ts';
+import type { ProvenanceMigrationClient, ExtractionCommitSqlRow } from './provenance-types.ts';
 import { createAppError } from '../../errors/app-error.ts';
 import { backfillKnowledgeArtifactProvenance } from './knowledge-artifact-provenance-backfill.ts';
 import { dbKnowledgeArtifactProvenance } from './db-mappers.ts';
@@ -16,7 +17,9 @@ import { knowledgeExtractionCommitKey } from '../../modules/ai/knowledge-extract
 /** 调用方提供核心 syncRuntime 事务；迁移数据、journal 与完成标记一次提交。 */
 export async function migratePostgresKnowledgeArtifactProvenance(db: ProvenanceMigrationClient, ownerId: string) {
   return db.$transaction(async tx => {
-    const migrations = await tx.$queryRawUnsafe('SELECT version FROM knowledge_artifact_provenance_migrations');
+    const migrations = await tx.$queryRawUnsafe<{ version: number }[]>(
+      'SELECT version FROM knowledge_artifact_provenance_migrations'
+    );
     if (migrations.some(row => row.version !== 1))
       throw createAppError('STORAGE_SCHEMA_VERSION_UNSUPPORTED', '来源迁移版本未知。', 422);
     const [items, evidence, notes, versions, records, journal] = await Promise.all([
@@ -38,11 +41,13 @@ export async function migratePostgresKnowledgeArtifactProvenance(db: ProvenanceM
       validateKnowledgeArtifactProvenanceRelations(state);
       return { migrated: false };
     }
-    const [available] = await tx.$queryRawUnsafe(
+    const [available] = await tx.$queryRawUnsafe<{ relation: string | null }[]>(
       "SELECT to_regclass('knowledge_extraction_commits')::text AS relation"
     );
     const rows = available?.relation
-      ? await tx.$queryRawUnsafe('SELECT to_jsonb(c) AS row FROM knowledge_extraction_commits c')
+      ? await tx.$queryRawUnsafe<{ row: ExtractionCommitSqlRow }[]>(
+          'SELECT to_jsonb(c) AS row FROM knowledge_extraction_commits c'
+        )
       : [];
     const receipts = rows.map(({ row }) => {
       try {
@@ -68,8 +73,20 @@ export async function migratePostgresKnowledgeArtifactProvenance(db: ProvenanceM
         throw createAppError('KNOWLEDGE_ARTIFACT_PROVENANCE_CONFLICT', '已永久删除的来源记录不能通过迁移重建。', 409);
       if (previous.get(record.id) === record.provenanceHash) continue;
       const data = dbKnowledgeArtifactProvenance(record);
-      if (previous.has(record.id)) await tx.knowledgeArtifactProvenance.update({ where: { id: record.id }, data });
-      else await tx.knowledgeArtifactProvenance.create({ data });
+      if (previous.has(record.id))
+        await (
+          tx.knowledgeArtifactProvenance.update as MigrationWriteOperation<
+            typeof tx.knowledgeArtifactProvenance.update,
+            { where: { id: string }; data: typeof data }
+          >
+        )({ where: { id: record.id }, data });
+      else
+        await (
+          tx.knowledgeArtifactProvenance.create as MigrationWriteOperation<
+            typeof tx.knowledgeArtifactProvenance.create,
+            { data: typeof data }
+          >
+        )({ data });
     }
     validateKnowledgeArtifactProvenanceRelations(state);
     await tx.$executeRawUnsafe('INSERT INTO knowledge_artifact_provenance_migrations (version) VALUES (1)');

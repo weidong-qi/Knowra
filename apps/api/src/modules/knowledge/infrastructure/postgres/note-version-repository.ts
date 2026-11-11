@@ -45,15 +45,17 @@ export function createPostgresNoteVersionRepository({ db }: NoteVersionRepositor
         return mapNoteVersion(await db.noteVersion.create({ data }));
       });
     },
-    async findById(id: string) {
+    async findById(id: unknown) {
       return withRepositoryErrors(() =>
-        db.noteVersion.findUnique({ where: { id } }).then(mapNoteVersion<Models.NoteVersion | null>)
+        db.noteVersion.findUnique({ where: { id: id as string } }).then(mapNoteVersion<Models.NoteVersion | null>)
       );
     },
-    async findByNoteIdAndContentHash(noteId: string, contentHash: string) {
+    async findByNoteIdAndContentHash(noteId: unknown, contentHash: unknown) {
       return withRepositoryErrors(() =>
         db.noteVersion
-          .findUnique({ where: { noteId_contentHash: { noteId, contentHash } } })
+          .findUnique({
+            where: { noteId_contentHash: { noteId: noteId as string, contentHash: contentHash as string } }
+          })
           .then(mapNoteVersion<Models.NoteVersion | null>)
       );
     },

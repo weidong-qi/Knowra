@@ -3,7 +3,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.ts';
-import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.ts';
 import { temporaryDirectory } from './helpers.mjs';

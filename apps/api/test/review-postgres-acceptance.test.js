@@ -5,7 +5,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { withCommandServer } from './command-search-http.test.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createPostgresAppContext } from '../src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../src/postgres-app.factory.ts';
 import { buildJsonMigrationPlan, applyJsonMigration } from '../src/infrastructure/migration/json-to-postgres.ts';
 
 async function fixture(operation) {

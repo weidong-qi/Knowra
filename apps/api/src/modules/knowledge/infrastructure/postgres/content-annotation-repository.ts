@@ -46,13 +46,14 @@ interface ContentAnnotationDelegate {
 export interface ContentAnnotationRepositoryOptions {
   db: { contentAnnotation: ContentAnnotationDelegate };
 }
+// 来自查询/历史来源的筛选值，沿用原真值判断并交给 SDK 校验。
 interface AnnotationListOptions {
-  noteId?: string;
-  spaceId?: string;
-  includeDeleted?: boolean;
-  kind?: string;
-  scopeType?: string;
-  anchorStatus?: string;
+  noteId?: unknown;
+  spaceId?: unknown;
+  includeDeleted?: unknown;
+  kind?: unknown;
+  scopeType?: unknown;
+  anchorStatus?: unknown;
 }
 type AnnotationDuplicateInput = Pick<
   CreateContentAnnotationDto,
@@ -120,8 +121,10 @@ export function createPostgresContentAnnotationRepository({ db }: ContentAnnotat
         )
       );
     },
-    async findById(id: string) {
-      return withRepositoryErrors(async () => mapAnnotation(await db.contentAnnotation.findUnique({ where: { id } })));
+    async findById(id: unknown) {
+      return withRepositoryErrors(async () =>
+        mapAnnotation(await db.contentAnnotation.findUnique({ where: { id: id as string } }))
+      );
     },
     async findByIdempotencyKey(noteId: string, idempotencyKey: string) {
       return withRepositoryErrors(async () =>
@@ -166,7 +169,7 @@ export function createPostgresContentAnnotationRepository({ db }: ContentAnnotat
       return withRepositoryErrors(async () =>
         (
           await db.contentAnnotation.findMany({
-            where,
+            where: where as AnnotationWhere,
             orderBy: { updatedAt: 'desc' }
           })
         ).map(mapAnnotation)

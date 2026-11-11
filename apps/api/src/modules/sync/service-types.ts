@@ -71,7 +71,7 @@ export interface SyncNoteProvider<Backend extends SyncBackend = 'local'> extends
   applyNote(
     operation: SyncNoteOperation,
     current: Pick<LocalRow<'notes'>, 'deleted'> | null
-  ): SyncAwaitable<SyncNoteMutationResult | void>;
+  ): SyncAwaitable<SyncNoteMutationResult | null | void>;
 }
 /** HTTP 边界保留原始请求；各方法沿现有校验流程解释载荷。 */
 export interface SyncHttpService {

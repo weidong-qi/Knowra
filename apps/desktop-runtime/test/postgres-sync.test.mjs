@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { noteContent } from '../../api/src/modules/sync/journal.ts';
 import { temporaryDirectory, markText, inlineId } from './helpers.mjs';
 

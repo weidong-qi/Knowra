@@ -1,6 +1,5 @@
 import type { PostgresTransactionHost } from '../postgres-transaction-port.ts';
-import type * as rows from './db-mappers.ts';
-import type { KnowledgeArtifactProvenance } from '@prisma/client';
+import type { KnowledgeArtifactProvenance, PdfAnnotation, Prisma } from '@prisma/client';
 
 type Awaitable<Value> = Value | PromiseLike<Value>;
 interface MigrationModel<Row> {
@@ -9,34 +8,29 @@ interface MigrationModel<Row> {
   deleteMany(): Awaitable<{ count: number }>;
 }
 interface MigrationRows {
-  user: ReturnType<typeof rows.dbUser>;
-  knowledgeSpace: ReturnType<typeof rows.dbSpace>;
-  folder: ReturnType<typeof rows.dbFolder>;
-  tagGroup: ReturnType<typeof rows.dbTagGroup>;
-  tag: ReturnType<typeof rows.dbTag>;
-  note: ReturnType<typeof rows.dbNote>;
-  attachment: ReturnType<typeof rows.dbAttachment>;
-  pdfAnnotation: {
-    id: string;
-    noteId: string;
-    revision: number;
-    payload: import('@study-accelerator/shared/pdf').PdfAnnotation;
-  };
-  contentAnnotation: ReturnType<typeof rows.dbAnnotation>;
-  annotationExclusion: ReturnType<typeof rows.dbAnnotationExclusion>;
-  annotationRevision: ReturnType<typeof rows.dbAnnotationRevision>;
-  analysisScopeSnapshot: ReturnType<typeof rows.dbAnalysisScopeSnapshot>;
-  noteVersion: ReturnType<typeof rows.dbNoteVersion>;
-  knowledgeItem: ReturnType<typeof rows.dbKnowledgeItem>;
-  knowledgeEvidence: ReturnType<typeof rows.dbKnowledgeEvidence>;
-  knowledgeArtifactProvenance: ReturnType<typeof rows.dbKnowledgeArtifactProvenance>;
-  learningObjective: ReturnType<typeof rows.dbLearningObjective>;
-  examProfile: ReturnType<typeof rows.dbExamProfile>;
-  examFocus: ReturnType<typeof rows.dbExamFocus>;
-  question: ReturnType<typeof rows.dbQuestion>;
-  questionObjective: ReturnType<typeof rows.dbQuestionObjective>;
-  questionSource: ReturnType<typeof rows.dbQuestionSource>;
-  personalTodo: ReturnType<typeof rows.dbPersonalTodo>;
+  user: Prisma.UserCreateManyInput;
+  knowledgeSpace: Prisma.KnowledgeSpaceCreateManyInput;
+  folder: Prisma.FolderCreateManyInput;
+  tagGroup: Prisma.TagGroupCreateManyInput;
+  tag: Prisma.TagCreateManyInput;
+  note: Prisma.NoteCreateManyInput;
+  attachment: Prisma.AttachmentCreateManyInput;
+  pdfAnnotation: Prisma.PdfAnnotationCreateManyInput;
+  contentAnnotation: Prisma.ContentAnnotationCreateManyInput;
+  annotationExclusion: Prisma.AnnotationExclusionCreateManyInput;
+  annotationRevision: Prisma.AnnotationRevisionCreateManyInput;
+  analysisScopeSnapshot: Prisma.AnalysisScopeSnapshotCreateManyInput;
+  noteVersion: Prisma.NoteVersionCreateManyInput;
+  knowledgeItem: Prisma.KnowledgeItemCreateManyInput;
+  knowledgeEvidence: Prisma.KnowledgeEvidenceCreateManyInput;
+  knowledgeArtifactProvenance: Prisma.KnowledgeArtifactProvenanceCreateManyInput;
+  learningObjective: Prisma.LearningObjectiveCreateManyInput;
+  examProfile: Prisma.ExamProfileCreateManyInput;
+  examFocus: Prisma.ExamFocusCreateManyInput;
+  question: Prisma.QuestionCreateManyInput;
+  questionObjective: Prisma.QuestionObjectiveCreateManyInput;
+  questionSource: Prisma.QuestionSourceCreateManyInput;
+  personalTodo: Prisma.PersonalTodoCreateManyInput;
   noteTag: { noteId: string; tagId: string };
 }
 export type MigrationTransaction = {
@@ -47,16 +41,19 @@ export type MigrationTransaction = {
           findMany(options: { select: { id: true } }): Awaitable<{ id: string }[]>;
         });
 } & {
-  // createMany 使用 mapper 的写入形状；读取仍是 Prisma 原生 JSON 列。
+  // 写端口使用 SDK 输入，读取保留原生 JSON 列。
   knowledgeArtifactProvenance: { findMany(): Awaitable<KnowledgeArtifactProvenance[]> };
-  pdfAnnotation: { findMany(): Awaitable<MigrationRows['pdfAnnotation'][]> };
+  pdfAnnotation: { findMany(): Awaitable<PdfAnnotation[]> };
   syncJournal?: {
     findMany(): Awaitable<{ ownerId: string; payload: unknown }[]>;
     deleteMany(): Awaitable<{ count: number }>;
-    create(input: {
-      data: { ownerId: string; payload: ReturnType<typeof import('../../modules/sync/journal.ts').createJournal> };
-    }): Awaitable<object>;
+    create(input: { data: { ownerId: string; payload: Prisma.InputJsonValue } }): Awaitable<object>;
   };
 };
 export type MigrationClient =
   PostgresTransactionHost<MigrationTransaction> | (MigrationTransaction & { $transaction?: undefined });
+
+/** 局部保留历史 JSON 投影；只扩展原 SDK 操作的入参视图，校验与拒绝仍由 SDK 执行。 */
+export type MigrationWriteOperation<Operation extends (...args: never[]) => object, Input> = (
+  input: Parameters<Operation>[0] | Input
+) => ReturnType<Operation>;

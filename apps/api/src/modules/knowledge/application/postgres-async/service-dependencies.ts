@@ -249,5 +249,5 @@ export interface PostgresModuleDependencies extends Partial<PostgresRepositories
   readPurgeTaskState?: ReturnType<
     typeof import('../../../../infrastructure/asset-purge-task-state.ts').createPostgresPurgeTaskReader
   > | null;
-  getPurgeDatasetEpoch?: (() => string | Promise<string>) | null;
+  getPurgeDatasetEpoch?: (() => string | undefined | Promise<string | undefined>) | null;
 }
