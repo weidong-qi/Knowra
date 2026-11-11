@@ -183,6 +183,11 @@ jobs:
         if: matrix.suite == 'chromium'
         # 恢复回归复用合成页面配置，以 runner 预装的 Chrome 保留浏览器沙箱。
         run: |
+          # Azure 镜像 DNS 故障时改用 Ubuntu 官方主镜像，仍完整安装并校验签名依赖。
+          if [[ -f /etc/apt/apt-mirrors.txt ]] && ! timeout 10s getent ahostsv4 azure.archive.ubuntu.com > /dev/null; then
+            echo 'Azure Ubuntu 镜像 DNS 不可用，切换 Ubuntu 官方主镜像。'
+            sudo sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' /etc/apt/apt-mirrors.txt
+          fi
           npx playwright install --with-deps chromium
           google-chrome --version
 
