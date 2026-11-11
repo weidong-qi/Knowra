@@ -224,10 +224,10 @@ export async function main(argv, { env = process.env, fetchImpl = fetch, log = c
 
 async function loadOnlinePrompt() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-  const gatewayFile = path.join(root, 'apps/api/src/modules/ai/knowledge-extraction-gateway.js');
+  const gatewayFile = path.join(root, 'apps/api/src/modules/ai/knowledge-extraction-gateway.ts');
   const gateway = await import(pathToFileURL(gatewayFile).href);
   const contract = await import(
-    pathToFileURL(path.join(root, 'apps/api/src/modules/knowledge/application/knowledge-extraction-contract.js')).href
+    pathToFileURL(path.join(root, 'apps/api/src/modules/knowledge/application/knowledge-extraction-contract.ts')).href
   );
   const schema = contract.KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA;
   if (typeof gateway.KNOWLEDGE_EXTRACTION_SYSTEM_PROMPT === 'string')
@@ -237,7 +237,7 @@ async function loadOnlinePrompt() {
   const match = /const (?:SYSTEM_PROMPT|KNOWLEDGE_EXTRACTION_SYSTEM_PROMPT) = (\[[\s\S]*?\])\.join\('\\n'\);/.exec(
     source
   );
-  if (!match) throw new Error('无法从 knowledge-extraction-gateway.js 读取线上 v1 提示词');
+  if (!match) throw new Error('无法从 knowledge-extraction-gateway.ts 读取线上 v1 提示词');
   const lines = new Function('KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA', `return ${match[1]};`)(schema);
   return { v1Prompt: lines.join('\n'), schema };
 }

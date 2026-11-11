@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createEmptyLocalState } from '../../src/infrastructure/local-data-schema.js';
 import { hashRecord } from '../../src/modules/ai/record-contract.ts';
-import { validateKnowledgeExtractionResult } from '../../src/modules/knowledge/application/knowledge-extraction-contract.js';
-import { validateKnowledgeExtractionCommit } from '../../src/modules/ai/knowledge-extraction-commit-contract.js';
+import { validateKnowledgeExtractionResult } from '../../src/modules/knowledge/application/knowledge-extraction-contract.ts';
+import { validateKnowledgeExtractionCommit } from '../../src/modules/ai/knowledge-extraction-commit-contract.ts';
 import { createKnowledgeArtifactProvenanceFromReceipt } from '../../src/infrastructure/migration/knowledge-artifact-provenance-backfill.js';
 import { validateKnowledgeArtifactProvenance } from '../../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 

@@ -16,12 +16,12 @@ import {
   taskKey,
   validateExtractionTask,
   validateExtractionTaskState
-} from '../modules/ai/knowledge-extraction-task-contract.js';
+} from '../modules/ai/knowledge-extraction-task-contract.ts';
 import {
   knowledgeExtractionCommitKey,
   validateKnowledgeExtractionCommit,
   validateKnowledgeExtractionCommitState
-} from '../modules/ai/knowledge-extraction-commit-contract.js';
+} from '../modules/ai/knowledge-extraction-commit-contract.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';

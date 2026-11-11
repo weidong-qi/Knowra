@@ -166,13 +166,13 @@ export interface WorkerMessage extends ProviderMessage {
   allowExternal?: boolean;
 }
 export interface ExtractionGatewayOptions extends NonNullable<
-  Parameters<typeof import('../knowledge/application/knowledge-extraction-contract.js').prepareKnowledgeExtraction>[0]
+  Parameters<typeof import('../knowledge/application/knowledge-extraction-contract.ts').prepareKnowledgeExtraction>[0]
 > {
   maxTokens?: number;
 }
 export interface ExtractionGatewayResultOptions {
   extractionRequest?: ReturnType<
-    typeof import('../knowledge/application/knowledge-extraction-contract.js').prepareKnowledgeExtraction
+    typeof import('../knowledge/application/knowledge-extraction-contract.ts').prepareKnowledgeExtraction
   >;
   result?: Pick<GatewayResult, 'refused' | 'truncated' | 'finishReason' | 'toolCalls' | 'content'>;
 }

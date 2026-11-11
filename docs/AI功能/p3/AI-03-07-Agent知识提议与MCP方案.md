@@ -20,7 +20,7 @@
 ## 现状基础
 
 - 笔记助手已有 Agent 循环（4 轮/6 工具）、检查点、预算预留与结算、取消，工具 `notes_search`、`notes_read` 与 4 个笔记写入提议工具。
-- 提炼 v1 契约（`knowledge-extraction-contract.js`）的逐字引文校验、版本绑定与候选计划生成可复用；原子接纳服务（AI-03-02A）负责候选与证据同事务提交。
+- 提炼 v1 契约（`knowledge-extraction-contract.ts`）的逐字引文校验、版本绑定与候选计划生成可复用；原子接纳服务（AI-03-02A）负责候选与证据同事务提交。
 - 缺口：Agent 读不到重点（ContentAnnotation）；动作计划只认笔记类写入，没有知识候选的提议工具。
 
 ## 切片

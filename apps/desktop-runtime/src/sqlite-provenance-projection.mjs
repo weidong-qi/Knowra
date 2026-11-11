@@ -1,5 +1,5 @@
 import { backfillKnowledgeArtifactProvenance } from '../../api/src/infrastructure/migration/knowledge-artifact-provenance-backfill.js';
-import { knowledgeExtractionCommitKey } from '../../api/src/modules/ai/knowledge-extraction-commit-contract.js';
+import { knowledgeExtractionCommitKey } from '../../api/src/modules/ai/knowledge-extraction-commit-contract.ts';
 
 /** 启动与只读恢复预检共享的投影；只修改调用者提供的内存 state。 */
 export function projectSqliteProvenance(db, state, { hasFact = () => false, initialState = state } = {}) {

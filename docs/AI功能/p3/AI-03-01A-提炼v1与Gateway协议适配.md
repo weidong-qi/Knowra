@@ -4,7 +4,7 @@
 
 ## 批次范围
 
-现有提炼 v1 已能从保存的 AnalysisScope 和不可变 NoteVersion 生成请求、严格校验候选与引文，但没有适配 Gateway。此批次提供 `apps/api/src/modules/ai/knowledge-extraction-gateway.js` 两个函数：
+现有提炼 v1 已能从保存的 AnalysisScope 和不可变 NoteVersion 生成请求、严格校验候选与引文，但没有适配 Gateway。此批次提供 `apps/api/src/modules/ai/knowledge-extraction-gateway.ts` 两个函数：
 
 - `prepareKnowledgeExtractionGateway`：调用既有 v1 输入校验器，生成 `format: json`、`tools: []` 的 Gateway 请求，以及保留在服务端的原始 `extractionRequest`。提示词版本固定为 `knowledge-extraction-v1`，不选择新的模型。
 - `validateKnowledgeExtractionGatewayResult`：要求完整 `stop`、未拒答、未截断、没有工具调用，再把原始响应文本交给既有 v1 严格校验器。返回整批候选计划，不创建任务、候选、证据或确认记录。

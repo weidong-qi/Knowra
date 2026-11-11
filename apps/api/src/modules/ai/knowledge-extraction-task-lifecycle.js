@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.ts';
-import { EXTRACTION_MOCK_PROFILE as profile, taskError, taskTime } from './knowledge-extraction-task-contract.js';
+import { EXTRACTION_MOCK_PROFILE as profile, taskError, taskTime } from './knowledge-extraction-task-contract.ts';
 import { requireTask, verifyTaskRequest } from './knowledge-extraction-task-context.js';
 
 export function* replaceTaskJob(ai, job, patch, now) {

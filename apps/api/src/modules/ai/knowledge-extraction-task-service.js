@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { assertMockGateway, runTaskSteps, taskError, taskId } from './knowledge-extraction-task-contract.js';
+import { assertMockGateway, runTaskSteps, taskError, taskId } from './knowledge-extraction-task-contract.ts';
 import { buildTaskRecords, prepareTaskSources } from './knowledge-extraction-task-context.js';
 import { createExtractionTaskLifecycle, taskEvent } from './knowledge-extraction-task-lifecycle.js';
-import { createExtractionMockWorker } from './knowledge-extraction-mock-worker.js';
+import { createExtractionMockWorker } from './knowledge-extraction-mock-worker.ts';
 import { createExtractionTaskQueries } from './knowledge-extraction-task-queries.ts';
 
 /** 仅受信宿主显式注入 Mock 才装配；HTTP 包装不扩展真实执行权限或默认启动能力。 */

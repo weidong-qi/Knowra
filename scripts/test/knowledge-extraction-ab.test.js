@@ -111,7 +111,7 @@ test('引文唯一性、安全范围和 UTF-16 边界：错误时不接受', () 
 
 test('实验定位算法和线上 anchorQuote 的行为一致（合成数据）', async () => {
   const { anchorQuote } =
-    await import('../../apps/api/src/modules/knowledge/application/knowledge-extraction-contract.js');
+    await import('../../apps/api/src/modules/knowledge/application/knowledge-extraction-contract.ts');
   const cases = [
     ['A😀B', { sourceId: 'x', start: 1, end: 3, quote: '😀' }],
     ['A😀B', { sourceId: 'x', start: 0, end: 2, quote: '😀' }],

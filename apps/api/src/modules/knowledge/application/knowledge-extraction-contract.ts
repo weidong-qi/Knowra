@@ -1,5 +1,15 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
+
+import type {
+  PrepareExtractionInput,
+  ExtractionRequest,
+  ExtractionSource,
+  ValidateExtractionInput,
+  ExtractionOutput,
+  ExtractionPlan,
+  ExtractionCandidatePlan
+} from './knowledge-extraction-types.ts';
 
 export const KNOWLEDGE_EXTRACTION_CONTRACT_VERSION = 1;
 export const KNOWLEDGE_EXTRACTION_LIMITS = Object.freeze({
@@ -14,12 +24,13 @@ export const KNOWLEDGE_EXTRACTION_LIMITS = Object.freeze({
 });
 const TYPES = ['concept', 'fact', 'principle', 'process', 'algorithm', 'formula', 'comparison', 'application'];
 const LIMITS = KNOWLEDGE_EXTRACTION_LIMITS;
-const fail = (code, message) => {
+const fail: (code: string, message: string) => never = (code, message) => {
   throw createAppError(code, message, 422);
 };
-const hash = value => calculateContentHash(JSON.stringify(value));
-const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-const text = (value, max = 500) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
+const hash = <Value>(value: Value) => calculateContentHash(JSON.stringify(value));
+const isObject = (value: unknown): value is object =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+const text = (value: unknown, max = 500) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 
 /** 提供商适配器可使用此 Schema；应用层仍须调用 validateKnowledgeExtractionResult。 */
 export const KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA = {
@@ -67,11 +78,11 @@ export const KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA = {
  * 只提供明确选中的片段；contextSegments、排除内容、遗漏内容不会作为可引用来源发送。
  * 不调用模型、不写数据库，也不代表当前提炼服务已经开放。
  */
-/**
- * @param {import('./knowledge-extraction-types.ts').PrepareExtractionInput} input
- * @returns {import('./knowledge-extraction-types.ts').ExtractionRequest}
- */
-export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey } = {}) {
+export function prepareKnowledgeExtraction({
+  scope,
+  noteVersions,
+  idempotencyKey
+}: PrepareExtractionInput = {}): ExtractionRequest {
   if (
     !isObject(scope) ||
     !text(scope.id) ||
@@ -93,10 +104,9 @@ export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey
   const versions = new Map(noteVersions.map(version => [version.id, version]));
   const bindings = new Map(scope.noteVersions.map(version => [version.noteVersionId, version]));
   const revisions = new Map((scope.annotationRevisions ?? []).map(entry => [entry.annotationId, entry.revision]));
-  const used = new Set();
+  const used = new Set<string>();
   let characters = 0;
-  /** @type {import('./knowledge-extraction-types.ts').ExtractionSource[]} */
-  const sources = scope.segments.map(segment => {
+  const sources: ExtractionSource[] = scope.segments.map(segment => {
     if (!isObject(segment)) fail('KNOWLEDGE_EXTRACTION_SCOPE_INVALID', '分析片段无效。');
     const version = versions.get(segment.noteVersionId);
     const binding = bindings.get(segment.noteVersionId);
@@ -115,7 +125,9 @@ export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey
     }
     if (
       !Array.isArray(segment.annotationIds) ||
-      segment.annotationIds.some(id => !text(id) || !Number.isInteger(revisions.get(id)) || revisions.get(id) < 1)
+      segment.annotationIds.some(
+        id => !text(id) || !Number.isInteger(revisions.get(id)) || (revisions.get(id) as number) < 1
+      )
     ) {
       fail('KNOWLEDGE_EXTRACTION_SCOPE_INVALID', '分析范围缺少标注修订记录。');
     }
@@ -135,7 +147,7 @@ export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey
       markdown: segment.markdown,
       annotationRevisions: [...new Set(segment.annotationIds)]
         .sort()
-        .map(annotationId => ({ annotationId, revision: /** @type {number} */ (revisions.get(annotationId)) }))
+        .map(annotationId => ({ annotationId, revision: revisions.get(annotationId) as number }))
     };
   });
   const inputHash = hash([KNOWLEDGE_EXTRACTION_CONTRACT_VERSION, scope.id, scope.spaceId, scope.inputHash, sources]);
@@ -153,11 +165,7 @@ export function prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey
  * 校验不可信结果并生成候选创建计划。request 只接受服务端保留的原始请求，不能采用模型回传的来源表。
  * 返回内容仍需用户审核；引文匹配不代表生成陈述在语义上正确。
  */
-/**
- * @param {import('./knowledge-extraction-types.ts').ValidateExtractionInput} input
- * @returns {import('./knowledge-extraction-types.ts').ExtractionPlan}
- */
-export function validateKnowledgeExtractionResult({ request, result } = {}) {
+export function validateKnowledgeExtractionResult({ request, result }: ValidateExtractionInput = {}): ExtractionPlan {
   if (
     !isObject(request) ||
     request.contractVersion !== KNOWLEDGE_EXTRACTION_CONTRACT_VERSION ||
@@ -176,7 +184,7 @@ export function validateKnowledgeExtractionResult({ request, result } = {}) {
     }
   }
   assertKeys(result, ['contractVersion', 'requestId', 'candidates']);
-  const output = /** @type {import('./knowledge-extraction-types.ts').ExtractionOutput} */ (result);
+  const output = result as ExtractionOutput;
   if (output.contractVersion !== KNOWLEDGE_EXTRACTION_CONTRACT_VERSION || output.requestId !== request?.requestId) {
     fail('KNOWLEDGE_EXTRACTION_REQUEST_MISMATCH', '提炼结果不属于当前请求。');
   }
@@ -184,8 +192,7 @@ export function validateKnowledgeExtractionResult({ request, result } = {}) {
     fail('KNOWLEDGE_EXTRACTION_RESULT_INVALID', '提炼候选数量无效。');
   }
   const byId = new Map(request.sources.map(source => [source.sourceId, source]));
-  /** @type {import('./knowledge-extraction-types.ts').ExtractionCandidatePlan[]} */
-  const candidates = Array.from(output.candidates, (candidate, index) => {
+  const candidates = Array.from(output.candidates, (candidate, index): ExtractionCandidatePlan => {
     assertKeys(candidate, ['title', 'canonicalStatement', 'knowledgeType', 'citations']);
     if (
       !text(candidate.title, LIMITS.titleCharacters) ||
@@ -197,7 +204,7 @@ export function validateKnowledgeExtractionResult({ request, result } = {}) {
     ) {
       fail('KNOWLEDGE_EXTRACTION_RESULT_INVALID', '提炼候选的标题、陈述、类型或引文无效。');
     }
-    const used = new Set();
+    const used = new Set<string>();
     const provenance = Array.from(candidate.citations, citation => {
       assertKeys(citation, ['sourceId', 'start', 'end', 'quote']);
       const source = byId.get(citation.sourceId);
@@ -263,7 +270,7 @@ export function validateKnowledgeExtractionResult({ request, result } = {}) {
  * 否则在本片段中按 quote 定位，必须恰好出现一次（与 Agent 知识提议的定位规则一致），
  * 找不到或出现多次仍然拒绝，“引文逐字来自所选范围”的约束不放松。
  */
-export function anchorQuote(markdown, { start, end, quote }) {
+export function anchorQuote(markdown: string, { start, end, quote }: { start: number; end: number; quote: string }) {
   if (validRange(start, end, markdown) && markdown.slice(start, end) === quote) return { start, end };
   const first = markdown.indexOf(quote);
   if (first === -1)
@@ -275,13 +282,13 @@ export function anchorQuote(markdown, { start, end, quote }) {
   return { start: first, end: first + quote.length };
 }
 
-function assertKeys(value, keys) {
+function assertKeys(value: unknown, keys: readonly string[]) {
   if (!isObject(value) || Object.keys(value).length !== keys.length || keys.some(key => !Object.hasOwn(value, key))) {
     fail('KNOWLEDGE_EXTRACTION_RESULT_INVALID', '提炼结果字段不符合契约，不能指定审核状态或来源记录。');
   }
 }
 
-function validRange(start, end, value) {
+function validRange(start: number, end: number, value: string) {
   return (
     Number.isSafeInteger(start) &&
     Number.isSafeInteger(end) &&
@@ -293,7 +300,7 @@ function validRange(start, end, value) {
   );
 }
 
-function splitsSurrogate(value, index) {
+function splitsSurrogate(value: string, index: number) {
   const previous = value.charCodeAt(index - 1);
   const current = value.charCodeAt(index);
   return previous >= 0xd800 && previous <= 0xdbff && current >= 0xdc00 && current <= 0xdfff;

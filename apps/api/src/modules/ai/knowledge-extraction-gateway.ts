@@ -1,14 +1,16 @@
 import { normalizeAiRequest } from './gateway.js';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import {
   KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA,
   prepareKnowledgeExtraction,
   validateKnowledgeExtractionResult
-} from '../knowledge/application/knowledge-extraction-contract.js';
+} from '../knowledge/application/knowledge-extraction-contract.ts';
+
+import type { ExtractionGatewayOptions, ExtractionGatewayResultOptions } from './boundary-types.ts';
 
 export const KNOWLEDGE_EXTRACTION_PROMPT_VERSION = 'knowledge-extraction-v1';
 const MAX_MESSAGE_CHARACTERS = 120_000;
-const fail = (code, message) => {
+const fail: (code: string, message: string) => never = (code, message) => {
   throw createAppError(code, message, 422);
 };
 /** 线上 v1 提示词；导出仅供离线 A/B 实验脚本复用原文，不改变线上行为。 */
@@ -28,8 +30,12 @@ export const KNOWLEDGE_EXTRACTION_SYSTEM_PROMPT = [
  * 此处只适配协议，不读取凭据、不调用模型，也不创建任务或业务资产。
  * 未来 Worker 仍须负责 grant/manifest、核价、预算、取消和来源入库复核。
  */
-/** @param {import('./boundary-types.ts').ExtractionGatewayOptions} [options] */
-export function prepareKnowledgeExtractionGateway({ scope, noteVersions, idempotencyKey, maxTokens = 8_192 } = {}) {
+export function prepareKnowledgeExtractionGateway({
+  scope,
+  noteVersions,
+  idempotencyKey,
+  maxTokens = 8_192
+}: ExtractionGatewayOptions = {}) {
   const extractionRequest = prepareKnowledgeExtraction({ scope, noteVersions, idempotencyKey });
   // 仅发送提炼必需的来源定位和所选原文；权限及版本映射保留在服务端原始请求。
   const content = JSON.stringify({
@@ -54,8 +60,10 @@ export function prepareKnowledgeExtractionGateway({ scope, noteVersions, idempot
 }
 
 /** 只接受 Gateway 的完整无工具响应；绑定服务端原请求，整批生成候选计划而不执行确认。 */
-/** @param {import('./boundary-types.ts').ExtractionGatewayResultOptions} [options] */
-export function validateKnowledgeExtractionGatewayResult({ extractionRequest, result } = {}) {
+export function validateKnowledgeExtractionGatewayResult({
+  extractionRequest,
+  result
+}: ExtractionGatewayResultOptions = {}) {
   if (result?.refused === true) {
     fail('KNOWLEDGE_EXTRACTION_REFUSED', '模型拒绝提炼，未采纳任何候选。');
   }

@@ -1,4 +1,4 @@
-import { EXTRACTION_MOCK_PROFILE as profile, taskError, taskId } from './knowledge-extraction-task-contract.js';
+import { EXTRACTION_MOCK_PROFILE as profile, taskError, taskId } from './knowledge-extraction-task-contract.ts';
 import { verifyTaskRequest } from './knowledge-extraction-task-context.js';
 import { extractionPageInput } from './knowledge-extraction-task-page.ts';
 import { extractionSafeError } from './knowledge-extraction-http-errors.ts';

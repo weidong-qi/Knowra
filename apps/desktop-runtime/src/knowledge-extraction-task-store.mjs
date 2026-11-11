@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { validateExtractionTask } from '../../api/src/modules/ai/knowledge-extraction-task-contract.js';
+import { validateExtractionTask } from '../../api/src/modules/ai/knowledge-extraction-task-contract.ts';
 import { extractionPageSql } from '../../api/src/modules/ai/knowledge-extraction-task-page.ts';
 import {
   decodeSqliteKnowledgeExtractionTask as decode,

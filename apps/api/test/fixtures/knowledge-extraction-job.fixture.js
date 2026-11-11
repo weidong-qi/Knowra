@@ -3,7 +3,7 @@ import { aiRecords } from '../ai-record-fixtures.js';
 import { createAiGateway } from '../../src/modules/ai/gateway.js';
 import { createMockAiAdapter } from '../../src/modules/ai/infrastructure/providers/mock-adapter.ts';
 import { manifestHash, scopeHash, hashRecord } from '../../src/modules/ai/record-contract.ts';
-import { prepareKnowledgeExtractionGateway } from '../../src/modules/ai/knowledge-extraction-gateway.js';
+import { prepareKnowledgeExtractionGateway } from '../../src/modules/ai/knowledge-extraction-gateway.ts';
 
 /** 三驱动共用合成资料；通过已有范围/版本服务和真实 Mock Gateway 构造待接纳的任务。 */
 export async function createKnowledgeExtractionJobFixture(app, ai = app.dataStore?.aiRepository, ownerId = 'demo') {

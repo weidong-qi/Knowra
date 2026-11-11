@@ -4,11 +4,11 @@ import {
   EXTRACTION_MOCK_PROFILE,
   taskKey,
   validateExtractionTask
-} from '../modules/ai/knowledge-extraction-task-contract.js';
+} from '../modules/ai/knowledge-extraction-task-contract.ts';
 import {
   knowledgeExtractionCommitKey,
   validateKnowledgeExtractionCommit
-} from '../modules/ai/knowledge-extraction-commit-contract.js';
+} from '../modules/ai/knowledge-extraction-commit-contract.ts';
 import type { QuerySqlPort } from './core-operation-types.ts';
 import type {
   LocalPurgeTaskDataStore,

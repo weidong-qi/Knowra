@@ -1,6 +1,9 @@
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import { hashRecord } from './record-contract.ts';
-import { validateKnowledgeExtractionResult } from '../knowledge/application/knowledge-extraction-contract.js';
+import { validateKnowledgeExtractionResult } from '../knowledge/application/knowledge-extraction-contract.ts';
+
+import type { KnowledgeExtractionCommitReceipt } from './knowledge-extraction-commit-types.ts';
+import type { RawExtractionIndexKey } from './knowledge-extraction-task-types.ts';
 
 const keys = [
   'schemaVersion',
@@ -23,59 +26,58 @@ const keys = [
   'result',
   'candidates',
   'receiptHash'
-];
-const identifier = value =>
+] as const;
+const identifier = (value: unknown) =>
   typeof value === 'string' &&
   value.length > 0 &&
   value.length <= 200 &&
   value.trim() === value &&
   !/[^\P{Cc}\u007f-\u009f]/u.test(value);
-const invalid = () => {
+const invalid = (): never => {
   throw createAppError('KNOWLEDGE_EXTRACTION_COMMIT_INVALID', '提炼提交记录无效，已停止接纳。', 422);
 };
-const exact = (value, fields) =>
+const exact = (value: unknown, fields: readonly string[]) =>
   value &&
   typeof value === 'object' &&
   !Array.isArray(value) &&
   Object.keys(value).length === fields.length &&
   fields.every(field => Object.hasOwn(value, field));
-const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
-export const knowledgeExtractionCommitKey = value => JSON.stringify([value.ownerId, value.datasetId, value.jobId]);
+const digest = (value: unknown) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+export const knowledgeExtractionCommitKey = (value: RawExtractionIndexKey) =>
+  JSON.stringify([value.ownerId, value.datasetId, value.jobId]);
 
 /** 独立核心提交记录 v1；完整结果与精确来源保留在执行宿主，尚不进入普通同步/快照。 */
-/**
- * @overload
- * @param {unknown} input
- * @returns {import('./knowledge-extraction-commit-types.ts').KnowledgeExtractionCommitReceipt}
- */
-/** @returns {import('./knowledge-extraction-commit-types.ts').KnowledgeExtractionCommitReceipt} */
-export function validateKnowledgeExtractionCommit(input) {
+export function validateKnowledgeExtractionCommit(input: unknown): KnowledgeExtractionCommitReceipt {
+  // 结构视图只供原校验表达式读取；是否有效仍由下方完整运行时校验决定。
+  const record = input as KnowledgeExtractionCommitReceipt;
   if (
-    !input ||
-    typeof input !== 'object' ||
-    Array.isArray(input) ||
-    Object.keys(input).length !== keys.length ||
-    keys.some(key => !Object.hasOwn(input, key)) ||
-    input.schemaVersion !== 1 ||
-    input.executionMode !== 'mock' ||
-    [
-      'ownerId',
-      'datasetId',
-      'datasetEpoch',
-      'spaceId',
-      'jobId',
-      'attemptId',
-      'scopeId',
-      'requestId',
-      'modelId',
-      'promptVersion',
-      'resultSchemaVersion'
-    ].some(key => !identifier(input[key])) ||
-    typeof input.committedAt !== 'string' ||
-    !Number.isFinite(Date.parse(input.committedAt))
+    !record ||
+    typeof record !== 'object' ||
+    Array.isArray(record) ||
+    Object.keys(record).length !== keys.length ||
+    keys.some(key => !Object.hasOwn(record, key)) ||
+    record.schemaVersion !== 1 ||
+    record.executionMode !== 'mock' ||
+    (
+      [
+        'ownerId',
+        'datasetId',
+        'datasetEpoch',
+        'spaceId',
+        'jobId',
+        'attemptId',
+        'scopeId',
+        'requestId',
+        'modelId',
+        'promptVersion',
+        'resultSchemaVersion'
+      ] as const
+    ).some(key => !identifier(record[key])) ||
+    typeof record.committedAt !== 'string' ||
+    !Number.isFinite(Date.parse(record.committedAt))
   )
     invalid();
-  const request = input.request;
+  const request = record.request;
   if (
     !exact(request, ['contractVersion', 'requestId', 'scopeId', 'spaceId', 'inputHash', 'sources']) ||
     request.contractVersion !== 1 ||
@@ -99,7 +101,7 @@ export function validateKnowledgeExtractionCommit(input) {
         'markdown',
         'annotationRevisions'
       ]) ||
-      ['sourceId', 'noteId', 'noteVersionId'].some(field => !identifier(source[field])) ||
+      (['sourceId', 'noteId', 'noteVersionId'] as const).some(field => !identifier(source[field])) ||
       !digest(source.contentHash) ||
       !Number.isSafeInteger(source.start) ||
       !Number.isSafeInteger(source.end) ||
@@ -122,25 +124,29 @@ export function validateKnowledgeExtractionCommit(input) {
     characters += source.markdown.length;
   }
   if (characters > 120_000) invalid();
-  const plan = validateKnowledgeExtractionResult({ request: input.request, result: input.result });
+  const plan = validateKnowledgeExtractionResult({ request: record.request, result: record.result });
   if (
-    input.scopeId !== input.request.scopeId ||
-    input.spaceId !== input.request.spaceId ||
-    input.requestId !== plan.requestId ||
-    input.inputHash !== plan.inputHash ||
-    input.outputHash !== plan.outputHash ||
+    record.scopeId !== record.request.scopeId ||
+    record.spaceId !== record.request.spaceId ||
+    record.requestId !== plan.requestId ||
+    record.inputHash !== plan.inputHash ||
+    record.outputHash !== plan.outputHash ||
     plan.candidates.length > 20 ||
-    hashRecord(input.candidates) !== hashRecord(plan.candidates)
+    hashRecord(record.candidates) !== hashRecord(plan.candidates)
   )
     invalid();
-  const { receiptHash, ...content } = input;
+  const { receiptHash, ...content } = record;
   if (receiptHash !== hashRecord(content)) invalid();
-  return structuredClone(input);
+  return structuredClone(record);
 }
 
-export function validateKnowledgeExtractionCommitState(input = { version: 1, receipts: [] }) {
-  if (!input || input.version !== 1 || Object.keys(input).length !== 2 || !Array.isArray(input.receipts)) invalid();
-  const receipts = input.receipts.map(validateKnowledgeExtractionCommit);
+export function validateKnowledgeExtractionCommitState(input: unknown = { version: 1, receipts: [] }): {
+  version: 1;
+  receipts: KnowledgeExtractionCommitReceipt[];
+} {
+  const state = input as { version: number; receipts: unknown[] };
+  if (!state || state.version !== 1 || Object.keys(state).length !== 2 || !Array.isArray(state.receipts)) invalid();
+  const receipts = state.receipts.map(validateKnowledgeExtractionCommit);
   if (new Set(receipts.map(knowledgeExtractionCommitKey)).size !== receipts.length) invalid();
   return { version: 1, receipts };
 }

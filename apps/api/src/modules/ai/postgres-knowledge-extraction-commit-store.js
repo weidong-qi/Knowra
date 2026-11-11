@@ -3,7 +3,7 @@ import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction
 import {
   knowledgeExtractionCommitKey,
   validateKnowledgeExtractionCommit
-} from './knowledge-extraction-commit-contract.js';
+} from './knowledge-extraction-commit-contract.ts';
 import { createPostgresAiRepository } from './postgres-record-repository.ts';
 import { createAsyncKnowledgeItemService } from '../knowledge/application/postgres-async/knowledge-domain-service.js';
 import { createPostgresKnowledgeItemRepository } from '../knowledge/infrastructure/postgres/knowledge-item-repository.ts';

@@ -4,7 +4,7 @@ import {
   KNOWLEDGE_EXTRACTION_LIMITS as LIMITS,
   prepareKnowledgeExtraction,
   validateKnowledgeExtractionResult
-} from '../src/modules/knowledge/application/knowledge-extraction-contract.js';
+} from '../src/modules/knowledge/application/knowledge-extraction-contract.ts';
 import { createKnowledgeExtractionFixture } from './fixtures/knowledge-extraction.fixture.js';
 
 const code = expected => error => error.code === expected;

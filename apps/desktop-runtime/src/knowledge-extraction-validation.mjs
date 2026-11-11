@@ -1,13 +1,13 @@
 import {
   knowledgeExtractionCommitKey,
   validateKnowledgeExtractionCommit
-} from '../../api/src/modules/ai/knowledge-extraction-commit-contract.js';
+} from '../../api/src/modules/ai/knowledge-extraction-commit-contract.ts';
 import {
   EXTRACTION_MOCK_PROFILE,
   taskKey,
   validateExtractionTask
-} from '../../api/src/modules/ai/knowledge-extraction-task-contract.js';
-import { KNOWLEDGE_EXTRACTION_PROMPT_VERSION } from '../../api/src/modules/ai/knowledge-extraction-gateway.js';
+} from '../../api/src/modules/ai/knowledge-extraction-task-contract.ts';
+import { KNOWLEDGE_EXTRACTION_PROMPT_VERSION } from '../../api/src/modules/ai/knowledge-extraction-gateway.ts';
 
 const extensions = {
   commits: {

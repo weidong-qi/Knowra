@@ -9,7 +9,7 @@ import {
   mapKnowledgeArtifactProvenance
 } from '../../modules/knowledge/infrastructure/postgres/mappers.ts';
 import { validateKnowledgeArtifactProvenanceRelations } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
-import { knowledgeExtractionCommitKey } from '../../modules/ai/knowledge-extraction-commit-contract.js';
+import { knowledgeExtractionCommitKey } from '../../modules/ai/knowledge-extraction-commit-contract.ts';
 
 /** 调用方提供核心 syncRuntime 事务；迁移数据、journal 与完成标记一次提交。 */
 /**
