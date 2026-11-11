@@ -56,12 +56,12 @@ import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { createPostgresAiRepository } from './modules/ai/postgres-record-repository.ts';
 import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.js';
-import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.js';
-import { createPostgresKnowledgeExtractionTaskStore } from './modules/ai/postgres-knowledge-extraction-task-store.js';
+import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.ts';
+import { createPostgresKnowledgeExtractionTaskStore } from './modules/ai/postgres-knowledge-extraction-task-store.ts';
 import {
   createPostgresKnowledgeExtractionCommitStore,
   createPostgresKnowledgeExtractionContext
-} from './modules/ai/postgres-knowledge-extraction-commit-store.js';
+} from './modules/ai/postgres-knowledge-extraction-commit-store.ts';
 import { createPostgresAiAccessStore } from './modules/ai/postgres-access-store.js';
 import { createPostgresAiConversationStore } from './modules/ai/postgres-conversation-store.js';
 import { createPostgresBudgetAuthority } from './modules/ai/postgres-budget-authority.js';

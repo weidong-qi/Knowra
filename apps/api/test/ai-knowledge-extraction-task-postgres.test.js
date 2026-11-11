@@ -18,7 +18,7 @@ import {
   waitForExtractionReady,
   callExtractionHttp as call
 } from './fixtures/knowledge-extraction-http.fixture.js';
-import { createPostgresKnowledgeExtractionTaskStore } from '../src/modules/ai/postgres-knowledge-extraction-task-store.js';
+import { createPostgresKnowledgeExtractionTaskStore } from '../src/modules/ai/postgres-knowledge-extraction-task-store.ts';
 
 async function fixture(run, onCall) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-extraction-task-pg-')),

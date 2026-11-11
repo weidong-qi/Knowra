@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createKnowledgeModule } from './modules/knowledge/index.js';
 import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.js';
-import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.js';
+import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.ts';
 import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-handlers.js';
 import { createFileDataStore } from './infrastructure/file-data-store.js';
 import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.js';

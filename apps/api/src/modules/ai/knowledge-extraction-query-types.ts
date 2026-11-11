@@ -1,3 +1,5 @@
+import type { ExtractionTaskDescriptor } from './knowledge-extraction-task-types.ts';
+import type { KnowledgeExtractionCommitReceipt } from './knowledge-extraction-commit-types.ts';
 import type { AppError } from '../../errors/app-error.ts';
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { KnowledgeSpaceRecord } from '../knowledge/infrastructure/knowledge-space-repository.ts';
@@ -25,8 +27,8 @@ export type ExtractionPageJob = Pick<
 >;
 export type ExtractionQueryJob = Pick<AiJob, 'jobId' | 'createdAt' | 'spaceId' | 'status' | 'phase' | 'updatedAt'>;
 export interface ExtractionLoadedTask {
-  job: ExtractionQueryJob;
-  descriptor: { scopeId: string };
+  job: AiJob;
+  descriptor: ExtractionTaskDescriptor;
 }
 export interface ExtractionJobSummary extends ExtractionQueryJob {
   contractVersion: 1;
@@ -59,6 +61,12 @@ interface ExtractionQueryAttempt {
 type RawExtractionRecord = Record<string, unknown>;
 type ExtractionReadValue =
   | DatasetIdentity
+  | ExtractionTaskDescriptor
+  | ExtractionTaskDescriptor[]
+  | KnowledgeExtractionCommitReceipt
+  | AiReadEvent
+  | number
+  | void
   | KnowledgeSpaceRecord
   | NoteRecord
   | NoteVersionRecord
@@ -85,13 +93,13 @@ export interface ExtractionQueryContext<Transaction = object | undefined> {
     noteVersionRepository: { findById(id: string): Awaitable<NoteVersionRecord | null> };
   };
 }
-export interface ExtractionQueryOptions<Transaction = object | undefined> {
-  read<Result>(
-    operation: (context: ExtractionQueryContext<Transaction>) => ExtractionQuerySteps<Result>,
-    jobId?: string
-  ): Promise<Result>;
-  load(context: ExtractionQueryContext<Transaction>, jobId: string): ExtractionQuerySteps<ExtractionLoadedTask>;
-  view(context: ExtractionQueryContext<Transaction>, jobId: string): ExtractionQuerySteps<{ candidateIds: string[] }>;
+export interface ExtractionQueryOptions<
+  Transaction = object | undefined,
+  Context extends ExtractionQueryContext<Transaction> = ExtractionQueryContext<Transaction>
+> {
+  read<Result>(operation: (context: Context) => ExtractionQuerySteps<Result>, jobId?: string): Promise<Result>;
+  load(context: Context, jobId: string): ExtractionQuerySteps<ExtractionLoadedTask>;
+  view(context: Context, jobId: string): ExtractionQuerySteps<{ candidateIds: string[] }>;
   store: { listPage?(input: ExtractionPage, transaction: Transaction): Awaitable<ExtractionPageRow[]> };
   ownerId: string;
   clock(): Date;

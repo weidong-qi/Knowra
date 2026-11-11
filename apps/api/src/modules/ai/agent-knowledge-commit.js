@@ -2,7 +2,7 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.js';
 import { hashRecord } from './record-contract.ts';
 import { runAsync, runSync } from './action-plan.js';
-import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.js';
+import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.ts';
 import { assertAiReadableNote } from './note-privacy.js';
 import {
   createKnowledgeArtifactProvenanceFromProposal,

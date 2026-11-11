@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createKnowledgeExtractionTaskService } from '../../src/modules/ai/knowledge-extraction-task-service.js';
+import { createKnowledgeExtractionTaskService } from '../../src/modules/ai/knowledge-extraction-task-service.ts';
 import { createMaintenanceGate } from '../../src/infrastructure/maintenance-gate.ts';
 import { createServer } from '../../src/server.js';
 

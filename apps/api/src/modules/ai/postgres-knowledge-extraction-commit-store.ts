@@ -1,4 +1,14 @@
-import { createAppError } from '../../errors/app-error.js';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { KnowledgeExtractionCommitReceipt } from './knowledge-extraction-commit-types.ts';
+import type { ExtractionSqlTransaction, PostgresExtractionStoreOptions } from './knowledge-extraction-host-types.ts';
+interface CommitRow {
+  owner_id: unknown;
+  dataset_id: unknown;
+  job_id: unknown;
+  receipt_json: string;
+  receipt_hash: unknown;
+}
+import { createAppError } from '../../errors/app-error.ts';
 import { PERSISTENCE_TRANSACTION_ACTIVE } from '../../infrastructure/transaction-context.ts';
 import {
   knowledgeExtractionCommitKey,
@@ -14,11 +24,15 @@ import { createPostgresNoteVersionRepository } from '../knowledge/infrastructure
 import { createPostgresKnowledgeSpaceRepository } from '../knowledge/infrastructure/postgres/knowledge-space-repository.ts';
 import { createPostgresAnalysisScopeRepository } from '../knowledge/infrastructure/postgres/annotation-support-repositories.ts';
 
-export function createPostgresKnowledgeExtractionCommitStore({ client, ownerId }) {
+export function createPostgresKnowledgeExtractionCommitStore({ client, ownerId }: PostgresExtractionStoreOptions) {
   return {
     supportsAsync: true,
-    runTransaction(operation, input) {
-      if (client[PERSISTENCE_TRANSACTION_ACTIVE]) throw new TypeError('提炼接纳必须拥有最外层事务，不能嵌套提交。');
+    runTransaction<Result>(
+      operation: (tx: ExtractionSqlTransaction) => Result | PromiseLike<Result>,
+      input: { jobId: string }
+    ) {
+      if ((client as typeof client & { [PERSISTENCE_TRANSACTION_ACTIVE]?: boolean })[PERSISTENCE_TRANSACTION_ACTIVE])
+        throw new TypeError('提炼接纳必须拥有最外层事务，不能嵌套提交。');
       return client.$transaction(
         async tx => {
           await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(1266775634, 32)::text');
@@ -40,8 +54,8 @@ export function createPostgresKnowledgeExtractionCommitStore({ client, ownerId }
         { isolationLevel: 'Serializable', maxWait: 10000, timeout: 60000 }
       );
     },
-    async get(input, tx = client) {
-      const [row] = await tx.$queryRawUnsafe(
+    async get(input: Pick<DatasetIdentity, 'datasetId'> & { jobId: string }, tx: ExtractionSqlTransaction = client) {
+      const [row] = await tx.$queryRawUnsafe<CommitRow[]>(
         `SELECT * FROM knowledge_extraction_commits
         WHERE owner_id = $1 AND dataset_id = $2 AND job_id = $3`,
         ownerId,
@@ -65,7 +79,7 @@ export function createPostgresKnowledgeExtractionCommitStore({ client, ownerId }
       }
       return receipt;
     },
-    insert: (receipt, tx) =>
+    insert: (receipt: KnowledgeExtractionCommitReceipt, tx: ExtractionSqlTransaction) =>
       tx.$executeRawUnsafe(
         `INSERT INTO knowledge_extraction_commits
       (owner_id, dataset_id, job_id, receipt_hash, receipt_json) VALUES ($1, $2, $3, $4, $5)`,
@@ -79,10 +93,11 @@ export function createPostgresKnowledgeExtractionCommitStore({ client, ownerId }
 }
 
 /** AI repository 的事务 API 绑定同一连接，绝不另开业务之外的提交。 */
-export function createPostgresKnowledgeExtractionContext(tx, ownerId) {
+export function createPostgresKnowledgeExtractionContext(tx: PostgresExtractionContextTransaction, ownerId: string) {
   const boundClient = new Proxy(tx, {
     get(target, key) {
-      if (key === '$transaction') return operation => operation(tx);
+      if (key === '$transaction')
+        return <Result>(operation: (db: PostgresExtractionContextTransaction) => Result) => operation(tx);
       const value = Reflect.get(target, key);
       return typeof value === 'function' ? value.bind(target) : value;
     }
@@ -96,20 +111,30 @@ export function createPostgresKnowledgeExtractionContext(tx, ownerId) {
     knowledgeSpaceRepository: createPostgresKnowledgeSpaceRepository({ db: tx }),
     analysisScopeRepository: createPostgresAnalysisScopeRepository({ db: tx })
   };
-  const getTombstone = async (collection, id) => {
+  const getTombstone = async (collection: string, id: string) => {
     const journal = await tx.syncJournal.findUnique({ where: { ownerId } });
     return journal?.payload?.tombstones?.[JSON.stringify([collection, id])] ?? null;
   };
   return {
     transaction: tx,
     repositories,
-    aiRepository: createPostgresAiRepository({ client: boundClient, ownerId }),
+    aiRepository: createPostgresAiRepository({
+      client: boundClient as typeof boundClient & import('./record-infrastructure-types.ts').AiSqlClient,
+      ownerId
+    }),
     knowledgeItemService: createAsyncKnowledgeItemService({
       repository: repositories.knowledgeItemRepository,
       evidenceRepository: repositories.knowledgeEvidenceRepository,
       ...repositories,
       getTombstone,
-      runTransaction: operation =>
+      runTransaction: <Result>(
+        operation: (
+          context: typeof repositories & {
+            itemRepository: typeof repositories.knowledgeItemRepository;
+            evidenceRepository: typeof repositories.knowledgeEvidenceRepository;
+          }
+        ) => Result
+      ) =>
         operation({
           itemRepository: repositories.knowledgeItemRepository,
           evidenceRepository: repositories.knowledgeEvidenceRepository,
@@ -118,3 +143,21 @@ export function createPostgresKnowledgeExtractionContext(tx, ownerId) {
     })
   };
 }
+
+type RepositoryDatabase<Factory extends (options: never) => object> = Parameters<Factory>[0] extends { db: infer Db }
+  ? Db
+  : never;
+type PostgresExtractionContextTransaction = ExtractionSqlTransaction &
+  RepositoryDatabase<typeof createPostgresKnowledgeItemRepository> &
+  RepositoryDatabase<typeof createPostgresKnowledgeEvidenceRepository> &
+  RepositoryDatabase<typeof createPostgresKnowledgeArtifactProvenanceRepository> &
+  RepositoryDatabase<typeof createPostgresNoteRepository> &
+  RepositoryDatabase<typeof createPostgresNoteVersionRepository> &
+  RepositoryDatabase<typeof createPostgresKnowledgeSpaceRepository> &
+  RepositoryDatabase<typeof createPostgresAnalysisScopeRepository> & {
+    syncJournal: {
+      findUnique(input: {
+        where: { ownerId: string };
+      }): PromiseLike<{ payload?: { tombstones?: Record<string, unknown> } } | null>;
+    };
+  };

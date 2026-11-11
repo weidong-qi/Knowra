@@ -30,7 +30,7 @@ v1 的 AIJob 没有 scopeId/executionMode，且 resultJson 仅用于问答。本
 | 应用/调度 | `apps/api/src/modules/ai/knowledge-extraction-task-{service,context,lifecycle}.js`、`knowledge-extraction-task-contract.ts` 和 `knowledge-extraction-mock-worker.ts`；两个 app factory 仅在显式注入时装配。 |
 | JSON | `file-data-store.js` 新增 `aiKnowledgeExtractionTasks: {version:1,tasks:[]}`，与 AI 记录、业务状态及 journal 同一最外层事务、最终原子替换。失败恢复全部内存记录，读写复制描述；未知/损坏状态保留原文并仅关闭本切片。 |
 | SQLite | `knowledge-extraction-task-store.mjs` 新增 `ai_knowledge_extraction_tasks` 及独立 `metadata.aiKnowledgeExtractionTasksVersion=1`；升级前保护备份，DDL/标记同事务，不改 AI user_version。创建/领取/取消/恢复共享既有 BEGIN IMMEDIATE。 |
-| PostgreSQL | migration `i_knowledge_extraction_tasks` 增加 owner/dataset/job 主键、TEXT 描述表，无业务外键；`postgres-knowledge-extraction-task-store.js` 复用 02A 宿主事务与核心 advisory 锁，AI repository 绑定同一连接。实际工厂外层仍是 syncRuntime 的 ReadCommitted，不因内层参数宣称升级了隔离级别。 |
+| PostgreSQL | migration `i_knowledge_extraction_tasks` 增加 owner/dataset/job 主键、TEXT 描述表，无业务外键；`postgres-knowledge-extraction-task-store.ts` 复用 02A 宿主事务与核心 advisory 锁，AI repository 绑定同一连接。实际工厂外层仍是 syncRuntime 的 ReadCommitted，不因内层参数宣称升级了隔离级别。 |
 
 私有任务描述不进入普通业务快照/同步；完整 JSON 文件和 SQLite 整库备份保留它。损坏/未来描述旁普通笔记仍可写，不能清空扩展“修复”错误。02A 的核心首份结果和候选不依赖描述表外键。独立恢复预检 validator、跨端 AI 元数据同步和来源清理引用保护仍归 AI-03-05；本批不修改备份独立恢复实现。
 

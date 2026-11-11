@@ -10,7 +10,7 @@ import {
 import { validateKnowledgeExtractionCommit } from './knowledge-extraction-commit-contract.ts';
 import { createKnowledgeArtifactProvenanceFromReceipt } from '../../infrastructure/migration/knowledge-artifact-provenance-backfill.js';
 import { isAiReadableNote } from './note-privacy.js';
-import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.js';
+import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.ts';
 
 const fail = (code, message) => {
   throw createAppError(code, message, 409);
