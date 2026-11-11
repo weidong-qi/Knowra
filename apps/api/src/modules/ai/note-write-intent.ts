@@ -1,4 +1,4 @@
-import { actionError } from './action-state.js';
+import { actionError } from './action-state.ts';
 import organizeParameters from './contracts/note-organize-v1.schema.json' with { type: 'json' };
 import { NOTE_WRITE_TOOLS } from './note-plan.ts';
 export type WriteIntent =

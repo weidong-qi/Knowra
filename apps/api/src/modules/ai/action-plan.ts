@@ -5,7 +5,7 @@ import { createNoteWritePlan } from './note-plan.ts';
 import { hashRecord } from './record-contract.ts';
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { buildUpdateNoteDto } from '../knowledge/application/dto/note.dto.ts';
-import { actionError } from './action-state.js';
+import { actionError } from './action-state.ts';
 
 export const image = (note: PlanNote) => ({
   id: note.id,

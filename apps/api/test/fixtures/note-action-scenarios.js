@@ -3,7 +3,7 @@ import { calculateContentHash } from '../../src/modules/knowledge/domain/note-ve
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from '../../src/modules/ai/record-contract.ts';
 import { finalizePlan } from '../../src/modules/ai/action-plan.ts';
-import { validateActionState } from '../../src/modules/ai/action-state.js';
+import { validateActionState } from '../../src/modules/ai/action-state.ts';
 
 export function noteActionScenarios(withFixture) {
   return [

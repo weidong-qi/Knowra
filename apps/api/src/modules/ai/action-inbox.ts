@@ -1,11 +1,30 @@
+import type { ActionRecord, ActionState, ActionPlan, AssistantMessageSource } from './action-state-types.ts';
+import type {
+  ActionInboxOptions,
+  InboxInput,
+  InboxOrigin,
+  InboxFlow,
+  MessageSourceGuardOptions,
+  MessageSourceScope,
+  GuardFlow,
+  Awaitable
+} from './action-inbox-types.ts';
+import type { ActionReference } from './note-plan-types.ts';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { AiConversationTurn, AiAccessPolicy, AiRequestManifest, AiRunGrant } from './private-record-types.ts';
+import type { SourceReference } from './access-service-types.ts';
+import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
+import type { FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
+import type { AppError } from '../../errors/app-error.ts';
 import { assertAiReadableNote } from './note-privacy.ts';
 import { hashRecord } from './record-contract.ts';
-import { actionError } from './action-state.js';
+import { actionError } from './action-state.ts';
 import { buildActionPlan, finalizePlan } from './action-plan.ts';
 
 const pending = ['awaitingApproval', 'authorized', 'conflicted', 'expired'];
-const validId = value => typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value;
-const requireInput = (input, keys) => {
+const validId = (value: unknown) =>
+  typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value;
+const requireInput = (input: InboxInput, keys: string[]) => {
   if (
     !input ||
     Object.keys(input).some(key => !keys.includes(key)) ||
@@ -14,13 +33,13 @@ const requireInput = (input, keys) => {
   )
     actionError('AI_REQUEST_INVALID', '成果修订或重新预览请求无效。', 422);
 };
-const eventFor = (row, input, kind) => {
+const eventFor = (row: ActionRecord, input: InboxInput, kind: 'revise' | 'repreview') => {
   const event = row.inboxEvents?.find(event => event.requestId === input.requestId);
   if (event && (event.kind !== kind || event.inputHash !== hashRecord(input)))
     actionError('AI_IDEMPOTENCY_CONFLICT', '相同成果请求 ID 的输入已变化。');
   return event;
 };
-const ensurePending = (row, input) => {
+const ensurePending = (row: ActionRecord, input: InboxInput) => {
   if (row.plan.planHash !== input.planHash) actionError('AI_ACTION_PLAN_CHANGED', '成果已修订，请查看当前差异。');
   if (!pending.includes(row.status)) actionError('AI_ACTION_CONFLICT', '成果当前不可修订或重新预览。');
 };
@@ -36,20 +55,26 @@ export function createActionInboxMethods({
   references,
   verifyDraft,
   verifyRevisionTurn
-}) {
-  async function update(actionId, input, kind, build, origin = null) {
+}: ActionInboxOptions) {
+  async function update(
+    actionId: string,
+    input: InboxInput,
+    kind: 'revise' | 'repreview',
+    build?: (row: ActionRecord) => Awaitable<ActionPlan>,
+    origin: InboxOrigin | null = null
+  ) {
     await service.get(actionId);
     return store.transaction(() =>
       run(
-        (function* () {
-          const state = yield store.read(),
+        (function* (): InboxFlow<ActionRecord> {
+          const state = (yield store.read()) as ActionState,
             row = rowFor(state, actionId, ownerId);
           if (eventFor(row, input, kind)) return row;
           ensurePending(row, input);
-          yield verifyDraft(row, state, yield store.identity());
-          const nextPlan = build ? yield build(row) : row.plan;
+          yield verifyDraft(row, state, (yield store.identity()) as DatasetIdentity);
+          const nextPlan = build ? ((yield build(row)) as ActionPlan) : row.plan;
           if (origin) yield verifyRevisionTurn(origin, row);
-          return yield store.write((current, identity) => {
+          return (yield store.write((current, identity) => {
             const latest = rowFor(current, actionId, ownerId);
             if (eventFor(latest, input, kind)) return latest;
             ensurePending(latest, input);
@@ -92,13 +117,13 @@ export function createActionInboxMethods({
               ...(origin ? { originTurnId: origin.turnId, originGeneration: origin.leaseGeneration } : {})
             });
             return latest;
-          });
+          })) as ActionRecord;
         })()
       )
     );
   }
   const methods = {
-    async listInbox(spaceId) {
+    async listInbox(spaceId: string | null) {
       // service.list performs owner/space authorization, but intentionally caps execution-history rows.
       await service.list(spaceId);
       const identity = await store.identity();
@@ -124,14 +149,16 @@ export function createActionInboxMethods({
         })
       );
     },
-    async repreview(actionId, input) {
+    async repreview(actionId: string, rawInput: unknown) {
+      const input = rawInput as InboxInput;
       requireInput(input, ['planHash', 'requestId']);
       return update(actionId, input, 'repreview');
     },
-    async reviseForAssistantTurn(actionId, input, origin) {
+    async reviseForAssistantTurn(actionId: string, input: unknown, origin: InboxOrigin) {
       return methods.revise(actionId, input, origin);
     },
-    async revise(actionId, input, origin = null) {
+    async revise(actionId: string, rawInput: unknown, origin: InboxOrigin | null = null) {
+      const input = rawInput as InboxInput;
       requireInput(input, ['planHash', 'requestId', 'arguments']);
       if (!input.arguments || typeof input.arguments !== 'object' || Array.isArray(input.arguments))
         actionError('AI_REQUEST_INVALID', '成果修订内容无效。', 422);
@@ -141,14 +168,14 @@ export function createActionInboxMethods({
         'revise',
         row =>
           run(
-            (function* () {
+            (function* (): InboxFlow<ActionPlan> {
               const notes = row.plan.items
                 .filter(item => item.before)
-                .map(item => ({ ...item.before, updatedAt: item.baseline.expectedUpdatedAt }));
-              const args = structuredClone(input.arguments);
+                .map(item => ({ ...item.before!, updatedAt: item.baseline.expectedUpdatedAt }));
+              const args = structuredClone(input.arguments!);
               if (row.plan.toolName === 'notes_propose_organize' && Array.isArray(args.changes)) {
                 const order = new Map(row.plan.items.map((item, index) => [item.after.id, index]));
-                args.changes.sort((left, right) => order.get(left.noteId) - order.get(right.noteId));
+                args.changes.sort((left, right) => order.get(left.noteId)! - order.get(right.noteId)!);
               }
               const targets =
                 row.plan.toolName === 'notes_propose_organize'
@@ -159,13 +186,13 @@ export function createActionInboxMethods({
                 hashRecord([...(targets ?? [])].sort()) !== hashRecord(row.plan.items.map(item => item.after.id).sort())
               )
                 actionError('AI_SCOPE_FORBIDDEN', '修订不得更换成果目标。', 403);
-              const changes = row.plan.toolName === 'notes_propose_organize' ? args.changes : [args];
-              const refs = yield run(
+              const changes = row.plan.toolName === 'notes_propose_organize' ? args.changes! : [args];
+              const refs = (yield run(
                 references(row.spaceId, {
                   folders: [...notes.map(note => note.folderId), ...changes.map(change => change.folderId)],
                   tags: [...notes.flatMap(note => note.tagIds), ...changes.flatMap(change => change.tagIds ?? [])]
                 })
-              );
+              )) as ActionReference[];
               const built = buildActionPlan({
                 toolName: row.plan.toolName,
                 args,
@@ -175,7 +202,7 @@ export function createActionInboxMethods({
                   ...row,
                   identity: Object.fromEntries(
                     ['ownerId', 'actorId', 'datasetId', 'datasetEpoch', 'spaceId', 'requestId', 'operationId'].map(
-                      key => [key, row[key]]
+                      key => [key, row[key as keyof ActionRecord]]
                     )
                   ),
                   targetNoteId: row.plan.items[0].after.id,
@@ -187,12 +214,12 @@ export function createActionInboxMethods({
               });
               const { planHash: _hash, ...content } = structuredClone(built);
               for (const item of content.items) {
-                const original = row.plan.items.find(original => original.after.id === item.after.id);
+                const original = row.plan.items.find(original => original.after.id === item.after.id)!;
                 item.before = structuredClone(original.before);
                 item.baseline = structuredClone(original.baseline);
                 if (original.after.aiVisibility === undefined) delete item.after.aiVisibility;
               }
-              return finalizePlan(content);
+              return finalizePlan(content) as ActionPlan;
             })()
           ),
         origin
@@ -209,12 +236,17 @@ export function createAssistantMessageSourceGuard({
   repositories: repos,
   ownerId,
   now
-}) {
-  const boundary = (row, scope) =>
-    row && row.ownerId === ownerId && ['datasetId', 'datasetEpoch', 'spaceId'].every(key => row[key] === scope[key]);
-  const refsHash = refs => hashRecord([...new Set(refs.map(hashRecord))].sort());
+}: MessageSourceGuardOptions) {
+  const boundary = (row: (MessageSourceScope & { ownerId: string }) | null | undefined, scope: MessageSourceScope) =>
+    row &&
+    row.ownerId === ownerId &&
+    ['datasetId', 'datasetEpoch', 'spaceId'].every(
+      key => row[key as keyof MessageSourceScope] === scope[key as keyof MessageSourceScope]
+    );
+  const refsHash = (refs: SourceReference[]) => hashRecord([...new Set(refs.map(hashRecord))].sort());
   const denied = () => actionError('AI_ACTION_GRANT_REVOKED', '助手消息来源授权已失效或记录不完整，请重新生成。', 403);
-  function* verify(source, scope) {
+  function* verify(rawSource: unknown, scope: MessageSourceScope): GuardFlow {
+    const source = rawSource as AssistantMessageSource;
     if (
       source?.sourceKind !== 'assistantMessage' ||
       !/^[a-f0-9]{64}$/.test(source.contentHash) ||
@@ -228,19 +260,19 @@ export function createAssistantMessageSourceGuard({
       source.sourceFree === Boolean(source.sourceRefs.length)
     )
       denied();
-    const turn = yield conversationStore?.peekTurn(source.turnId);
+    const turn = (yield conversationStore?.peekTurn(source.turnId)) as AiConversationTurn;
     if (
       !boundary(turn, scope) ||
-      turn.status !== 'succeeded' ||
-      turn.conversationId !== source.conversationId ||
-      turn.assistantMessageId !== source.messageId ||
-      turn.leaseGeneration !== source.originGeneration ||
-      (turn.requestedPolicyId ?? null) !== source.policyId
+      turn!.status !== 'succeeded' ||
+      turn!.conversationId !== source.conversationId ||
+      turn!.assistantMessageId !== source.messageId ||
+      turn!.leaseGeneration !== source.originGeneration ||
+      (turn!.requestedPolicyId ?? null) !== source.policyId
     )
       denied();
-    let policy = null;
+    let policy: AiAccessPolicy | null = null;
     if (source.policyId) {
-      policy = yield accessStore?.peek('aiAccessPolicy', source.policyId);
+      policy = (yield accessStore?.peek('aiAccessPolicy', source.policyId)) as AiAccessPolicy;
       if (
         !boundary(policy, scope) ||
         policy.actorId !== ownerId ||
@@ -251,19 +283,19 @@ export function createAssistantMessageSourceGuard({
       )
         denied();
     } else if (source.policyRevision !== null || source.sourceRefs.length || source.provenanceManifestId) denied();
-    let manifest = null;
+    let manifest: AiRequestManifest | null = null;
     if (source.provenanceManifestId) {
-      manifest = yield accessStore?.peek('aiRequestManifest', source.provenanceManifestId);
-      const grant = manifest ? yield accessStore?.peek('aiRunGrant', manifest.grantId) : null;
+      manifest = (yield accessStore?.peek('aiRequestManifest', source.provenanceManifestId)) as AiRequestManifest;
+      const grant = manifest ? ((yield accessStore?.peek('aiRunGrant', manifest.grantId)) as AiRunGrant) : null;
       if (
         !boundary(manifest, scope) ||
         !boundary(grant, scope) ||
-        grant.actorId !== ownerId ||
-        grant.conversationId !== source.conversationId ||
+        grant!.actorId !== ownerId ||
+        grant!.conversationId !== source.conversationId ||
         manifest.policyId !== source.policyId ||
         manifest.policyRevision !== source.policyRevision ||
-        grant.policyId !== source.policyId ||
-        grant.policyRevision !== source.policyRevision ||
+        grant!.policyId !== source.policyId ||
+        grant!.policyRevision !== source.policyRevision ||
         hashRecord(manifest) !== source.manifestHash ||
         refsHash([...manifest.sources, ...manifest.historySources]) !== refsHash(source.sourceRefs)
       )
@@ -279,11 +311,12 @@ export function createAssistantMessageSourceGuard({
         ]
       : [];
     for (const ref of [...source.sourceRefs, ...catalogIds.map(noteId => ({ noteId }))]) {
-      const note = yield repos.noteRepository.findById(ref.noteId);
+      const note = (yield repos.noteRepository.findById(ref.noteId)) as NoteRecord;
       try {
         assertAiReadableNote(note);
       } catch (error) {
-        if (error.code === 'AI_SCOPE_FORBIDDEN') actionError(error.code, error.message, 403);
+        if ((error as AppError).code === 'AI_SCOPE_FORBIDDEN')
+          actionError((error as AppError).code, (error as AppError).message, 403);
         throw error;
       }
       if (
@@ -293,15 +326,15 @@ export function createAssistantMessageSourceGuard({
         (policy.scope.kind === 'fixed' && !policy.scope.noteIds.includes(note.id))
       )
         denied();
-      if (policy.scope.kind === 'folder') {
+      if (policy!.scope.kind === 'folder') {
         let folderId = note.folderId,
           allowed = false;
         const seen = new Set();
         while (folderId && !seen.has(folderId)) {
           seen.add(folderId);
-          const folder = yield repos.folderRepository.findById(folderId);
+          const folder = (yield repos.folderRepository.findById(folderId)) as FolderRecord | null;
           if (!folder || folder.deletedAt || folder.spaceId !== scope.spaceId) break;
-          if (folderId === policy.scope.folderId) {
+          if (folderId === policy!.scope.folderId) {
             allowed = true;
             break;
           }
@@ -313,48 +346,51 @@ export function createAssistantMessageSourceGuard({
   }
   return {
     verify,
-    async resolve(input, scope) {
+    async resolve(
+      input: { conversationId: string; sourceMessageId: string },
+      scope: MessageSourceScope
+    ): Promise<AssistantMessageSource> {
       const conversation = await conversationStore?.getConversation(input.conversationId);
       const message =
         conversation &&
-        (await conversationStore.listMessages(input.conversationId, 0, 100_000)).find(
+        (await conversationStore!.listMessages(input.conversationId, 0, 100_000)).find(
           row => row.messageId === input.sourceMessageId
         );
       if (
         !boundary(conversation, scope) ||
         !boundary(message, scope) ||
-        message.role !== 'assistant' ||
-        message.conversationId !== input.conversationId ||
-        typeof message.sourceFree !== 'boolean' ||
-        !Array.isArray(message.sourceRefs) ||
-        message.sourceFree === Boolean(message.sourceRefs.length)
+        message!.role !== 'assistant' ||
+        message!.conversationId !== input.conversationId ||
+        typeof message!.sourceFree !== 'boolean' ||
+        !Array.isArray(message!.sourceRefs) ||
+        message!.sourceFree === Boolean(message!.sourceRefs.length)
       )
         actionError('AI_ACTION_SOURCE_INVALID', '对话来源不可用。', 422);
-      const turn = await conversationStore.peekTurn(message.turnId);
+      const turn = await conversationStore!.peekTurn(message!.turnId);
       if (
         !boundary(turn, scope) ||
-        turn.status !== 'succeeded' ||
-        turn.conversationId !== input.conversationId ||
-        turn.assistantMessageId !== message.messageId
+        turn!.status !== 'succeeded' ||
+        turn!.conversationId !== input.conversationId ||
+        turn!.assistantMessageId !== message!.messageId
       )
         denied();
-      const manifest = message.provenanceManifestId
-        ? await accessStore?.get('aiRequestManifest', message.provenanceManifestId)
+      const manifest = message!.provenanceManifestId
+        ? await accessStore?.get('aiRequestManifest', message!.provenanceManifestId)
         : null;
-      const policy = turn.requestedPolicyId ? await accessStore?.get('aiAccessPolicy', turn.requestedPolicyId) : null;
+      const policy = turn!.requestedPolicyId ? await accessStore?.get('aiAccessPolicy', turn!.requestedPolicyId) : null;
       if (
-        message.provenanceManifestId &&
-        (!manifest || refsHash([...manifest.sources, ...manifest.historySources]) !== refsHash(message.sourceRefs))
+        message!.provenanceManifestId &&
+        (!manifest || refsHash([...manifest.sources, ...manifest.historySources]) !== refsHash(message!.sourceRefs))
       )
         denied();
-      const source = {
+      const source: AssistantMessageSource = {
         sourceKind: 'assistantMessage',
         conversationId: input.conversationId,
-        messageId: message.messageId,
-        turnId: message.turnId,
-        originGeneration: turn.leaseGeneration,
-        contentHash: hashRecord(message.content),
-        sourceFree: message.sourceFree,
+        messageId: message!.messageId,
+        turnId: message!.turnId,
+        originGeneration: turn!.leaseGeneration,
+        contentHash: hashRecord(message!.content),
+        sourceFree: message!.sourceFree,
         sourceRefs: structuredClone(
           manifest
             ? [
@@ -362,11 +398,11 @@ export function createAssistantMessageSourceGuard({
                   [...manifest.sources, ...manifest.historySources].map(ref => [hashRecord(ref), ref])
                 ).values()
               ]
-            : message.sourceRefs
+            : message!.sourceRefs
         ),
-        provenanceManifestId: message.provenanceManifestId ?? null,
+        provenanceManifestId: message!.provenanceManifestId ?? null,
         manifestHash: manifest ? hashRecord(manifest) : null,
-        policyId: turn.requestedPolicyId ?? null,
+        policyId: turn!.requestedPolicyId ?? null,
         policyRevision: policy?.revision ?? null
       };
       return source;

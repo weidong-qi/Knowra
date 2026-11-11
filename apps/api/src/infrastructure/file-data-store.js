@@ -3,7 +3,7 @@ import {
   validateTaskWorkspaceSnapshot,
   rebindTaskWorkspaceSnapshot
 } from '../modules/task-workspaces/storage-validation.ts';
-import { createJsonActionStore } from '../modules/ai/action-state.js';
+import { createJsonActionStore } from '../modules/ai/action-state.ts';
 import {
   planHistoryRetention,
   applyHistoryRetentionPlan,

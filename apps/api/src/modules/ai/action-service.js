@@ -1,10 +1,10 @@
 import { assertAiReadableNote } from './note-privacy.ts';
-import { createActionInboxMethods, createAssistantMessageSourceGuard } from './action-inbox.js';
+import { createActionInboxMethods, createAssistantMessageSourceGuard } from './action-inbox.ts';
 import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.ts';
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
-import { actionError, actionIdentityKeys, DRAFT_LEASE_MS } from './action-state.js';
+import { actionError, actionIdentityKeys, DRAFT_LEASE_MS } from './action-state.ts';
 import { assertBaseline, baseline, buildActionPlan, finalizePlan, image, runAsync, runSync } from './action-plan.ts';
 import { reuseCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';
 

@@ -23,11 +23,7 @@ export interface PrivateStoreOptions {
   ownerId: string;
 }
 /** 存储适配器只传递完整状态；动作与草稿内容由动作账本负责校验。 */
-export interface ActionState {
-  version: number;
-  actions: object[];
-  drafts: object[];
-}
+export type { ActionState } from './action-state-types.ts';
 export type AccessKind = 'aiAccessPolicy' | 'aiRunGrant' | 'aiRequestManifest';
 /** 此视图仅描述持久适配器核对的索引；校验器保留记录的其余字段。 */
 export interface AccessIndexRecord extends DatasetIdentity {
