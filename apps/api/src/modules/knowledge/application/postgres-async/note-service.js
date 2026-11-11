@@ -1,7 +1,7 @@
 import { prepareAnnotationChange } from '../annotation-change-context.ts';
 import { Note } from '../../domain/note.ts';
 import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.ts';
-import { createNoteSummary } from '../note-summary.js';
+import { createNoteSummary } from '../note-summary.ts';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 import { createAsyncNoteAssociationOperations } from './note-association-operations.js';
 import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from '../note-link-relations.js';

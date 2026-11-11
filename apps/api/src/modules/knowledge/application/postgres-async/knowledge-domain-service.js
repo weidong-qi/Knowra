@@ -10,7 +10,7 @@ import {
   buildCreateKnowledgeItemDto,
   buildUpdateKnowledgeItemDto
 } from '../dto/knowledge-item.dto.ts';
-import { assertKnowledgeItemConfirmable } from '../formal-asset-validation.js';
+import { assertKnowledgeItemConfirmable } from '../formal-asset-validation.ts';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 
 const now = () => new Date().toISOString();

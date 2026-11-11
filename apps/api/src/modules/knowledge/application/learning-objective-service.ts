@@ -1,30 +1,36 @@
 import { LearningObjective } from '../domain/learning-objective.ts';
 import { buildCreateLearningObjectiveDto, buildUpdateLearningObjectiveDto } from './dto/learning-objective.dto.ts';
-import { assertLearningObjectiveConfirmable } from './formal-asset-validation.js';
+import { assertLearningObjectiveConfirmable } from './formal-asset-validation.ts';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 
-import { assertLearningObjectiveBaseline, nextLearningObjectiveTimestamp } from './learning-objective-concurrency.js';
+import { assertLearningObjectiveBaseline, nextLearningObjectiveTimestamp } from './learning-objective-concurrency.ts';
 
-/** @param {import('./service-dependencies.ts').LearningObjectiveDependencies} dependencies */
+import type { LearningObjectiveDependencies } from './service-dependencies.ts';
+import type { LearningObjectiveDtoInput } from './dto/learning-objective.dto.ts';
+import type { LearningObjectiveConstructorInput } from '../domain/learning-objective.ts';
+import type { LearningObjectiveReviewInput } from './learning-objective-concurrency.ts';
+import type { LearningObjectiveServiceRecord as ObjectiveRecord } from './service-dependencies.ts';
+type ObjectiveInput = LearningObjectiveDtoInput & LearningObjectiveReviewInput;
+
 export function createLearningObjectiveService({
   repository,
   knowledgeItemRepository,
   getTombstone = null,
   onObjectiveInvalidated = null,
   runTransaction = operation => operation()
-} = {}) {
+}: LearningObjectiveDependencies = {}) {
   if (!repository || !knowledgeItemRepository) throw new TypeError('LearningObjective repositories are required');
 
-  function requireObjective(id, { includeArchived = false } = {}) {
-    const objective = /** @type {LearningObjective} */ (repository.findById(id));
+  function requireObjective(id: string, { includeArchived = false } = {}) {
+    const objective = repository!.findById(id) as LearningObjective;
     if (!objective || objective.deletedAt || (!includeArchived && objective.reviewStatus === 'archived')) {
       throw notFoundError('LEARNING_OBJECTIVE_NOT_FOUND', 'LearningObjective not found');
     }
     return objective;
   }
 
-  function requireKnowledgeItem(id, { confirmed = false } = {}) {
-    const item = knowledgeItemRepository.findById(id);
+  function requireKnowledgeItem(id: string, { confirmed = false } = {}) {
+    const item = knowledgeItemRepository!.findById(id);
     if (!item || item.deletedAt || item.reviewStatus === 'archived') {
       throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
     }
@@ -37,30 +43,35 @@ export function createLearningObjectiveService({
     return item;
   }
 
-  function assertConfirmable(objective) {
-    const item = knowledgeItemRepository.findById(objective.knowledgeItemId);
+  function assertConfirmable(
+    objective: Pick<ObjectiveRecord, 'knowledgeItemId' | 'objective' | 'actionVerb' | 'cognitiveLevel'>
+  ) {
+    const item = knowledgeItemRepository!.findById(objective.knowledgeItemId);
     return assertLearningObjectiveConfirmable(objective, item);
   }
 
-  function assertObjectiveIdAvailable(id) {
+  function assertObjectiveIdAvailable(id: string) {
     if (getTombstone?.('learningObjectives', id))
       throw conflictError('LEARNING_OBJECTIVE_ID_DELETED', '已清理的学习目标 ID 不能复用');
-    if (repository.findById(id)) {
+    if (repository!.findById(id)) {
       throw conflictError('LEARNING_OBJECTIVE_ID_CONFLICT', 'A LearningObjective with the same id already exists');
     }
   }
 
-  function saveNew(objective) {
-    return repository.create?.(objective) ?? repository.save(objective);
+  function saveNew(objective: ObjectiveRecord) {
+    return repository!.create?.(objective) ?? repository!.save(objective);
   }
 
-  function notifyIfInvalidated(previous, next) {
+  function notifyIfInvalidated(
+    previous: Pick<ObjectiveRecord, 'reviewStatus'> | null | undefined,
+    next: Pick<ObjectiveRecord, 'id' | 'reviewStatus'>
+  ) {
     if (previous?.reviewStatus === 'confirmed' && next?.reviewStatus !== 'confirmed') {
       onObjectiveInvalidated?.(next.id);
     }
   }
 
-  function createCandidate(input = {}) {
+  function createCandidate(input: ObjectiveInput = {}) {
     const dto = buildCreateLearningObjectiveDto(input);
     return runTransaction(() => {
       const item = requireKnowledgeItem(dto.knowledgeItemId, { confirmed: Object.hasOwn(input, 'reviewBaseline') });
@@ -70,15 +81,13 @@ export function createLearningObjectiveService({
     });
   }
 
-  function updateObjective(id, input = {}) {
-    const dto = /** @type {Partial<import('../domain/learning-objective.ts').LearningObjectiveConstructorInput>} */ (
-      buildUpdateLearningObjectiveDto(input)
-    );
+  function updateObjective(id: string, input: ObjectiveInput = {}) {
+    const dto = buildUpdateLearningObjectiveDto(input) as Partial<LearningObjectiveConstructorInput>;
     return runTransaction(() => {
       const current = requireObjective(id);
       assertLearningObjectiveBaseline(current, requireKnowledgeItem(current.knowledgeItemId), input);
-      const changed = Object.keys(dto).some(field => dto[field] !== current[field]);
-      const next = repository.save(
+      const changed = (Object.keys(dto) as (keyof typeof dto)[]).some(field => dto[field] !== current[field]);
+      const next = repository!.save(
         new LearningObjective({
           ...current,
           ...dto,
@@ -94,12 +103,12 @@ export function createLearningObjectiveService({
 
   return {
     createCandidate,
-    getObjective: id => requireObjective(id, { includeArchived: true }),
-    listObjectives(options = {}) {
+    getObjective: (id: string) => requireObjective(id, { includeArchived: true }),
+    listObjectives(options: Parameters<NonNullable<LearningObjectiveDependencies['repository']>['list']>[0] = {}) {
       return repository.list(options);
     },
     updateObjective,
-    confirmObjective(id, input = {}) {
+    confirmObjective(id: string, input: ObjectiveInput = {}) {
       return runTransaction(() => {
         const current = requireObjective(id);
         assertLearningObjectiveBaseline(current, requireKnowledgeItem(current.knowledgeItemId), input);
@@ -115,7 +124,7 @@ export function createLearningObjectiveService({
         );
       });
     },
-    requestRevision(id, reviewNote = null) {
+    requestRevision(id: string, reviewNote: string | null = null) {
       const current = requireObjective(id);
       return runTransaction(() => {
         const next = repository.save(
@@ -130,7 +139,7 @@ export function createLearningObjectiveService({
         return next;
       });
     },
-    archive(id) {
+    archive(id: string) {
       const current = requireObjective(id);
       return runTransaction(() => {
         const next = repository.save(
@@ -144,7 +153,7 @@ export function createLearningObjectiveService({
         return next;
       });
     },
-    restore(id) {
+    restore(id: string) {
       const current = requireObjective(id, { includeArchived: true });
       if (current.reviewStatus !== 'archived') return current;
       return repository.save(
@@ -155,7 +164,7 @@ export function createLearningObjectiveService({
         })
       );
     },
-    invalidateByKnowledgeItemId(knowledgeItemId) {
+    invalidateByKnowledgeItemId(knowledgeItemId: string) {
       return runTransaction(() => {
         const changed = [];
         for (const current of repository.list({
