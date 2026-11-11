@@ -6,7 +6,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../apps/api/src/app.factory.js';
 import { ContentAnnotation } from '../../apps/api/src/modules/knowledge/domain/content-annotation.ts';
 import { temporaryDirectory, openWorkspace } from '../../apps/desktop-runtime/test/helpers.mjs';

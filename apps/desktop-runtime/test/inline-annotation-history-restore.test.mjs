@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { test } from 'node:test';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { temporaryDirectory } from './helpers.mjs';

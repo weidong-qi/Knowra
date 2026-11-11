@@ -11,7 +11,7 @@ import { createPostgresKnowledgeItemRepository } from '../src/modules/knowledge/
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 import { createServer } from '../src/server.js';
 import { createAppContext } from '../src/app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import { annotationOf, markText } from './fixtures/inline-annotation-seed.js';
 

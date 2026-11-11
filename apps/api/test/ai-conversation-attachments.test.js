@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import {
   createConversationAttachmentService,
   CONVERSATION_ATTACHMENT_LIMITS

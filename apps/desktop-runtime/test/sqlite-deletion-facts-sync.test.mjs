@@ -3,7 +3,7 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.ts';
 import { acquireDataFileWriteLock } from '../apps/api/src/infrastructure/data-file-write-lock.ts';
 import { writeJsonFileAtomically } from '../apps/api/src/infrastructure/atomic-json-file.ts';
 import { LOCAL_DATA_COLLECTIONS } from '../apps/api/src/infrastructure/local-data-schema.ts';

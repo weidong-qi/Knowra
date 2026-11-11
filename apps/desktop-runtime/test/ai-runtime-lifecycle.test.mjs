@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
 import { createRuntimeServices } from '../src/runtime-services.mjs';
 import { createAppContext } from '../../api/src/app.factory.js';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createServer } from '../../api/src/server.js';
 
 const logger = { warn() {}, error() {} };

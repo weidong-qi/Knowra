@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createAppContext } from '../../src/app.factory.js';
-import { createFileDataStore } from '../../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../src/infrastructure/file-data-store.ts';
 import {
   createExtractionTaskSources,
   extractionTaskGateway,

@@ -12,7 +12,7 @@ import {
 } from '@study-accelerator/content-anchor';
 import { knowraCheck } from '@study-accelerator/shared/knowra-marks';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createServer } from '../../api/src/server.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.js';
+import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.ts';
 import {
   applyJsonMigration,
   buildJsonMigrationPlan,

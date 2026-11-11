@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createAppContext } from '../src/app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

@@ -26,7 +26,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createAppContext } from '../src/app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 
 const SPACE = 'space-inline';
 const inlineRows = (module, noteId) =>

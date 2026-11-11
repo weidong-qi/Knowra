@@ -5,7 +5,7 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { createAppContext } from '../src/app.factory.js';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createServer } from '../src/server.js';
 import { syncContract, syncContractQuery } from '../src/modules/sync/protocol-contract.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';

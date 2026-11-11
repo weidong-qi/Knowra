@@ -10,7 +10,7 @@ import { assertSpacesOwnedBy } from '../../../infrastructure/owner-boundary.ts';
 import type { createLocalAttachmentStore } from '../../../infrastructure/local-attachment-store.ts';
 import type { AttachmentRestoreBody } from '../../../infrastructure/local-attachment-types.ts';
 import type { LocalAttachmentUploadInput } from '../../../infrastructure/local-attachment-upload.ts';
-import type { createFileDataStore } from '../../../infrastructure/file-data-store.js';
+import type { createFileDataStore } from '../../../infrastructure/file-data-store.ts';
 
 type AttachmentStore = Pick<
   ReturnType<typeof createLocalAttachmentStore>,

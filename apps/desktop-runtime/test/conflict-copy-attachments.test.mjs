@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { attachmentIdsInText } from '@study-accelerator/shared/attachments';
 import { createAppContext } from '../../api/src/app.factory.js';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { createServer } from '../../api/src/server.js';
 import { createSyncEngine } from '../src/sync-engine.mjs';

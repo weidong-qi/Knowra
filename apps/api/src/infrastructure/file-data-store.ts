@@ -65,45 +65,62 @@ import {
   validatePersistedLocalState
 } from './local-data-schema.ts';
 
-/** @typedef {ReturnType<typeof validateCoreOperationState>} CoreOperationState */
-/** @typedef {ReturnType<typeof validateKnowledgeExtractionCommitState>} ExtractionCommitState */
-/** @typedef {ReturnType<typeof validateExtractionTaskState>} ExtractionTaskState */
-/** @typedef {import('../modules/task-workspaces/repository-port.ts').TaskWorkspaceSnapshot} TaskWorkspaceSnapshot */
-// 旧 JS 校验器接受原始 JSON；默认参数的推断类型不代表输入已校验。
-/** @typedef {(input?: unknown) => CoreOperationState} CoreOperationStateParser */
-/** @typedef {(input?: unknown) => ExtractionCommitState} ExtractionCommitStateParser */
-/** @typedef {(input?: unknown) => ExtractionTaskState} ExtractionTaskStateParser */
+import type { LocalDataState, LocalCollection } from './local-data-types.ts';
+import type { TaskWorkspaceSnapshot } from '../modules/task-workspaces/repository-port.ts';
+import type { AiPrivateState } from '../modules/ai/record-infrastructure-types.ts';
+import type { AppError } from '../errors/app-error.ts';
+import type { Hooks, FilePort, Options } from './atomic-json-file.ts';
 
-function ensureParentDirectory(filePath) {
+type ValidatedFileAiState = AiPrivateState &
+  ReturnType<Parameters<typeof createJsonAiAccessStore>[0]['getState']> &
+  ReturnType<Parameters<typeof createJsonActionStore>[0]['getState']> &
+  ReturnType<Parameters<typeof createJsonAiConversationStore>[0]['getState']> &
+  ReturnType<Parameters<typeof createJsonBudgetAuthority>[0]['getState']>;
+type CoreOperationState = ReturnType<typeof validateCoreOperationState>;
+type ExtractionCommitState = ReturnType<typeof validateKnowledgeExtractionCommitState>;
+type ExtractionTaskState = ReturnType<typeof validateExtractionTaskState>;
+type AtomicWriteArguments<D> =
+  | [filePath: string, value: unknown, options?: Options<number>]
+  | [filePath: string, value: unknown, options: Hooks & { fileSystem: FilePort<D> }];
+type AtomicWriter = <D>(...args: AtomicWriteArguments<D>) => void;
+interface FileDataStoreOptions {
+  writeJson?: AtomicWriter;
+  maintenanceToken?: string | null;
+}
+interface TransactionState {
+  dirty: boolean;
+  afterCommit?: (() => void)[];
+  commitGuards?: (() => unknown)[];
+  skipHistoryRetention?: boolean;
+}
+
+function ensureParentDirectory(filePath: string) {
   const directory = path.dirname(filePath);
   fs.mkdirSync(directory, { recursive: true });
 }
 
-function replaceCollection(target, source) {
+function replaceCollection<T>(target: T[], source: T[]) {
   target.splice(0, target.length, ...source);
 }
 
-export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomically, maintenanceToken = null } = {}) {
+export function createFileDataStore(
+  filePath: string,
+  { writeJson = writeJsonFileAtomically, maintenanceToken = null }: FileDataStoreOptions = {}
+) {
   ensureParentDirectory(filePath);
   const identity = () => {
     try {
       const stat = fs.statSync(filePath, { bigint: true });
       return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}`;
     } catch (error) {
-      if (error.code === 'ENOENT') return null;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
     }
   };
   let diskIdentity = identity();
-  // 仅给既有转发绑定配对完整调用元组；不使用重载 Parameters 的最后签名代替全部调用。
-  /**
-   * @template D
-   * @typedef {[filePath: string, value: unknown, options?: import('./atomic-json-file.ts').Options<number> | undefined] | [filePath: string, value: unknown, options: import('./atomic-json-file.ts').Hooks & { fileSystem: import('./atomic-json-file.ts').FilePort<D> }]} AtomicWriteArguments
-   */
-  /** @type {<D>(...args: AtomicWriteArguments<D>) => void} */
-  const write = writeJson;
-  /** @template D @param {AtomicWriteArguments<D>} args */
-  writeJson = (...args) =>
+  // 绑定完整调用元组，保留原子写入器的两种文件端口。
+  const write: AtomicWriter = writeJson;
+  writeJson = <D>(...args: AtomicWriteArguments<D>) =>
     withDataFileWriteLock(filePath, maintenanceToken, () => {
       if (identity() !== diskIdentity)
         throw createAppError(
@@ -124,40 +141,38 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
   const parsedInput = parsePersistedState(filePath);
   const state = validatePersistedLocalState(parsedInput);
   // 既有校验已确认顶层为对象；各扩展仍保持未校验输入类型并独立校验。
-  const parsed = /** @type {Record<string, unknown>} */ (parsedInput);
+  const parsed = parsedInput as Record<string, unknown>;
   // 独立扩展不加入普通笔记 collections、搜索或 sync；坏数据原样保留。
   let taskWorkspaces = parsed.taskWorkspaces === undefined ? createEmptyTaskWorkspaceSnapshot() : parsed.taskWorkspaces;
-  let taskWorkspaceStoreError = null;
+  let taskWorkspaceStoreError: unknown = null;
   try {
     validateTaskWorkspaceSnapshot(taskWorkspaces);
   } catch (error) {
     taskWorkspaceStoreError = error;
   }
   let coreOperations = parsed.coreOperations;
-  let coreOperationStoreError = null;
+  let coreOperationStoreError: unknown = null;
   try {
-    coreOperations = /** @type {CoreOperationStateParser} */ (validateCoreOperationState)(coreOperations);
+    coreOperations = validateCoreOperationState(coreOperations);
   } catch (error) {
     coreOperationStoreError = error;
   }
   let knowledgeExtractionCommits = parsed.knowledgeExtractionCommits;
-  let knowledgeExtractionCommitStoreError = null;
+  let knowledgeExtractionCommitStoreError: unknown = null;
   try {
-    knowledgeExtractionCommits = /** @type {ExtractionCommitStateParser} */ (validateKnowledgeExtractionCommitState)(
-      knowledgeExtractionCommits
-    );
+    knowledgeExtractionCommits = validateKnowledgeExtractionCommitState(knowledgeExtractionCommits);
   } catch (error) {
     knowledgeExtractionCommitStoreError = error;
   }
   let extractionTasks = parsed.aiKnowledgeExtractionTasks;
-  let knowledgeExtractionTaskStoreError = null;
+  let knowledgeExtractionTaskStoreError: unknown = null;
   try {
-    extractionTasks = /** @type {ExtractionTaskStateParser} */ (validateExtractionTaskState)(extractionTasks);
+    extractionTasks = validateExtractionTaskState(extractionTasks);
   } catch (error) {
     knowledgeExtractionTaskStoreError = error;
   }
-  let aiRuntime;
-  let aiRuntimeError = null;
+  let aiRuntime: unknown;
+  let aiRuntimeError: unknown = null;
   try {
     aiRuntime = validateAiState(parsed.aiRuntime);
   } catch (error) {
@@ -177,18 +192,18 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
   }
   let committed = createSyncBaseline(state);
   let historyBasis = historyRetentionBasis(state);
-  let transaction = null;
+  let transaction: TransactionState | null = null;
   if (
     parsed.taskWorkspaces === undefined ||
     parsed.schemaVersion !== LOCAL_DATA_SCHEMA_VERSION ||
-    ['knowledgeItems', 'knowledgeEvidence', 'knowledgeArtifactProvenance'].some(
+    (['knowledgeItems', 'knowledgeEvidence', 'knowledgeArtifactProvenance'] as const).some(
       collection => JSON.stringify(parsed[collection] ?? []) !== JSON.stringify(state[collection])
     )
   ) {
     const previous = Object.fromEntries(
-      LOCAL_DATA_COLLECTIONS.map(collection => [
+      (LOCAL_DATA_COLLECTIONS as readonly LocalCollection[]).map(collection => [
         collection,
-        cloneJsonData(/** @type {{id: string}[] | undefined} */ (parsed[collection]) ?? [])
+        cloneJsonData((parsed[collection] as { id: string }[] | undefined) ?? [])
       ])
     );
     journal = appendChanges(journal, previous, state);
@@ -214,7 +229,7 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
   /**
    * @param operation
    * @param {{beforeCommit?: () => void}} options */
-  function runTransaction(operation, { beforeCommit } = {}) {
+  function runTransaction<T>(operation: () => T, { beforeCommit }: { beforeCommit?: () => unknown } = {}): T {
     if (typeof operation !== 'function') {
       throw new TypeError('Storage transaction operation must be a function');
     }
@@ -232,17 +247,17 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     const previousExtractionTasks = cloneJsonData(extractionTasks);
     const previousJournal = cloneJsonData(journal);
     transaction = { dirty: false, afterCommit: [], commitGuards: beforeCommit ? [beforeCommit] : [] };
-    let committedCallbacks = [];
+    let committedCallbacks: (() => void)[] = [];
 
     try {
       const result = operation();
-      if (result && typeof result.then === 'function') {
+      if (result && typeof (result as { then?: unknown }).then === 'function') {
         throw new TypeError('Local storage transactions must be synchronous');
       }
       if (transaction.dirty) {
         persistState(state);
       }
-      committedCallbacks = transaction.afterCommit;
+      committedCallbacks = transaction.afterCommit!;
       return result;
     } catch (error) {
       replaceState(state, previousState);
@@ -266,9 +281,9 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
   }
 
   /** 在最外层事务成功写入后执行；回滚时丢弃，不在事务中则立即执行。 */
-  function afterCommit(callback) {
+  function afterCommit(callback: () => void) {
     if (transaction) {
-      transaction.afterCommit.push(callback);
+      transaction.afterCommit!.push(callback);
       return;
     }
     try {
@@ -289,11 +304,11 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
 
   // 仅供批量同步：领域层在独立后像中工作，applyState 只替换集合，不原地修改旧记录。
   // 普通业务及旧版笔记同步仍使用完整前像事务，不能复用此路径。
-  function runSyncBatchTransaction(operation) {
+  function runSyncBatchTransaction<T>(operation: () => T): T {
     if (transaction) throw new TypeError('批量同步必须拥有最外层事务。');
     const previousState = Object.fromEntries(
-      LOCAL_DATA_COLLECTIONS.map(collection => [collection, [...state[collection]]])
-    );
+      (LOCAL_DATA_COLLECTIONS as readonly LocalCollection[]).map(collection => [collection, [...state[collection]]])
+    ) as LocalDataState;
     const previousJournal = journal;
     journal = {
       ...cloneJournalForChanges(journal),
@@ -303,7 +318,8 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     transaction = { dirty: true, skipHistoryRetention: true };
     try {
       const result = operation();
-      if (result && typeof result.then === 'function') throw new TypeError('批量同步事务必须同步。');
+      if (result && typeof (result as { then?: unknown }).then === 'function')
+        throw new TypeError('批量同步事务必须同步。');
       persistState(state);
       return result;
     } catch (error) {
@@ -316,7 +332,7 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
   }
 
   // 仅供传输快照缓存使用：业务实体、修订和删除事实在该事务内只读。
-  function runSyncJournalTransaction(operation) {
+  function runSyncJournalTransaction<T>(operation: () => T): T {
     if (transaction) throw new TypeError('同步快照缓存必须拥有最外层事务。');
     const candidate = appendChanges(cloneJsonData(journal), committed, state);
     // 兼容尚未 flush 的内部业务写入；先走完整校验与提交，不能把未登记实体藏在快照外。
@@ -331,7 +347,8 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     journal = candidate;
     try {
       const result = operation();
-      if (result && typeof result.then === 'function') throw new TypeError('快照缓存事务必须同步。');
+      if (result && typeof (result as { then?: unknown }).then === 'function')
+        throw new TypeError('快照缓存事务必须同步。');
       writeJson(filePath, {
         schemaVersion: LOCAL_DATA_SCHEMA_VERSION,
         ...state,
@@ -349,14 +366,14 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     }
   }
 
-  function prepareImport(snapshot) {
+  function prepareImport(snapshot: unknown) {
     return validateLocalSnapshot(snapshot);
   }
 
-  function commitImport(preparedSnapshot) {
+  function commitImport(preparedSnapshot: unknown) {
     const validated = validateLocalSnapshot(preparedSnapshot);
     assertNoKnowledgeArtifactProvenanceDowngrade(state, validated.data);
-    for (const collection of LOCAL_DATA_COLLECTIONS) {
+    for (const collection of LOCAL_DATA_COLLECTIONS as readonly LocalCollection[]) {
       for (const item of validated.data[collection]) {
         if (journal.tombstones?.[syncKey(collection, item.id)]) {
           throw createAppError('IMPORT_DELETED_ID', '旧备份包含已经永久删除的对象，请使用新的资产 ID 导入。', 409, {
@@ -378,11 +395,11 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     const previousTaskWorkspaces = taskWorkspaces;
     try {
       if (!taskWorkspaceStoreError)
-        taskWorkspaces = rebindTaskWorkspaceSnapshot(/** @type {TaskWorkspaceSnapshot} */ (taskWorkspaces), {
-          datasetId: /** @type {TaskWorkspaceSnapshot} */ (taskWorkspaces).datasetId,
+        taskWorkspaces = rebindTaskWorkspaceSnapshot(taskWorkspaces as TaskWorkspaceSnapshot, {
+          datasetId: (taskWorkspaces as TaskWorkspaceSnapshot).datasetId,
           datasetEpoch: randomUUID()
         });
-      aiRuntime = { ...aiRuntime, datasetEpoch: randomUUID() };
+      aiRuntime = { ...(aiRuntime as AiPrivateState), datasetEpoch: randomUUID() };
       persistState(validated.data);
     } catch (error) {
       journal = previousJournal;
@@ -394,11 +411,11 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
     return exportSnapshot();
   }
 
-  function importSnapshot(snapshot) {
+  function importSnapshot(snapshot: unknown) {
     return commitImport(prepareImport(snapshot));
   }
 
-  function persistState(nextState) {
+  function persistState(nextState: LocalDataState) {
     try {
       const noteIds = changedHistoryNoteIds(historyBasis, nextState);
       const references = getHistoryRetentionReferences();
@@ -407,7 +424,8 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
           nextState,
           planHistoryRetention(nextState, { noteIds, externalReferences: references })
         );
-        for (const name of HISTORY_RETENTION_COLLECTIONS) replaceCollection(nextState[name], retained[name]);
+        for (const name of HISTORY_RETENTION_COLLECTIONS)
+          replaceCollection<LocalDataState[LocalCollection][number]>(nextState[name], retained[name]);
       }
       // 只用于断言；不可变历史在校验期间只读，不再产生随即丢弃的整库历史副本。
       assertPersistedLocalState({ schemaVersion: LOCAL_DATA_SCHEMA_VERSION, ...nextState });
@@ -423,24 +441,21 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
           sync: nextJournal,
           taskWorkspaces,
           aiRuntime: aiRuntimeError ? aiRuntime : validateAiState(aiRuntime),
-          coreOperations: coreOperationStoreError
-            ? coreOperations
-            : /** @type {CoreOperationStateParser} */ (validateCoreOperationState)(coreOperations),
+          coreOperations: coreOperationStoreError ? coreOperations : validateCoreOperationState(coreOperations),
           knowledgeExtractionCommits: knowledgeExtractionCommitStoreError
             ? knowledgeExtractionCommits
-            : /** @type {ExtractionCommitStateParser} */ (validateKnowledgeExtractionCommitState)(
-                knowledgeExtractionCommits
-              ),
+            : validateKnowledgeExtractionCommitState(knowledgeExtractionCommits),
           aiKnowledgeExtractionTasks: knowledgeExtractionTaskStoreError
             ? extractionTasks
-            : /** @type {ExtractionTaskStateParser} */ (validateExtractionTaskState)(extractionTasks)
+            : validateExtractionTaskState(extractionTasks)
         },
         {
           beforeCommit: () => {
             for (const guard of transaction?.commitGuards ?? []) {
               const result = guard();
               if (result === false) throw createAppError('TASK_WORKSPACE_FORBIDDEN', '任务工作区操作授权已失效。', 403);
-              if (result?.then) throw new TypeError('Local storage commit guard must be synchronous');
+              if ((result as { then?: unknown } | null | undefined)?.then)
+                throw new TypeError('Local storage commit guard must be synchronous');
             }
           }
         }
@@ -449,7 +464,7 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
       committed = nextCommitted;
       historyBasis = historyRetentionBasis(nextState);
     } catch (error) {
-      if (error?.code?.startsWith('TASK_WORKSPACE_')) throw error;
+      if ((error as AppError | null | undefined)?.code?.startsWith('TASK_WORKSPACE_')) throw error;
       // 对外只给通用提示，真实原因写入服务日志，便于排查。
       console.error('[storage] 本地数据写入失败：', error);
       throw createAppError('STORAGE_WRITE_FAILED', 'Failed to persist local data safely', 500, { cause: error });
@@ -495,33 +510,31 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
       }
       return structuredClone({
         ai: aiRuntime,
-        tasks: /** @type {ExtractionTaskState} */ (extractionTasks).tasks,
-        receipts: /** @type {ExtractionCommitState} */ (knowledgeExtractionCommits).receipts
+        tasks: (extractionTasks as ExtractionTaskState).tasks,
+        receipts: (knowledgeExtractionCommits as ExtractionCommitState).receipts
       });
     },
     knowledgeExtractionTaskStore: knowledgeExtractionTaskStoreError
       ? null
       : {
           supportsAsync: false,
-          runTransaction(operation) {
+          runTransaction<T>(operation: () => T) {
             if (transaction) throw new TypeError('提炼任务必须拥有最外层事务。');
             return runTransaction(operation);
           },
-          get: input =>
+          get: (input: Parameters<typeof taskKey>[0]) =>
             structuredClone(
-              /** @type {ExtractionTaskState} */ (extractionTasks).tasks.find(
-                task => taskKey(task) === taskKey(input)
-              ) ?? null
+              (extractionTasks as ExtractionTaskState).tasks.find(task => taskKey(task) === taskKey(input)) ?? null
             ),
-          list: input =>
-            /** @type {ExtractionTaskState} */ (extractionTasks).tasks
+          list: (input: { ownerId: string; datasetId: string }) =>
+            (extractionTasks as ExtractionTaskState).tasks
               .filter(task => task.ownerId === input.ownerId && task.datasetId === input.datasetId)
               .map(task => structuredClone(task)),
-          listPage: input =>
+          listPage: (input: Parameters<typeof extractionPageRows>[2]) =>
             extractionPageRows(
-              aiRuntime.jobs,
+              (aiRuntime as AiPrivateState).jobs,
               new Set(
-                /** @type {ExtractionTaskState} */ (extractionTasks).tasks
+                (extractionTasks as ExtractionTaskState).tasks
                   .filter(
                     task =>
                       task.ownerId === input.ownerId &&
@@ -532,13 +545,11 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
               ),
               input
             ),
-          insert(task) {
+          insert(task: unknown) {
             const record = validateExtractionTask(task);
-            if (
-              /** @type {ExtractionTaskState} */ (extractionTasks).tasks.some(task => taskKey(task) === taskKey(record))
-            )
+            if ((extractionTasks as ExtractionTaskState).tasks.some(task => taskKey(task) === taskKey(record)))
               throw new Error('提炼任务描述已存在。');
-            /** @type {ExtractionTaskState} */ (extractionTasks).tasks.push(record);
+            (extractionTasks as ExtractionTaskState).tasks.push(record);
             flush();
           }
         },
@@ -547,18 +558,18 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
       ? null
       : {
           supportsAsync: false,
-          runTransaction(operation) {
+          runTransaction<T>(operation: () => T) {
             if (transaction) throw new TypeError('提炼接纳必须拥有最外层事务，不能嵌套提交。');
             return runTransaction(operation);
           },
-          get: input =>
+          get: (input: Parameters<typeof knowledgeExtractionCommitKey>[0]) =>
             structuredClone(
-              /** @type {ExtractionCommitState} */ (knowledgeExtractionCommits).receipts.find(
+              (knowledgeExtractionCommits as ExtractionCommitState).receipts.find(
                 receipt => knowledgeExtractionCommitKey(receipt) === knowledgeExtractionCommitKey(input)
               ) ?? null
             ),
-          insert: receipt => {
-            /** @type {ExtractionCommitState} */ (knowledgeExtractionCommits).receipts.push(
+          insert: (receipt: unknown) => {
+            (knowledgeExtractionCommits as ExtractionCommitState).receipts.push(
               validateKnowledgeExtractionCommit(receipt)
             );
             flush();
@@ -573,34 +584,42 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
             return runTransaction(operation);
           },
           get: input =>
-            /** @type {CoreOperationState} */ (coreOperations).receipts.find(
+            (coreOperations as CoreOperationState).receipts.find(
               receipt => coreOperationKey(receipt) === coreOperationKey(input)
             ) ?? null,
           insert: receipt => {
-            /** @type {CoreOperationState} */ (coreOperations).receipts.push(receipt);
+            (coreOperations as CoreOperationState).receipts.push(receipt);
             flush();
           }
         }),
     coreOperationStoreError,
     aiRepository: aiRuntimeError
       ? null
-      : createJsonAiRepository({ getState: () => aiRuntime, runTransaction, onChange: flush }),
+      : createJsonAiRepository({ getState: () => aiRuntime as ValidatedFileAiState, runTransaction, onChange: flush }),
     aiAccessStore: aiRuntimeError
       ? null
-      : createJsonAiAccessStore({ getState: () => aiRuntime, runTransaction, onChange: flush }),
+      : createJsonAiAccessStore({ getState: () => aiRuntime as ValidatedFileAiState, runTransaction, onChange: flush }),
     aiActionStore: aiRuntimeError
       ? null
-      : createJsonActionStore({ getState: () => aiRuntime, runTransaction, onChange: flush }),
+      : createJsonActionStore({ getState: () => aiRuntime as ValidatedFileAiState, runTransaction, onChange: flush }),
     aiConversationStore: aiRuntimeError
       ? null
-      : createJsonAiConversationStore({ getState: () => aiRuntime, runTransaction, onChange: flush }),
+      : createJsonAiConversationStore({
+          getState: () => aiRuntime as ValidatedFileAiState,
+          runTransaction,
+          onChange: flush
+        }),
     aiBudgetAuthority: aiRuntimeError
       ? null
-      : createJsonBudgetAuthority({ getState: () => aiRuntime, runTransaction, onChange: flush }),
+      : createJsonBudgetAuthority({
+          getState: () => aiRuntime as ValidatedFileAiState,
+          runTransaction,
+          onChange: flush
+        }),
     aiRuntimeError,
     getSyncJournal: () => journal,
     previewSyncJournal: () => appendChanges(cloneJournalForChanges(journal), committed, state),
-    runSyncTransaction: operation =>
+    runSyncTransaction: <T>(operation: () => T) =>
       runTransaction(() => {
         const result = operation();
         flush();
@@ -619,7 +638,7 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
   };
 }
 
-function assertNoInterruptedReplacement(filePath) {
+function assertNoInterruptedReplacement(filePath: string) {
   const prefix = `.${path.basename(filePath)}.`;
   const recoveryFiles = fs
     .readdirSync(path.dirname(filePath))
@@ -633,7 +652,7 @@ function assertNoInterruptedReplacement(filePath) {
   }
 }
 
-function parsePersistedState(filePath) {
+function parsePersistedState(filePath: string) {
   try {
     const parsed = readJsonFileSync(filePath, { allowEmpty: true });
     return parsed === undefined ? createEmptyLocalState() : parsed;
@@ -642,8 +661,8 @@ function parsePersistedState(filePath) {
   }
 }
 
-function replaceState(target, source) {
-  for (const collectionName of LOCAL_DATA_COLLECTIONS) {
-    replaceCollection(target[collectionName], source[collectionName]);
+function replaceState(target: LocalDataState, source: LocalDataState) {
+  for (const collectionName of LOCAL_DATA_COLLECTIONS as readonly LocalCollection[]) {
+    replaceCollection<LocalDataState[LocalCollection][number]>(target[collectionName], source[collectionName]);
   }
 }

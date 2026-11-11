@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
 import { createAppContext } from '../src/app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 
 export const attachmentCleanupCrashTests = ['before-commit', 'after-commit'].map(phase => ({
   name: `附件清理真实子进程 SIGKILL：${phase} 恢复保留或自动清理`,

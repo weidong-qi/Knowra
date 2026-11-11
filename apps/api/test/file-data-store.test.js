@@ -7,7 +7,7 @@ export const fileDataStoreTests = [
   {
     name: 'afterCommit 在最外层事务写入后执行，嵌套推迟、回滚丢弃、事务外立即执行',
     async run() {
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-after-commit-'));
       try {
         const store = createFileDataStore(path.join(dir, 'data.json'));
@@ -36,7 +36,7 @@ export const fileDataStoreTests = [
   {
     name: 'missing local data with interrupted replacement files refuses empty initialization',
     async run() {
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-recovery-'));
       const target = path.join(dir, 'data.json');
       try {
@@ -65,7 +65,7 @@ export const fileDataStoreTests = [
   {
     name: 'file data store exports versioned snapshots and imports legacy v1 data',
     async run() {
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
 
@@ -125,7 +125,7 @@ export const fileDataStoreTests = [
   {
     name: 'file data store rejects unsupported versions and malformed collections before replacement',
     async run() {
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-schema-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
 
@@ -165,7 +165,7 @@ export const fileDataStoreTests = [
   {
     name: 'file data store rejects broken cross references and folder cycles',
     async run() {
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-references-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
 
@@ -264,7 +264,7 @@ export const fileDataStoreTests = [
   {
     name: 'file data store keeps memory and disk unchanged when import persistence fails',
     async run() {
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-failure-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
       fs.writeFileSync(
@@ -309,7 +309,7 @@ export const fileDataStoreTests = [
   {
     name: 'file data store commits a local transaction once and restores memory when persistence fails',
     async run() {
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-store-transaction-'));
       const filePath = path.join(tempDir, 'knowledge-base.json');
       let writeCount = 0;

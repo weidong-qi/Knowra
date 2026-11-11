@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
 import { createAppContext } from '../../api/src/app.factory.js';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createServer } from '../../api/src/server.js';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { createSyncEngine } from '../src/sync-engine.mjs';

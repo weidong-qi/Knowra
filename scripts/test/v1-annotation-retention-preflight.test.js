@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../apps/api/src/app.factory.js';
 import { createServer } from '../../apps/api/src/server.js';
 import { ContentAnnotation } from '../../apps/api/src/modules/knowledge/domain/content-annotation.ts';
