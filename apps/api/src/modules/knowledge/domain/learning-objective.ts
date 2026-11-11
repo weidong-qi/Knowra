@@ -1,3 +1,4 @@
+// 历史 JSON 通过原有运行时检查；未规范化的字段保留输入类型。
 type LearningObjectiveActionVerb =
   '' | 'identify' | 'explain' | 'apply' | 'compare' | 'analyze' | 'calculate' | 'design' | 'evaluate';
 type LearningObjectiveCognitiveLevel = '' | 'remember' | 'understand' | 'apply' | 'analyze';
@@ -9,17 +10,21 @@ export interface LearningObjectiveConstructorInput<
   CognitiveLevel = string,
   DifficultyHint = string | null,
   CreatedAt = string,
-  UpdatedAt = CreatedAt
+  UpdatedAt = CreatedAt,
+  Id = string,
+  KnowledgeItemId = string,
+  ReviewNote = string | null,
+  DeletedAt = string | null
 > {
-  id: string;
-  knowledgeItemId: string;
-  objective?: string;
+  id: Id;
+  knowledgeItemId?: KnowledgeItemId;
+  objective?: unknown;
   actionVerb?: ActionVerb | '';
   cognitiveLevel?: CognitiveLevel | '';
   difficultyHint?: DifficultyHint | null;
-  reviewStatus?: string;
-  reviewNote?: string | null;
-  deletedAt?: string | null;
+  reviewStatus?: unknown;
+  reviewNote?: ReviewNote | null;
+  deletedAt?: DeletedAt | null;
   order?: unknown;
   createdAt?: CreatedAt | string;
   updatedAt?: UpdatedAt | CreatedAt | string;
@@ -37,10 +42,14 @@ export class LearningObjective<
   CognitiveLevel = string | undefined,
   DifficultyHint = string | null | undefined,
   CreatedAt = string | undefined,
-  UpdatedAt = CreatedAt
+  UpdatedAt = CreatedAt,
+  Id = string,
+  KnowledgeItemId = string,
+  ReviewNote = string | null,
+  DeletedAt = string | null
 > {
-  declare id: string;
-  declare knowledgeItemId: string;
+  declare id: NonNullable<Id>;
+  declare knowledgeItemId: NonNullable<KnowledgeItemId>;
   declare objective: string;
   declare actionVerb: [Exclude<ActionVerb, undefined>] extends [string] ? LearningObjectiveActionVerb : string;
   declare cognitiveLevel: [Exclude<CognitiveLevel, undefined>] extends [string]
@@ -48,8 +57,8 @@ export class LearningObjective<
     : string;
   declare difficultyHint: Exclude<DifficultyHint, string | undefined> | LearningObjectiveDifficultyHint;
   declare reviewStatus: 'candidate' | 'confirmed' | 'archived';
-  declare reviewNote: string | null;
-  declare deletedAt: string | null;
+  declare reviewNote: [Exclude<ReviewNote, null | undefined>] extends [string] ? string | null : unknown;
+  declare deletedAt: Exclude<DeletedAt, undefined> | null;
   declare order: number;
   declare createdAt: Exclude<CreatedAt, undefined> | string;
   declare updatedAt: Exclude<UpdatedAt | CreatedAt, undefined> | string;
@@ -67,13 +76,25 @@ export class LearningObjective<
     order = 0,
     createdAt = new Date().toISOString(),
     updatedAt = createdAt
-  }: LearningObjectiveConstructorInput<ActionVerb, CognitiveLevel, DifficultyHint, CreatedAt, UpdatedAt>) {
-    if (!id?.trim()) throw new Error('LearningObjective id is required');
-    if (!knowledgeItemId?.trim()) throw new Error('LearningObjective knowledgeItemId is required');
+  }: LearningObjectiveConstructorInput<
+    ActionVerb,
+    CognitiveLevel,
+    DifficultyHint,
+    CreatedAt,
+    UpdatedAt,
+    Id,
+    KnowledgeItemId,
+    ReviewNote,
+    DeletedAt
+  >) {
+    if (!(id as { trim(): unknown } | null | undefined)?.trim()) throw new Error('LearningObjective id is required');
+    if (!(knowledgeItemId as { trim(): unknown } | null | undefined)?.trim())
+      throw new Error('LearningObjective knowledgeItemId is required');
     if (typeof objective !== 'string' || typeof actionVerb !== 'string' || typeof cognitiveLevel !== 'string') {
       throw new Error('LearningObjective text fields are invalid');
     }
-    if (!REVIEW_STATUSES.has(reviewStatus)) throw new Error('LearningObjective reviewStatus is invalid');
+    if (!(REVIEW_STATUSES as ReadonlySet<unknown>).has(reviewStatus))
+      throw new Error('LearningObjective reviewStatus is invalid');
     if (actionVerb && !ACTION_VERBS.has(actionVerb)) throw new Error('LearningObjective actionVerb is invalid');
     if (cognitiveLevel && !COGNITIVE_LEVELS.has(cognitiveLevel))
       throw new Error('LearningObjective cognitiveLevel is invalid');
@@ -95,7 +116,7 @@ export class LearningObjective<
       cognitiveLevel: cognitiveLevel.trim(),
       difficultyHint: difficultyHint || null,
       reviewStatus,
-      reviewNote: reviewNote?.trim?.() || null,
+      reviewNote: (reviewNote as { trim?: () => unknown } | null | undefined)?.trim?.() || null,
       deletedAt,
       order: Number(order),
       createdAt,

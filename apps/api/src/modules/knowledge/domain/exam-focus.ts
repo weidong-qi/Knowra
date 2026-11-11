@@ -1,14 +1,23 @@
-export interface ExamFocusConstructorInput<DifficultyHint = string | null, CreatedAt = string, UpdatedAt = CreatedAt> {
-  id: string;
-  examProfileId: string;
-  learningObjectiveId: string;
-  description?: string;
+// 历史 JSON 通过原有运行时检查；未规范化的字段保留输入类型。
+export interface ExamFocusConstructorInput<
+  DifficultyHint = string | null,
+  CreatedAt = string,
+  UpdatedAt = CreatedAt,
+  Id = string,
+  ExamProfileId = string,
+  LearningObjectiveId = string,
+  DeletedAt = string | null
+> {
+  id: Id;
+  examProfileId?: ExamProfileId;
+  learningObjectiveId?: LearningObjectiveId;
+  description?: unknown;
   priority?: unknown;
   difficultyHint?: DifficultyHint | string | null;
   questionTypeSuggestions?: unknown;
-  sourceType?: string;
-  reviewStatus?: string;
-  deletedAt?: string | null;
+  sourceType?: unknown;
+  reviewStatus?: unknown;
+  deletedAt?: DeletedAt | null;
   createdAt?: CreatedAt | string;
   updatedAt?: UpdatedAt | CreatedAt | string;
 }
@@ -17,17 +26,25 @@ const REVIEW_STATUSES = new Set(['candidate', 'confirmed', 'archived']);
 const SOURCE_TYPES = new Set(['manual', 'ai', 'pastPaper', 'syllabus']);
 const DIFFICULTY_HINTS = new Set(['easy', 'medium', 'hard']);
 
-export class ExamFocus<DifficultyHint = string | null, CreatedAt = string, UpdatedAt = CreatedAt> {
-  declare id: string;
-  declare examProfileId: string;
-  declare learningObjectiveId: string;
+export class ExamFocus<
+  DifficultyHint = string | null,
+  CreatedAt = string,
+  UpdatedAt = CreatedAt,
+  Id = string,
+  ExamProfileId = string,
+  LearningObjectiveId = string,
+  DeletedAt = string | null
+> {
+  declare id: NonNullable<Id>;
+  declare examProfileId: NonNullable<ExamProfileId>;
+  declare learningObjectiveId: NonNullable<LearningObjectiveId>;
   declare description: string;
   declare priority: number;
   declare difficultyHint: Exclude<DifficultyHint, string | null | undefined> | 'easy' | 'medium' | 'hard' | null;
   declare questionTypeSuggestions: unknown[];
   declare sourceType: 'manual' | 'ai' | 'pastPaper' | 'syllabus';
   declare reviewStatus: 'candidate' | 'confirmed' | 'archived';
-  declare deletedAt: string | null;
+  declare deletedAt: Exclude<DeletedAt, undefined> | null;
   declare createdAt: Exclude<CreatedAt, undefined> | string;
   declare updatedAt: Exclude<UpdatedAt | CreatedAt, undefined> | string;
 
@@ -44,15 +61,30 @@ export class ExamFocus<DifficultyHint = string | null, CreatedAt = string, Updat
     deletedAt = null,
     createdAt = new Date().toISOString(),
     updatedAt = createdAt
-  }: ExamFocusConstructorInput<DifficultyHint, CreatedAt, UpdatedAt>) {
-    if (!id?.trim()) throw new Error('ExamFocus id is required');
-    if (!examProfileId?.trim() || !learningObjectiveId?.trim()) throw new Error('ExamFocus references are required');
+  }: ExamFocusConstructorInput<
+    DifficultyHint,
+    CreatedAt,
+    UpdatedAt,
+    Id,
+    ExamProfileId,
+    LearningObjectiveId,
+    DeletedAt
+  >) {
+    if (!(id as { trim(): unknown } | null | undefined)?.trim()) throw new Error('ExamFocus id is required');
+    if (
+      !(examProfileId as { trim(): unknown } | null | undefined)?.trim() ||
+      !(learningObjectiveId as { trim(): unknown } | null | undefined)?.trim()
+    )
+      throw new Error('ExamFocus references are required');
     if (typeof description !== 'string') throw new Error('ExamFocus description is invalid');
     if (!Number.isInteger(Number(priority)) || Number(priority) < 1) throw new Error('ExamFocus priority is invalid');
     if (!Array.isArray(questionTypeSuggestions)) throw new Error('ExamFocus questionTypeSuggestions is invalid');
     if (difficultyHint && !(DIFFICULTY_HINTS as ReadonlySet<unknown>).has(difficultyHint))
       throw new Error('ExamFocus difficultyHint is invalid');
-    if (!SOURCE_TYPES.has(sourceType) || !REVIEW_STATUSES.has(reviewStatus))
+    if (
+      !(SOURCE_TYPES as ReadonlySet<unknown>).has(sourceType) ||
+      !(REVIEW_STATUSES as ReadonlySet<unknown>).has(reviewStatus)
+    )
       throw new Error('ExamFocus status or sourceType is invalid');
 
     Object.assign(this, {

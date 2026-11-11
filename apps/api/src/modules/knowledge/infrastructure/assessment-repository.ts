@@ -1,3 +1,8 @@
+import type { LearningObjective } from '../domain/learning-objective.ts';
+import type { ExamProfile } from '../domain/exam-profile.ts';
+import type { ExamFocus } from '../domain/exam-focus.ts';
+import type { Question } from '../domain/question.ts';
+
 import { createAppError } from '../../../errors/app-error.ts';
 import { questionObjectiveRecords } from './question-objective-identity.ts';
 import type { QuestionObjectiveIdentityRecord } from './question-objective-identity.ts';
@@ -8,24 +13,27 @@ export interface AssessmentRecord {
   updatedAt?: unknown;
   questionId?: unknown;
 }
-export interface LearningObjectiveRecord extends AssessmentRecord {
+/** 未经此仓储校验的历史 JSON 列；schema 的检查不等于构造器规范化，也不覆盖直接注入记录。 */
+type StoredFields<Entity> = { [Field in keyof Entity]?: unknown };
+export interface LearningObjectiveRecord
+  extends AssessmentRecord, StoredFields<Omit<LearningObjective, keyof AssessmentRecord>> {
   order?: unknown;
   knowledgeItemId?: unknown;
   reviewStatus?: unknown;
   deletedAt?: unknown;
 }
-export interface ExamProfileRecord extends AssessmentRecord {
+export interface ExamProfileRecord extends AssessmentRecord, StoredFields<Omit<ExamProfile, keyof AssessmentRecord>> {
   archivedAt?: unknown;
   deletedAt?: unknown;
 }
-export interface ExamFocusRecord extends AssessmentRecord {
+export interface ExamFocusRecord extends AssessmentRecord, StoredFields<Omit<ExamFocus, keyof AssessmentRecord>> {
   priority?: unknown;
   examProfileId?: unknown;
   learningObjectiveId?: unknown;
   reviewStatus?: unknown;
   deletedAt?: unknown;
 }
-export interface QuestionRecord extends AssessmentRecord {
+export interface QuestionRecord extends AssessmentRecord, StoredFields<Omit<Question, keyof AssessmentRecord>> {
   reviewStatus?: unknown;
   deletedAt?: unknown;
 }
@@ -62,9 +70,15 @@ export interface NullishAssessmentRepositoryOptions<Record extends AssessmentRec
   records?: Record[] | null;
 }
 export interface AssessmentCollectionRepository<Record extends AssessmentRecord> {
-  create<Value extends Record>(record: Value): Value;
-  save<Value extends Record>(record: Value, options?: { expectedUpdatedAt?: unknown }): Value;
-  findById(id: unknown): Record | null;
+  create: {
+    <Value extends Record>(record: Value): Value;
+    (record: Record): Record;
+  };
+  save: {
+    <Value extends Record>(record: Value, options?: { expectedUpdatedAt?: unknown }): Value;
+    (record: Record, options?: { expectedUpdatedAt?: unknown }): Record;
+  };
+  findById<Id>(id: Id): (Record & { id: Id }) | null;
   delete(id: unknown): Record | null;
   list(options?: AssessmentListOptions): Record[];
   deleteByQuestionId(questionId: unknown): Record[];
@@ -111,7 +125,7 @@ function createCollectionRepository<Record extends AssessmentRecord>({
 }: CollectionOptions<Record> = {}): AssessmentCollectionRepository<Record> {
   const persist = () => onChange?.(records);
   return {
-    create(record) {
+    create<Value extends Record>(record: Value) {
       if (records.some(item => item.id === record.id)) {
         throw createAppError(
           'ASSESSMENT_ASSET_ID_CONFLICT',
@@ -123,7 +137,7 @@ function createCollectionRepository<Record extends AssessmentRecord>({
       persist();
       return record;
     },
-    save(record, { expectedUpdatedAt } = {}) {
+    save<Value extends Record>(record: Value, { expectedUpdatedAt }: { expectedUpdatedAt?: unknown } = {}) {
       const index = records.findIndex(item => item.id === record.id);
       if (expectedUpdatedAt && (index < 0 || records[index].updatedAt !== expectedUpdatedAt)) {
         throw createAppError(
@@ -137,8 +151,9 @@ function createCollectionRepository<Record extends AssessmentRecord>({
       persist();
       return record;
     },
-    findById(id) {
-      return records.find(item => item.id === id) ?? null;
+    findById<Id>(id: Id) {
+      // === 只证明找到记录的 ID 与查询输入一致，不证明其他历史字段已规范化。
+      return (records.find(item => item.id === id) as (Record & { id: Id }) | undefined) ?? null;
     },
     delete(id) {
       const index = records.findIndex(item => item.id === id);

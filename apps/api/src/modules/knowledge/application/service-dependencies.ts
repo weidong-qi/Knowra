@@ -8,11 +8,15 @@ import type { KnowledgeItem } from '../domain/knowledge-item.ts';
 import type { KnowledgeEvidence } from '../domain/knowledge-evidence.ts';
 import type {
   AssessmentCollectionRepository,
+  LearningObjectiveRecord,
+  ExamProfileRecord,
+  ExamFocusRecord,
+  QuestionRecord,
   ExamFocusRepository,
   QuestionObjectiveRepository,
   QuestionSourceRepository
 } from '../infrastructure/assessment-repository.ts';
-import type { KnowledgeItemRepository } from '../infrastructure/knowledge-item-repository.ts';
+import type { KnowledgeItemRepository, KnowledgeItemRecord } from '../infrastructure/knowledge-item-repository.ts';
 import type { KnowledgeEvidenceRepository } from '../infrastructure/knowledge-evidence-repository.ts';
 import type { ContentAnnotationRepository } from '../infrastructure/content-annotation-repository.ts';
 import type { NoteRepository } from '../infrastructure/note-repository.ts';
@@ -20,12 +24,10 @@ import type { NoteVersionRepository } from '../infrastructure/note-version-repos
 import type { ContentAnchor } from '@study-accelerator/content-anchor';
 import type { CreateLearningObjectiveDto } from './dto/learning-objective.dto.ts';
 import type { LearningObjective } from '../domain/learning-objective.ts';
-import type { ExamProfile } from '../domain/exam-profile.ts';
-import type { ExamFocus } from '../domain/exam-focus.ts';
 import type { Question } from '../domain/question.ts';
 
 interface TransactionDependencies {
-  getTombstone?: ((collection: string, id: string) => { previousUpdatedAt?: unknown } | null) | null;
+  getTombstone?: ((collection: string, id: string) => { previousUpdatedAt?: unknown } | null | undefined) | null;
   runTransaction?: <T>(operation: () => T) => T;
 }
 export interface AssessmentWritePort<Record, Result = Record> {
@@ -33,14 +35,11 @@ export interface AssessmentWritePort<Record, Result = Record> {
   save: (record: Record) => Result;
 }
 export interface AssessmentContextDependencies extends TransactionDependencies {
-  examProfileRepository?: Pick<
-    AssessmentCollectionRepository<ExamProfile<unknown, unknown>>,
-    'findById' | 'list' | 'save'
-  > &
-    Partial<Pick<AssessmentCollectionRepository<ExamProfile<unknown, unknown>>, 'create'>>;
-  examFocusRepository?: Pick<ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>, 'findById' | 'list' | 'save'> &
-    Partial<Pick<ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>, 'create'>>;
-  learningObjectiveRepository?: Pick<AssessmentCollectionRepository<LearningObjective>, 'findById'>;
+  examProfileRepository?: Pick<AssessmentCollectionRepository<ExamProfileRecord>, 'findById' | 'list' | 'save'> &
+    Partial<Pick<AssessmentCollectionRepository<ExamProfileRecord>, 'create'>>;
+  examFocusRepository?: Pick<ExamFocusRepository<ExamFocusRecord>, 'findById' | 'list' | 'save'> &
+    Partial<Pick<ExamFocusRepository<ExamFocusRecord>, 'create'>>;
+  learningObjectiveRepository?: Pick<AssessmentCollectionRepository<LearningObjectiveRecord>, 'findById'>;
 }
 export type LearningObjectiveServiceRecord = LearningObjective<
   CreateLearningObjectiveDto['actionVerb'],
@@ -50,10 +49,10 @@ export type LearningObjectiveServiceRecord = LearningObjective<
   CreateLearningObjectiveDto['updatedAt']
 >;
 export interface LearningObjectiveDependencies extends TransactionDependencies {
-  repository?: Pick<AssessmentCollectionRepository<LearningObjectiveServiceRecord>, 'findById' | 'list' | 'save'> &
-    Partial<Pick<AssessmentCollectionRepository<LearningObjectiveServiceRecord>, 'create'>>;
-  knowledgeItemRepository?: Pick<KnowledgeItemRepository, 'findById'>;
-  onObjectiveInvalidated?: ((id: string) => void) | null;
+  repository?: Pick<AssessmentCollectionRepository<LearningObjectiveRecord>, 'findById' | 'list' | 'save'> &
+    Partial<Pick<AssessmentCollectionRepository<LearningObjectiveRecord>, 'create'>>;
+  knowledgeItemRepository?: { findById(id: unknown): KnowledgeItemRecord<unknown> | null };
+  onObjectiveInvalidated?: ((id: unknown) => void) | null;
 }
 export type KnowledgeItemServiceRecord = KnowledgeItem<
   CreateKnowledgeItemDto['title'],
@@ -85,8 +84,8 @@ export type QuestionServiceRecord = Question<
   CreateQuestionDto['updatedAt']
 >;
 export interface QuestionDependencies extends TransactionDependencies {
-  repository: Pick<AssessmentCollectionRepository<QuestionServiceRecord>, 'findById' | 'save' | 'list'> &
-    Partial<Pick<AssessmentCollectionRepository<QuestionServiceRecord>, 'create'>>;
+  repository: Pick<AssessmentCollectionRepository<QuestionRecord>, 'findById' | 'save' | 'list'> &
+    Partial<Pick<AssessmentCollectionRepository<QuestionRecord>, 'create'>>;
   questionObjectiveRepository: Pick<
     QuestionObjectiveRepository,
     'listByQuestionIds' | 'listByObjectiveId' | 'replaceForQuestion'
@@ -95,9 +94,9 @@ export interface QuestionDependencies extends TransactionDependencies {
     QuestionSourceRepository,
     'findById' | 'listByQuestionIds' | 'replaceForQuestion' | 'markBySourceIds'
   >;
-  learningObjectiveRepository: Pick<AssessmentCollectionRepository<LearningObjective>, 'findById'>;
-  examFocusRepository?: Pick<ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>, 'findById'>;
-  knowledgeItemRepository?: Pick<KnowledgeItemRepository, 'findById'>;
+  learningObjectiveRepository: Pick<AssessmentCollectionRepository<LearningObjectiveRecord>, 'findById'>;
+  examFocusRepository?: Pick<ExamFocusRepository<ExamFocusRecord>, 'findById'>;
+  knowledgeItemRepository?: { findById(id: unknown): KnowledgeItemRecord<unknown> | null };
   noteRepository?: Pick<NoteRepository, 'findById'>;
   noteVersionRepository?: Pick<NoteVersionRepository, 'findById'>;
   knowledgeEvidenceRepository?: Pick<KnowledgeEvidenceRepository, 'findById'>;

@@ -1,10 +1,13 @@
+// 历史 JSON 通过原有运行时检查；未规范化的字段保留输入类型。
 export interface QuestionConstructorInput<
   QuestionType = string,
   Difficulty = string | null,
   CreatedAt = string,
-  UpdatedAt = CreatedAt
+  UpdatedAt = CreatedAt,
+  Id = string,
+  DeletedAt = string | null
 > {
-  id: string;
+  id: Id;
   questionType?: QuestionType | string;
   stem?: unknown;
   options?: unknown;
@@ -12,10 +15,10 @@ export interface QuestionConstructorInput<
   rubric?: unknown;
   explanation?: unknown;
   difficulty?: Difficulty | string | null;
-  reviewStatus?: string;
-  sourceMode?: string;
+  reviewStatus?: unknown;
+  sourceMode?: unknown;
   version?: unknown;
-  deletedAt?: string | null;
+  deletedAt?: DeletedAt | null;
   createdAt?: CreatedAt | string;
   updatedAt?: UpdatedAt | CreatedAt | string;
 }
@@ -29,8 +32,15 @@ function cloneOrNull<T>(value: T | null | undefined): T | null {
   return value === undefined || value === null ? null : structuredClone(value);
 }
 
-export class Question<QuestionType = string, Difficulty = string | null, CreatedAt = string, UpdatedAt = CreatedAt> {
-  declare id: string;
+export class Question<
+  QuestionType = string,
+  Difficulty = string | null,
+  CreatedAt = string,
+  UpdatedAt = CreatedAt,
+  Id = string,
+  DeletedAt = string | null
+> {
+  declare id: NonNullable<Id>;
   declare questionType: 'singleChoice' | 'multipleChoice' | 'trueFalse' | 'shortAnswer';
   declare stem: string;
   declare options: unknown[] | null;
@@ -41,7 +51,7 @@ export class Question<QuestionType = string, Difficulty = string | null, Created
   declare reviewStatus: 'draft' | 'validating' | 'candidate' | 'confirmed' | 'archived';
   declare sourceMode: 'manual' | 'ai' | 'import';
   declare version: number;
-  declare deletedAt: string | null;
+  declare deletedAt: Exclude<DeletedAt, undefined> | null;
   declare createdAt: Exclude<CreatedAt, undefined> | string;
   declare updatedAt: Exclude<UpdatedAt | CreatedAt, undefined> | string;
 
@@ -60,11 +70,14 @@ export class Question<QuestionType = string, Difficulty = string | null, Created
     deletedAt = null,
     createdAt = new Date().toISOString(),
     updatedAt = createdAt
-  }: QuestionConstructorInput<QuestionType, Difficulty, CreatedAt, UpdatedAt>) {
-    if (!id?.trim()) throw new Error('Question id is required');
+  }: QuestionConstructorInput<QuestionType, Difficulty, CreatedAt, UpdatedAt, Id, DeletedAt>) {
+    if (!(id as { trim(): unknown } | null | undefined)?.trim()) throw new Error('Question id is required');
     if (!(QUESTION_TYPE_SET as ReadonlySet<unknown>).has(questionType))
       throw new Error('Question questionType is invalid');
-    if (!REVIEW_STATUS_SET.has(reviewStatus) || !SOURCE_MODE_SET.has(sourceMode))
+    if (
+      !(REVIEW_STATUS_SET as ReadonlySet<unknown>).has(reviewStatus) ||
+      !(SOURCE_MODE_SET as ReadonlySet<unknown>).has(sourceMode)
+    )
       throw new Error('Question status or sourceMode is invalid');
     if (difficulty && !(DIFFICULTY_SET as ReadonlySet<unknown>).has(difficulty))
       throw new Error('Question difficulty is invalid');
