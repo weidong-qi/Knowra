@@ -9,7 +9,7 @@ import { applyCorsHeaders, handleCorsPreflight } from './http/cors.ts';
 import { sendError, sendJson } from './http/response.ts';
 import { handleStorageRoute } from './http/storage-routes.ts';
 import { handleKnowledgeRoute } from './modules/knowledge/http/knowledge-routes.ts';
-import { AppError } from './errors/app-error.js';
+import { AppError } from './errors/app-error.ts';
 import { handleSyncRoute } from './modules/sync/routes.ts';
 import { handleModelSettingsRoute } from './modules/ai/model-settings-routes.ts';
 import { handleAiFeatureRoute } from './modules/ai/feature-settings-routes.ts';

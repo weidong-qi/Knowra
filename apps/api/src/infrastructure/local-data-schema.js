@@ -1,5 +1,5 @@
 import { validatePdfAnnotation } from '@study-accelerator/shared/pdf';
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { cloneJsonData } from './json-clone.ts';
 import {
   normalizeLegacyNoteReferences,

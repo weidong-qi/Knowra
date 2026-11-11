@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
 export interface AnalysisScopeVersionBinding {
   noteId?: string;

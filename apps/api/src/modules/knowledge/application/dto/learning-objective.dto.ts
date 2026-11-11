@@ -4,7 +4,7 @@ import {
   LEARNING_OBJECTIVE_COGNITIVE_LEVELS,
   LEARNING_OBJECTIVE_DIFFICULTY_HINTS
 } from '../../domain/learning-objective.ts';
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 
 export interface LearningObjectiveDtoInput {
   id?: unknown;

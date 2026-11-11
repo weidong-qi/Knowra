@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { createWorkspaceSnapshotReader } from '../src/modules/knowledge/application/workspace-query-snapshot.js';
-import { createTrainingWorkspaceQuery } from '../src/modules/knowledge/application/training-workspace-query-service.js';
-import { createReviewQueueQuery } from '../src/modules/knowledge/application/review-queue-query-service.js';
+import { createWorkspaceSnapshotReader } from '../src/modules/knowledge/application/workspace-query-snapshot.ts';
+import { createTrainingWorkspaceQuery } from '../src/modules/knowledge/application/training-workspace-query-service.ts';
+import { createReviewQueueQuery } from '../src/modules/knowledge/application/review-queue-query-service.ts';
 
 export const trainingQueryIndexesTests = [
   {

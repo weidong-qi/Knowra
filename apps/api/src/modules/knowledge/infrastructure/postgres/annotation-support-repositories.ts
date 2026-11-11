@@ -1,6 +1,6 @@
 import type * as Models from '@prisma/client';
 import { toDate, toIso } from './mappers.ts';
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 
 interface CreatedWriteInput {

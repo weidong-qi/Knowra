@@ -1,4 +1,4 @@
-import { matchesText, paginateWorkspaceItems, parseWorkspaceQuery } from './workspace-query-utils.js';
+import { matchesText, paginateWorkspaceItems, parseWorkspaceQuery } from './workspace-query-utils.ts';
 
 import type {
   WorkspaceKnowledgeItemRecord,

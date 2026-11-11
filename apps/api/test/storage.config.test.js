@@ -4,7 +4,7 @@ export const storageConfigTests = [
   {
     name: 'createStorageConfig returns local-first defaults',
     async run() {
-      const { createStorageConfig } = await import('../src/config/storage.config.js');
+      const { createStorageConfig } = await import('../src/config/storage.config.ts');
       const config = createStorageConfig({});
 
       assert.equal(config.mode, 'local-first');

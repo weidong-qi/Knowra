@@ -1,4 +1,4 @@
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 import { mapKnowledgeItem, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 import type { ItemRepositoryOptions, ItemWriteInput, ItemListOptions } from './knowledge-graph-repository-types.ts';

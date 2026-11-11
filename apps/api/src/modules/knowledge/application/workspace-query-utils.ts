@@ -1,4 +1,4 @@
-import { validationError } from './knowledge-errors.js';
+import { validationError } from './knowledge-errors.ts';
 
 /** 请求字段未经过验证；原有 Number/String/布尔分支负责运行时处理。 */
 export interface WorkspaceQueryInput {

@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { syntheticPdf } from '../../../scripts/test-support/pdf-fixtures.mjs';
 import { validatePdfRelations } from '@study-accelerator/shared/pdf';
-import { createAppError } from '../src/errors/app-error.js';
+import { createAppError } from '../src/errors/app-error.ts';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';

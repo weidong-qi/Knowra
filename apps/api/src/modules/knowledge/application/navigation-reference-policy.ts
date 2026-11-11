@@ -1,4 +1,4 @@
-import { validationError } from './knowledge-errors.js';
+import { validationError } from './knowledge-errors.ts';
 
 /** 策略只读取引用字段，不把仓库返回值声明为完整领域模型。 */
 export interface NavigationReferenceRecord {

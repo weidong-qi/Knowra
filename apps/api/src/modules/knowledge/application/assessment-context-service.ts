@@ -6,7 +6,7 @@ import {
   buildUpdateExamFocusDto,
   buildUpdateExamProfileDto
 } from './dto/assessment.dto.ts';
-import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
+import { conflictError, notFoundError, validationError } from './knowledge-errors.ts';
 
 import type { AssessmentContextDependencies } from './service-dependencies.ts';
 import type { AssessmentDtoInput } from './dto/assessment.dto.ts';

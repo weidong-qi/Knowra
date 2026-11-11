@@ -1,4 +1,4 @@
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 import { questionObjectiveRecords } from './question-objective-identity.ts';
 import type { QuestionObjectiveIdentityRecord } from './question-objective-identity.ts';
 

@@ -42,7 +42,7 @@ import {
 } from './modules/knowledge/infrastructure/postgres/annotation-support-repositories.ts';
 import { createAsyncNoteDeletionCoordinator } from './modules/knowledge/application/postgres-async/note-deletion-coordinator.ts';
 import { withPostgresErrors } from './infrastructure/postgres-errors.ts';
-import { notFoundError } from './modules/knowledge/application/knowledge-errors.js';
+import { notFoundError } from './modules/knowledge/application/knowledge-errors.ts';
 import { assertPostgresOwnerBoundary } from './infrastructure/owner-boundary.ts';
 import { createMaintenanceGate, wrapHandlersWithMaintenanceGate } from './infrastructure/maintenance-gate.ts';
 import {

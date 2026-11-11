@@ -8,7 +8,7 @@ import {
 } from './attachment-recovery.ts';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { createLocalAttachmentFileManager } from './local-attachment-file-manager.ts';
 import { createLocalAttachmentDeletionManager } from './local-attachment-deletion.ts';
 import { createLocalAttachmentSnapshotStore } from './local-attachment-snapshot-store.ts';

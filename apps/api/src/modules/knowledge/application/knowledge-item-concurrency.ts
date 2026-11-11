@@ -10,7 +10,7 @@ export interface KnowledgeItemBaselineInput {
 type NativeDateConstructor = new (value: unknown) => Date;
 type NativeDateParse = (value: unknown) => number;
 
-import { conflictError, validationError } from './knowledge-errors.js';
+import { conflictError, validationError } from './knowledge-errors.ts';
 
 export function assertKnowledgeItemBaseline(item: KnowledgeItemTimestampView, input: unknown = {}): void {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {

@@ -1,5 +1,5 @@
 import { extractNoteLinks, calculateContentHash } from '@study-accelerator/content-anchor';
-import { validationError } from './knowledge-errors.js';
+import { validationError } from './knowledge-errors.ts';
 import type { NoteLinkOccurrence } from '@study-accelerator/content-anchor';
 
 /** 只要求关系查询实际读取的字段；历史空间归属不在此处归一化。 */

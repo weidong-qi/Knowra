@@ -11,7 +11,7 @@ interface NoteAssociationDependencies {
 }
 import { Note } from '../../domain/note.ts';
 import { buildUpdateNoteDto } from '../dto/note.dto.ts';
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 
 export function createAsyncNoteAssociationOperations({
   repository,

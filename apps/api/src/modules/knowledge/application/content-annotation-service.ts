@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { sameKnowraText, stripKnowraMarks } from '@study-accelerator/shared/knowra-marks';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../domain/content-annotation.ts';
 import { buildUpdateContentAnnotationDto } from './dto/content-annotation-dto.ts';
 import { createInMemoryContentAnnotationRepository } from '../infrastructure/content-annotation-repository.ts';

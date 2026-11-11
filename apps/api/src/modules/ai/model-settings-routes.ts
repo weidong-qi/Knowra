@@ -1,6 +1,6 @@
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { createModelSettingsService } from './model-settings.ts';
 

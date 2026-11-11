@@ -1,4 +1,4 @@
-import { conflictError } from '../../src/modules/knowledge/application/knowledge-errors.js';
+import { conflictError } from '../../src/modules/knowledge/application/knowledge-errors.ts';
 
 // 基线 84013784f0cc698c95840a3bd4e4d48824700487，第 25 批迁移前两个模块的 hooks 冻结副本。
 // 只在合成依赖上执行，不读取生产源码，也不将新实现当作预期值。

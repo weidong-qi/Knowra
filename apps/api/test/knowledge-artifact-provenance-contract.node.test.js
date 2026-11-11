@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { AppError } from '../src/errors/app-error.js';
+import { AppError } from '../src/errors/app-error.ts';
 import {
   createLegacyKnowledgeArtifactProvenance,
   hashKnowledgeArtifactProvenance,

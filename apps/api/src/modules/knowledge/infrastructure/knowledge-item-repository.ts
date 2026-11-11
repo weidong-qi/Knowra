@@ -1,4 +1,4 @@
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
 import type { KnowledgeItem } from '../domain/knowledge-item.ts';
 

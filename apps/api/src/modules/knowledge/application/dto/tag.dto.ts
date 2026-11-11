@@ -1,5 +1,5 @@
 import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.ts';
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 import { parseTagColor, type TagColor } from '@study-accelerator/shared/tag-colors';
 
 export interface TagDtoInput {

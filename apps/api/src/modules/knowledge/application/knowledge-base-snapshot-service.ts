@@ -1,4 +1,4 @@
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 import {
   LOCAL_DATA_SCHEMA_VERSION,
   LOCAL_SNAPSHOT_VERSION,

@@ -1,4 +1,4 @@
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 import { versionPage } from '../domain/note-version-page.ts';
 
 import type { NoteVersion } from '../domain/note-version.ts';

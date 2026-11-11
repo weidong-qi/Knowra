@@ -1,5 +1,5 @@
-import { toExamProfileWorkspaceDto, toQuestionWorkspaceDto } from './workspace-query-dto.js';
-import { countBy, matchesText, paginateWorkspaceItems, parseWorkspaceQuery } from './workspace-query-utils.js';
+import { toExamProfileWorkspaceDto, toQuestionWorkspaceDto } from './workspace-query-dto.ts';
+import { countBy, matchesText, paginateWorkspaceItems, parseWorkspaceQuery } from './workspace-query-utils.ts';
 
 import type {
   WorkspaceQuestionRecord,

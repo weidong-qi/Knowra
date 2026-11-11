@@ -1,4 +1,4 @@
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 import type { NavigationReferenceRecord } from '../navigation-reference-policy.ts';
 export type MaybePromise<T> = T | PromiseLike<T>;
 export interface AsyncNavigationReferenceReader {

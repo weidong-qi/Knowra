@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
-import { createKnowledgeWorkspaceQuery } from '../src/modules/knowledge/application/knowledge-workspace-query-service.js';
-import { createWorkspaceSnapshotReader } from '../src/modules/knowledge/application/workspace-query-snapshot.js';
+import { createKnowledgeWorkspaceQuery } from '../src/modules/knowledge/application/knowledge-workspace-query-service.ts';
+import { createWorkspaceSnapshotReader } from '../src/modules/knowledge/application/workspace-query-snapshot.ts';
 import {
   toKnowledgeItemWorkspaceDto,
   toLearningObjectiveWorkspaceDto
-} from '../src/modules/knowledge/application/workspace-query-dto.js';
+} from '../src/modules/knowledge/application/workspace-query-dto.ts';
 import {
   matchesText,
   paginateWorkspaceItems,
   parseWorkspaceQuery
-} from '../src/modules/knowledge/application/workspace-query-utils.js';
+} from '../src/modules/knowledge/application/workspace-query-utils.ts';
 
 export const objectiveQueryProjectionTests = [
   {
