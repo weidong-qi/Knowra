@@ -89,7 +89,7 @@ export const searchServiceTests = [
       noteService.deleteNote('note-e');
 
       const searchService = createSearchService({
-        listNotes: (options) => noteService.listNotes(options)
+        listNotes: options => noteService.listNotes(options)
       });
 
       const results = searchService.searchNotes({
@@ -126,7 +126,7 @@ export const searchServiceTests = [
       noteService.assignTagToNote('note-tag-b', 'tag-db');
 
       const searchService = createSearchService({
-        listNotes: (options) => noteService.listNotes(options)
+        listNotes: options => noteService.listNotes(options)
       });
 
       const results = searchService.searchNotes({
@@ -156,7 +156,7 @@ export const searchServiceTests = [
       noteService.deleteNote('note-deleted-search');
 
       const searchService = createSearchService({
-        listNotes: (options) => noteService.listNotes(options)
+        listNotes: options => noteService.listNotes(options)
       });
 
       const results = searchService.searchNotes({
@@ -194,7 +194,7 @@ export const searchServiceTests = [
       });
 
       const searchService = createSearchService({
-        listNotes: (options) => noteService.listNotes(options)
+        listNotes: options => noteService.listNotes(options)
       });
 
       const results = searchService.searchNotes({
