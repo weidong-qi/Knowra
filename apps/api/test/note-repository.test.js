@@ -4,7 +4,8 @@ export const noteRepositoryTests = [
   {
     name: 'NoteRepository saves and retrieves notes by id',
     async run() {
-      const { createInMemoryNoteRepository } = await import('../src/modules/knowledge/infrastructure/note-repository.js');
+      const { createInMemoryNoteRepository } =
+        await import('../src/modules/knowledge/infrastructure/note-repository.js');
       const repository = createInMemoryNoteRepository();
 
       repository.save({
@@ -27,7 +28,8 @@ export const noteRepositoryTests = [
   {
     name: 'NoteRepository list applies space and tag filters',
     async run() {
-      const { createInMemoryNoteRepository } = await import('../src/modules/knowledge/infrastructure/note-repository.js');
+      const { createInMemoryNoteRepository } =
+        await import('../src/modules/knowledge/infrastructure/note-repository.js');
       const repository = createInMemoryNoteRepository();
 
       repository.save({
@@ -63,7 +65,8 @@ export const noteRepositoryTests = [
   {
     name: 'NoteRepository list supports offset and limit after sorting',
     async run() {
-      const { createInMemoryNoteRepository } = await import('../src/modules/knowledge/infrastructure/note-repository.js');
+      const { createInMemoryNoteRepository } =
+        await import('../src/modules/knowledge/infrastructure/note-repository.js');
       const repository = createInMemoryNoteRepository();
 
       repository.save({
@@ -113,7 +116,8 @@ export const noteRepositoryTests = [
   {
     name: 'NoteRepository favorite notes are listed first and can be filtered',
     async run() {
-      const { createInMemoryNoteRepository } = await import('../src/modules/knowledge/infrastructure/note-repository.js');
+      const { createInMemoryNoteRepository } =
+        await import('../src/modules/knowledge/infrastructure/note-repository.js');
       const repository = createInMemoryNoteRepository();
 
       repository.save({
@@ -159,7 +163,8 @@ export const noteRepositoryTests = [
   {
     name: 'NoteRepository uses the shared delete method name',
     async run() {
-      const { createInMemoryNoteRepository } = await import('../src/modules/knowledge/infrastructure/note-repository.js');
+      const { createInMemoryNoteRepository } =
+        await import('../src/modules/knowledge/infrastructure/note-repository.js');
       const repository = createInMemoryNoteRepository();
       repository.save({
         id: 'repo-note-delete',
