@@ -66,6 +66,12 @@ export interface PostgresRepositories {
     typeof import('../../infrastructure/postgres/question-repository.ts').createPostgresQuestionRepository
   >;
 }
+// 无独立事务宿主时直接返回回调结果；有宿主时 Promise 采用回调的完成值。
+// 关联 Result 与返回值，避免把本来始终异步的回调降为 T | Promise<T>。
+export type KnowledgeModuleRepositories = Omit<PostgresRepositories, 'attachmentRepository'>;
+export interface KnowledgeModuleTransaction {
+  <Result>(operation: (repositories: KnowledgeModuleRepositories) => Result): Result | Promise<Awaited<Result>>;
+}
 type AwaitablePort<Port> = {
   [Key in keyof Port]: Port[Key] extends (...args: infer Args) => infer Result
     ? (...args: Args) => Result | Awaited<Result>
@@ -130,10 +136,11 @@ export interface LearningObjectiveDependencies extends TransactionDependencies {
   knowledgeItemRepository?: Pick<PostgresRepositories['knowledgeItemRepository'], 'findById'> &
     Partial<Pick<PostgresRepositories['knowledgeItemRepository'], 'lockById'>>;
   onObjectiveInvalidated?:
-    | ((id: string) => void | Promise<void | {
-        sources: import('../../../sync/postgres-state-types.ts').SyncMappedEntityMap['questionSources'][];
-        questions: import('../../domain/question.ts').Question[];
-      }>)
+    | ((
+        id: string
+      ) => void | ReturnType<
+        ReturnType<typeof import('./question-service.ts').createAsyncQuestionService>['invalidateByObjectiveId']
+      >)
     | null;
 }
 export interface AssessmentContextDependencies extends TransactionDependencies {
@@ -210,31 +217,33 @@ export interface NoteDependencies extends TransactionDependencies {
   onBeforePermanentDelete?: NoteTransactionContext['onBeforePermanentDelete'];
 }
 export interface PostgresModuleDependencies extends Partial<PostgresRepositories> {
-  client?: import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost<
-    import('../../infrastructure/postgres/navigation-repository-types.ts').SpaceRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/navigation-repository-types.ts').FolderRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/navigation-repository-types.ts').TagRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/navigation-repository-types.ts').TagGroupRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/assessment-repository-types.ts').ObjectiveRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/assessment-repository-types.ts').ProfileRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/assessment-repository-types.ts').FocusRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/assessment-repository-types.ts').ObjectiveRelationRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/assessment-repository-types.ts').SourceRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ItemRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').EvidenceRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ProvenanceRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').QuestionRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/note-repository.ts').NoteRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/note-version-repository.ts').NoteVersionRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/content-annotation-repository.ts').ContentAnnotationRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationExclusionRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationRevisionRepositoryOptions['db'] &
-      import('../../../pdf/repository.ts').PdfAnnotationRepositoryOptions['db'] &
-      import('../../infrastructure/postgres/annotation-support-repositories.ts').AnalysisScopeRepositoryOptions['db']
-  >;
+  client?:
+    | import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost<
+        import('../../infrastructure/postgres/navigation-repository-types.ts').SpaceRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/navigation-repository-types.ts').FolderRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/navigation-repository-types.ts').TagRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/navigation-repository-types.ts').TagGroupRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/assessment-repository-types.ts').ObjectiveRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/assessment-repository-types.ts').ProfileRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/assessment-repository-types.ts').FocusRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/assessment-repository-types.ts').ObjectiveRelationRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/assessment-repository-types.ts').SourceRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ItemRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').EvidenceRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').ProvenanceRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/knowledge-graph-repository-types.ts').QuestionRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/note-repository.ts').NoteRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/note-version-repository.ts').NoteVersionRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/content-annotation-repository.ts').ContentAnnotationRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationExclusionRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/annotation-support-repositories.ts').AnnotationRevisionRepositoryOptions['db'] &
+          import('../../../pdf/repository.ts').PdfAnnotationRepositoryOptions['db'] &
+          import('../../infrastructure/postgres/annotation-support-repositories.ts').AnalysisScopeRepositoryOptions['db']
+      >
+    | null;
   getPurgeTombstone?: TransactionDependencies['getTombstone'];
   readPurgeTaskState?: ReturnType<
     typeof import('../../../../infrastructure/asset-purge-task-state.ts').createPostgresPurgeTaskReader
-  >;
-  getPurgeDatasetEpoch?: () => string | Promise<string>;
+  > | null;
+  getPurgeDatasetEpoch?: (() => string | Promise<string>) | null;
 }

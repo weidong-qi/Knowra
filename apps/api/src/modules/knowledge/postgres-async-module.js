@@ -199,37 +199,42 @@ export function createPostgresKnowledgeModule({
       })
     };
   }
-  const runTransaction = client?.$transaction
-    ? operation =>
-        withPostgresErrors(() =>
-          client.$transaction(
-            async tx =>
-              operation({
-                folderRepository: createPostgresFolderRepository({ db: tx }),
-                knowledgeSpaceRepository: createPostgresKnowledgeSpaceRepository({ db: tx }),
-                tagRepository: createPostgresTagRepository({ db: tx }),
-                tagGroupRepository: createPostgresTagGroupRepository({ db: tx }),
-                noteRepository: createPostgresNoteRepository({ db: tx }),
-                noteVersionRepository: createPostgresNoteVersionRepository({ db: tx }),
-                knowledgeItemRepository: createPostgresKnowledgeItemRepository({ db: tx }),
-                knowledgeEvidenceRepository: createPostgresKnowledgeEvidenceRepository({ db: tx }),
-                knowledgeArtifactProvenanceRepository: createPostgresKnowledgeArtifactProvenanceRepository({ db: tx }),
-                contentAnnotationRepository: createPostgresContentAnnotationRepository({ db: tx }),
-                pdfAnnotationRepository: createPostgresPdfAnnotationRepository({ db: tx }),
-                annotationExclusionRepository: createPostgresAnnotationExclusionRepository({ db: tx }),
-                annotationRevisionRepository: createPostgresAnnotationRevisionRepository({ db: tx }),
-                analysisScopeRepository: createPostgresAnalysisScopeRepository({ db: tx }),
-                learningObjectiveRepository: createPostgresLearningObjectiveRepository({ db: tx }),
-                examProfileRepository: createPostgresExamProfileRepository({ db: tx }),
-                examFocusRepository: createPostgresExamFocusRepository({ db: tx }),
-                questionRepository: createPostgresQuestionRepository({ db: tx }),
-                questionObjectiveRepository: createPostgresQuestionObjectiveRepository({ db: tx }),
-                questionSourceRepository: createPostgresQuestionSourceRepository({ db: tx })
-              }),
-            { isolationLevel: 'Serializable' }
-          )
-        )
-    : operation => operation(transactionRepositories);
+  const runTransaction =
+    /** @type {import('./application/postgres-async/service-dependencies.ts').KnowledgeModuleTransaction} */ (
+      client?.$transaction
+        ? operation =>
+            withPostgresErrors(() =>
+              client.$transaction(
+                async tx =>
+                  operation({
+                    folderRepository: createPostgresFolderRepository({ db: tx }),
+                    knowledgeSpaceRepository: createPostgresKnowledgeSpaceRepository({ db: tx }),
+                    tagRepository: createPostgresTagRepository({ db: tx }),
+                    tagGroupRepository: createPostgresTagGroupRepository({ db: tx }),
+                    noteRepository: createPostgresNoteRepository({ db: tx }),
+                    noteVersionRepository: createPostgresNoteVersionRepository({ db: tx }),
+                    knowledgeItemRepository: createPostgresKnowledgeItemRepository({ db: tx }),
+                    knowledgeEvidenceRepository: createPostgresKnowledgeEvidenceRepository({ db: tx }),
+                    knowledgeArtifactProvenanceRepository: createPostgresKnowledgeArtifactProvenanceRepository({
+                      db: tx
+                    }),
+                    contentAnnotationRepository: createPostgresContentAnnotationRepository({ db: tx }),
+                    pdfAnnotationRepository: createPostgresPdfAnnotationRepository({ db: tx }),
+                    annotationExclusionRepository: createPostgresAnnotationExclusionRepository({ db: tx }),
+                    annotationRevisionRepository: createPostgresAnnotationRevisionRepository({ db: tx }),
+                    analysisScopeRepository: createPostgresAnalysisScopeRepository({ db: tx }),
+                    learningObjectiveRepository: createPostgresLearningObjectiveRepository({ db: tx }),
+                    examProfileRepository: createPostgresExamProfileRepository({ db: tx }),
+                    examFocusRepository: createPostgresExamFocusRepository({ db: tx }),
+                    questionRepository: createPostgresQuestionRepository({ db: tx }),
+                    questionObjectiveRepository: createPostgresQuestionObjectiveRepository({ db: tx }),
+                    questionSourceRepository: createPostgresQuestionSourceRepository({ db: tx })
+                  }),
+                { isolationLevel: 'Serializable' }
+              )
+            )
+        : operation => operation(transactionRepositories)
+    );
   const trainingAssetLifecycle = createTrainingAssetLifecycle({
     repositories,
     runTransaction,
@@ -757,7 +762,10 @@ export function createPostgresKnowledgeModule({
           validateSiblingNameConflict: assertSiblingNameAvailable
         });
         const root = await transaction.folderRepository.findById(folderId);
-        const deletionPackage = root?.deletionPackage;
+        const deletionPackage =
+          /** @type {Pick<import('./domain/folder.ts').FolderDeletionPackage, 'id' | 'mode' | 'noteIds'> | null} */ (
+            root?.deletionPackage
+          );
         if (!deletionPackage) throw conflictError('FOLDER_NOT_IN_TRASH', '文件夹不在回收站中');
         const folders = await txFolderService.restoreDeletedFolder(folderId);
         for (const noteId of deletionPackage.mode === 'with-content' ? deletionPackage.noteIds : []) {
