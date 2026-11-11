@@ -98,24 +98,26 @@ test.describe('V4-05 公共 Shell 与主页', () => {
         const style = getComputedStyle(element);
         return {
           background: style.backgroundImage,
+          backgroundColor: style.backgroundColor,
           color: style.color,
           shadow: style.boxShadow,
           transform: style.transform
         };
       });
     await home.hover();
-    // 定稿外观全局使用 .045 悬停令牌；Chromium 的 alpha 会量化至 8 bit。
+    // 外壳采用独立的悬停令牌，保持与正文表面的视觉层次。
     expect(
       await home.evaluate(element => {
         const style = getComputedStyle(element);
-        return style.getPropertyValue('--surface-hover').trim() === style.getPropertyValue('--ni-hover').trim();
+        return style.getPropertyValue('--surface-hover').trim() === style.getPropertyValue('--ni-shell-hover').trim();
       })
     ).toBe(true);
-    await expect(home).toHaveCSS('background-color', 'rgba(24, 30, 48, 0.043)');
+    await expect(home).toHaveCSS('background-color', 'rgba(36, 84, 140, 0.06)');
     const resting = await appearance();
-    expect(resting.background).toContain('linear-gradient');
+    expect(resting.background).toBe('none');
+    expect(resting.backgroundColor).toBe('rgb(255, 255, 255)');
     expect(resting.shadow).toContain('0px 1px 2px');
-    expect(resting.shadow).toContain('inset');
+    expect(resting.shadow).not.toContain('inset');
     await selected.hover();
     await expect.poll(appearance).toEqual(resting);
     await page.waitForTimeout(150); // 等待原型的 120ms 状态过渡结束，再确认没有悬停变化。
@@ -132,7 +134,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await expect(page).toHaveURL(/#\/$/);
     const other = rail.getByRole('button', { name: '资料', exact: true });
     await other.hover();
-    await expect(other).toHaveCSS('background-color', 'rgba(24, 30, 48, 0.043)');
+    await expect(other).toHaveCSS('background-color', 'rgba(36, 84, 140, 0.06)');
   });
 
   test('上下文侧栏开关对齐模块轨道，展开与折叠显示对应视觉状态', async ({ page }, testInfo) => {
@@ -145,7 +147,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
       .getByRole('button', { name: '资料', exact: true });
     await expect(sidebar).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    await expect(toggle).toHaveCSS('background-color', /rgba\(24, 30, 48, 0\.08[56]\)/);
+    await expect(toggle).toHaveCSS('background-color', 'rgba(36, 84, 140, 0.1)');
     const toggleBox = await toggle.boundingBox(),
       moduleBox = await module.boundingBox();
     expect(toggleBox!.x + toggleBox!.width / 2).toBe(moduleBox!.x + moduleBox!.width / 2);
@@ -158,11 +160,11 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await page.mouse.move(1000, 20);
     await expect(sidebar).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    await expect(toggle).toHaveCSS('background-color', /rgba\(24, 30, 48, 0\.08[56]\)/);
+    await expect(toggle).toHaveCSS('background-color', 'rgba(36, 84, 140, 0.1)');
     await page.screenshot({ path: testInfo.outputPath('V5-侧栏开关对齐与展开态.png') });
   });
 
-  test('顶部标签栏复用浏览历史，空历史禁用，选中笔记图标使用亮橙色', async ({ page }, testInfo) => {
+  test('顶部标签栏复用浏览历史，空历史禁用，选中笔记图标使用主题强调色', async ({ page }, testInfo) => {
     await page.goto('/#/');
     const top = page.getByRole('banner', { name: '全局顶栏' });
     const back = top.getByRole('button', { name: '后退' });
@@ -194,7 +196,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await expect(page).toHaveURL(/#\/materials\/notes\/note-1$/);
     const selected = top.getByRole('tab', { name: '设计复盘' });
     await expect(selected).toHaveAttribute('aria-selected', 'true');
-    await expect(selected.locator('svg')).toHaveCSS('color', 'rgb(242, 107, 29)');
+    await expect(selected.locator('svg')).toHaveCSS('color', 'rgb(23, 24, 27)');
     await back.click();
     await expect(page).toHaveURL(/#\/materials$/);
     await expect(forward).toBeEnabled();
@@ -207,7 +209,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await expect(forward).toBeDisabled();
     await top.getByRole('tab', { name: '设计复盘' }).click();
     await expect(selected).toHaveAttribute('aria-selected', 'true');
-    await page.screenshot({ path: testInfo.outputPath('V5-顶部导航与橙色标签图标.png') });
+    await page.screenshot({ path: testInfo.outputPath('V5-顶部导航与主题标签图标.png') });
     await page.setViewportSize({ width: 390, height: 843 });
     await expect(back).toBeVisible();
     await expect(forward).toBeVisible();
@@ -271,7 +273,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
       })
     ).toBe(true);
     const selectionBackground = await selectedCategory.evaluate(element => {
-      // 在被测控件的主题作用域解析令牌，保留已定稿的渐变选中态。
+      // 在被测控件的主题作用域解析令牌，保留外壳统一的选中态。
       const probe = document.createElement('span');
       probe.style.background = 'var(--nav-selected-bg, var(--surface-raised))';
       element.append(probe);
@@ -284,7 +286,8 @@ test.describe('V4-05 公共 Shell 与主页', () => {
       probe.remove();
       return result;
     });
-    expect(selectionBackground.expected.image).toContain('linear-gradient');
+    expect(selectionBackground.expected.image).toBe('none');
+    expect(selectionBackground.expected.color).toBe('rgb(255, 255, 255)');
     expect(selectionBackground.actual).toEqual(selectionBackground.expected);
     await expect(page.getByText('显示 10 / 10 项设置')).toBeVisible();
     await expect(page.getByRole('heading', { name: '模型接入' })).toBeVisible();

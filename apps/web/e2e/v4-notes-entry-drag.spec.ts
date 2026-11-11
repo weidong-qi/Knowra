@@ -168,18 +168,22 @@ test('V5 笔记选中使用中性底色，索引保留独立滚动和图标焦�
   await note.click();
   await expect(note).toHaveAttribute('aria-current', 'page');
   await expect(note).toHaveCSS('color', 'rgb(23, 24, 27)');
-  await expect(note).toHaveCSS('background-color', 'rgba(24, 30, 48, 0.075)');
+  await expect(note).toHaveCSS('background-color', 'rgba(36, 84, 140, 0.08)');
   await expect(note).toHaveCSS('border-left-width', '0px');
-  // 侧栏的文字与文档图标统一使用深色墨色，保留选中背景和键盘焦点验收。
-  await expect(note.locator('svg path').last()).toHaveCSS('stroke', 'rgb(23, 24, 27)');
+  // 文档图标比选中文字轻一档，保留中性墨色、选中背景和键盘焦点验收。
+  await expect(note.locator('svg path').last()).toHaveCSS('stroke', 'rgb(61, 64, 71)');
 });
 
-test('V5 窄屏目录展开按钮和笔记触点至少44px', async ({ page }) => {
+test('V5 窄屏目录、笔记和回收站触点至少44px，主面板保留完整圆角', async ({ page }) => {
   await mockMoveWorkspace(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/#/materials');
+  await expect(page.locator('#feature-stage')).toHaveCSS('border-top-left-radius', '12px');
+  await expect(page.locator('#feature-stage')).toHaveCSS('border-top-right-radius', '12px');
   const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
   if (!(await sidebar.isVisible())) await page.getByRole('button', { name: '切换侧栏' }).click();
+  const trashBox = await sidebar.getByRole('button', { name: /回收站/ }).boundingBox();
+  expect(trashBox?.height).toBeGreaterThanOrEqual(44);
   const toggle = page.getByRole('button', { name: '展开甲目录' });
   await expect(toggle).toBeVisible();
   const toggleBox = await toggle.boundingBox();
