@@ -4,7 +4,7 @@ import type { Note, NoteConstructorInput } from '../knowledge/domain/note.ts';
 import type { LocalAttachmentRecord } from '../../infrastructure/local-attachment-types.ts';
 import type { createMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
 import type { buildNoteData, mapNote } from '../knowledge/infrastructure/postgres/mappers.ts';
-import type { buildJsonMigrationPlan, applyJsonMigration } from '../../infrastructure/migration/json-to-postgres.js';
+import type { buildJsonMigrationPlan, applyJsonMigration } from '../../infrastructure/migration/json-to-postgres.ts';
 import type { createPdfFiles } from './files.ts';
 
 export type BinaryStream = AsyncIterable<Uint8Array | string>;

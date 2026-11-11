@@ -1,5 +1,5 @@
 import type { PostgresTransactionHost } from '../postgres-transaction-port.ts';
-import type * as rows from './db-mappers.js';
+import type * as rows from './db-mappers.ts';
 import type { KnowledgeArtifactProvenance } from '@prisma/client';
 
 type Awaitable<Value> = Value | PromiseLike<Value>;

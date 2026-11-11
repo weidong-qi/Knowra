@@ -22,7 +22,7 @@ import { createInMemoryContentAnnotationRepository } from './modules/knowledge/i
 import { createInMemoryNoteVersionRepository } from './modules/knowledge/infrastructure/note-version-repository.ts';
 import { createInMemoryKnowledgeItemRepository } from './modules/knowledge/infrastructure/knowledge-item-repository.js';
 import { createInMemoryKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/knowledge-evidence-repository.js';
-import { createInMemoryKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.js';
+import { createInMemoryKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
 import { createInMemoryLearningObjectiveRepository } from './modules/knowledge/infrastructure/learning-objective-repository.js';
 import { createInMemoryExamProfileRepository } from './modules/knowledge/infrastructure/exam-profile-repository.js';
 import { createInMemoryExamFocusRepository } from './modules/knowledge/infrastructure/exam-focus-repository.js';

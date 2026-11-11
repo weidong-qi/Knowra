@@ -92,7 +92,7 @@ Phase1.0 已经完成“保留 JSON 默认路径、增加 PostgreSQL 可选路�
 
 - Prisma：`prisma/schema.prisma`、`prisma/migrations/0_phase1_initial/`、`prisma/migrations/1_attachment_reliability/`；
 - PostgreSQL 装配：`apps/api/src/postgres-app.factory.js`、`apps/api/src/postgres-async-module.js`、`apps/api/src/modules/knowledge/infrastructure/postgres/`、`apps/api/src/modules/knowledge/application/postgres-async/`；
-- 迁移与校验：`apps/api/src/infrastructure/migration/json-to-postgres.js`、`scripts/migrate-json-to-postgres.mjs`、`scripts/check-attachments.mjs`；
+- 迁移与校验：`apps/api/src/infrastructure/migration/json-to-postgres.ts`、`scripts/migrate-json-to-postgres.mjs`、`scripts/check-attachments.mjs`；
 - 附件：`apps/api/src/infrastructure/postgres-attachment-store.js`、`local-attachment-store.js`、`attachment-integrity.js`、`attachment-status.js` 及附件目录/快照辅助模块。
 
 ### 本地验证结果

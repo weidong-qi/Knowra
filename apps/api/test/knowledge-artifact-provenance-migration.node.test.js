@@ -4,8 +4,8 @@ import { syntheticProvenanceFixture } from './fixtures/knowledge-artifact-proven
 import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts
-} from '../src/infrastructure/migration/knowledge-artifact-provenance-backfill.js';
-import { createInMemoryKnowledgeArtifactProvenanceRepository } from '../src/modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.js';
+} from '../src/infrastructure/migration/knowledge-artifact-provenance-backfill.ts';
+import { createInMemoryKnowledgeArtifactProvenanceRepository } from '../src/modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
 import {
   createLegacyKnowledgeArtifactProvenance,
   hashKnowledgeArtifactProvenance

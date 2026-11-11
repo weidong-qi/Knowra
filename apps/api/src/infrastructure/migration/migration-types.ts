@@ -1,5 +1,5 @@
 import type { MigrationClient } from './migration-client.ts';
-import type { buildJsonMigrationPlan } from './json-to-postgres.js';
+import type { MigrationPlan } from './migration-records.ts';
 import type { MigrationReport } from './migration-report.ts';
 
 export interface JsonMigrationInput {
@@ -37,16 +37,16 @@ export interface JsonMigrationInput {
 }
 export interface JsonMigrationOptions {
   input?: JsonMigrationInput;
-  sourceFile?: string;
+  sourceFile?: string | null;
   storageRootDir?: string;
-  uploadsDir?: string;
+  uploadsDir?: string | null;
   fallbackTimestamp?: string;
   allowMissingAttachments?: boolean;
-  ownerId?: string;
+  ownerId?: string | null;
 }
 export interface ApplyJsonMigrationOptions {
   client?: MigrationClient;
-  plan?: ReturnType<typeof buildJsonMigrationPlan>['plan'];
+  plan?: MigrationPlan | null;
   report?: MigrationReport & { appliedAt?: string };
   requireEmptyTarget?: boolean;
   replaceExisting?: boolean;

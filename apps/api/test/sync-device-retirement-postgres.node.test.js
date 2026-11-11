@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyJsonMigration, buildJsonMigrationPlan } from '../src/infrastructure/migration/json-to-postgres.js';
+import { applyJsonMigration, buildJsonMigrationPlan } from '../src/infrastructure/migration/json-to-postgres.ts';
 import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
 import { createPostgresSyncRuntime } from '../src/modules/sync/postgres-provider.ts';
 import { createJournal, requestHash } from '../src/modules/sync/journal.ts';

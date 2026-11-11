@@ -3,7 +3,7 @@ import { validateLocalSnapshot, LOCAL_DATA_SCHEMA_VERSION, LOCAL_SNAPSHOT_VERSIO
 import { validateAttachmentSnapshotItems } from './local-attachment-snapshot-validator.ts';
 import { stageAttachmentFiles, createAttachmentDirectorySwap } from './attachment-directory-swap.ts';
 import { assertNoInsecureImageUrls } from '../modules/knowledge/application/note-content-policy.js';
-import { buildJsonMigrationPlan, applyJsonMigration } from './migration/json-to-postgres.js';
+import { buildJsonMigrationPlan, applyJsonMigration } from './migration/json-to-postgres.ts';
 
 /** @param {import('./postgres-storage-types.ts').PostgresSnapshotOptions} options */
 export function createPostgresSnapshotService({

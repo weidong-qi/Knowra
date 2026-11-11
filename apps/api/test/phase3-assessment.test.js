@@ -256,7 +256,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 JSON migration preserves objective, focus, question and source relations',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const result = buildJsonMigrationPlan({
         input: {
           spaces: [{ id: 'phase3-space', userId: 'demo', name: 'Phase3' }],

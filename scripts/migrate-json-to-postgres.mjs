@@ -6,17 +6,14 @@ import {
   applyJsonMigration,
   buildJsonMigrationPlan,
   loadJsonMigrationSource
-} from '../apps/api/src/infrastructure/migration/json-to-postgres.js';
+} from '../apps/api/src/infrastructure/migration/json-to-postgres.ts';
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(scriptsDirectory, '..');
 const args = parseArguments(process.argv.slice(2));
 const sourceFile = path.resolve(args.source ?? path.join(workspaceRoot, 'storage/data/knowledge-base.json'));
 const storageRootDir = path.resolve(args['storage-root'] ?? workspaceRoot);
-const uploadsDir = path.resolve(
-  args['uploads-dir']
-    ?? path.join(storageRootDir, 'storage', 'uploads')
-);
+const uploadsDir = path.resolve(args['uploads-dir'] ?? path.join(storageRootDir, 'storage', 'uploads'));
 const fallbackTimestamp = args['fallback-timestamp'] ?? new Date().toISOString();
 const allowMissingAttachments = Boolean(args['allow-missing-attachments']);
 const ownerId = args['owner-id'] ?? process.env.KNOWRA_OWNER_ID ?? 'demo';
@@ -56,11 +53,17 @@ try {
     }
   }
 } catch (error) {
-  console.error(JSON.stringify({
-    status: 'failed',
-    code: error.code ?? 'MIGRATION_FAILED',
-    message: error.message
-  }, null, 2));
+  console.error(
+    JSON.stringify(
+      {
+        status: 'failed',
+        code: error.code ?? 'MIGRATION_FAILED',
+        message: error.message
+      },
+      null,
+      2
+    )
+  );
   process.exitCode = 1;
 }
 

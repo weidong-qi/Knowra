@@ -4,7 +4,7 @@ import { createEmptyLocalState } from '../../src/infrastructure/local-data-schem
 import { hashRecord } from '../../src/modules/ai/record-contract.ts';
 import { validateKnowledgeExtractionResult } from '../../src/modules/knowledge/application/knowledge-extraction-contract.ts';
 import { validateKnowledgeExtractionCommit } from '../../src/modules/ai/knowledge-extraction-commit-contract.ts';
-import { createKnowledgeArtifactProvenanceFromReceipt } from '../../src/infrastructure/migration/knowledge-artifact-provenance-backfill.js';
+import { createKnowledgeArtifactProvenanceFromReceipt } from '../../src/infrastructure/migration/knowledge-artifact-provenance-backfill.ts';
 import { validateKnowledgeArtifactProvenance } from '../../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
 export function syntheticProvenanceFixture({ alias = false, recorded = false } = {}) {

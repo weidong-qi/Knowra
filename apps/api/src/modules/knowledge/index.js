@@ -35,7 +35,7 @@ import { createAnnotationScopeService } from './application/annotation-scope-ser
 import { createInMemoryNoteVersionRepository } from './infrastructure/note-version-repository.ts';
 import { createInMemoryKnowledgeItemRepository } from './infrastructure/knowledge-item-repository.js';
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
-import { createInMemoryKnowledgeArtifactProvenanceRepository } from './infrastructure/knowledge-artifact-provenance-repository.js';
+import { createInMemoryKnowledgeArtifactProvenanceRepository } from './infrastructure/knowledge-artifact-provenance-repository.ts';
 import { createInMemoryKnowledgeEvidenceRepository } from './infrastructure/knowledge-evidence-repository.js';
 import { createInMemoryLearningObjectiveRepository } from './infrastructure/learning-objective-repository.js';
 import { createInMemoryExamProfileRepository } from './infrastructure/exam-profile-repository.js';

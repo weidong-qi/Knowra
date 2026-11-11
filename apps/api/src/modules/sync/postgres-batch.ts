@@ -8,7 +8,7 @@ import type {
   SyncDeleteCall,
   SyncWriteMapper
 } from './postgres-types.ts';
-import * as dbMaps from '../../infrastructure/migration/db-mappers.js';
+import * as dbMaps from '../../infrastructure/migration/db-mappers.ts';
 
 const tables = [
   ['spaces', 'knowledgeSpace', 'dbSpace'],

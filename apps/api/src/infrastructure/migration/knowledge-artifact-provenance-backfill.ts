@@ -1,3 +1,7 @@
+import type { ProvenanceBackfillState, ProvenanceBackfillOptions } from './provenance-types.ts';
+import type { KnowledgeExtractionCommitReceipt } from '../../modules/ai/knowledge-extraction-commit-types.ts';
+import type { ExtractionCandidatePlan } from '../../modules/knowledge/application/knowledge-extraction-types.ts';
+import type { RecordedKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { validateKnowledgeExtractionCommit } from '../../modules/ai/knowledge-extraction-commit-contract.ts';
 import {
@@ -7,28 +11,21 @@ import {
   resolveKnowledgeArtifactProvenanceSource
 } from '../../modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { migrateLegacyKnowledgeArtifactProvenance } from '../../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
-import { assertProvenanceWrite } from '../../modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.js';
+import { assertProvenanceWrite } from '../../modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
 
-/**
- * @overload
- * @param {unknown} extension
- * @returns {unknown[]}
- */
-/** @returns {unknown[]} */
-export function legacyKnowledgeExtractionReceipts(extension) {
+export function legacyKnowledgeExtractionReceipts(input: unknown): unknown[] {
+  const extension = input as { version?: unknown; receipts?: unknown } | null | undefined;
   return extension?.version === 1 && Object.keys(extension).length === 2 && Array.isArray(extension.receipts)
     ? extension.receipts
     : [];
 }
 
-/** 只从已经验证的宿主 receipt 挑选白名单；不改变原 receipt 或其 hash。 */
-/**
- * @param {import('../../modules/ai/knowledge-extraction-commit-types.ts').KnowledgeExtractionCommitReceipt} receipt
- * @param {import('../../modules/knowledge/application/knowledge-extraction-types.ts').ExtractionCandidatePlan} candidate
- */
-export function createKnowledgeArtifactProvenanceFromReceipt(receipt, candidate) {
+export function createKnowledgeArtifactProvenanceFromReceipt(
+  receipt: KnowledgeExtractionCommitReceipt,
+  candidate: ExtractionCandidatePlan
+): RecordedKnowledgeArtifactProvenance {
   const artifactId = candidate.candidateInput.id;
-  const record = {
+  const record: Omit<RecordedKnowledgeArtifactProvenance, 'provenanceHash'> = {
     id: knowledgeArtifactProvenanceId(artifactId),
     schemaVersion: 1,
     state: 'recorded',
@@ -62,14 +59,16 @@ export function createKnowledgeArtifactProvenanceFromReceipt(receipt, candidate)
       annotationRevisions: source.annotationRevisions.map(({ annotationId, revision }) => ({ annotationId, revision }))
     }))
   };
-  return validateKnowledgeArtifactProvenance({ ...record, provenanceHash: hashKnowledgeArtifactProvenance(record) });
+  return validateKnowledgeArtifactProvenance({
+    ...record,
+    provenanceHash: hashKnowledgeArtifactProvenance(record)
+  }) as RecordedKnowledgeArtifactProvenance;
 }
 
-/** 只修改摘要集合。坏的可选旧 receipt 被隔离，坏的新摘要永远抛错。 */
-/**
- * @param {import('./provenance-types.ts').ProvenanceBackfillState} state
- * @param {import('./provenance-types.ts').ProvenanceBackfillOptions} options */
-export function backfillKnowledgeArtifactProvenance(state, { receipts = [], getTombstone = () => null } = {}) {
+export function backfillKnowledgeArtifactProvenance(
+  state: ProvenanceBackfillState,
+  { receipts = [], getTombstone = () => null }: ProvenanceBackfillOptions = {}
+) {
   const records = (state.knowledgeArtifactProvenance ??= []);
   records.forEach(validateKnowledgeArtifactProvenance);
   const items = new Map(state.knowledgeItems.map(item => [item.id, item]));
@@ -98,15 +97,18 @@ export function backfillKnowledgeArtifactProvenance(state, { receipts = [], getT
         stats.unavailable++;
         continue;
       }
-      const refs = [
+      const refs: [string, string | null | undefined][] = [
         ['knowledgeItems', item.id],
         ['knowledgeArtifactProvenance', record.id],
-        ...record.sources.flatMap(source => [
-          ['knowledgeEvidence', source.evidenceId],
-          ['notes', source.noteId],
-          ['noteVersions', source.originNoteVersionId],
-          ['noteVersions', evidence.get(source.evidenceId)?.noteVersionId]
-        ])
+        ...record.sources.flatMap(
+          source =>
+            [
+              ['knowledgeEvidence', source.evidenceId],
+              ['notes', source.noteId],
+              ['noteVersions', source.originNoteVersionId],
+              ['noteVersions', evidence.get(source.evidenceId)?.noteVersionId]
+            ] as [string, string | null | undefined][]
+        )
       ];
       if (refs.some(([collection, id]) => id && getTombstone(collection, id))) {
         stats.deleted++;
@@ -119,7 +121,7 @@ export function backfillKnowledgeArtifactProvenance(state, { receipts = [], getT
             record,
             source,
             evidence: link,
-            noteVersion: versions.get(link?.noteVersionId),
+            noteVersion: versions.get(link?.noteVersionId as string),
             note: notes.get(source.noteId),
             knowledgeItem: item
           });

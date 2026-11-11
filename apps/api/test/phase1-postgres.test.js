@@ -46,7 +46,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration plan preserves ids, soft deletes, tags, hashes and timestamp repairs',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const fallbackTimestamp = '2026-07-27T00:00:00.000Z';
       const result = buildJsonMigrationPlan({
         input: {
@@ -188,7 +188,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration preflight blocks missing attachment files unless explicitly allowed',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const input = {
         spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
         folders: [],
@@ -217,7 +217,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration verifies an attachment file hash before applying metadata',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-phase1-migration-'));
       try {
         const uploadPath = path.join(tempRoot, 'storage', 'uploads', 'attachment-1-file.txt');
@@ -258,7 +258,7 @@ export const phase1PostgresTests = [
   {
     name: 'versioned JSON migration wrappers keep strict reference validation',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const result = buildJsonMigrationPlan({
         input: {
           version: 'v1-local-json',
@@ -288,7 +288,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration blocks a persisted Note contentHash mismatch',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const result = buildJsonMigrationPlan({
         input: {
           spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
@@ -322,7 +322,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration blocks insecure HTTP image sources before PostgreSQL apply',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const result = buildJsonMigrationPlan({
         input: {
           spaces: [{ id: 'space-demo', userId: 'demo', name: 'Default' }],
@@ -356,7 +356,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration can enforce the configured single-owner boundary',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const result = buildJsonMigrationPlan({
         ownerId: 'owner-a',
         input: {
@@ -379,7 +379,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration preserves the configured owner for an empty knowledge snapshot',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const result = buildJsonMigrationPlan({
         ownerId: 'demo',
         fallbackTimestamp: '2026-07-30T00:00:00.000Z',
@@ -648,7 +648,7 @@ export const phase1PostgresTests = [
     name: 'JSON migration apply holds the exclusive PostgreSQL advisory lock',
     async run() {
       const { applyJsonMigration, buildJsonMigrationPlan } =
-        await import('../src/infrastructure/migration/json-to-postgres.js');
+        await import('../src/infrastructure/migration/json-to-postgres.ts');
       const prepared = buildJsonMigrationPlan({
         ownerId: 'demo',
         input: {
@@ -756,7 +756,7 @@ export const phase1PostgresTests = [
   {
     name: 'JSON migration blocks absolute, traversal and symbolic-link attachment paths even when missing files are allowed',
     async run() {
-      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.js');
+      const { buildJsonMigrationPlan } = await import('../src/infrastructure/migration/json-to-postgres.ts');
       const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-phase1-path-safety-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
