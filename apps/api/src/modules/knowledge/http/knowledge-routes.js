@@ -1,13 +1,13 @@
-import { handleFolderRoute } from './folder-routes.js';
-import { handleContentAnnotationRoute } from './content-annotation-routes.js';
+import { handleFolderRoute } from './folder-routes.ts';
+import { handleContentAnnotationRoute } from './content-annotation-routes.ts';
 import { handleNoteRoute } from './note-routes.js';
-import { handleSpaceRoute } from './space-routes.js';
-import { handleTagRoute } from './tag-routes.js';
-import { handleNoteVersionRoute } from './note-version-routes.js';
+import { handleSpaceRoute } from './space-routes.ts';
+import { handleTagRoute } from './tag-routes.ts';
+import { handleNoteVersionRoute } from './note-version-routes.ts';
 import { handleKnowledgeItemRoute } from './knowledge-item-routes.js';
-import { handleLearningObjectiveRoute } from './learning-objective-routes.js';
+import { handleLearningObjectiveRoute } from './learning-objective-routes.ts';
 import { handleAssessmentRoute } from './assessment-routes.js';
-import { handleWorkspaceRoute } from './workspace-routes.js';
+import { handleWorkspaceRoute } from './workspace-routes.ts';
 
 const knowledgeRouteHandlers = [
   handleWorkspaceRoute,

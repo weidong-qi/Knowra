@@ -1,16 +1,43 @@
+import type { IncomingMessage } from 'node:http';
+import type { ResponseWriter } from '../../../http/response.ts';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+
+type TagRouteKnowledge = Pick<
+  ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
+  | 'createTag'
+  | 'createTagGroup'
+  | 'deleteTag'
+  | 'deleteTagGroup'
+  | 'listTagGroups'
+  | 'listTags'
+  | 'mergeTags'
+  | 'reorderTags'
+  | 'updateTag'
+  | 'updateTagGroup'
+>;
+export interface TagRouteContext {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  knowledge: TagRouteKnowledge;
+}
+
 import { parseBody, toQueryObject } from '../../../http/request.ts';
 import { sendJson } from '../../../http/response.ts';
 
-export async function handleTagRoute({ request, response, url, knowledge }) {
+export async function handleTagRoute({ request, response, url, knowledge }: TagRouteContext): Promise<boolean> {
   if (request.method === 'POST' && url.pathname === '/api/knowledge/tags/merge') {
     const body = await parseBody(request);
-    sendJson(response, 200, { data: await knowledge.mergeTags(body) });
+    sendJson(response, 200, { data: await knowledge.mergeTags(body as Parameters<TagRouteKnowledge['mergeTags']>[0]) });
     return true;
   }
 
   if (request.method === 'POST' && url.pathname === '/api/knowledge/tags/reorder') {
     const body = await parseBody(request);
-    sendJson(response, 200, { data: await knowledge.reorderTags(body) });
+    sendJson(response, 200, {
+      data: await knowledge.reorderTags(body as Parameters<TagRouteKnowledge['reorderTags']>[0])
+    });
     return true;
   }
 

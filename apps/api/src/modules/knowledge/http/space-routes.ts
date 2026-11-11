@@ -1,8 +1,36 @@
+import type { IncomingMessage } from 'node:http';
+import type { ResponseWriter } from '../../../http/response.ts';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+
+type SpaceRouteMethods = Pick<
+  ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
+  | 'createKnowledgeSpace'
+  | 'deleteEmptySpace'
+  | 'inspectEmptySpaceDeletion'
+  | 'listKnowledgeSpaces'
+  | 'migrateSpaceAssets'
+  | 'previewSpaceMigration'
+>;
+interface SpaceRouteKnowledge extends SpaceRouteMethods {
+  createDefaultKnowledgeSpace: (
+    body: unknown
+  ) =>
+    | ReturnType<ReturnType<typeof createKnowledgeHttpHandlers>['createDefaultKnowledgeSpace']>
+    | ReturnType<ReturnType<typeof createPostgresKnowledgeHttpHandlers>['createDefaultKnowledgeSpace']>;
+}
+export interface SpaceRouteContext {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  knowledge: SpaceRouteKnowledge;
+}
+
 import { parseBody, toQueryObject } from '../../../http/request.ts';
 import { sendJson } from '../../../http/response.ts';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
-function decode(value) {
+function decode(value: string) {
   try {
     return decodeURIComponent(value);
   } catch {
@@ -10,7 +38,7 @@ function decode(value) {
   }
 }
 
-export async function handleSpaceRoute({ request, response, url, knowledge }) {
+export async function handleSpaceRoute({ request, response, url, knowledge }: SpaceRouteContext): Promise<boolean> {
   if (request.method === 'POST' && url.pathname === '/api/knowledge/spaces/default') {
     const body = await parseBody(request);
     sendJson(response, 201, {
