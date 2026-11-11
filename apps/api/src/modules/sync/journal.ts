@@ -2,6 +2,8 @@ import { randomUUID, createHash } from 'node:crypto';
 import { LOCAL_DATA_COLLECTIONS } from '../../infrastructure/local-data-schema.js';
 import { createAppError } from '../../errors/app-error.ts';
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
+import { validateDeviceRetirements, preserveDeviceRetirements } from './device-retirement.ts';
+import type { SyncDeviceRetirement } from './device-retirement.ts';
 import type { Note } from '../knowledge/domain/note.ts';
 import type { SyncSnapshotBinding } from './protocol-contract.ts';
 
@@ -52,6 +54,7 @@ export interface SyncJournal {
   receipts: Record<string, { hash: string; result: SyncReceiptResult; sequence?: number }>;
   snapshots: Record<string, SyncSnapshot>;
   deviceSequences?: Record<string, number>;
+  retiredDevices?: Record<string, SyncDeviceRetirement>;
 }
 
 export const syncKey = <Id>(collection: string, id: Id) => JSON.stringify([collection, id]);
@@ -115,7 +118,7 @@ export function loadJournal(input: unknown, state: SyncState): SyncJournal {
   if (value === undefined) return createJournal(state);
   if (
     !value ||
-    value.version !== 1 ||
+    ![1, 2].includes(value.version ?? 0) ||
     typeof value.epoch !== 'string' ||
     !Number.isSafeInteger(value.head) ||
     !Array.isArray(value.changes) ||
@@ -124,6 +127,7 @@ export function loadJournal(input: unknown, state: SyncState): SyncJournal {
     !value.snapshots
   )
     throw syncError('SYNC_STORAGE_INVALID', '同步日志格式无效，已停止加载。', 500);
+  validateDeviceRetirements(value);
   const journal = cloneJsonData(value) as SyncJournal;
   journal.tombstones ??= {};
   if (LOCAL_DATA_COLLECTIONS.every(collection => Array.isArray(state[collection]))) {
@@ -165,6 +169,7 @@ export function resetJournalKeepingTombstones(input: unknown, state: SyncState):
   }
   const previous = loadJournal(value, state);
   const next: SyncJournal = { ...createJournal(state), deviceSequences: {} };
+  preserveDeviceRetirements(previous, next);
   const present = new Set(
     LOCAL_DATA_COLLECTIONS.flatMap(collection => (state[collection] ?? []).map(item => syncKey(collection, item.id)))
   );

@@ -4,6 +4,7 @@ export interface SyncIssue {
 }
 
 export interface SyncStatusSnapshot {
+  safetyPaused?: boolean;
   serverUrl?: string | null;
   phase?: string;
   error?: SyncIssue | null;
@@ -21,12 +22,19 @@ export interface SyncPresentation {
   detail: string;
 }
 
-export function describeLocalSyncStatus(status: SyncStatusSnapshot | null, connectionError: SyncIssue | null = null): SyncPresentation {
+export function describeLocalSyncStatus(
+  status: SyncStatusSnapshot | null,
+  connectionError: SyncIssue | null = null
+): SyncPresentation {
   if (connectionError?.code?.startsWith('LOCAL_RUNTIME_')) {
     return { tone: 'warning', main: '本地资料状态待确认', detail: '本地服务连接失败' };
   }
+  if (status?.safetyPaused || status?.error?.code === 'SYNC_RESULT_UNCERTAIN') {
+    return { tone: 'danger', main: '云端同步已暂停', detail: '提交结果待人工核对，本地修改已保留' };
+  }
   if (!status?.serverUrl) {
-    if (connectionError?.code === 'AUTH_REQUIRED') return { tone: 'danger', main: '本地资料待连接', detail: '请重新登录' };
+    if (connectionError?.code === 'AUTH_REQUIRED')
+      return { tone: 'danger', main: '本地资料待连接', detail: '请重新登录' };
     if (connectionError) return { tone: 'warning', main: '本地资料待连接', detail: '连接失败' };
     return { tone: 'neutral', main: '本地资料', detail: '连接云端' };
   }
@@ -45,8 +53,13 @@ export function describeLocalSyncStatus(status: SyncStatusSnapshot | null, conne
     return { tone: 'danger', main: '本地资料待同步', detail: '同步版本不兼容' };
   }
   if (status.error) {
-    const networkFailure = status.error.code?.startsWith('SYNC_NETWORK_') || status.error.code?.startsWith('SYNC_CONNECTION_');
-    return { tone: 'warning', main: '本地资料待同步', detail: networkFailure ? '连接失败，等待重试' : '同步失败，等待重试' };
+    const networkFailure =
+      status.error.code?.startsWith('SYNC_NETWORK_') || status.error.code?.startsWith('SYNC_CONNECTION_');
+    return {
+      tone: 'warning',
+      main: '本地资料待同步',
+      detail: networkFailure ? '连接失败，等待重试' : '同步失败，等待重试'
+    };
   }
   const pending = status.pendingEntities ?? status.pendingNotes ?? 0;
   if (status.attachmentPending) return { tone: 'warning', main: '本地资料待同步', detail: '附件等待重试' };

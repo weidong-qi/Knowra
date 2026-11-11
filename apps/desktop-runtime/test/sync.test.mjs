@@ -194,7 +194,7 @@ test('同步传输接线在首次失败、重新配置和断开后读取当前�
   assert.equal(device.engine.status().phase, 'synced');
 });
 
-test('丢失成功响应后原 ID 重试；发送期间的新编辑不会被旧确认清除', async t => {
+test('丢失成功响应后持久暂停，不重发且保留发送期间的新编辑', async t => {
   const cloud = await fixture(t);
   let lose = true;
   let edited = false;
@@ -220,11 +220,11 @@ test('丢失成功响应后原 ID 重试；发送期间的新编辑不会被旧�
   assert.equal(a.engine.status().phase, 'paused');
   assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '已发送的第一版');
   await a.engine.sync();
-  assert.equal(a.engine.status().error, null);
-  assert.equal(ids[0], ids[1]);
-  assert.notEqual(ids[1], ids[2]);
-  assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '发送期间继续编辑');
-  assert.equal(a.engine.status().pendingEntities, 0);
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(ids.length, 1);
+  assert.equal(a.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '发送期间继续编辑');
+  assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '已发送的第一版');
+  assert(a.engine.status().pendingEntities > 0);
   assert.equal(cloud.dataStore.state.noteVersions.filter(version => version.content === '已发送的第一版').length, 1);
 });
 
@@ -371,7 +371,7 @@ test('JSON 云端提交失败回滚正文、版本、修订和幂等结果；原
   assert.equal(service.push(operation).status, 'accepted');
 });
 
-test('未确认的新建已被云端删除，服务器恢复后必须冲突，不能按空基线复活', async t => {
+test('未确认的新建被云端删除并换 epoch 后仍暂停保留本地，不复活云端', async t => {
   const cloud = await fixture(t);
   let lose = true;
   const a = cloud.device('a', async (url, options) => {
@@ -393,8 +393,8 @@ test('未确认的新建已被云端删除，服务器恢复后必须冲突，�
   cloud.context.http.knowledge.permanentlyDeleteNote({ id: created.id });
   cloud.dataStore.commitImport(cloud.dataStore.exportSnapshot());
   await a.engine.sync();
-  assert.equal(a.engine.status().error, null);
-  assert.equal(noteConflict(a.engine, created.id).remote, null);
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(a.knowledge.noteService.getNote(created.id).rawMarkdown, '保留副本');
   assert(!cloud.dataStore.state.notes.some(note => note.id === created.id));
 });
 
@@ -483,7 +483,7 @@ test('采用云端与保留两篇都有可导出的恢复记录；再次并发�
   assert.equal(cloud.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '处理期间的第二次变化');
 });
 
-test('关闭并重新打开 SQLite 后，冻结请求仍按相同操作 ID 重试', async t => {
+test('关闭并重新打开 SQLite 后，未确认请求仍暂停且不重发', async t => {
   const cloud = await fixture(t);
   const ids = [];
   let lose = true;
@@ -513,19 +513,14 @@ test('关闭并重新打开 SQLite 后，冻结请求仍按相同操作 ID 重�
   workspace = openWorkspace(directory);
   engine = fullEngine(workspace, directory, { fetcher });
   await engine.sync();
-  assert.equal(engine.status().error, null);
-  assert.equal(ids.length, 2);
-  assert.equal(ids[0], ids[1]);
-  assert.equal(engine.status().pendingEntities, 0);
-  assert(
-    workspace.store
-      .readOutbox()
-      .filter(row => row.changes.some(change => change.collection === 'notes'))
-      .every(row => row.state === 'acknowledged')
-  );
+  assert.equal(engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(ids.length, 1);
+  assert(engine.status().pendingEntities > 0);
+  assert.equal(workspace.knowledge.noteService.getNote(cloud.note.id).rawMarkdown, '重启后继续确认');
+  assert(workspace.store.readOutbox().some(row => row.state !== 'acknowledged'));
 });
 
-test('冻结目录冲突丢响应后只阻塞关联笔记，调整归属后继续同步', async t => {
+test('冻结目录冲突丢响应后暂停整个同步，保留关联与独立笔记', async t => {
   const cloud = await fixture(t);
   let lose = true;
   const ids = [];
@@ -563,21 +558,16 @@ test('冻结目录冲突丢响应后只阻塞关联笔记，调整归属后继�
   );
   a.knowledge.noteService.createNote({ title: '没有依赖的笔记', rawMarkdown: '继续同步', spaceId: cloud.space.id });
   await a.engine.sync();
-  assert.equal(a.engine.status().error, null);
-  assert.equal(ids[0], ids[1], '未知提交必须先以原操作 ID 核对');
-  assert.equal(noteConflict(a.engine, blocked.id).local.rawMarkdown, '不丢失');
-  assert(cloud.dataStore.state.notes.some(note => note.title === '没有依赖的笔记'));
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(ids.length, 1, '未知结果不得以原 ID 或新 ID 再提交');
+  assert.equal(a.knowledge.noteService.getNote(blocked.id).rawMarkdown, '不丢失');
+  assert(a.store.state.notes.some(note => note.title === '没有依赖的笔记'));
+  assert(!cloud.dataStore.state.notes.some(note => note.title === '没有依赖的笔记'));
   a.knowledge.noteService.updateNote(blocked.id, { folderId: null });
-  await a.engine.sync();
-  assert.equal(a.engine.status().error, null);
-  assert.equal(cloud.knowledge.noteService.getNote(blocked.id).folderId, null);
-  assert.equal(cloud.knowledge.noteService.getNote(blocked.id).rawMarkdown, '不丢失');
-  const remaining = a.engine.status().entityConflict;
-  assert(remaining.items.some(item => item.collection === 'folders' && item.id === folder.id));
-  assert(!remaining.items.some(item => item.collection === 'notes' && item.id === blocked.id));
-  await a.engine.resolve({ conflictId: remaining.id, choice: 'remote' });
-  assert.equal(a.engine.status().entityConflict, null);
-  assert.equal(a.engine.status().pendingEntities, 0);
+  await a.engine.retry();
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(ids.length, 1);
+  assert.equal(a.knowledge.noteService.getNote(blocked.id).folderId, null);
 });
 
 test('已有标注与知识证据随正文事务同步，保持不可变来源引用和失效状态', async t => {

@@ -45,6 +45,7 @@ import {
   loadJournal,
   syncKey
 } from '../modules/sync/journal.ts';
+import { preserveDeviceRetirements } from '../modules/sync/device-retirement.ts';
 import {
   createJsonAiAccessStore,
   createJsonAiConversationStore,
@@ -366,7 +367,9 @@ export function createFileDataStore(filePath, { writeJson = writeJsonFileAtomica
       }
     }
     const previousJournal = journal;
-    journal = createJournal(validated.data);
+    const replacementJournal = createJournal(validated.data);
+    preserveDeviceRetirements(previousJournal, replacementJournal);
+    journal = replacementJournal;
     journal.tombstones = structuredClone(previousJournal.tombstones ?? {});
     for (const [key, tombstone] of Object.entries(journal.tombstones)) {
       journal.revisions[key] = tombstone.revision;

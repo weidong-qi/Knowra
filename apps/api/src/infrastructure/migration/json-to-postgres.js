@@ -50,6 +50,7 @@ import {
 import { createPostgresAdvisoryLock } from '../postgres-advisory-lock.ts';
 import { findInsecureImageUrls } from '../../modules/knowledge/application/note-content-policy.js';
 import { createJournal, loadJournal, syncKey } from '../../modules/sync/journal.ts';
+import { preserveDeviceRetirements } from '../../modules/sync/device-retirement.ts';
 import {
   backfillKnowledgeArtifactProvenance,
   legacyKnowledgeExtractionReceipts
@@ -377,6 +378,7 @@ export async function applyJsonMigration({
   if (!plan || report?.errors?.length) {
     throw createAppError('MIGRATION_PRECHECK_FAILED', 'JSON migration preflight did not pass', 422, { report });
   }
+  const targetOwnerId = plan.users[0]?.id ?? 'demo';
 
   /** @param {import('./migration-client.ts').MigrationTransaction} tx */
   const applyPlan = async tx => {
@@ -397,6 +399,8 @@ export async function applyJsonMigration({
         )
       : {};
     const normalizedJournals = previousJournals.map(old => ({ ...old, payload: loadJournal(old.payload, presentIds) }));
+    if (normalizedJournals.some(old => old.payload.version === 2 && old.ownerId !== targetOwnerId))
+      throw createAppError('SYNC_PROTECTED_OWNER_MISMATCH', '目标存在其他所属资料库的作废记录，不能删除后重建。', 409);
     for (const old of normalizedJournals) {
       for (const [collection, planCollection] of Object.entries(syncPlanCollections)) {
         for (const item of plan[planCollection] ?? []) {
@@ -485,11 +489,12 @@ export async function applyJsonMigration({
       const state = Object.fromEntries(
         Object.entries(syncPlanCollections).map(([collection, source]) => [collection, plan[source] ?? []])
       );
-      const previous = normalizedJournals.find(row => row.ownerId === plan.users[0]?.id);
+      const previous = normalizedJournals.find(row => row.ownerId === targetOwnerId);
       const journal = createJournal(state);
+      if (previous) preserveDeviceRetirements(previous.payload, journal);
       journal.tombstones = structuredClone(previous?.payload?.tombstones ?? {});
       for (const [key, tombstone] of Object.entries(journal.tombstones)) journal.revisions[key] = tombstone.revision;
-      await tx.syncJournal.create({ data: { ownerId: plan.users[0]?.id ?? 'demo', payload: journal } });
+      await tx.syncJournal.create({ data: { ownerId: targetOwnerId, payload: journal } });
     }
   };
   const advisoryLock = createPostgresAdvisoryLock(client);

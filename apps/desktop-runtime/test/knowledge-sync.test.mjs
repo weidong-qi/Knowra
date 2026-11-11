@@ -135,7 +135,7 @@ test('缺少知识生命周期能力的旧云端在拉取前停止，冻结边�
 });
 
 for (const receiptState of ['accepted', 'missing', 'unknown'])
-  test(`新增强制能力后旧冻结知识边界回执${receiptState}使用原hash，私有绑定与队列一致`, async t => {
+  test(`新增强制能力后旧冻结知识边界回执${receiptState}均不自动解释，原hash、私有绑定与队列保留`, async t => {
     const cloud = await fixture(t),
       sent = [];
     const { item } = cloud.knowledge.knowledgeItemService.createCandidate({
@@ -174,35 +174,23 @@ for (const receiptState of ['accepted', 'missing', 'unknown'])
       cursor = meta(a, 'cursor');
     await a.restart();
     await a.engine.sync();
-    if (receiptState === 'unknown') {
-      assert.equal(a.engine.status().error.code, 'SYNC_LEGACY_OPERATION_UNRESOLVED');
-      assert.equal(sent.length, 0);
-      assert.deepEqual(meta(a, 'entityUpload'), old);
-      assert.deepEqual(meta(a, 'knowledgeLifecycleUpload'), binding);
-      assert.deepEqual(meta(a, 'knowledgeLifecycleQueue'), queue);
-      assert.deepEqual(a.store.readOutbox(), outbox);
-      assert.deepEqual(a.store.exportSnapshot().data, state);
-      assert.equal(meta(a, 'cursor'), cursor);
-      return;
-    }
-    clean(a);
-    assert.equal(meta(a, 'entityUpload'), null);
-    assert.equal(meta(a, 'knowledgeLifecycleUpload'), null);
-    assert.equal(cloud.knowledge.knowledgeItemService.getItem(item.id).deletedAt, null);
-    assert.deepEqual(
-      sent.flatMap(op =>
-        op.changes.filter(entry => entry.collection === 'knowledgeItems').map(entry => entry.lifecycleAction)
-      ),
-      receiptState === 'accepted' ? ['restore'] : ['trash', 'restore']
-    );
-    assert(sent.every(op => op.operationId !== old.operationId && op.capabilities.includes('knowledge-lifecycle-v1')));
+    assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+    assert.equal(sent.length, 0);
+    assert.deepEqual(meta(a, 'entityUpload'), old);
+    assert.deepEqual(meta(a, 'knowledgeLifecycleUpload'), binding);
+    assert.deepEqual(meta(a, 'knowledgeLifecycleQueue'), queue);
+    assert.deepEqual(a.store.readOutbox(), outbox);
+    assert.deepEqual(a.store.exportSnapshot().data, state);
+    assert.equal(meta(a, 'cursor'), cursor);
     if (receiptState === 'accepted')
       assert.equal(
         cloud.store.getSyncJournal().receipts[JSON.stringify([old.deviceId, old.operationId])].hash,
         requestHash(old)
       );
     await a.restart();
-    clean(a);
+    await a.engine.sync();
+    assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+    assert.deepEqual(meta(a, 'entityUpload'), old);
   });
 
 // 全部通过真实 HTTP 云端及 SQLite 设备；不会触及用户资料。
@@ -324,7 +312,7 @@ test('阶段1 知识回收站与来源撤回在两个 SQLite 设备及云端收�
   assert.equal(cloud.store.state.knowledgeItems.find(row => row.id === item.id).deletedAt, null);
 });
 
-test('知识创建丢响应后重启重放同一请求，后继编辑保留且证据不重复', async t => {
+test('知识创建丢响应后重启仍暂停，后继编辑保留且证据不重复', async t => {
   const cloud = await fixture(t);
   let lose = true;
   const operationIds = [];
@@ -347,11 +335,12 @@ test('知识创建丢响应后重启重放同一请求，后继编辑保留且�
   await a.restart();
   a.knowledge.knowledgeItemService.updateItem(item.id, { canonicalStatement: '响应丢失后的编辑' });
   await a.engine.sync();
-  clean(a);
-  assert.equal(operationIds[0], operationIds[1]);
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(operationIds.length, 1);
   assert.equal(cloud.store.state.knowledgeItems.length, 1);
   assert.equal(cloud.store.state.knowledgeEvidence.length, 1);
-  assert.equal(cloud.knowledge.knowledgeItemService.getItem(item.id).canonicalStatement, '响应丢失后的编辑');
+  assert.equal(a.knowledge.knowledgeItemService.getItem(item.id).canonicalStatement, '响应丢失后的编辑');
+  assert.notEqual(cloud.knowledge.knowledgeItemService.getItem(item.id).canonicalStatement, '响应丢失后的编辑');
 });
 
 test('并发知识修改进入冲突，采用本地保留远端恢复记录并同步另一端', async t => {
@@ -549,7 +538,7 @@ test('无下游的离线知识多次删除恢复按边界同步，净零动作�
   clean(a);
 });
 
-test('知识删除边界丢响应后重启重放原操作，后继恢复与编辑继续同步', async t => {
+test('知识删除边界丢响应后重启仍暂停，保留原操作、后继恢复与编辑', async t => {
   const cloud = await fixture(t);
   let lose = false;
   const sent = [];
@@ -579,17 +568,21 @@ test('知识删除边界丢响应后重启重放原操作，后继恢复与编�
   a.knowledge.knowledgeItemService.updateItem(item.id, { canonicalStatement: '响应丢失之后的后继编辑' });
   await a.restart();
   await a.engine.sync();
-  clean(a);
-  assert.deepEqual(sent[0], sent[1]);
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.equal(sent.length, 1);
   assert.equal(sent[0].changes.find(row => row.id === item.id).lifecycleAction, 'trash');
-  assert.equal(sent.at(-1).changes.find(row => row.id === item.id).lifecycleAction, 'restore');
+  assert.deepEqual(meta(a, 'entityUpload'), sent[0]);
   assert.equal(
-    cloud.store.state.knowledgeItems.find(row => row.id === item.id).canonicalStatement,
+    a.store.state.knowledgeItems.find(row => row.id === item.id).canonicalStatement,
     '响应丢失之后的后继编辑'
   );
-  assert.equal(cloud.store.state.knowledgeItems.find(row => row.id === item.id).deletedAt, null);
+  assert.equal(a.store.state.knowledgeItems.find(row => row.id === item.id).deletedAt, null);
+  assert(cloud.store.state.knowledgeItems.find(row => row.id === item.id).deletedAt);
+  const queue = meta(a, 'knowledgeLifecycleQueue');
+  assert(queue.length > 0);
   await a.restart();
-  clean(a);
+  assert.equal(a.engine.status().error.code, 'SYNC_RESULT_UNCERTAIN');
+  assert.deepEqual(meta(a, 'knowledgeLifecycleQueue'), queue);
 });
 
 test('已收到与最早知识边界相同的权威基线可消费它并继续后继恢复', async t => {

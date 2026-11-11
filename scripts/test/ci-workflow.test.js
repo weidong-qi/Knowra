@@ -26,7 +26,8 @@ test('CI partitions every npm test entry exactly once and keeps Chromium in addi
   assert.deepEqual(suites.chromium, [
     'test:e2e -w @study-accelerator/desktop-runtime',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts'
+    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
+    'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts'
   ]);
   const matrix = workflow
     .match(/suite: \[([^\]]+)\]/)[1]
@@ -81,7 +82,7 @@ test('Chromium gate collects Knowra copy/save/reload scenarios and propagates th
   );
   assert.deepEqual(
     calls,
-    suites.chromium.map(command => ['run', ...command.split(' ')])
+    suites.chromium.slice(0, 3).map(command => ['run', ...command.split(' ')])
   );
   const result = spawnSync(
     process.platform === 'win32' ? 'npm.cmd' : 'npm',
@@ -95,6 +96,47 @@ test('Chromium gate collects Knowra copy/save/reload scenarios and propagates th
   assert.equal(specs.length, 6);
   for (const spec of specs) {
     assert.equal(spec.file, 'editor-knowra-marks.spec.ts');
+    assert.equal(spec.tests.length, 1);
+    assert.equal(spec.tests[0].expectedStatus, 'passed');
+  }
+});
+
+test('Chromium gate collects explicit sync recovery and propagates its failure', async () => {
+  const calls = [];
+  assert.throws(
+    () =>
+      runSuite('chromium', (_command, args) => {
+        calls.push(args);
+        return { status: calls.length === 4 ? 1 : 0 };
+      }),
+    /playwright\.sync-recovery\.config\.ts/
+  );
+  assert.deepEqual(
+    calls,
+    suites.chromium.map(command => ['run', ...command.split(' ')])
+  );
+  const result = spawnSync(
+    process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    ['run', ...suites.chromium[3].split(' '), '--list', '--reporter=json'],
+    { cwd: new URL('../../', import.meta.url), encoding: 'utf8', env: process.env }
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const report = JSON.parse(result.stdout.slice(result.stdout.indexOf('{')));
+  assert.deepEqual(report.errors, []);
+  const specs = report.suites.flatMap(suite => suite.specs);
+  assert.equal(specs.length, 3);
+  assert.equal(report.config.workers, 1);
+  assert.equal(report.config.projects.length, 1);
+  assert.equal(report.config.projects[0].retries, 0);
+  // JSON reporter 不序列化 use；直接加载同一配置核对浏览器和隐私门禁。
+  const { default: recoveryConfig } = await import('../../apps/web/playwright.sync-recovery.config.ts');
+  assert.equal(recoveryConfig.projects[0].use.channel, 'chrome');
+  assert.equal(recoveryConfig.use.launchOptions.chromiumSandbox, true);
+  assert.equal(recoveryConfig.use.trace, 'off');
+  assert.equal(recoveryConfig.use.video, 'off');
+  assert.equal(recoveryConfig.use.screenshot, 'off');
+  for (const spec of specs) {
+    assert.equal(spec.file, 'sync-safety-recovery.spec.ts');
     assert.equal(spec.tests.length, 1);
     assert.equal(spec.tests[0].expectedStatus, 'passed');
   }
