@@ -9,7 +9,7 @@ import { createIsolatedAiWorker } from './isolated-worker.js';
 import { createAiReadContextService } from './read-context-service.ts';
 import { createAiAccessService } from './access-service.ts';
 import { createAiConversationService } from './conversation-service.ts';
-import { createAiAgentWorker } from './agent-worker.js';
+import { createAiAgentWorker } from './agent-worker.ts';
 import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.ts';
 import { createConversationAttachmentService } from './conversation-attachments.ts';
 import { createBalanceService } from './balance-service.ts';

@@ -9,7 +9,7 @@ import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrast
 import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge/infrastructure/knowledge-space-repository.ts';
 import { NoteVersion } from '../src/modules/knowledge/domain/note-version.ts';
 import { createAiAccessService } from '../src/modules/ai/access-service.ts';
-import { createAiAgentWorker } from '../src/modules/ai/agent-worker.js';
+import { createAiAgentWorker } from '../src/modules/ai/agent-worker.ts';
 import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
 import { createAiConversationService } from '../src/modules/ai/conversation-service.ts';
 import { beijingDay } from '../src/modules/ai/budget-ledger.ts';

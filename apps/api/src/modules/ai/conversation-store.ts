@@ -63,7 +63,7 @@ export interface TurnSubmission {
 }
 interface ToolCallInput {
   callId: string;
-  toolName: AiConversationToolCall['toolName'];
+  toolName: string;
   argumentsJson: object;
   maxCalls?: number;
 }

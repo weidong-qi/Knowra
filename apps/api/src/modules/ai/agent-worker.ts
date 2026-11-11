@@ -1,3 +1,9 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { AgentWorkerOptions, BudgetSettlement, GatewayResult } from './boundary-types.ts';
+import type { GatewayRequest } from './gateway.ts';
+import type { SourceReference } from './access-service-types.ts';
+import type { AiConversationTurn, AiConversationMessage } from './private-record-types.ts';
+import type { AgentRequest, AgentManifest, AgentResult, ToolCall, RawReadArguments, ToolReceipt, CatalogDependencies, RawCitation, RequestSources, RawWriteArguments, RawToolResult, InitialSearchResult, RawAnswer, RawSearchResult, WorkerToolOutcome } from './agent-worker-types.ts';
 import { authorizedHistory, authorizedQuestion, plainMessages } from './agent-request-context.ts';
 import { analyzeProposal, proposalProgress } from './proposal-progress.ts';
 // 保留既有调用方的进度文本入口，纯规则统一在 proposal-progress.ts 维护。
@@ -32,7 +38,7 @@ const PROPOSAL_TOOLS = 14;
 const MAX_OUTPUT_TOKENS = 4096;
 const MAX_ATTEMPTS = 8;
 const MAX_RUN_MS = 10 * 60_000;
-const deterministicWriteFailure = code =>
+const deterministicWriteFailure = (code: unknown) =>
   typeof code === 'string' &&
   (/^AI_NOTE_(TOOL_INVALID|TARGET_INVALID|TARGET_CONFLICT|REFERENCE_DENIED|BASELINE_INVALID|ANCHOR_INVALID|PATCH_INVALID|NO_CHANGE|PLAN_LIMIT|TARGET_NOT_READ)$/.test(
     code
@@ -49,14 +55,13 @@ const deterministicWriteFailure = code =>
       'AI_ACTION_PLAN_CHANGED',
       'AI_ACTION_SOURCE_INVALID'
     ].includes(code));
-const fail = (code, message) => {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+const fail: (code: string, message: string) => never = (code, message) => {
+  const error = new Error(message) as AppError;
   error.code = code;
   throw error;
 };
-const safeCode = value => (typeof value === 'string' && /^AI_[A-Z0-9_]{1,64}$/.test(value) ? value : 'AI_TASK_FAILED');
-const manifestCatalogDeps = manifest => ({
+const safeCode = (value: unknown) => (typeof value === 'string' && /^AI_[A-Z0-9_]{1,64}$/.test(value) ? value : 'AI_TASK_FAILED');
+const manifestCatalogDeps = (manifest: AgentManifest) => ({
   noteIds: [
     ...new Set([
       ...(manifest.catalog ?? []).flatMap(item => item.noteIds ?? []),
@@ -70,9 +75,9 @@ const manifestCatalogDeps = manifest => ({
     ])
   ]
 });
-const refRange = ref => ({ noteId: ref.noteId, start: ref.start, end: ref.end });
-const uniqueRefs = refs => [...new Map(refs.map(ref => [hashRecord(ref), ref])).values()];
-const boundary = (content, position) =>
+const refRange = (ref: SourceReference) => ({ noteId: ref.noteId, start: ref.start, end: ref.end });
+const uniqueRefs = (refs: SourceReference[]) => [...new Map(refs.map(ref => [hashRecord(ref), ref])).values()];
+const boundary = (content: string, position: number) =>
   position <= 0 ||
   position >= content.length ||
   !(
@@ -118,7 +123,6 @@ const TOOLS = Object.freeze([
 ]);
 
 /** 有界自主助手：读取受授权约束，写工具只生成待审稿，网络仍由隔离 adapter 处理。 */
-/** @param {import('./boundary-types.ts').AgentWorkerOptions} [options] */
 export function createAiAgentWorker({
   store,
   access,
@@ -139,20 +143,20 @@ export function createAiAgentWorker({
   annotations = null,
   knowledgeProposals = false,
   knowledgeCommit = null
-} = {}) {
+}: AgentWorkerOptions = {}) {
   const priceProfile = baseProfile; // 外层只用于模型名等不随自定义单价变化的字段
   if (!store || !modelSettings || !budget || !gateway || !priceProfile) {
     throw new TypeError('AI Agent needs conversation store, model settings, budget and gateway');
   }
-  const active = new Map();
+  const active = new Map<string, { controller: AbortController; promise: Promise<void> }>();
   let closed = false,
     priceStaleWarned = false;
   const recovery = createAiRecoveryScope();
   const search = access ? createAuthorizedRetrieval({ access, candidateSource: retrievalCandidates }) : null;
-  const provider = gateway.capabilities?.().provider;
+  const provider = gateway!.capabilities?.().provider;
   const webSearch = createAssistantWebSearch(webSearchAdapter);
   const proposalNames = new Set(['notes_create', 'notes_append', 'notes_propose_patch', 'notes_propose_organize']);
-  const availableTools = (turn, canRead, finalOnly = false, artifactRequested = false, proposalRequested = false) =>
+  const availableTools = (turn: AiConversationTurn, canRead: boolean, finalOnly = false, artifactRequested = false, proposalRequested = false) =>
     finalOnly
       ? []
       : [
@@ -170,51 +174,51 @@ export function createAiAgentWorker({
           ...(webSearch.enabled ? [WEB_SEARCH_TOOL] : [])
         ];
 
-  async function currentTurn(turnId, generation, signal) {
-    const turn = await store.getTurn(turnId);
+  async function currentTurn(turnId: string, generation: number, signal: AbortSignal) {
+    const turn = await store!.getTurn(turnId);
     if (
       signal?.aborted ||
       !turn ||
       turn.status !== 'running' ||
       turn.leaseGeneration !== generation ||
-      Date.parse(turn.leaseExpiresAt) <= now().getTime()
+      Date.parse(turn.leaseExpiresAt!) <= now().getTime()
     )
       fail('AI_CANCELLED', '任务已取消或租约失效。');
     return turn;
   }
 
   // 用量明细只含模型名、token 数和对话 ID；结果未知时 token 为空，仍记录这次请求发生过。
-  const usageDetail = (turn, request, usage) => ({
-    modelId: request.modelId,
+  const usageDetail = (turn: AiConversationTurn, request: GatewayRequest, usage: GatewayResult['usage'] | null): NonNullable<BudgetSettlement['usage']> => ({
+    modelId: request.modelId!,
     conversationId: turn.conversationId,
     ...(usage?.unknown === false
       ? {
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
+          inputTokens: usage.inputTokens!,
+          outputTokens: usage.outputTokens!,
           cacheHitTokens: usage.cacheHitTokens ?? null
         }
       : {})
   });
 
-  async function settleOnFailure(attemptId, reserved, sent, error, detail) {
+  async function settleOnFailure(attemptId: string, reserved: boolean, sent: boolean, error: unknown, detail: BudgetSettlement['usage']) {
     if (!reserved) return;
     const disposition = sent ? 'unknown' : 'released';
     try {
-      await budget.settle({ accountRef, attemptId, disposition, ...(sent ? { usage: detail } : {}) });
+      await budget!.settle({ accountRef, attemptId, disposition, ...(sent ? { usage: detail } : {}) });
     } catch (fault) {
-      logger.warn?.('Agent budget settlement deferred', { code: safeCode(fault?.code) });
+      logger.warn?.('Agent budget settlement deferred', { code: safeCode((fault as Partial<AppError> | null)?.code) });
       return;
     }
     try {
-      await store.advanceModelAttempt(attemptId, disposition, { errorCode: safeCode(error?.code) });
+      await store!.advanceModelAttempt(attemptId, disposition, { errorCode: safeCode((error as Partial<AppError> | null)?.code) });
     } catch (fault) {
-      logger.warn?.('Agent attempt settlement deferred', { code: safeCode(fault?.code) });
+      logger.warn?.('Agent attempt settlement deferred', { code: safeCode((fault as Partial<AppError> | null)?.code) });
     }
   }
 
-  async function paidCall(turn, generation, request, manifest, grantId, credentialRef, signal) {
+  async function paidCall(turn: AiConversationTurn, generation: number, request: AgentRequest, manifest: AgentManifest | null, grantId: string | null, credentialRef: string, signal: AbortSignal) {
     if (provider !== 'mock' && !allowExternal) fail('AI_EGRESS_NOT_READY', '当前运行端未启用模型外发。');
-    if ((await store.listModelAttempts(turn.turnId)).length >= MAX_ATTEMPTS)
+    if ((await store!.listModelAttempts(turn.turnId)).length >= MAX_ATTEMPTS)
       fail('AI_ATTEMPT_LIMIT', '模型调用次数已达到上限。');
     const plan = policy ? await policy.snapshot() : null;
     const priceProfile = plan?.profile ?? baseProfile;
@@ -227,14 +231,14 @@ export function createAiAgentWorker({
     });
     if (quote.priceStale && !priceStaleWarned) {
       priceStaleWarned = true;
-      logger.warn?.('AI price profile is past its review date; costs are estimates', { version: priceProfile.version });
+      logger.warn?.('AI price profile is past its review date; costs are estimates', { version: priceProfile!.version });
     }
     if (manifest && manifest.payloadHash !== quote.payloadHash) fail('AI_PAYLOAD_STALE', '实际请求与发送清单不一致。');
     const attemptId = randomUUID(),
       day = beijingDay(now());
-    const attempt = await store.createModelAttempt(turn.turnId, generation, {
+    const attempt = await store!.createModelAttempt(turn.turnId, generation, {
       attemptId,
-      modelId: request.modelId,
+      modelId: request.modelId!,
       payloadHash: quote.payloadHash,
       manifestId: manifest?.manifestId ?? null,
       grantId: grantId ?? null,
@@ -244,11 +248,11 @@ export function createAiAgentWorker({
       sent = false,
       settled = false;
     try {
-      const reservation = await budget.reserve({
+      const reservation = await budget!.reserve({
         accountRef,
         jobId: turn.turnId,
         attemptId,
-        priceVersion: priceProfile.version,
+        priceVersion: priceProfile!.version,
         reservedMicrounits: quote.reservedMicrounits,
         day,
         ...(plan ? { limits: plan.limits } : {})
@@ -258,17 +262,17 @@ export function createAiAgentWorker({
         reservation?.accountRef !== accountRef ||
         reservation.jobId !== turn.turnId ||
         reservation.attemptId !== attemptId ||
-        reservation.priceVersion !== priceProfile.version ||
+        reservation.priceVersion !== priceProfile!.version ||
         reservation.day !== day ||
         reservation.reservedMicrounits !== quote.reservedMicrounits
       ) {
         fail('AI_BUDGET_INVALID', '预算回执与模型尝试不一致。');
       }
-      await store.advanceModelAttempt(attemptId, 'reserved', { generation });
+      await store!.advanceModelAttempt(attemptId, 'reserved', { generation });
       await currentTurn(turn.turnId, generation, signal);
       if (beijingDay(now()) !== day) fail('AI_BUDGET_DAY_CHANGED', '预算日期已切换。');
       if (manifest)
-        await access.assertRequest({ grantId, manifestId: manifest.manifestId, request, recipient: 'deepseek' });
+        await access!.assertRequest({ grantId: grantId!, manifestId: manifest.manifestId, request, recipient: 'deepseek' });
       quoteWorstCase({
         request,
         priceProfile,
@@ -278,10 +282,10 @@ export function createAiAgentWorker({
       });
       // 快照之后到真正发送之间用户可能点了暂停：在标记“已发送”前再复核一次（此时抛错会释放预留）。
       if (policy) await policy.assertRunnable();
-      await store.advanceModelAttempt(attemptId, 'sent', { generation });
+      await store!.advanceModelAttempt(attemptId, 'sent', { generation });
       sent = true;
       authorizeAttempt(attemptId);
-      const result = await gateway.complete({
+      const result = await gateway!.complete({
         ...request,
         credentialRef,
         signal,
@@ -289,25 +293,25 @@ export function createAiAgentWorker({
         verifyBeforeSend: async () => {
           await currentTurn(turn.turnId, generation, signal);
           if (manifest)
-            await access.assertRequest({ grantId, manifestId: manifest.manifestId, request, recipient: 'deepseek' });
+            await access!.assertRequest({ grantId: grantId!, manifestId: manifest.manifestId, request, recipient: 'deepseek' });
         }
       });
       const usage = result.usage;
       const actual =
         usage?.unknown === false &&
         Number.isSafeInteger(usage.inputTokens) &&
-        usage.inputTokens >= 0 &&
+        usage.inputTokens! >= 0 &&
         Number.isSafeInteger(usage.outputTokens) &&
-        usage.outputTokens >= 0
-          ? actualCostMicrounits(usage, priceProfile)
+        usage.outputTokens! >= 0
+          ? actualCostMicrounits(usage, priceProfile!)
           : null;
       if (
         actual !== null &&
-        (actual > quote.reservedMicrounits || usage.inputTokens > 100_000 || usage.outputTokens > 20_000)
+        (actual > quote.reservedMicrounits || usage.inputTokens! > 100_000 || usage.outputTokens! > 20_000)
       )
         fail('AI_USAGE_LIMIT', '模型用量超过预留或单次上限。');
       const disposition = actual === null ? 'unknown' : 'settled';
-      await budget.settle({
+      await budget!.settle({
         accountRef,
         attemptId,
         disposition,
@@ -318,10 +322,10 @@ export function createAiAgentWorker({
       try {
         await currentTurn(turn.turnId, generation, signal);
       } catch (error) {
-        await store.advanceModelAttempt(attemptId, disposition, { actualMicrounits: actual });
+        await store!.advanceModelAttempt(attemptId, disposition, { actualMicrounits: actual });
         throw error;
       }
-      await store.advanceModelAttempt(attemptId, disposition, {
+      await store!.advanceModelAttempt(attemptId, disposition, {
         generation,
         actualMicrounits: actual,
         modelResult: result
@@ -335,15 +339,15 @@ export function createAiAgentWorker({
     }
   }
 
-  async function historyFor(turn) {
-    const messages = await store.listMessages(turn.conversationId, 0, 100_000);
+  async function historyFor(turn: AiConversationTurn) {
+    const messages = await store!.listMessages(turn.conversationId, 0, 100_000);
     const current = messages.find(row => row.messageId === turn.userMessageId);
     if (!current) fail('AI_INPUT_INVALID', '当前提问未找到。');
     const prior = messages.filter(item => item.sequence < current.sequence);
     return prior.slice(-12);
   }
 
-  async function readTool(grantId, args) {
+  async function readTool(grantId: string, args: RawReadArguments) {
     if (
       !args ||
       Object.keys(args).some(key => !['noteId', 'start', 'end'].includes(key)) ||
@@ -353,10 +357,11 @@ export function createAiAgentWorker({
     ) {
       fail('AI_TOOL_ARGUMENTS_INVALID', '阅读参数无效。');
     }
-    const { note, version, contentHash } = await access.verifyRead({ grantId, noteId: args.noteId });
+    const { note, version, contentHash } = await access!.verifyRead({ grantId, noteId: args.noteId });
     const content = version.content;
-    const start = args.start ?? 0,
-      requestedEnd = args.end ?? start + 1000;
+    // 原 Number.isSafeInteger 检查拒绝非数字；此处类型语法只表达先前算术/强制转换，不新增转换。
+    const start = (args.start ?? 0) as number,
+      requestedEnd = (args.end ?? start + 1000) as number;
     if (
       !Number.isSafeInteger(start) ||
       !Number.isSafeInteger(requestedEnd) ||
@@ -390,19 +395,18 @@ export function createAiAgentWorker({
     }
   };
 
-  /** @returns {Promise<import('./boundary-types.ts').ToolOutcome>} */
   async function executeTool(
-    turn,
-    generation,
-    grantId,
-    call,
-    signal,
-    sourceRefs,
-    userMessage,
-    modelId = null,
+    turn: AiConversationTurn,
+    generation: number,
+    grantId: string | null,
+    call: ToolCall,
+    signal: AbortSignal,
+    sourceRefs: SourceReference[],
+    userMessage: string,
+    modelId: string | null = null,
     proposalsOn = false,
-    catalogDeps = null
-  ) {
+    catalogDeps: CatalogDependencies | null = null
+  ): Promise<WorkerToolOutcome> {
     await currentTurn(turn.turnId, generation, signal);
     const writeCall = proposalNames.has(call.name) && (!turn.writeIntent || call.name === turn.writeIntent.toolName);
     if (!writeCall && call.name !== 'web_search' && (!grantId || !access))
@@ -410,7 +414,7 @@ export function createAiAgentWorker({
     if (typeof call.id !== 'string' || !call.id || call.id.length > 128)
       fail('AI_TOOL_INVALID', '模型工具调用 ID 无效。');
     const callId = hashRecord({ turnId: turn.turnId, providerCallId: call.id });
-    const persisted = await store.appendToolCall(turn.turnId, generation, {
+    const persisted = await store!.appendToolCall(turn.turnId, generation, {
       callId,
       toolName: call.name,
       argumentsJson: call.arguments,
@@ -418,40 +422,40 @@ export function createAiAgentWorker({
     });
     if (persisted.status !== 'requested') {
       for (const ref of persisted.sourceRefs) await verifyRef(grantId, ref);
-      if (persisted.resultJson?.actionId)
-        await actions.resumeForTurn(persisted.resultJson.actionId, turn, { grantId, sourceRefs, catalogDeps });
+      if ((persisted.resultJson as RawToolResult | null)?.actionId)
+        await actions!.resumeForTurn((persisted.resultJson as RawToolResult).actionId as string, turn, { grantId, sourceRefs, catalogDeps });
       return toolOutcome(persisted);
     }
     let receiptPending = false;
     try {
-      let outcome;
+      let outcome: ToolReceipt;
       if (writeCall) {
         if (call.name !== 'notes_create') {
           if (!grantId || !access) fail('AI_SCOPE_FORBIDDEN', '修改已有笔记需要当前读取授权。');
           const targets =
             call.name === 'notes_propose_organize'
-              ? call.arguments?.changes?.map(change => change?.noteId)
-              : [call.arguments?.noteId];
+              ? (call.arguments as RawWriteArguments)?.changes?.map(change => change?.noteId)
+              : [(call.arguments as RawWriteArguments)?.noteId];
           if (!Array.isArray(targets) || !targets.length || targets.length > 20)
             fail('AI_TOOL_ARGUMENTS_INVALID', '修改目标无效。');
-          for (const noteId of targets) await access.verifyRead({ grantId, noteId });
-          if (!turn.writeIntent && targets.some(noteId => !sourceRefs.some(ref => ref.noteId === noteId))) {
+          for (const noteId of targets) await access!.verifyRead({ grantId, noteId: noteId as string });
+          if (!turn.writeIntent && targets.some((noteId: unknown) => !sourceRefs.some(ref => ref.noteId === noteId))) {
             fail('AI_NOTE_TARGET_NOT_READ', '请先读取目标笔记，再提出对应原文的差异稿。');
           }
         }
         if (!actions) fail('AI_ACTION_UNAVAILABLE', '写入计划服务不可用。');
         // 目录依赖是独立元数据，不借用正文片段表达，也不影响“改写已有笔记前必须先读”的判断。
         const action = turn.writeIntent
-          ? await actions.planForTurn(turn, turn.writeIntent, call, { sourceRefs, grantId, catalogDeps })
-          : await actions.planForAssistantTurn(turn, call, { sourceRefs, grantId, catalogDeps });
+          ? await actions!.planForTurn(turn, turn.writeIntent, call, { sourceRefs, grantId, catalogDeps })
+          : await actions!.planForAssistantTurn(turn, call, { sourceRefs, grantId, catalogDeps });
         receiptPending = true;
-        await actions.resumeForTurn(action.actionId, turn, { sourceRefs, grantId, catalogDeps });
+        await actions!.resumeForTurn(action.actionId, turn, { sourceRefs, grantId, catalogDeps });
         outcome = {
           resultJson: { actionId: action.actionId, planHash: action.plan.planHash, status: action.status },
           sourceRefs: []
         };
       } else if (call.name === 'notes_search') {
-        const found = await searchAssistantNotes({ search, access, grantId, args: call.arguments });
+        const found = await searchAssistantNotes({ search: search!, access: access!, grantId: grantId!, args: call.arguments });
         outcome = {
           resultJson: {
             hits: found.hits.map(hit => ({ noteId: hit.noteId, title: hit.title, ref: hit.ref, text: hit.text })),
@@ -464,14 +468,14 @@ export function createAiAgentWorker({
         };
       } else if (CATALOG_TOOL_NAMES.includes(call.name) && !turn.writeIntent) {
         // 结果不经 sources 回到模型：发送前由授权服务按同一参数重建 catalog，并写入请求清单。
-        const listed = await access.listCatalog({ grantId, toolName: call.name, args: call.arguments });
+        const listed = await access!.listCatalog({ grantId: grantId!, toolName: call.name, args: call.arguments });
         outcome = {
           resultJson: { catalog: true, kind: listed.spec.kind, total: listed.total, returned: listed.returned },
           sourceRefs: []
         };
-      } else if (call.name === 'notes_read') outcome = await readTool(grantId, call.arguments);
+      } else if (call.name === 'notes_read') outcome = await readTool(grantId!, call.arguments);
       else if (call.name === 'annotations_list' && annotations && !turn.writeIntent) {
-        outcome = await listAnnotatedRanges({ access, repository: annotations, grantId, args: call.arguments });
+        outcome = await listAnnotatedRanges({ access: access!, repository: annotations, grantId: grantId!, args: call.arguments });
       } else if (
         call.name === 'knowledge_propose' &&
         proposalsOn &&
@@ -479,8 +483,8 @@ export function createAiAgentWorker({
         requestsKnowledgeProposal(userMessage)
       ) {
         outcome = await proposeKnowledge({
-          access,
-          grantId,
+          access: access!,
+          grantId: grantId!,
           args: call.arguments,
           sourceRefs,
           turnId: turn.turnId,
@@ -495,7 +499,7 @@ export function createAiAgentWorker({
                   save: plan =>
                     knowledgeCommit.commit({
                       plan,
-                      modelId,
+                      modelId: modelId!,
                       origin,
                       identity,
                       grantId,
@@ -510,12 +514,12 @@ export function createAiAgentWorker({
       else fail('AI_TOOL_INVALID', '模型请求了未开放的工具。');
       receiptPending = true;
       await currentTurn(turn.turnId, generation, signal);
-      await store.settleToolCall(turn.turnId, generation, callId, outcome);
+      await store!.settleToolCall(turn.turnId, generation, callId, outcome);
       return toolOutcome(outcome);
     } catch (error) {
-      if (!receiptPending && (!writeCall || deterministicWriteFailure(error?.code)))
-        await store
-          .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode(error?.code) })
+      if (!receiptPending && (!writeCall || deterministicWriteFailure((error as Partial<AppError> | null)?.code)))
+        await store!
+          .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode((error as Partial<AppError> | null)?.code) })
           .catch(() => undefined);
       if (
         [
@@ -529,24 +533,24 @@ export function createAiAgentWorker({
           'AI_PROPOSAL_CITATION_INVALID',
           'AI_PROPOSAL_INVALID',
           'AI_PROPOSAL_DUPLICATE'
-        ].includes(error?.code)
+        ].includes((error as Partial<AppError> | null)?.code!)
       ) {
         return {
           sourceRefs: [],
           truncated: false,
           fallback: false,
           inspected: 0,
-          errorCode: safeCode(error?.code),
-          ...(typeof error?.hint === 'string' ? { hint: error.hint.slice(0, 300) } : {})
+          errorCode: safeCode((error as Partial<AppError> | null)?.code),
+          ...(typeof (error as { hint?: unknown } | null)?.hint === 'string' ? { hint: (error as { hint: string }).hint.slice(0, 300) } : {})
         };
       }
       throw error;
     }
   }
 
-  async function verifyRef(grantId, ref) {
+  async function verifyRef(grantId: string | null | undefined, ref: SourceReference) {
     if (!grantId || !access) fail('AI_SCOPE_FORBIDDEN', '来源需要当前读取授权。');
-    const { version, contentHash } = await access.verifyRead({ grantId, noteId: ref.noteId });
+    const { version, contentHash } = await access!.verifyRead({ grantId, noteId: ref.noteId });
     if (
       version.id !== ref.noteVersionId ||
       contentHash !== ref.contentHash ||
@@ -556,30 +560,29 @@ export function createAiAgentWorker({
     }
   }
 
-  function toolOutcome(outcome) {
+  function toolOutcome(outcome: ToolReceipt): WorkerToolOutcome {
     return {
       sourceRefs: outcome.sourceRefs ?? [],
-      truncated: outcome.resultJson?.truncated === true,
-      fallback: outcome.resultJson?.mode === 'keyword_fallback',
-      inspected: outcome.resultJson?.inspected ?? 0,
-      actionId: outcome.resultJson?.actionId,
-      catalog: outcome.resultJson?.catalog === true,
-      progress: outcome.resultJson?.status === 'saved',
-      external: outcome.resultJson?.sourceType === 'external' ? outcome.resultJson : null,
+      truncated: (outcome.resultJson as RawToolResult | null)?.truncated === true,
+      fallback: (outcome.resultJson as RawToolResult | null)?.mode === 'keyword_fallback',
+      inspected: ((outcome.resultJson as RawToolResult | null)?.inspected ?? 0),
+      actionId: (outcome.resultJson as RawToolResult | null)?.actionId,
+      catalog: (outcome.resultJson as RawToolResult | null)?.catalog === true,
+      progress: (outcome.resultJson as RawToolResult | null)?.status === 'saved',
+      external: (outcome.resultJson as RawToolResult | null)?.sourceType === 'external' ? outcome.resultJson as { hits: unknown } : null,
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
       ...(outcome.hint ? { hint: outcome.hint } : {})
     };
   }
 
-  async function draftForContinuation(turn, prior, grantId, content) {
+  async function draftForContinuation(turn: AiConversationTurn, prior: AiConversationMessage[], grantId: string | undefined, content: string) {
     if (!actions || !/(短|长|精简|扩写|补充|继续|再|改|调整|删|加|润色|这份|这个|它)/.test(content)) return '';
     const last = prior.at(-1);
     if (last?.role !== 'assistant') return '';
-    const calls = await store.listToolCalls(last.turnId);
-    const actionId = calls.findLast(call => call.status === 'succeeded' && call.resultJson?.actionId)?.resultJson
-      .actionId;
+    const calls = await store!.listToolCalls(last.turnId);
+    const actionId = (calls.findLast(call => call.status === 'succeeded' && (call.resultJson as RawToolResult | null)?.actionId) as (typeof calls)[number] & { resultJson: RawToolResult } | undefined)?.resultJson.actionId;
     if (!actionId) return '';
-    const action = await actions.get(actionId);
+    const action = await actions!.get(actionId as string);
     if (
       action.ownerId !== turn.ownerId ||
       action.spaceId !== turn.spaceId ||
@@ -594,12 +597,12 @@ export function createAiAgentWorker({
     const catalogDeps = action.grant.catalogDeps ?? null;
     if (catalogDeps && (catalogDeps.noteIds.length || catalogDeps.folderIds.length)) {
       if (!grantId || !access) fail('AI_SCOPE_FORBIDDEN', '续改含目录资料的待审稿需要当前读取授权。');
-      await access.assertCatalogDeps({ grantId, deps: catalogDeps });
+      await access!.assertCatalogDeps({ grantId, deps: catalogDeps });
     }
     for (const item of action.plan.items)
       if (item.before) {
         if (!grantId) return '';
-        await access.verifyRead({ grantId, noteId: item.after.id });
+        await access!.verifyRead({ grantId, noteId: item.after.id });
       }
     const drafts = action.plan.items.map(item => ({
       noteId: item.after.id,
@@ -615,8 +618,8 @@ export function createAiAgentWorker({
     };
   }
 
-  function citedResult(result, request, manifest) {
-    const payload = result.json;
+  function citedResult(result: AgentResult, request: AgentRequest, manifest: AgentManifest) {
+    const payload = result.json as RawAnswer | null | undefined;
     // 系统提示允许“未用资料可返回空 citations”；漏写该字段等价于空，不作为结构错误（引用一旦给出仍逐条严格校验）。
     const given = payload && payload.citations === undefined ? [] : payload?.citations;
     if (
@@ -629,18 +632,18 @@ export function createAiAgentWorker({
     ) {
       fail('AI_OUTPUT_INVALID', '模型回答结构无效。');
     }
-    const sources = JSON.parse(request.messages.at(-1).content).sources;
-    const citations = [];
-    for (const item of given) {
+    const sources = (JSON.parse(request.messages.at(-1)!.content) as RequestSources).sources;
+    const citations: SourceReference[] = [];
+    for (const item of given as RawCitation[]) {
       if (
         !item ||
-        !/^S\d{1,3}$/.test(item.sourceId) ||
+        !/^S\d{1,3}$/.test(item.sourceId as string) ||
         typeof item.quote !== 'string' ||
         !item.quote ||
         item.quote.length > 1000
       )
         fail('AI_CITATION_INVALID', '模型引用格式无效。');
-      const source = sources[Number(item.sourceId.slice(1)) - 1];
+      const source = sources[Number((item.sourceId as string).slice(1)) - 1];
       const offset = source?.text.indexOf(item.quote) ?? -1;
       if (!source || offset < 0) fail('AI_CITATION_INVALID', '模型引用不在已发送的来源中。');
       citations.push({
@@ -662,11 +665,11 @@ export function createAiAgentWorker({
     };
   }
 
-  async function runClaimed(turn, signal) {
+  async function runClaimed(turn: AiConversationTurn, signal: AbortSignal) {
     const generation = turn.leaseGeneration;
-    const conversation = await store.getConversation(turn.conversationId);
+    const conversation = await store!.getConversation(turn.conversationId);
     if (!conversation || conversation.ownerId !== turn.ownerId) fail('AI_CONVERSATION_NOT_FOUND', '会话不存在。');
-    const user = (await store.listMessages(turn.conversationId, 0, 100_000)).find(
+    const user = (await store!.listMessages(turn.conversationId, 0, 100_000)).find(
       row => row.messageId === turn.userMessageId
     );
     if (!user || user.content.length > 4000) fail('AI_INPUT_TOO_LARGE', '单次提问不能超过 4000 字符。');
@@ -676,8 +679,8 @@ export function createAiAgentWorker({
     const proposalRequested = proposalsOn && !turn.writeIntent && requestsKnowledgeProposal(user.content);
     const maxRounds = proposalRequested ? PROPOSAL_ROUNDS : MAX_ROUNDS,
       maxTools = proposalRequested ? PROPOSAL_TOOLS : MAX_TOOLS;
-    const reference = await modelSettings.credentialReference();
-    if (!reference || reference.modelId !== priceProfile.modelId)
+    const reference = await modelSettings!.credentialReference();
+    if (!reference || reference.modelId !== priceProfile!.modelId)
       fail('AI_NOT_CONFIGURED', '请先配置已核价的 deepseek-flash 模型。');
     if (provider !== 'mock' && !allowExternal) fail('AI_GENERATION_UNAVAILABLE', '当前运行端未启用模型外发。');
     const prior = await historyFor(turn);
@@ -687,7 +690,7 @@ export function createAiAgentWorker({
     if (turn.writeIntent && !actions) fail('AI_ACTION_UNAVAILABLE', '当前写入计划服务不可用。');
     if (turn.writeIntent?.noteId) {
       if (!grant) fail('AI_SCOPE_FORBIDDEN', '已有笔记写入需要读取授权。');
-      await access.verifyRead({ grantId: grant.grantId, noteId: turn.writeIntent.noteId });
+      await access!.verifyRead({ grantId: grant.grantId, noteId: turn.writeIntent.noteId });
     }
     if (turn.requestedPolicyId && !grant) fail('AI_ACCESS_REVOKED', '读取授权不可用。');
     const draft = await draftForContinuation(turn, prior, grant?.grantId, user.content);
@@ -710,9 +713,9 @@ export function createAiAgentWorker({
     let searchFallback = checkpoint.searchFallback;
     let externalContext = checkpoint.externalContext;
     let toolFeedback = checkpoint.toolFeedback;
-    let totalTools = Math.max(checkpoint.totalTools, (await store.listToolCalls(turn.turnId)).length);
+    let totalTools = Math.max(checkpoint.totalTools, (await store!.listToolCalls(turn.turnId)).length);
     let forceAnswer = checkpoint.forceAnswer;
-    let budgetCapacity = null,
+    let budgetCapacity: number | null = null,
       proposalNudges = 0,
       proposalNudge = ''; // 本轮运行内的临时状态：请求预算容量、已提醒次数、一次性提醒
     let noProgressRounds = checkpoint.noProgressRounds,
@@ -721,7 +724,7 @@ export function createAiAgentWorker({
     let nextRound = checkpoint.nextRound;
     let initialSearchDone = checkpoint.initialSearchDone;
     const save = async () =>
-      store.saveCheckpoint(turn.turnId, generation, {
+      store!.saveCheckpoint(turn.turnId, generation, {
         version: 1,
         nextRound,
         totalTools,
@@ -747,13 +750,12 @@ export function createAiAgentWorker({
       !turn.writeIntent &&
       (rankHighlights || /(文件夹|目录|分类|夹下|夹里|夹中)/.test(user.content))
     ) {
-      const matched = await access.matchCatalogFolders({ grantId: grant.grantId, text: user.content }).catch(() => []);
+      const matched = await access!.matchCatalogFolders({ grantId: grant.grantId, text: user.content }).catch(() => []);
       const ranked = rankHighlights ? { sortBy: 'annotations', limit: 10 } : {};
-      /** @type {[import('./private-record-types.ts').AiConversationToolCall['toolName'], object][]} */
-      const plans = matched.length
+      const plans: ['notes_list' | 'folders_list', import('./catalog-tool.ts').CatalogArguments][] = matched.length
         ? matched.map(
-            item =>
-              /** @type {['notes_list', object]} */ ([
+            (item): ['notes_list', import('./catalog-tool.ts').CatalogArguments] =>
+              ([
                 'notes_list',
                 { folderId: item.folderId, ...(rankHighlights ? { ...ranked, recursive: true } : {}) }
               ])
@@ -763,7 +765,7 @@ export function createAiAgentWorker({
           : [['folders_list', {}]];
       for (const [toolName, args] of plans) {
         const callId = hashRecord({ turnId: turn.turnId, initialCatalog: toolName, args });
-        const prefetch = await store.appendToolCall(turn.turnId, generation, {
+        const prefetch = await store!.appendToolCall(turn.turnId, generation, {
           callId,
           toolName,
           argumentsJson: args,
@@ -771,80 +773,81 @@ export function createAiAgentWorker({
         });
         if (prefetch.status !== 'requested') continue;
         try {
-          const listed = await access.listCatalog({ grantId: grant.grantId, toolName, args });
+          const listed = await access!.listCatalog({ grantId: grant.grantId, toolName, args });
           await currentTurn(turn.turnId, generation, signal);
-          await store.settleToolCall(turn.turnId, generation, callId, {
+          await store!.settleToolCall(turn.turnId, generation, callId, {
             resultJson: { catalog: true, kind: listed.spec.kind, total: listed.total, returned: listed.returned },
             sourceRefs: []
           });
         } catch (error) {
-          await store
-            .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode(error?.code) })
+          await store!
+            .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode((error as Partial<AppError> | null)?.code) })
             .catch(() => undefined);
-          if (error?.code === 'AI_CANCELLED') throw error;
+          if ((error as Partial<AppError> | null)?.code === 'AI_CANCELLED') throw error;
         }
       }
     }
     if (!initialSearchDone && grant && /(我的|我记|笔记|资料|文档|记录|之前|根据|比较|总结|引用)/.test(user.content)) {
       const callId = hashRecord({ turnId: turn.turnId, initialSearch: true });
-      const initialCall = await store.appendToolCall(turn.turnId, generation, {
+      const initialCall = await store!.appendToolCall(turn.turnId, generation, {
         callId,
         toolName: 'notes_search',
         argumentsJson: { query: user.content, limit: 3, origin: 'automatic' },
         maxCalls: maxTools
       });
       try {
-        /** @type {NonNullable<import('./private-record-types.ts').AiConversationToolCall['resultJson']>} */
-        const initial =
+        // 持久 resultJson 只有对象校验；hits 的 map 操作与后续来源验证沿用原路径。
+        // 不把恢复值声明为已校验检索结果，缺失/损坏方法仍在同一调用处失败。
+        const initial: RawSearchResult =
           initialCall.status === 'succeeded'
-            ? { ...initialCall.resultJson, hits: initialCall.resultJson.hits }
-            : await search.search({ grantId: grant.grantId, query: user.content, limit: 3 });
+            ? { ...initialCall.resultJson, hits: (initialCall.resultJson as RawSearchResult).hits }
+            : await search!.search({ grantId: grant.grantId, query: user.content, limit: 3 });
         await currentTurn(turn.turnId, generation, signal);
         if (initialCall.status === 'requested')
-          await store.settleToolCall(turn.turnId, generation, callId, {
+          await store!.settleToolCall(turn.turnId, generation, callId, {
             resultJson: {
-              hits: initial.hits.map(hit => ({ noteId: hit.noteId, title: hit.title, ref: hit.ref, text: hit.text })),
+              hits: (initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => ({ noteId: hit.noteId, title: hit.title, ref: hit.ref, text: hit.text })),
               inspected: initial.inspected,
               truncated: initial.truncated,
               mode: initial.mode,
               ...(initial.fallbackReason ? { fallbackReason: initial.fallbackReason } : {})
             },
-            sourceRefs: initial.hits.map(hit => hit.ref)
+            sourceRefs: (initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => hit.ref)
           });
-        sourceRefs = uniqueRefs([...sourceRefs, ...initial.hits.map(hit => hit.ref)]).slice(-12);
-        searchTruncated = initial.truncated;
+        sourceRefs = uniqueRefs([...sourceRefs, ...(initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => hit.ref)]).slice(-12);
+        searchTruncated = initial.truncated as boolean;
         searchFallback = initial.mode === 'keyword_fallback';
       } catch (error) {
-        await store
-          .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode(error?.code) })
+        await store!
+          .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode((error as Partial<AppError> | null)?.code) })
           .catch(() => undefined);
         throw error;
       }
     }
     initialSearchDone = true;
-    totalTools = Math.max(totalTools, (await store.listToolCalls(turn.turnId)).length);
+    totalTools = Math.max(totalTools, (await store!.listToolCalls(turn.turnId)).length);
     await save();
     for (let round = nextRound; round < maxRounds; round++) {
-      await store.renewLease(turn.turnId, generation);
-      await store.setPhase(turn.turnId, generation, sourceRefs.length ? 'retrieving' : 'generating');
-      let request,
-        manifest = null;
+      await store!.renewLease(turn.turnId, generation);
+      await store!.setPhase(turn.turnId, generation, sourceRefs.length ? 'retrieving' : 'generating');
+      let request: AgentRequest,
+        manifest: AgentManifest | null = null;
       // 已落盘的模型结果（恢复场景）可能含有原请求清单里的目录标题：先确认这些依赖仍被授权，并继承到新清单，
       // 否则新清单只重建当前目录，旧标题就脱离了依赖链。依赖已失效则丢弃该结果，由用户显式重试重新生成。
-      const pending = (await store.listModelAttempts(turn.turnId)).find(
+      const pending = (await store!.listModelAttempts(turn.turnId)).find(
         attempt => attempt.ordinal > handledAttemptOrdinal && attempt.modelResult
       );
       let inheritedCatalog = (draft || null)?.catalogDeps ?? null;
       if (grant && pending?.manifestId) {
         try {
-          const resumed = await access.catalogDependencies({ grantId: grant.grantId, manifestId: pending.manifestId });
+          const resumed = await access!.catalogDependencies({ grantId: grant.grantId, manifestId: pending.manifestId });
           inheritedCatalog = {
             noteIds: [...new Set([...(inheritedCatalog?.noteIds ?? []), ...resumed.noteIds])],
             folderIds: [...new Set([...(inheritedCatalog?.folderIds ?? []), ...resumed.folderIds])]
           };
         } catch (error) {
-          if (!['AI_SCOPE_FORBIDDEN', 'AI_SOURCE_STALE'].includes(error?.code)) throw error;
-          await store.rejectModelResult(turn.turnId, generation, pending.ordinal, 'AI_OUTPUT_INVALID');
+          if (!['AI_SCOPE_FORBIDDEN', 'AI_SOURCE_STALE'].includes((error as Partial<AppError> | null)?.code!)) throw error;
+          await store!.rejectModelResult(turn.turnId, generation, pending.ordinal, 'AI_OUTPUT_INVALID');
           fail('AI_SOURCE_STALE', '恢复的回答依赖的目录或笔记已不在授权范围内，请重试本轮。');
         }
       }
@@ -853,7 +856,7 @@ export function createAiAgentWorker({
         let prepared;
         for (;;) {
           const progress = proposalRequested
-            ? proposalProgress(await store.listToolCalls(turn.turnId), sourceRefs, budgetCapacity)
+            ? proposalProgress(await store!.listToolCalls(turn.turnId), sourceRefs, budgetCapacity)
             : '';
           const boundedQuestion = authorizedQuestion({
             userContent: user.content,
@@ -871,7 +874,7 @@ export function createAiAgentWorker({
             plainContext
           });
           try {
-            prepared = await access.prepareRequest({
+            prepared = await access!.prepareRequest({
               grantId: grant.grantId,
               recipient: 'deepseek',
               modelId: reference.modelId,
@@ -887,7 +890,7 @@ export function createAiAgentWorker({
               maxTokens: MAX_OUTPUT_TOKENS,
               writeToolName: turn.writeIntent?.toolName ?? null,
               assistantTools: !turn.writeIntent,
-              catalog: catalogSpecsFromCalls(await store.listToolCalls(turn.turnId)),
+              catalog: catalogSpecsFromCalls(await store!.listToolCalls(turn.turnId)),
               inheritedCatalog,
               tools: availableTools(turn, true, finalOnly, artifactRequested, proposalRequested),
               format: 'json'
@@ -897,10 +900,10 @@ export function createAiAgentWorker({
             // 提炼回合：来源体积超过请求预算（固定开销约 7KB，每条来源再加数百字节）时不让回合失败，
             // 从最旧的来源起移出窗口直到装得下；说明文字随后按移出后的真实窗口重算，并提示被移出重点的重新读取位置。
             if (
-              error?.code !== 'AI_CONTEXT_BUDGET' ||
+              (error as Partial<AppError> | null)?.code !== 'AI_CONTEXT_BUDGET' ||
               sourceRefs.length <= 1 ||
               (!proposalRequested &&
-                !(await store.listToolCalls(turn.turnId)).some(call => CATALOG_TOOL_NAMES.includes(call.toolName)))
+                !(await store!.listToolCalls(turn.turnId)).some(call => CATALOG_TOOL_NAMES.includes(call.toolName)))
             )
               throw error;
             sourceRefs = sourceRefs.slice(1);
@@ -910,14 +913,14 @@ export function createAiAgentWorker({
         proposalNudge = '';
         request = prepared.request;
         manifest = prepared.manifest;
-        for (const call of await store.listToolCalls(turn.turnId)) {
+        for (const call of await store!.listToolCalls(turn.turnId)) {
           if (
             call.status === 'succeeded' &&
             call.sourceRefs.length &&
             !call.provenanceManifestId &&
-            call.sourceRefs.every(ref => manifest.sources.some(source => hashRecord(source) === hashRecord(ref)))
+            call.sourceRefs.every(ref => manifest!.sources.some(source => hashRecord(source) === hashRecord(ref)))
           ) {
-            await store.bindToolResultManifest(turn.turnId, generation, call.callId, manifest.manifestId);
+            await store!.bindToolResultManifest(turn.turnId, generation, call.callId, manifest.manifestId);
           }
         }
       } else {
@@ -947,18 +950,18 @@ export function createAiAgentWorker({
       await save();
       if (pending?.modelId && pending.modelId !== reference.modelId) fail('AI_MODEL_CHANGED', '恢复前模型配置已变化。');
       const delivery = pending
-        ? { result: pending.modelResult, attemptOrdinal: pending.ordinal }
-        : await paidCall(turn, generation, request, manifest, grant?.grantId ?? null, reference.credentialRef, signal);
+        ? { result: pending.modelResult!, attemptOrdinal: pending.ordinal }
+        : await paidCall(turn, generation, request, manifest, grant?.grantId ?? null, reference.credentialRef!, signal);
       const { result, attemptOrdinal } = delivery;
       const permittedTools = pending
         ? availableTools(turn, Boolean(grant), false, artifactRequested, proposalRequested)
         : request.tools;
       if (result.toolCalls.some(call => !permittedTools.some(tool => tool.name === call.name))) {
-        await store.rejectModelResult(turn.turnId, generation, attemptOrdinal, 'AI_TOOL_INVALID');
+        await store!.rejectModelResult(turn.turnId, generation, attemptOrdinal, 'AI_TOOL_INVALID');
         fail('AI_TOOL_INVALID', '恢复的工具请求不在当前授权工具范围内。');
       }
       if (result.finishReason === 'tool_calls') {
-        const persistedCalls = await store.listToolCalls(turn.turnId);
+        const persistedCalls = await store!.listToolCalls(turn.turnId);
         if (
           !result.toolCalls.length ||
           result.toolCalls.length > 2 ||
@@ -975,7 +978,7 @@ export function createAiAgentWorker({
           fail('AI_AGENT_LIMIT', '工具轮次达到上限。');
         }
         if (result.toolCalls.some(call => proposalNames.has(call.name)) && result.toolCalls.length !== 1) {
-          await store.rejectModelResult(turn.turnId, generation, attemptOrdinal, 'AI_TOOL_INVALID');
+          await store!.rejectModelResult(turn.turnId, generation, attemptOrdinal, 'AI_TOOL_INVALID');
           fail('AI_TOOL_INVALID', '一轮只可提出一个明确的写入计划。');
         }
 
@@ -995,11 +998,11 @@ export function createAiAgentWorker({
             proposalsOn,
             manifest ? manifestCatalogDeps(manifest) : null
           );
-          totalTools = (await store.listToolCalls(turn.turnId)).length;
+          totalTools = (await store!.listToolCalls(turn.turnId)).length;
           proposalSaved ||= outcome.progress === true || outcome.catalog === true;
           if (outcome.actionId) {
             await currentTurn(turn.turnId, generation, signal);
-            await store.completeTurn(turn.turnId, generation, {
+            await store!.completeTurn(turn.turnId, generation, {
               content: turn.writeIntent
                 ? '已生成笔记计划，尚未写入。请在执行记录中查看差异并确认。'
                 : '已生成待审成果。请在 AI 成果收件箱继续修改或确认采纳。',
@@ -1040,7 +1043,7 @@ export function createAiAgentWorker({
           : result.refused
             ? 'AI_PROVIDER_REFUSED'
             : 'AI_OUTPUT_INVALID';
-        await store.rejectModelResult(turn.turnId, generation, attemptOrdinal, code);
+        await store!.rejectModelResult(turn.turnId, generation, attemptOrdinal, code);
         fail(code, '模型未返回完整可用回答。');
       }
       // 提炼回合：仍有待提交的重点却直接作答（常见于把“最终回答”误当作提交方式、声称已提交）时，先提醒一次再决定，
@@ -1050,7 +1053,7 @@ export function createAiAgentWorker({
         grant &&
         proposalNudges < 2 &&
         request.tools.some(tool => tool.name === 'knowledge_propose') &&
-        analyzeProposal(await store.listToolCalls(turn.turnId), sourceRefs, budgetCapacity).needPropose
+        analyzeProposal(await store!.listToolCalls(turn.turnId), sourceRefs, budgetCapacity).needPropose
       ) {
         proposalNudges++;
         proposalNudge =
@@ -1060,11 +1063,11 @@ export function createAiAgentWorker({
         await save();
         continue;
       }
-      await store.setPhase(turn.turnId, generation, 'validating');
+      await store!.setPhase(turn.turnId, generation, 'validating');
       let answer;
       try {
         answer = grant
-          ? citedResult(result, request, manifest)
+          ? citedResult(result, request, manifest!)
           : {
               content: result.content.trim(),
               sourceRefs: [],
@@ -1074,10 +1077,10 @@ export function createAiAgentWorker({
             };
         if (!answer.content) fail('AI_OUTPUT_INVALID', '模型返回空回答。');
       } catch (error) {
-        if (['AI_CITATION_INVALID', 'AI_OUTPUT_INVALID'].includes(error.code))
-          await store.rejectModelResult(turn.turnId, generation, attemptOrdinal, error.code);
+        if (['AI_CITATION_INVALID', 'AI_OUTPUT_INVALID'].includes((error as AppError).code))
+          await store!.rejectModelResult(turn.turnId, generation, attemptOrdinal, (error as AppError).code);
         // 引文无法逐字核对时先让模型修正一次，而不是整轮失败；已展示的引用仍然逐条严格校验。
-        if (error.code === 'AI_CITATION_INVALID' && citationRepairs < 1 && round < maxRounds - 1) {
+        if ((error as AppError).code === 'AI_CITATION_INVALID' && citationRepairs < 1 && round < maxRounds - 1) {
           citationRepairs++;
           toolFeedback =
             '\n注意：上一条回答的引用无法在 sources 中逐字核对。请重新作答：quote 必须逐字摘自 sources 的 text 且 sourceId 对应；不确定时 citations 留空数组。';
@@ -1091,30 +1094,30 @@ export function createAiAgentWorker({
       if (externalContext)
         answer.content += '\n\n外部检索来源（合成验收，非真实联网）：' + renderExternalSources(externalContext);
       await currentTurn(turn.turnId, generation, signal);
-      await store.completeTurn(turn.turnId, generation, answer);
+      await store!.completeTurn(turn.turnId, generation, answer);
       return;
     }
     fail('AI_AGENT_LIMIT', '模型轮次达到上限。');
   }
 
-  async function run(turnId, mode = 'resume') {
+  async function run(turnId: string, mode = 'resume'): Promise<void> {
     if (closed) fail('AI_GENERATION_UNAVAILABLE', 'AI 执行端已关闭。');
-    if (active.has(turnId)) return active.get(turnId).promise;
+    if (active.has(turnId)) return active.get(turnId)!.promise;
     const controller = new AbortController();
-    let timer;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const promise = (async () => {
-      let turn;
+      let turn: AiConversationTurn | undefined;
       try {
-        const previous = await store.getTurn(turnId);
+        const previous = await store!.getTurn(turnId);
         const remainingMs = previous?.executionStartedAt
           ? MAX_RUN_MS - (now().getTime() - Date.parse(previous.executionStartedAt))
           : MAX_RUN_MS;
         timer = setTimeout(() => controller.abort(), Math.max(1, remainingMs));
         timer.unref?.();
-        turn = await store.claimTurn(turnId, 300_000, { mode });
+        turn = await store!.claimTurn(turnId, 300_000, { mode });
         await runClaimed(turn, controller.signal);
       } catch (error) {
-        if (turn) await store.failTurn(turnId, turn.leaseGeneration, safeCode(error?.code)).catch(() => undefined);
+        if (turn) await store!.failTurn(turnId, turn.leaseGeneration, safeCode((error as Partial<AppError> | null)?.code)).catch(() => undefined);
         throw error;
       } finally {
         clearTimeout(timer);
@@ -1126,23 +1129,23 @@ export function createAiAgentWorker({
   }
 
   async function recover() {
-    await store.recoverInterrupted();
-    const attempts = await store.listModelAttempts();
-    const turns = new Map((await store.listTurns()).map(turn => [turn.turnId, turn]));
+    await store!.recoverInterrupted();
+    const attempts = await store!.listModelAttempts();
+    const turns = new Map((await store!.listTurns()).map(turn => [turn.turnId, turn]));
     let uncertain = 0;
     for (const attempt of attempts) {
       if (!['prepared', 'reserved', 'sent'].includes(attempt.status)) continue;
       const turn = turns.get(attempt.turnId);
-      if (!turn || (turn.status === 'running' && Date.parse(turn.leaseExpiresAt) > now().getTime())) continue;
+      if (!turn || (turn.status === 'running' && Date.parse(turn.leaseExpiresAt!) > now().getTime())) continue;
       try {
-        await budget.settle({ accountRef, attemptId: attempt.attemptId, disposition: 'unknown' });
+        await budget!.settle({ accountRef, attemptId: attempt.attemptId, disposition: 'unknown' });
       } catch (error) {
-        if (error.code !== 'AI_BUDGET_NOT_FOUND' && error.code !== 'AI_BUDGET_CONFLICT') {
-          logger.warn?.('Agent budget recovery deferred', { code: safeCode(error?.code) });
+        if ((error as AppError).code !== 'AI_BUDGET_NOT_FOUND' && (error as AppError).code !== 'AI_BUDGET_CONFLICT') {
+          logger.warn?.('Agent budget recovery deferred', { code: safeCode((error as Partial<AppError> | null)?.code) });
           continue;
         }
       }
-      await store
+      await store!
         .advanceModelAttempt(attempt.attemptId, 'unknown', { errorCode: 'AI_DELIVERY_UNCERTAIN' })
         .catch(() => undefined);
       uncertain++;
@@ -1150,10 +1153,10 @@ export function createAiAgentWorker({
     return uncertain;
   }
 
-  function cancel(turnId) {
+  function cancel(turnId: string) {
     active.get(turnId)?.controller.abort();
   }
-  async function retry(turnId) {
+  async function retry(turnId: string) {
     const previous = active.get(turnId);
     if (previous) {
       previous.controller.abort();

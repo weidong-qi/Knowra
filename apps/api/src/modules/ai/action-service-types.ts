@@ -16,7 +16,6 @@ import type {
   CoreOperationResult
 } from '../../infrastructure/core-operation-types.ts';
 import type { createActionInboxMethods } from './action-inbox.ts';
-import type { WriteIntent } from './note-write-intent.ts';
 
 export interface ActionArguments extends RevisionArguments {
   actionId?: string;
@@ -96,7 +95,7 @@ export interface ActionServiceMethods {
   ): Promise<ActionRecord>;
   planForTurn(
     turn: AiConversationTurn,
-    intent: WriteIntent,
+    intent: NonNullable<AiConversationTurn['writeIntent']>,
     call: ActionCall,
     options?: ActionSourceOptions
   ): Promise<ActionRecord>;

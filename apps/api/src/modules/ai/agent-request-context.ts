@@ -3,7 +3,7 @@ import { PROPOSAL_GUIDANCE } from './proposal-progress.ts';
 import { ASSISTANT_GUIDANCE } from './assistant-tools.ts';
 import type { AppError } from '../../errors/app-error.ts';
 import type { SourceReference } from './access-service-types.ts';
-import type { WriteIntent } from './note-write-intent.ts';
+import type { AiConversationTurn } from './private-record-types.ts';
 
 interface ContextHistoryEntry<Reference = SourceReference> {
   role: string;
@@ -32,7 +32,7 @@ interface PlainMessageContext<Reference> extends Pick<
   'userContent' | 'draftContext' | 'toolFeedback' | 'externalContext' | 'webSearchEnabled'
 > {
   prior: readonly ContextHistoryEntry<Reference>[];
-  writeIntent?: WriteIntent | null;
+  writeIntent?: AiConversationTurn['writeIntent'] | null;
 }
 
 // 仅组装请求文本与历史；授权核验、来源预算重试和外发仍由调用方负责。

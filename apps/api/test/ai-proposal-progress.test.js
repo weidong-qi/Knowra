@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { analyzeProposal, proposalProgress } from '../src/modules/ai/proposal-progress.ts';
-import { proposalProgress as workerProposalProgress } from '../src/modules/ai/agent-worker.js';
+import { proposalProgress as workerProposalProgress } from '../src/modules/ai/agent-worker.ts';
 
 const ref = (noteId, start, end) => ({ noteId, start, end });
 const first = { annotationId: 'a', importance: 'core', start: 0, end: 4 };
