@@ -1,8 +1,41 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createAiAssistantService } from './assistant-service.js';
+type AssistantRoutePort = Pick<
+  ReturnType<typeof createAiAssistantService>,
+  | 'allowRule'
+  | 'balance'
+  | 'budgetAlerts'
+  | 'budgetSettings'
+  | 'cancel'
+  | 'get'
+  | 'list'
+  | 'markAlerts'
+  | 'pauseRule'
+  | 'preview'
+  | 'resolveUnknown'
+  | 'resumeRule'
+  | 'saveBudgetSettings'
+  | 'start'
+  | 'status'
+  | 'usage'
+  | 'usageExport'
+>;
+interface AssistantRouteContext {
+  request: IncomingMessage;
+  response: Pick<ServerResponse, 'setHeader' | 'writeHead' | 'end'>;
+  url: URL;
+  assistant?: AssistantRoutePort | null;
+}
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { AppError, createAppError } from '../../errors/app-error.js';
+import { AppError, createAppError } from '../../errors/app-error.ts';
 
-export async function handleAssistantRoute({ request, response, url, assistant }) {
+export async function handleAssistantRoute({
+  request,
+  response,
+  url,
+  assistant
+}: AssistantRouteContext): Promise<boolean> {
   if (!url.pathname.startsWith('/api/ai/assistant')) return false;
   if (!assistant) throw createAppError('AI_ASSISTANT_UNAVAILABLE', '助手服务不可用。', 503);
   response.setHeader('Cache-Control', 'no-store');
@@ -59,24 +92,42 @@ export async function handleAssistantRoute({ request, response, url, assistant }
       }
       if (url.pathname === `${root}/usage/resolve`) {
         sendJson(response, 200, {
-          data: await assistant.resolveUnknown(await parseBody(request, { limitBytes: 512 }))
+          data: await assistant.resolveUnknown(
+            (await parseBody(request, { limitBytes: 512 })) as Parameters<AssistantRoutePort['resolveUnknown']>[0]
+          )
         });
         return true;
       }
       if (url.pathname === `${root}/alerts/mark`) {
-        sendJson(response, 200, { data: await assistant.markAlerts(await parseBody(request, { limitBytes: 2048 })) });
+        sendJson(response, 200, {
+          data: await assistant.markAlerts(
+            (await parseBody(request, { limitBytes: 2048 })) as Parameters<AssistantRoutePort['markAlerts']>[0]
+          )
+        });
         return true;
       }
       if (url.pathname === `${root}/alerts/pause`) {
-        sendJson(response, 200, { data: await assistant.pauseRule(await parseBody(request, { limitBytes: 256 })) });
+        sendJson(response, 200, {
+          data: await assistant.pauseRule(
+            (await parseBody(request, { limitBytes: 256 })) as Parameters<AssistantRoutePort['pauseRule']>[0]
+          )
+        });
         return true;
       }
       if (url.pathname === `${root}/alerts/resume`) {
-        sendJson(response, 200, { data: await assistant.resumeRule(await parseBody(request, { limitBytes: 256 })) });
+        sendJson(response, 200, {
+          data: await assistant.resumeRule(
+            (await parseBody(request, { limitBytes: 256 })) as Parameters<AssistantRoutePort['resumeRule']>[0]
+          )
+        });
         return true;
       }
       if (url.pathname === `${root}/alerts/allow`) {
-        sendJson(response, 200, { data: await assistant.allowRule(await parseBody(request, { limitBytes: 256 })) });
+        sendJson(response, 200, {
+          data: await assistant.allowRule(
+            (await parseBody(request, { limitBytes: 256 })) as Parameters<AssistantRoutePort['allowRule']>[0]
+          )
+        });
         return true;
       }
       if (url.pathname === `${root}/balance/refresh`) {
@@ -98,10 +149,10 @@ export async function handleAssistantRoute({ request, response, url, assistant }
     }
   } catch (error) {
     if (error instanceof AppError) throw error;
-    if (error.code?.startsWith('AI_')) {
-      const status = ['AI_JOB_NOT_FOUND'].includes(error.code)
+    if ((error as AppError).code?.startsWith('AI_')) {
+      const status = ['AI_JOB_NOT_FOUND'].includes((error as AppError).code)
         ? 404
-        : error.code === 'AI_PRIVATE_STORAGE_UNAVAILABLE'
+        : (error as AppError).code === 'AI_PRIVATE_STORAGE_UNAVAILABLE'
           ? 503
           : [
                 'AI_GENERATION_UNAVAILABLE',
@@ -113,20 +164,22 @@ export async function handleAssistantRoute({ request, response, url, assistant }
                 'AI_BALANCE_STALE',
                 'AI_PAUSED_BY_USER',
                 'AI_BUDGET_ALERTS_INVALID'
-              ].includes(error.code)
+              ].includes((error as AppError).code)
             ? 409
-            : ['AI_BUDGET_UNAVAILABLE', 'AI_BALANCE_UNSUPPORTED', 'AI_BUDGET_SETTINGS_UNAVAILABLE'].includes(error.code)
+            : ['AI_BUDGET_UNAVAILABLE', 'AI_BALANCE_UNSUPPORTED', 'AI_BUDGET_SETTINGS_UNAVAILABLE'].includes(
+                  (error as AppError).code
+                )
               ? 503
-              : error.code === 'AI_BALANCE_UNAVAILABLE'
+              : (error as AppError).code === 'AI_BALANCE_UNAVAILABLE'
                 ? 502
-                : error.code === 'AI_BALANCE_STORAGE_INVALID'
+                : (error as AppError).code === 'AI_BALANCE_STORAGE_INVALID'
                   ? 500
-                  : error.code === 'AI_BUDGET_NOT_FOUND'
+                  : (error as AppError).code === 'AI_BUDGET_NOT_FOUND'
                     ? 404
-                    : error.code === 'AI_BUDGET_CONFLICT'
+                    : (error as AppError).code === 'AI_BUDGET_CONFLICT'
                       ? 409
                       : 422;
-      throw createAppError(error.code, error.message, status);
+      throw createAppError((error as AppError).code, (error as AppError).message, status);
     }
     throw error;
   }

@@ -1,8 +1,42 @@
+import type { IncomingMessage } from 'node:http';
+import type { ResponseWriter } from '../../../http/response.ts';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+type NoteRouteKnowledge = Pick<
+  ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
+  | 'assignTagToNote'
+  | 'assignTagToNotes'
+  | 'createNote'
+  | 'deleteNote'
+  | 'deleteNotes'
+  | 'emptyRecycleBin'
+  | 'getLinkedNotes'
+  | 'getNote'
+  | 'getNoteLinkRelations'
+  | 'importMarkdown'
+  | 'importMarkdownBatch'
+  | 'listNotes'
+  | 'permanentlyDeleteNote'
+  | 'removeTagFromNote'
+  | 'restoreNote'
+  | 'searchNotes'
+  | 'setFavorite'
+  | 'setNoteTags'
+  | 'updateNote'
+  | 'updateTagsForNotes'
+>;
+export interface NoteRouteContext {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  knowledge: NoteRouteKnowledge;
+}
+
 import { parseBody, toQueryObject } from '../../../http/request.ts';
 import { sendJson } from '../../../http/response.ts';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
-function decodeRouteId(value) {
+function decodeRouteId(value: string) {
   try {
     return decodeURIComponent(value);
   } catch {
@@ -10,19 +44,19 @@ function decodeRouteId(value) {
   }
 }
 
-function matchNotePath(pathname, suffix = '') {
+function matchNotePath(pathname: string, suffix = '') {
   const escapedSuffix = suffix.replaceAll('/', '\\/');
   return pathname.match(new RegExp(`^\\/api\\/knowledge\\/notes\\/([^/]+)${escapedSuffix}$`));
 }
 
 /** @param {unknown} body */
-function assertMarkdownBody(body) {
-  const value = /** @type {{contentKind?: unknown; pdfSource?: unknown} | null | undefined} */ (body);
+function assertMarkdownBody(body: unknown) {
+  const value = body as { contentKind?: unknown; pdfSource?: unknown } | null | undefined;
   if ((value?.contentKind && value.contentKind !== 'markdown') || value?.pdfSource)
     throw createAppError('PDF_IMPORT_REQUIRED', '请使用 PDF 导入保存原文件。', 422);
 }
 
-export async function handleNoteRoute({ request, response, url, knowledge }) {
+export async function handleNoteRoute({ request, response, url, knowledge }: NoteRouteContext): Promise<boolean> {
   if (request.method === 'GET' && url.pathname === '/api/knowledge/notes') {
     sendJson(response, 200, {
       data: await knowledge.listNotes(toQueryObject(url))
@@ -68,7 +102,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
     const body = await parseBody(request);
     assertMarkdownBody(body);
     sendJson(response, 200, {
-      data: await knowledge.deleteNotes(body)
+      data: await knowledge.deleteNotes(body as Parameters<NoteRouteKnowledge['deleteNotes']>[0])
     });
     return true;
   }
@@ -77,7 +111,7 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
     const body = await parseBody(request);
     assertMarkdownBody(body);
     sendJson(response, 200, {
-      data: await knowledge.assignTagToNotes(body)
+      data: await knowledge.assignTagToNotes(body as Parameters<NoteRouteKnowledge['assignTagToNotes']>[0])
     });
     return true;
   }
@@ -85,7 +119,9 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
   if (request.method === 'PATCH' && url.pathname === '/api/knowledge/notes/batch/tags') {
     const body = await parseBody(request);
     assertMarkdownBody(body);
-    sendJson(response, 200, { data: await knowledge.updateTagsForNotes(body) });
+    sendJson(response, 200, {
+      data: await knowledge.updateTagsForNotes(body as Parameters<NoteRouteKnowledge['updateTagsForNotes']>[0])
+    });
     return true;
   }
 
@@ -125,8 +161,8 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
     const body = await parseBody(request);
     assertMarkdownBody(body);
     if (
-      Object.hasOwn(/** @type {object} */ (body ?? {}), 'rawMarkdown') &&
-      !(/** @type {{ expectedUpdatedAt?: unknown }} */ (body).expectedUpdatedAt)
+      Object.hasOwn((body ?? {}) as object, 'rawMarkdown') &&
+      !(body as { expectedUpdatedAt?: unknown }).expectedUpdatedAt
     ) {
       throw createAppError('NOTE_VERSION_REQUIRED', '正文保存需要加载时的版本，请刷新客户端后重试。', 428);
     }
@@ -161,7 +197,10 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
     const body = await parseBody(request);
     assertMarkdownBody(body);
     sendJson(response, 200, {
-      data: await knowledge.setFavorite({ id: decodeRouteId(favoriteMatch[1]) }, body)
+      data: await knowledge.setFavorite(
+        { id: decodeRouteId(favoriteMatch[1]) },
+        body as Parameters<NoteRouteKnowledge['setFavorite']>[1]
+      )
     });
     return true;
   }
@@ -179,7 +218,10 @@ export async function handleNoteRoute({ request, response, url, knowledge }) {
     const body = await parseBody(request);
     assertMarkdownBody(body);
     sendJson(response, 200, {
-      data: await knowledge.assignTagToNote({ id: decodeRouteId(tagsMatch[1]) }, body)
+      data: await knowledge.assignTagToNote(
+        { id: decodeRouteId(tagsMatch[1]) },
+        body as Parameters<NoteRouteKnowledge['assignTagToNote']>[1]
+      )
     });
     return true;
   }
