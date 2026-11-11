@@ -825,7 +825,7 @@ export const noteServiceTests = [
       const { createAsyncNoteService } =
         await import('../src/modules/knowledge/application/postgres-async/note-service.js');
       const { createInMemoryNoteRepository } =
-        await import('../src/modules/knowledge/infrastructure/note-repository.js');
+        await import('../src/modules/knowledge/infrastructure/note-repository.ts');
       const repository = createInMemoryNoteRepository();
       const sync = createNoteService({ repository });
       const asyncService = createAsyncNoteService({ repository });

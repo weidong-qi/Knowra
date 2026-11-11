@@ -11,8 +11,8 @@ import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import { createSqliteDataStore } from '../../desktop-runtime/src/sqlite-data-store.mjs';
 import { createAsyncLearningObjectiveService } from '../src/modules/knowledge/application/postgres-async/learning-objective-service.ts';
-import { createInMemoryLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/learning-objective-repository.js';
-import { createInMemoryKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/knowledge-item-repository.js';
+import { createInMemoryLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/assessment-repository.ts';
+import { createInMemoryKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/knowledge-item-repository.ts';
 import { createPostgresLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/postgres/learning-objective-repository.ts';
 
 const objectiveInput = { objective: '能够解释合成知识的原因', actionVerb: 'explain', cognitiveLevel: 'understand' };

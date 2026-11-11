@@ -41,7 +41,7 @@ import { Tag } from '../knowledge/domain/tag.ts';
 import { TagGroup } from '../knowledge/domain/tag-group.ts';
 import { ContentAnnotation } from '../knowledge/domain/content-annotation.ts';
 import { createInMemoryContentAnnotationRepository } from '../knowledge/infrastructure/content-annotation-repository.ts';
-import { createInMemoryAnnotationRevisionRepository } from '../knowledge/infrastructure/annotation-support-repositories.js';
+import { createInMemoryAnnotationRevisionRepository } from '../knowledge/infrastructure/annotation-support-repositories.ts';
 import { validateSyncBatchState, LOCAL_DATA_SCHEMA_VERSION } from '../../infrastructure/local-data-schema.js';
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { assertNoInsecureImageUrls } from '../knowledge/application/note-content-policy.ts';

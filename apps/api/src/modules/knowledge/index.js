@@ -20,7 +20,7 @@ import { createTagGroupService } from './application/tag-group-service.ts';
 import { createKnowledgeSpaceService } from './application/knowledge-space-service.ts';
 import { createSearchService } from './application/search-service.ts';
 import { createContentAnnotationService } from './application/content-annotation-service.ts';
-import { createInMemoryNoteRepository } from './infrastructure/note-repository.js';
+import { createInMemoryNoteRepository } from './infrastructure/note-repository.ts';
 import { createInMemoryFolderRepository } from './infrastructure/folder-repository.ts';
 import { createInMemoryTagRepository } from './infrastructure/tag-repository.ts';
 import { createInMemoryTagGroupRepository } from './infrastructure/tag-group-repository.ts';
@@ -30,19 +30,19 @@ import {
   createInMemoryAnalysisScopeRepository,
   createInMemoryAnnotationExclusionRepository,
   createInMemoryAnnotationRevisionRepository
-} from './infrastructure/annotation-support-repositories.js';
+} from './infrastructure/annotation-support-repositories.ts';
 import { createAnnotationScopeService } from './application/annotation-scope-service.js';
 import { createInMemoryNoteVersionRepository } from './infrastructure/note-version-repository.ts';
-import { createInMemoryKnowledgeItemRepository } from './infrastructure/knowledge-item-repository.js';
+import { createInMemoryKnowledgeItemRepository } from './infrastructure/knowledge-item-repository.ts';
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
 import { createInMemoryKnowledgeArtifactProvenanceRepository } from './infrastructure/knowledge-artifact-provenance-repository.ts';
-import { createInMemoryKnowledgeEvidenceRepository } from './infrastructure/knowledge-evidence-repository.js';
-import { createInMemoryLearningObjectiveRepository } from './infrastructure/learning-objective-repository.js';
-import { createInMemoryExamProfileRepository } from './infrastructure/exam-profile-repository.js';
-import { createInMemoryExamFocusRepository } from './infrastructure/exam-focus-repository.js';
-import { createInMemoryQuestionRepository } from './infrastructure/question-repository.js';
-import { createInMemoryQuestionObjectiveRepository } from './infrastructure/question-objective-repository.js';
-import { createInMemoryQuestionSourceRepository } from './infrastructure/question-source-repository.js';
+import { createInMemoryKnowledgeEvidenceRepository } from './infrastructure/knowledge-evidence-repository.ts';
+import { createInMemoryLearningObjectiveRepository } from './infrastructure/assessment-repository.ts';
+import { createInMemoryExamProfileRepository } from './infrastructure/assessment-repository.ts';
+import { createInMemoryExamFocusRepository } from './infrastructure/assessment-repository.ts';
+import { createInMemoryQuestionRepository } from './infrastructure/assessment-repository.ts';
+import { createInMemoryQuestionObjectiveRepository } from './infrastructure/assessment-repository.ts';
+import { createInMemoryQuestionSourceRepository } from './infrastructure/assessment-repository.ts';
 import { createNoteVersionService } from './application/note-version-service.ts';
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { NOTE_VERSION_COALESCE_WINDOW_MS, selectCoalescibleVersion } from './application/note-version-coalescing.ts';

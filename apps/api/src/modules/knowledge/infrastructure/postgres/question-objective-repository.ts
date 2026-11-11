@@ -5,7 +5,7 @@ import type {
 } from './assessment-repository-types.ts';
 import { mapQuestionObjective, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
-import { questionObjectiveRecords } from '../question-objective-identity.js';
+import { questionObjectiveRecords } from '../question-objective-identity.ts';
 
 export function createPostgresQuestionObjectiveRepository({ db }: ObjectiveRelationRepositoryOptions) {
   if (!db?.questionObjective)

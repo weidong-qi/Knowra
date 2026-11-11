@@ -2,7 +2,7 @@ import { prepareAnnotationChange } from './annotation-change-context.ts';
 import { Note } from '../domain/note.ts';
 import { buildCreateNoteDto, buildUpdateNoteDto } from './dto/note.dto.ts';
 import { createNoteSummary } from './note-summary.ts';
-import { createInMemoryNoteRepository } from '../infrastructure/note-repository.js';
+import { createInMemoryNoteRepository } from '../infrastructure/note-repository.ts';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 import { createNoteAssociationOperations } from './note-association-operations.ts';
 import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from './note-link-relations.ts';
