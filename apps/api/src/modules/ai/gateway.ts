@@ -1,3 +1,42 @@
+import type { GatewayOptions } from './boundary-types.ts';
+import type { ProviderRequest, ProviderRequestTool } from './infrastructure/providers/deepseek-adapter.ts';
+
+export interface GatewayRequest extends Omit<ProviderRequest, 'tools'> {
+  tools?: ProviderRequestTool[];
+  credentialRef?: string;
+  budgetAttemptId?: string;
+  verifyBeforeSend?: () => unknown;
+  onSend?: () => void;
+  expiresAt?: number;
+}
+export type GatewayStreamEvent =
+  { type: 'delta'; content: string } | { type: 'result'; result: ReturnType<typeof normalize> };
+
+interface RawToolCall {
+  id: string;
+  type: string;
+  function: { name: string; arguments: string };
+}
+// 供应商线格式的读取视图；保留以下运行校验及未校验元数据的原值透传。
+interface RawResponse {
+  choices?: {
+    finish_reason: string;
+    message: {
+      content: string | null;
+      tool_calls?: RawToolCall[];
+      refusal?: unknown;
+    };
+  }[];
+  model?: string | null;
+  id?: string | null;
+  usage?: { prompt_tokens: number; completion_tokens: number; prompt_cache_hit_tokens: number };
+}
+interface PreparedRequest extends ProviderRequest {
+  tools: ProviderRequestTool[];
+  maxTokens: number;
+  format: 'text' | 'json';
+}
+
 const TOOL_NAMES = new Set([
   'notes_search',
   'notes_read',
@@ -14,12 +53,14 @@ const TOOL_NAMES = new Set([
 ]);
 
 export class AiGatewayError extends Error {
-  /**
-   * @param {string} code
-   * @param {string} message
-   * @param {{retryable?: boolean, httpStatus?: number | null}} [options]
-   */
-  constructor(code, message, { retryable = false, httpStatus = null } = {}) {
+  code: string;
+  retryable: boolean;
+  httpStatus: number | null;
+  constructor(
+    code: string,
+    message: string,
+    { retryable = false, httpStatus = null }: { retryable?: boolean; httpStatus?: number | null } = {}
+  ) {
     super(message);
     this.name = 'AiGatewayError';
     this.code = code;
@@ -29,14 +70,13 @@ export class AiGatewayError extends Error {
 }
 
 /** 仅供受信 worker 调用；预算服务未注入前真实供应商调用默认关闭。 */
-/** @param {import('./boundary-types.ts').GatewayOptions} options */
-export function createAiGateway({ adapter, resolveCredential, authorizePaidCall = async () => false }) {
+export function createAiGateway({ adapter, resolveCredential, authorizePaidCall = async () => false }: GatewayOptions) {
   if (!adapter || typeof adapter.complete !== 'function' || typeof adapter.stream !== 'function') {
     throw new TypeError('AI adapter is required');
   }
   return {
     capabilities: () => adapter.capabilities(),
-    async complete(request) {
+    async complete(request: GatewayRequest) {
       const prepared = await prepare(request);
       const control = {
         verifyBeforeSend: request.verifyBeforeSend,
@@ -50,7 +90,7 @@ export function createAiGateway({ adapter, resolveCredential, authorizePaidCall 
       }
       return normalize(await adapter.complete(prepared, control), prepared, adapter.provider);
     },
-    async *stream(request) {
+    async *stream(request: GatewayRequest): AsyncGenerator<GatewayStreamEvent, void, void> {
       const prepared = await prepare(request);
       if (typeof request.verifyBeforeSend === 'function') await request.verifyBeforeSend();
       let resultReceived = false;
@@ -66,7 +106,7 @@ export function createAiGateway({ adapter, resolveCredential, authorizePaidCall 
     }
   };
 
-  async function prepare(request) {
+  async function prepare(request: GatewayRequest) {
     if (request?.signal?.aborted) throw new AiGatewayError('AI_CANCELLED', '模型请求已取消。');
     const input = normalizeAiRequest(request);
     if (adapter.provider === 'mock') return input;
@@ -92,7 +132,8 @@ export function createAiGateway({ adapter, resolveCredential, authorizePaidCall 
   }
 }
 
-export function normalizeAiRequest(value) {
+export function normalizeAiRequest(input: unknown): PreparedRequest {
+  const value = input as GatewayRequest;
   if (!value || !Array.isArray(value.messages) || value.messages.length < 1 || value.messages.length > 32) {
     throw new AiGatewayError('AI_REQUEST_INVALID', '模型消息无效。');
   }
@@ -150,7 +191,8 @@ export function normalizeAiRequest(value) {
   };
 }
 
-function normalize(raw, request, provider) {
+function normalize(input: unknown, request: PreparedRequest, provider: string) {
+  const raw = input as RawResponse;
   const choice = raw?.choices?.[0];
   if (!choice || typeof choice.finish_reason !== 'string' || !choice.message || !Array.isArray(raw.choices)) {
     throw new AiGatewayError('AI_RESPONSE_INVALID', '模型响应结构无效。');
@@ -174,7 +216,7 @@ function normalize(raw, request, provider) {
     ) {
       throw new AiGatewayError('AI_TOOL_INVALID', '模型请求了未授权工具。');
     }
-    let args;
+    let args: unknown;
     try {
       args = JSON.parse(call.function.arguments);
     } catch {
@@ -182,16 +224,16 @@ function normalize(raw, request, provider) {
     }
     if (!args || typeof args !== 'object' || Array.isArray(args))
       throw new AiGatewayError('AI_TOOL_ARGUMENTS_INVALID', '模型工具参数无效。');
-    return { id: call.id, name: call.function.name, arguments: args };
+    return { id: call.id, name: call.function.name, arguments: args as Record<string, unknown> };
   });
   const truncated = finishReason === 'length';
   const refused =
     finishReason === 'content_filter' ||
     (typeof choice.message.refusal === 'string' && Boolean(choice.message.refusal));
-  let json = null;
+  let json: Record<string, unknown> | null = null;
   if (request.format === 'json' && !truncated && !refused && finishReason === 'stop') {
     try {
-      json = parseJsonContent(content);
+      json = parseJsonContent(content) as Record<string, unknown> | null;
     } catch {
       // 带工具的请求没有强制 JSON 模式；模型直接用自然语言作答时，按无引用的回答处理，而不是让整轮失败。
       if (!request.tools.length || typeof content !== 'string' || !content.trim())
@@ -235,13 +277,13 @@ function normalize(raw, request, provider) {
 }
 
 /** JSON 模式偶尔带 ```json 围栏或前后说明文字；先严格解析，失败再截取最外层对象。 */
-function parseJsonContent(content) {
+function parseJsonContent(content: string | null): unknown {
   try {
-    return JSON.parse(content);
+    return JSON.parse(content as string);
   } catch (error) {
     const start = content?.indexOf('{') ?? -1,
       end = content?.lastIndexOf('}') ?? -1;
     if (start < 0 || end <= start) throw error;
-    return JSON.parse(content.slice(start, end + 1));
+    return JSON.parse(content!.slice(start, end + 1));
   }
 }

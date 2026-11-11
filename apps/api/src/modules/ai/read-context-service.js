@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { hashRecord, manifestHash, scopeHash } from './record-contract.ts';
-import { normalizeAiRequest } from './gateway.js';
+import { normalizeAiRequest } from './gateway.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
 import { isAiReadableNote, assertAiNoteUnchanged, assertAiSourcesReadable } from './note-privacy.ts';
 

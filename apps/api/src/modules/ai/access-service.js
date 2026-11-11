@@ -3,7 +3,7 @@ import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { hashRecord } from './record-contract.ts';
 import { accessError } from './access-records.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
-import { normalizeAiRequest } from './gateway.js';
+import { normalizeAiRequest } from './gateway.ts';
 import { normalizeCatalogSpec, MAX_CATALOG_SPECS } from './catalog-tool.ts';
 const MIN_CATALOG_ITEMS = 5;
 import {
@@ -858,11 +858,12 @@ export function createAiAccessService({
       tools.some(tool =>
         assistantTools
           ? !assistantToolNames.has(tool?.name) ||
-            (['notes_search', 'notes_read'].includes(tool.name) && !grant.allowedTools.includes(tool.name)) ||
+            (['notes_search', 'notes_read'].includes(tool.name) &&
+              !(/** @type {readonly string[]} */ (grant.allowedTools).includes(tool.name))) ||
             // 重点列表与阅读同一原文，沿用 notes_read 的运行授权，不扩大授权词表。
             (['annotations_list', 'knowledge_propose'].includes(tool.name) &&
               !grant.allowedTools.includes('notes_read'))
-          : !grant.allowedTools.includes(tool?.name) &&
+          : !(/** @type {readonly string[]} */ (grant.allowedTools).includes(tool?.name)) &&
             !(
               tool?.name === writeToolName &&
               ['notes_create', 'notes_append', 'notes_propose_patch', 'notes_propose_organize'].includes(writeToolName)

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createAiGateway, AiGatewayError } from '../src/modules/ai/gateway.js';
+import { createAiGateway, AiGatewayError } from '../src/modules/ai/gateway.ts';
 import { createMockAiAdapter } from '../src/modules/ai/infrastructure/providers/mock-adapter.ts';
 import { createDeepSeekAdapter } from '../src/modules/ai/infrastructure/providers/deepseek-adapter.ts';
 import { deepSeekPayload } from '../src/modules/ai/outbound-payload.ts';

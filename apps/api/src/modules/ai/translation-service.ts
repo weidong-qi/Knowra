@@ -1,3 +1,4 @@
+import type { GatewayRequest } from './gateway.ts';
 import type { BudgetReservation, BudgetReserveInput, BudgetSettlement } from './private-store-types.ts';
 import { randomUUID } from 'node:crypto';
 import { beijingDay } from './budget-ledger.ts';
@@ -26,7 +27,7 @@ interface TranslationOptions {
   modelSettings: { credentialReference(): Promise<{ modelId: string; credentialRef: string } | null> };
   gateway: {
     capabilities?: () => { provider?: string } | undefined;
-    complete(request: Record<string, unknown>): Promise<{ content?: unknown; usage?: Usage; finishReason?: unknown }>;
+    complete(request: GatewayRequest): Promise<{ content?: unknown; usage?: Usage; finishReason?: unknown }>;
   };
   budget: {
     reserve(

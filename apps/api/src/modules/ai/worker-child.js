@@ -1,5 +1,5 @@
 import { createAiWorker } from './worker.js';
-import { createAiGateway } from './gateway.js';
+import { createAiGateway } from './gateway.ts';
 import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.ts';
 
 let nextId = 0;

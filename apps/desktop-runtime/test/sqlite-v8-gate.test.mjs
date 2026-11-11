@@ -4,7 +4,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
-import { createConversationAttachmentService } from '../../api/src/modules/ai/conversation-attachments.js';
+import { createConversationAttachmentService } from '../../api/src/modules/ai/conversation-attachments.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { initializeDatabase, readAiSchemaVersion } from '../src/sqlite-schema.mjs';
 import { initializeDatabase as initializeV7 } from './fixtures/sqlite-schema-v7.fixture.mjs';
