@@ -30,7 +30,9 @@ export function createPostgresAiConversationStore(
   if (!client?.$transaction || !repository || !ownerId)
     throw new TypeError('PostgreSQL AI conversation store needs client, repository and owner');
   async function load(db: PrivateSqlTransaction): Promise<ConversationState> {
-    const state: ConversationState = emptyConversationState();
+    // 旧 JS 工厂按 CONVERSATION_KINDS 的六个集合创建空数组，Object.fromEntries 推断丢失固定键。
+    const collections: Record<string, ConversationIndexRecord[]> = emptyConversationState();
+    const state = collections as ConversationState;
     for (const row of await db.$queryRawUnsafe<ConversationSqlRow[]>(
       'SELECT * FROM ai_conversation_records WHERE owner_id = $1',
       ownerId

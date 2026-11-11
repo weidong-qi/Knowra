@@ -74,7 +74,7 @@ export interface ConversationIndexRecord extends DatasetIdentity {
   attemptId?: string;
   attachmentId?: string;
 }
-export type ConversationState = Record<string, ConversationIndexRecord[]>;
+export type ConversationState = Record<ConversationCollection, ConversationIndexRecord[]>;
 export interface ConversationSqlRow {
   kind: ConversationKind;
   record_id: string;
