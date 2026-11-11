@@ -1,6 +1,11 @@
+import type { KnowledgeItemDependencies } from './service-dependencies.ts';
+import type { KnowledgeItemDtoInput, KnowledgeEvidenceDtoInput } from '../dto/knowledge-item.dto.ts';
+import type { KnowledgeItemBaselineInput } from '../knowledge-item-concurrency.ts';
+import type { NoteVersionRecord } from '../../infrastructure/note-version-repository.ts';
+import type { KnowledgeItemServiceRecord } from '../service-dependencies.ts';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
-import { matchesKnowledgeCandidateRequest } from '../knowledge-candidate-retry.js';
-import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from '../knowledge-item-concurrency.js';
+import { matchesKnowledgeCandidateRequest } from '../knowledge-candidate-retry.ts';
+import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from '../knowledge-item-concurrency.ts';
 import { KnowledgeItem } from '../../domain/knowledge-item.ts';
 import { KnowledgeEvidence } from '../../domain/knowledge-evidence.ts';
 import { isEvidenceUsable, legacyEvidenceApplicability } from '../../domain/evidence-applicability.ts';
@@ -11,30 +16,31 @@ import {
   buildUpdateKnowledgeItemDto
 } from '../dto/knowledge-item.dto.ts';
 import { assertKnowledgeItemConfirmable } from '../formal-asset-validation.ts';
-import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
+import { conflictError, notFoundError, validationError } from '../knowledge-errors.ts';
 
 const now = () => new Date().toISOString();
 
-/** @param {import('./service-dependencies.ts').KnowledgeItemDependencies} dependencies */
-export function createAsyncKnowledgeItemService({
-  repository,
-  evidenceRepository,
-  noteVersionRepository,
-  annotationRepository,
-  noteRepository,
-  getTombstone = null,
-  onItemInvalidated = null,
-  runTransaction = operation => operation()
-} = {}) {
+export function createAsyncKnowledgeItemService(
+  {
+    repository,
+    evidenceRepository,
+    noteVersionRepository,
+    annotationRepository,
+    noteRepository,
+    getTombstone = null,
+    onItemInvalidated = null,
+    runTransaction = operation => operation()
+  }: KnowledgeItemDependencies = {} as KnowledgeItemDependencies
+) {
   if (!repository || !evidenceRepository) throw new TypeError('Async KnowledgeItem repositories are required');
 
-  async function requireItem(id) {
+  async function requireItem(id: string) {
     const item = await repository.findById(id);
     if (!item || item.deletedAt) throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
     return item;
   }
 
-  async function assertItemIdAvailable(id) {
+  async function assertItemIdAvailable(id: string) {
     if (await getTombstone?.('knowledgeItems', id)) {
       throw conflictError('KNOWLEDGE_ITEM_ID_DELETED', '已永久删除的知识点 ID 不能重新使用');
     }
@@ -43,19 +49,25 @@ export function createAsyncKnowledgeItemService({
     }
   }
 
-  async function saveNew(targetRepository, record) {
+  async function saveNew<Record, Saved>(
+    targetRepository: { create?: (record: Record) => Saved; save: (record: Record) => Saved },
+    record: Record
+  ) {
     return targetRepository.create ? targetRepository.create(record) : targetRepository.save(record);
   }
 
-  async function notifyIfInvalidated(previous, next) {
+  async function notifyIfInvalidated(
+    previous: { reviewStatus?: string | null } | null | undefined,
+    next: { id: string; reviewStatus?: string | null; deletedAt?: KnowledgeItemServiceRecord['deletedAt'] } | null
+  ) {
     if (previous?.reviewStatus === 'confirmed' && (next?.reviewStatus !== 'confirmed' || next?.deletedAt)) {
-      await onItemInvalidated?.(next.id);
+      await onItemInvalidated?.(next!.id);
     }
   }
 
   async function resolveEvidence(
-    input,
-    knowledgeItemId,
+    input: KnowledgeEvidenceDtoInput,
+    knowledgeItemId: string,
     {
       evidenceRepository: sourceEvidenceRepository = evidenceRepository,
       noteVersionRepository: sourceVersionRepository = noteVersionRepository,
@@ -67,7 +79,7 @@ export function createAsyncKnowledgeItemService({
     if (await getTombstone?.('knowledgeEvidence', dto.id)) {
       throw conflictError('KNOWLEDGE_EVIDENCE_ID_DELETED', '已永久删除的来源 ID 不能重新使用');
     }
-    if (await sourceEvidenceRepository.findById(dto.id)) {
+    if (await sourceEvidenceRepository!.findById(dto.id)) {
       throw conflictError('KNOWLEDGE_EVIDENCE_ID_CONFLICT', 'KnowledgeEvidence with the same id already exists');
     }
     let noteId = dto.noteId;
@@ -77,14 +89,14 @@ export function createAsyncKnowledgeItemService({
     let version = null;
     let status = 'valid';
     if (dto.sourceType === 'noteVersion') {
-      version = await sourceVersionRepository?.findById(noteVersionId);
+      version = await sourceVersionRepository?.findById(noteVersionId!);
       if (!version) throw notFoundError('NOTE_VERSION_NOT_FOUND', 'NoteVersion not found');
       if (noteId && noteId !== version.noteId)
         throw conflictError('KNOWLEDGE_EVIDENCE_NOTE_MISMATCH', 'Evidence note does not match NoteVersion');
-      noteId = version.noteId;
+      noteId = version.noteId as string;
     }
     if (dto.sourceType === 'annotation') {
-      annotation = await sourceAnnotationRepository?.findById(annotationId);
+      annotation = await sourceAnnotationRepository?.findById(annotationId!);
       if (!annotation) throw notFoundError('ANNOTATION_NOT_FOUND', 'Annotation not found');
       if (
         dto.expectedAnnotationRevision !== undefined &&
@@ -94,17 +106,17 @@ export function createAsyncKnowledgeItemService({
       }
       if (noteId && noteId !== annotation.noteId)
         throw conflictError('KNOWLEDGE_EVIDENCE_NOTE_MISMATCH', 'Evidence note does not match annotation');
-      noteId = annotation.noteId;
+      noteId = annotation.noteId as string;
       if (dto.noteVersionId && annotation.noteVersionId && dto.noteVersionId !== annotation.noteVersionId) {
         throw conflictError('KNOWLEDGE_EVIDENCE_VERSION_MISMATCH', '标注来源版本已变化，请重新加载标注。');
       }
-      noteVersionId = annotation.noteVersionId ?? noteVersionId;
+      noteVersionId = (annotation.noteVersionId ?? noteVersionId) as string | null;
       if (!noteVersionId)
         throw validationError(
           'KNOWLEDGE_EVIDENCE_VERSION_REQUIRED',
           'Annotation evidence requires a NoteVersion-bound annotation'
         );
-      version = await sourceVersionRepository?.findById(noteVersionId);
+      version = await sourceVersionRepository?.findById(noteVersionId!);
       if (!version) throw notFoundError('NOTE_VERSION_NOT_FOUND', 'NoteVersion not found');
       if (version.noteId !== noteId) {
         throw conflictError(
@@ -146,9 +158,9 @@ export function createAsyncKnowledgeItemService({
     });
   }
 
-  async function createCandidate(input = {}) {
+  async function createCandidate(input: KnowledgeCandidateInput = {}) {
     const dto = buildCreateKnowledgeItemDto(input);
-    const evidenceInputs = Array.isArray(input.evidence) ? input.evidence : [];
+    const evidenceInputs = Array.isArray(input.evidence) ? (input.evidence as KnowledgeEvidenceDtoInput[]) : [];
     if (input.id) {
       const existing = await repository.findById(dto.id);
       if (existing) {
@@ -183,19 +195,25 @@ export function createAsyncKnowledgeItemService({
         if (new Set(evidence.map(record => record.id)).size !== evidence.length) {
           throw conflictError('KNOWLEDGE_EVIDENCE_ID_CONFLICT', '同一候选不能包含重复的来源 ID。');
         }
-        const item = await saveNew(itemRepository, new KnowledgeItem({ ...dto, id: dto.id }));
+        const item = await saveNew(itemRepository!, new KnowledgeItem({ ...dto, id: dto.id }));
         const savedEvidence = [];
-        for (const record of evidence) savedEvidence.push(await saveNew(transactionEvidenceRepository, record));
+        for (const record of evidence)
+          savedEvidence.push(
+            await saveNew(
+              transactionEvidenceRepository!,
+              record as Parameters<NonNullable<KnowledgeItemDependencies['evidenceRepository']>['save']>[0]
+            )
+          );
         return { item, evidence: savedEvidence };
       }
     );
   }
 
-  async function updateItem(id, input = {}) {
+  async function updateItem(id: string, input: KnowledgeItemDtoInput & KnowledgeItemBaselineInput = {}) {
     const current = await requireItem(id);
     assertKnowledgeItemBaseline(current, input);
     const dto = buildUpdateKnowledgeItemDto(input);
-    const textChanged = ['title', 'canonicalStatement', 'userExplanation'].some(
+    const textChanged = (['title', 'canonicalStatement', 'userExplanation'] as const).some(
       field => Object.hasOwn(dto, field) && dto[field] !== current[field]
     );
     const next = await repository.save(
@@ -205,30 +223,35 @@ export function createAsyncKnowledgeItemService({
         reviewStatus: current.reviewStatus === 'confirmed' && textChanged ? 'needsRevision' : current.reviewStatus,
         updatedAt: nextKnowledgeItemTimestamp(current)
       }),
-      { expectedUpdatedAt: current.updatedAt }
+      { expectedUpdatedAt: current.updatedAt as string }
     );
     await notifyIfInvalidated(current, next);
     return next;
   }
 
-  async function confirmItem(id, input = {}) {
+  async function confirmItem(id: string, input: KnowledgeItemBaselineInput = {}) {
     const item = await requireItem(id);
     assertKnowledgeItemBaseline(item, input);
     const evidence = await evidenceRepository.list({ knowledgeItemId: id });
     assertKnowledgeItemConfirmable(item, evidence);
     return repository.save(
       new KnowledgeItem({ ...item, reviewStatus: 'confirmed', updatedAt: nextKnowledgeItemTimestamp(item) }),
-      { expectedUpdatedAt: item.updatedAt }
+      { expectedUpdatedAt: item.updatedAt as string }
     );
   }
 
   return {
     createCandidate,
     getItem: requireItem,
-    async listItems(options = {}) {
+    async listItems(
+      options: NonNullable<Parameters<NonNullable<KnowledgeItemDependencies['repository']>['list']>[0]> & {
+        evidenceStatus?: string;
+        noteId?: string;
+      } = {}
+    ) {
       const items = await repository.list(options);
       if (!options.noteId) return items;
-      const evidenceByItem = new Map();
+      const evidenceByItem = new Map<string, SavedEvidence[]>();
       for (const evidence of await evidenceRepository.list({ noteId: options.noteId })) {
         const records = evidenceByItem.get(evidence.knowledgeItemId) ?? [];
         records.push(evidence);
@@ -237,7 +260,7 @@ export function createAsyncKnowledgeItemService({
       return items
         .filter(item => evidenceByItem.has(item.id))
         .map(item => {
-          const evidence = evidenceByItem.get(item.id);
+          const evidence = evidenceByItem.get(item.id)!;
           return {
             ...item,
             evidenceStatus: summarizeEvidenceStatus(evidence.map(record => record.status)),
@@ -247,7 +270,7 @@ export function createAsyncKnowledgeItemService({
     },
     updateItem,
     confirmItem,
-    async markNeedsRevision(id, input = {}) {
+    async markNeedsRevision(id: string, input: KnowledgeItemBaselineInput = {}) {
       const current = await requireItem(id);
       assertKnowledgeItemBaseline(current, input);
       const next = await repository.save(
@@ -256,41 +279,41 @@ export function createAsyncKnowledgeItemService({
           reviewStatus: 'needsRevision',
           updatedAt: nextKnowledgeItemTimestamp(current)
         }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       await notifyIfInvalidated(current, next);
       return next;
     },
-    async archive(id, input = {}) {
+    async archive(id: string, input: KnowledgeItemBaselineInput = {}) {
       const current = await requireItem(id);
       assertKnowledgeItemBaseline(current, input);
       const next = await repository.save(
         new KnowledgeItem({ ...current, reviewStatus: 'archived', updatedAt: nextKnowledgeItemTimestamp(current) }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       await notifyIfInvalidated(current, next);
       return next;
     },
-    async restore(id, input = {}) {
+    async restore(id: string, input: KnowledgeItemBaselineInput = {}) {
       const item = await requireItem(id);
       assertKnowledgeItemBaseline(item, input);
       if (item.reviewStatus !== 'archived') return item;
       return repository.save(
         new KnowledgeItem({ ...item, reviewStatus: 'candidate', updatedAt: nextKnowledgeItemTimestamp(item) }),
-        { expectedUpdatedAt: item.updatedAt }
+        { expectedUpdatedAt: item.updatedAt as string }
       );
     },
-    async trash(id, input = {}) {
+    async trash(id: string, input: KnowledgeItemBaselineInput = {}) {
       const current = await requireItem(id);
       assertKnowledgeItemBaseline(current, input);
       const next = await repository.save(
         new KnowledgeItem({ ...current, deletedAt: now(), updatedAt: nextKnowledgeItemTimestamp(current) }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       await notifyIfInvalidated(current, next);
       return next;
     },
-    async restoreDeleted(id, input = {}) {
+    async restoreDeleted(id: string, input: KnowledgeItemBaselineInput = {}) {
       const current = await repository.findById(id);
       if (!current || !current.deletedAt) throw notFoundError('KNOWLEDGE_ITEM_NOT_IN_TRASH', '知识点不在回收站中');
       assertKnowledgeItemBaseline(current, input);
@@ -306,10 +329,10 @@ export function createAsyncKnowledgeItemService({
           reviewStatus,
           updatedAt: nextKnowledgeItemTimestamp(current)
         }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
     },
-    async listEvidence(id) {
+    async listEvidence(id: string) {
       if (!(await repository.findById(id))) throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
       const records = await evidenceRepository.list({ knowledgeItemId: id });
       return Promise.all(
@@ -322,7 +345,7 @@ export function createAsyncKnowledgeItemService({
         }))
       );
     },
-    async createEvidence(input) {
+    async createEvidence(input: KnowledgeEvidenceDtoInput & { knowledgeItemId: string }) {
       const item = await requireItem(input.knowledgeItemId);
       return runTransaction(
         async ({
@@ -332,17 +355,17 @@ export function createAsyncKnowledgeItemService({
           noteRepository: sourceNoteRepository = noteRepository
         } = {}) =>
           saveNew(
-            transactionEvidenceRepository,
-            await resolveEvidence(input, item.id, {
+            transactionEvidenceRepository!,
+            (await resolveEvidence(input, item.id, {
               evidenceRepository: transactionEvidenceRepository,
               noteVersionRepository: sourceVersionRepository,
               annotationRepository: sourceAnnotationRepository,
               noteRepository: sourceNoteRepository
-            })
+            })) as Parameters<NonNullable<KnowledgeItemDependencies['evidenceRepository']>['save']>[0]
           )
       );
     },
-    async retireEvidence(knowledgeItemId, evidenceId, input = {}) {
+    async retireEvidence(knowledgeItemId: string, evidenceId: string, input: KnowledgeItemBaselineInput = {}) {
       const currentItem = await requireItem(knowledgeItemId);
       const currentEvidence = await evidenceRepository.findById(evidenceId);
       if (!currentEvidence || currentEvidence.knowledgeItemId !== knowledgeItemId) {
@@ -366,7 +389,7 @@ export function createAsyncKnowledgeItemService({
                     updatedAt: now()
                   })
                 );
-          let item = currentItem;
+          let item: Awaited<ReturnType<NonNullable<KnowledgeItemDependencies['repository']>['findById']>> = currentItem;
           const remaining = await transactionEvidenceRepository.list({ knowledgeItemId });
           if (item.reviewStatus === 'confirmed' && item.sourceMode !== 'manual' && !remaining.some(isEvidenceUsable)) {
             item = await itemRepository.save(
@@ -375,7 +398,7 @@ export function createAsyncKnowledgeItemService({
                 reviewStatus: 'needsRevision',
                 updatedAt: nextKnowledgeItemTimestamp(item)
               }),
-              { expectedUpdatedAt: item.updatedAt }
+              { expectedUpdatedAt: item.updatedAt as string }
             );
             await notifyIfInvalidated(currentItem, item);
           }
@@ -383,7 +406,7 @@ export function createAsyncKnowledgeItemService({
         }
       );
     },
-    async readoptEvidence(knowledgeItemId, evidenceId, input = {}) {
+    async readoptEvidence(knowledgeItemId: string, evidenceId: string, input: KnowledgeItemBaselineInput = {}) {
       const item = await requireItem(knowledgeItemId);
       const current = await evidenceRepository.findById(evidenceId);
       if (!current || current.knowledgeItemId !== knowledgeItemId)
@@ -403,21 +426,21 @@ export function createAsyncKnowledgeItemService({
       );
       return { item, evidence };
     },
-    markEvidenceByNoteId(noteId, status = 'invalid') {
+    markEvidenceByNoteId(noteId: string, status: KnowledgeEvidence['status'] = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteId(noteId, status));
     },
-    markEvidenceByAnnotationId(annotationId, status = 'invalid') {
+    markEvidenceByAnnotationId(annotationId: string, status: KnowledgeEvidence['status'] = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByAnnotationId(annotationId, status));
     },
-    async reconcileEvidenceByAnnotationIds(annotationIds) {
-      const versions = new Map();
-      const affected = [];
+    async reconcileEvidenceByAnnotationIds(annotationIds: string[]) {
+      const versions = new Map<string, NoteVersionRecord>();
+      const affected: SavedEvidence[] = [];
       await markEvidenceAndReconcile(async () => {
         const changed = [];
         for (const annotationId of new Set(annotationIds)) {
           const annotation = await annotationRepository?.findById(annotationId);
           if (!annotation) throw notFoundError('ANNOTATION_NOT_FOUND', 'Annotation not found');
-          const note = await noteRepository?.findById(annotation.noteId);
+          const note = await noteRepository?.findById(annotation.noteId as string);
           if (!note) throw notFoundError('NOTE_NOT_FOUND', 'Note not found');
           for (const evidence of await evidenceRepository.list({ annotationId })) {
             if (evidence.noteVersionId && !versions.has(evidence.noteVersionId)) {
@@ -445,17 +468,25 @@ export function createAsyncKnowledgeItemService({
       });
       return affected;
     },
-    markEvidenceByNoteVersionId(noteVersionId, status = 'stale', sourceType = null) {
+    markEvidenceByNoteVersionId(
+      noteVersionId: string,
+      status: KnowledgeEvidence['status'] = 'stale',
+      sourceType: KnowledgeEvidence['sourceType'] | null = null
+    ) {
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteVersionId(noteVersionId, status, sourceType));
     },
-    markEvidenceByNoteVersionIds(noteVersionIds, status = 'stale', sourceType = null) {
+    markEvidenceByNoteVersionIds(
+      noteVersionIds: string[],
+      status: KnowledgeEvidence['status'] = 'stale',
+      sourceType: KnowledgeEvidence['sourceType'] | null = null
+    ) {
       return markEvidenceAndReconcile(() =>
         evidenceRepository.markByNoteVersionIds(noteVersionIds, status, sourceType)
       );
     }
   };
 
-  async function markEvidenceAndReconcile(markEvidence) {
+  async function markEvidenceAndReconcile(markEvidence: () => SavedEvidence[] | PromiseLike<SavedEvidence[]>) {
     const changed = await markEvidence();
     for (const knowledgeItemId of new Set(changed.map(record => record.knowledgeItemId))) {
       const current = await repository.findById(knowledgeItemId);
@@ -470,7 +501,7 @@ export function createAsyncKnowledgeItemService({
           reviewStatus: 'needsRevision',
           updatedAt: nextKnowledgeItemTimestamp(current)
         }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       await notifyIfInvalidated(current, next);
     }
@@ -478,14 +509,14 @@ export function createAsyncKnowledgeItemService({
   }
 }
 
-function summarizeEvidenceStatus(statuses = []) {
+function summarizeEvidenceStatus(statuses: SavedEvidence['status'][] = []) {
   if (statuses.includes('invalid')) return 'invalid';
   if (statuses.includes('stale')) return 'stale';
   if (statuses.includes('insufficient')) return 'insufficient';
   return statuses.length ? 'valid' : 'insufficient';
 }
 
-function toEvidenceSummary(evidence) {
+function toEvidenceSummary(evidence: SavedEvidence) {
   return {
     sourceType: evidence.sourceType,
     sourceId: evidence.sourceId,
@@ -495,3 +526,9 @@ function toEvidenceSummary(evidence) {
     status: evidence.status
   };
 }
+
+interface KnowledgeCandidateInput extends KnowledgeItemDtoInput {
+  evidence?: unknown;
+}
+
+type SavedEvidence = Awaited<ReturnType<NonNullable<KnowledgeItemDependencies['evidenceRepository']>['list']>>[number];

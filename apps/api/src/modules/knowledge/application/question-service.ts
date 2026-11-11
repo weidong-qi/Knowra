@@ -1,9 +1,13 @@
+import type { QuestionDependencies, QuestionServiceRecord } from './service-dependencies.ts';
+import type { QuestionDtoInput, QuestionSourceDto } from './dto/assessment.dto.ts';
+import type { AssessmentListOptions } from '../infrastructure/assessment-repository.ts';
+import type { QuestionSourceReference } from './formal-asset-validation.ts';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { Question } from '../domain/question.ts';
 import { QuestionSource } from '../domain/question-source.ts';
 import { buildCreateQuestionDto, buildUpdateQuestionDto } from './dto/assessment.dto.ts';
 import { assertQuestionConfirmable, deriveQuestionSourceStatus } from './formal-asset-validation.ts';
-import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
+import { conflictError, notFoundError, validationError } from './knowledge-errors.ts';
 
 const now = () => new Date().toISOString();
 const supportedSourceTypes = new Set([
@@ -14,38 +18,43 @@ const supportedSourceTypes = new Set([
   'knowledgeEvidence'
 ]);
 
-/** @param {import('./service-dependencies.ts').QuestionDependencies} dependencies */
-export function createQuestionService({
-  repository,
-  questionObjectiveRepository,
-  questionSourceRepository,
-  learningObjectiveRepository,
-  examFocusRepository,
-  knowledgeItemRepository,
-  noteRepository,
-  noteVersionRepository,
-  knowledgeEvidenceRepository,
-  getTombstone = null,
-  runTransaction = operation => operation()
-} = {}) {
+export function createQuestionService(
+  {
+    repository,
+    questionObjectiveRepository,
+    questionSourceRepository,
+    learningObjectiveRepository,
+    examFocusRepository,
+    knowledgeItemRepository,
+    noteRepository,
+    noteVersionRepository,
+    knowledgeEvidenceRepository,
+    getTombstone = null,
+    runTransaction = operation => operation()
+  }: QuestionDependencies = {} as QuestionDependencies
+) {
   if (!repository || !questionObjectiveRepository || !questionSourceRepository || !learningObjectiveRepository)
     throw new TypeError('Question repositories are required');
 
-  function requireQuestion(id, { includeArchived = false } = {}) {
+  type ServiceQuestion =
+    | QuestionServiceRecord
+    | NonNullable<Awaited<ReturnType<NonNullable<QuestionDependencies['repository']>['findById']>>>;
+  type ResolvedSource = Awaited<ReturnType<typeof resolveSourceReference>>;
+  function requireQuestion(id: string, { includeArchived = false } = {}) {
     const question = repository.findById(id);
     if (!question || question.deletedAt || (!includeArchived && question.reviewStatus === 'archived'))
       throw notFoundError('QUESTION_NOT_FOUND', 'Question not found');
     return question;
   }
 
-  function assertQuestionIdAvailable(id) {
+  function assertQuestionIdAvailable(id: string) {
     if (getTombstone?.('questions', id)) throw conflictError('QUESTION_ID_DELETED', '已清理的题目 ID 不能复用');
     if (repository.findById(id)) {
       throw conflictError('QUESTION_ID_CONFLICT', 'A Question with the same id already exists');
     }
   }
 
-  function requireObjectives(ids, { confirmed = false } = {}) {
+  function requireObjectives(ids: Iterable<unknown>, { confirmed = false } = {}) {
     const uniqueIds = [...new Set(ids)];
     const objectives = uniqueIds.map(id => {
       const objective = learningObjectiveRepository.findById(id);
@@ -58,8 +67,8 @@ export function createQuestionService({
     return objectives;
   }
 
-  function resolveSourceReference(source, { preserveStale = false } = {}) {
-    if (!supportedSourceTypes.has(source.sourceType))
+  function resolveSourceReference(source: SourceView, { preserveStale = false } = {}) {
+    if (!(supportedSourceTypes as ReadonlySet<unknown>).has(source.sourceType))
       throw validationError('QUESTION_SOURCE_TYPE_UNSUPPORTED', 'QuestionSource type is not supported in Phase3.0');
     if (source.sourceType === 'manual') {
       return {
@@ -75,12 +84,12 @@ export function createQuestionService({
       noteVersion: noteVersionRepository,
       knowledgeEvidence: knowledgeEvidenceRepository
     };
-    const sourceRepository = repositories[source.sourceType];
-    let reference = sourceRepository?.findById(source.sourceId);
+    const sourceRepository = repositories[source.sourceType as keyof typeof repositories];
+    let reference = sourceRepository?.findById(source.sourceId) as SourceReference | null | undefined;
     if (!reference || reference.deletedAt)
       throw notFoundError('QUESTION_SOURCE_NOT_FOUND', 'QuestionSource reference not found');
     if (source.sourceType === 'noteVersion' && noteRepository) {
-      const note = noteRepository.findById(reference.noteId);
+      const note = noteRepository.findById(reference.noteId!);
       reference = {
         ...reference,
         isCurrent: Boolean(note && !note.deleted && sameKnowraText(note.rawMarkdown, reference.content))
@@ -93,21 +102,12 @@ export function createQuestionService({
     };
   }
 
-  /**
-   * @overload
-   * @param {import('../infrastructure/assessment-repository.ts').QuestionSourceRecord[]} sources
-   * @param {{preserveStale?: boolean}} [options]
-   * @returns {ReturnType<typeof resolveSourceReference>[]}
-   */
-  /** @overload @param {unknown} sources @param {{preserveStale?: boolean}} [options] @returns {unknown} */
-  /** @param {unknown} sources @param {{preserveStale?: boolean}} [options] */
-  function resolveSources(sources = [], options = {}) {
-    return /** @type {{map(callback: (source: unknown) => object): unknown}} */ (sources).map(source =>
+  function resolveSources(sources: unknown = [], options: { preserveStale?: boolean } = {}): ResolvedSource[] {
+    return (sources as { map(callback: (source: SourceView) => ResolvedSource): ResolvedSource[] }).map(source =>
       resolveSourceReference(source, options)
     );
   }
-
-  function assertSourceIdsAvailable(sources, questionId) {
+  function assertSourceIdsAvailable(sources: ResolvedSource[], questionId: string) {
     const sourceIds = new Set();
     for (const source of sources) {
       if (sourceIds.has(source.id)) {
@@ -124,7 +124,7 @@ export function createQuestionService({
   }
 
   function hydrate(
-    question,
+    question: ServiceQuestion,
     links = questionObjectiveRepository.listByQuestionIds([question.id]),
     sources = questionSourceRepository.listByQuestionIds([question.id])
   ) {
@@ -132,13 +132,13 @@ export function createQuestionService({
       ...question,
       learningObjectiveIds: links
         .filter(link => link.questionId === question.id)
-        .sort((a, b) => /** @type {number} */ (a.order) - /** @type {number} */ (b.order))
+        .sort((a, b) => (a.order as number) - (b.order as number))
         .map(link => link.learningObjectiveId),
       sources: sources.filter(source => source.questionId === question.id)
     };
   }
 
-  function assertReady(question, { forConfirmation = false } = {}) {
+  function assertReady(question: ServiceQuestion, { forConfirmation = false } = {}) {
     const links = questionObjectiveRepository.listByQuestionIds([question.id]);
     const objectives = requireObjectives(links.map(link => link.learningObjectiveId));
     const persistedSources = questionSourceRepository.listByQuestionIds([question.id]);
@@ -160,7 +160,7 @@ export function createQuestionService({
     if (forConfirmation && !['candidate', 'confirmed'].includes(question.reviewStatus))
       throw conflictError('QUESTION_REVIEW_REQUIRED', 'Question must be a candidate before confirmation');
   }
-  function validateQuestion(id) {
+  function validateQuestion(id: string) {
     const current = requireQuestion(id);
     assertReady(current);
     const next =
@@ -171,7 +171,11 @@ export function createQuestionService({
     return hydrate(next);
   }
 
-  function replaceRelations(questionId, objectiveIds, sources) {
+  function replaceRelations(
+    questionId: string,
+    objectiveIds: Iterable<unknown>,
+    sources: ResolvedSource[] | undefined
+  ) {
     questionObjectiveRepository.replaceForQuestion(questionId, objectiveIds);
     if (sources !== undefined) {
       assertSourceIdsAvailable(sources, questionId);
@@ -185,16 +189,11 @@ export function createQuestionService({
     }
   }
 
-  /**
-   * @template {import('../domain/question.ts').Question<unknown, unknown, unknown, unknown>} Record
-   * @param {Record} question
-   * @returns {Record}
-   */
-  function saveNew(question) {
+  function saveNew(question: ServiceQuestion) {
     return repository.create?.(question) ?? repository.save(question);
   }
 
-  function downgradeConfirmedQuestions(questionIds) {
+  function downgradeConfirmedQuestions(questionIds: Iterable<unknown>) {
     const changed = [];
     for (const questionId of new Set(questionIds)) {
       const current = repository.findById(questionId);
@@ -211,7 +210,7 @@ export function createQuestionService({
     return changed;
   }
 
-  function markSourcesStale(sourceType, sourceIds = []) {
+  function markSourcesStale(sourceType: string, sourceIds: string[] = []) {
     return runTransaction(() => {
       const changedSources = questionSourceRepository.markBySourceIds(sourceType, sourceIds, 'stale');
       downgradeConfirmedQuestions(changedSources.map(source => source.questionId));
@@ -220,7 +219,7 @@ export function createQuestionService({
   }
 
   return {
-    createQuestion(input = {}) {
+    createQuestion(input: QuestionDtoInput = {}) {
       const dto = buildCreateQuestionDto(input);
       assertQuestionIdAvailable(dto.id);
       requireObjectives(dto.learningObjectiveIds);
@@ -233,10 +232,10 @@ export function createQuestionService({
         return hydrate(question);
       });
     },
-    getQuestion(id) {
+    getQuestion(id: string) {
       return hydrate(requireQuestion(id, { includeArchived: true }));
     },
-    listQuestions(options = {}) {
+    listQuestions(options: AssessmentListOptions & { examFocusId?: string } = {}) {
       const questions = repository.list(options);
       const ids = questions.map(question => question.id);
       const links = questionObjectiveRepository.listByQuestionIds(ids);
@@ -258,7 +257,7 @@ export function createQuestionService({
       }
       return filtered.map(question => hydrate(question, links, sources));
     },
-    updateQuestion(id, input = {}) {
+    updateQuestion(id: string, input: QuestionDtoInput = {}) {
       const current = requireQuestion(id);
       const dto = buildUpdateQuestionDto(input);
       const objectiveIds =
@@ -282,27 +281,27 @@ export function createQuestionService({
       });
     },
     validateQuestion,
-    submitForReview(id) {
+    submitForReview(id: string) {
       return validateQuestion(id);
     },
-    confirmQuestion(id) {
+    confirmQuestion(id: string) {
       const current = requireQuestion(id);
       assertReady(current, { forConfirmation: true });
       return repository.save(new Question({ ...current, reviewStatus: 'confirmed', updatedAt: now() }));
     },
-    archiveQuestion(id) {
+    archiveQuestion(id: string) {
       return repository.save(new Question({ ...requireQuestion(id), reviewStatus: 'archived', updatedAt: now() }));
     },
-    restoreQuestion(id) {
+    restoreQuestion(id: string) {
       const current = requireQuestion(id, { includeArchived: true });
       if (current.reviewStatus !== 'archived') return current;
       return repository.save(new Question({ ...current, reviewStatus: 'draft', updatedAt: now() }));
     },
-    markSourceStale(sourceType, sourceId) {
+    markSourceStale(sourceType: string, sourceId: string) {
       return markSourcesStale(sourceType, [sourceId]);
     },
     markSourcesStale,
-    invalidateByObjectiveId(learningObjectiveId) {
+    invalidateByObjectiveId(learningObjectiveId: string) {
       return runTransaction(() => {
         const changedSources = questionSourceRepository.markBySourceIds(
           'learningObjective',
@@ -319,3 +318,12 @@ export function createQuestionService({
     }
   };
 }
+
+type SourceView = Omit<QuestionSourceDto, 'sourceType'> & {
+  sourceType: string;
+  questionId?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+type SourceReference = QuestionSourceReference & { noteId?: string; content?: string };

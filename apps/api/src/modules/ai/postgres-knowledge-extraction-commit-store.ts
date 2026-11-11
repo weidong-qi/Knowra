@@ -15,7 +15,7 @@ import {
   validateKnowledgeExtractionCommit
 } from './knowledge-extraction-commit-contract.ts';
 import { createPostgresAiRepository } from './postgres-record-repository.ts';
-import { createAsyncKnowledgeItemService } from '../knowledge/application/postgres-async/knowledge-domain-service.js';
+import { createAsyncKnowledgeItemService } from '../knowledge/application/postgres-async/knowledge-domain-service.ts';
 import { createPostgresKnowledgeItemRepository } from '../knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createPostgresKnowledgeEvidenceRepository } from '../knowledge/infrastructure/postgres/knowledge-evidence-repository.ts';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from '../knowledge/infrastructure/postgres/knowledge-artifact-provenance-repository.ts';

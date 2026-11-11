@@ -46,14 +46,14 @@ import { createInMemoryQuestionSourceRepository } from './infrastructure/questio
 import { createNoteVersionService } from './application/note-version-service.ts';
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { NOTE_VERSION_COALESCE_WINDOW_MS, selectCoalescibleVersion } from './application/note-version-coalescing.js';
-import { createKnowledgeItemService } from './application/knowledge-item-service.js';
+import { createKnowledgeItemService } from './application/knowledge-item-service.ts';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
 import { createLearningObjectiveService } from './application/learning-objective-service.ts';
 import { createAssessmentContextService } from './application/assessment-context-service.ts';
-import { createQuestionService } from './application/question-service.js';
+import { createQuestionService } from './application/question-service.ts';
 import { createLocalTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
 import { createWorkspaceQueryService } from './application/workspace-query-service.js';
-import { bindLocalServiceTransactions } from './application/local-service-transactions.js';
+import { bindLocalServiceTransactions } from './application/local-service-transactions.ts';
 import { conflictError, validationError } from './application/knowledge-errors.js';
 
 export function createKnowledgeModule(options = {}) {

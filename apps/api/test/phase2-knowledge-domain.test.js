@@ -424,7 +424,7 @@ export const phase2KnowledgeDomainTests = [
     name: 'Phase2 PostgreSQL async KnowledgeEvidence 保持相同健康推导与重复 ID 语义',
     async run() {
       const { createAsyncKnowledgeItemService } =
-        await import('../src/modules/knowledge/application/postgres-async/knowledge-domain-service.js');
+        await import('../src/modules/knowledge/application/postgres-async/knowledge-domain-service.ts');
       const { createInMemoryKnowledgeItemRepository } =
         await import('../src/modules/knowledge/infrastructure/knowledge-item-repository.js');
       const { createInMemoryKnowledgeEvidenceRepository } =

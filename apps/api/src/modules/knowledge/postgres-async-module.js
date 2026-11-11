@@ -22,7 +22,7 @@ import { createAsyncKnowledgeSpaceService } from './application/postgres-async/s
 import { createAsyncContentAnnotationService } from './application/postgres-async/content-annotation-service.js';
 import { createAsyncNoteVersionService } from './application/note-version-service.ts';
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
-import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.js';
+import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.ts';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
 import { createAsyncSearchService } from './application/postgres-async/search-service.ts';
 import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.ts';
@@ -50,7 +50,7 @@ import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-
 import { createPostgresTagRepository } from './infrastructure/postgres/tag-repository.ts';
 import { createAsyncLearningObjectiveService } from './application/postgres-async/learning-objective-service.ts';
 import { createAsyncAssessmentContextService } from './application/postgres-async/assessment-context-service.ts';
-import { createAsyncQuestionService } from './application/postgres-async/question-service.js';
+import { createAsyncQuestionService } from './application/postgres-async/question-service.ts';
 import { createTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
 import { createWorkspaceQueryService } from './application/workspace-query-service.js';
 import { conflictError, validationError } from './application/knowledge-errors.js';

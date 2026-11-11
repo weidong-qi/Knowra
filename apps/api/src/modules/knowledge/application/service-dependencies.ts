@@ -1,3 +1,9 @@
+import type { CreateQuestionDto } from './dto/assessment.dto.ts';
+import type {
+  CreateKnowledgeItemDto,
+  UpdateKnowledgeItemDto,
+  CreateKnowledgeEvidenceDto
+} from './dto/knowledge-item.dto.ts';
 import type { KnowledgeItem } from '../domain/knowledge-item.ts';
 import type { KnowledgeEvidence } from '../domain/knowledge-evidence.ts';
 import type {
@@ -49,24 +55,52 @@ export interface LearningObjectiveDependencies extends TransactionDependencies {
   knowledgeItemRepository?: Pick<KnowledgeItemRepository, 'findById'>;
   onObjectiveInvalidated?: ((id: string) => void) | null;
 }
+export type KnowledgeItemServiceRecord = KnowledgeItem<
+  CreateKnowledgeItemDto['title'],
+  CreateKnowledgeItemDto['canonicalStatement'],
+  UpdateKnowledgeItemDto['userExplanation'],
+  CreateKnowledgeItemDto['knowledgeType'],
+  CreateKnowledgeItemDto['sourceMode'],
+  CreateKnowledgeItemDto['createdAt'],
+  CreateKnowledgeItemDto['updatedAt']
+>;
+export type KnowledgeEvidenceServiceRecord = KnowledgeEvidence<
+  CreateKnowledgeEvidenceDto['sourceType'],
+  CreateKnowledgeEvidenceDto['relationType'],
+  CreateKnowledgeEvidenceDto['headingPath']
+>;
 export interface KnowledgeItemDependencies extends TransactionDependencies {
-  repository?: KnowledgeItemRepository<KnowledgeItem>;
-  evidenceRepository?: KnowledgeEvidenceRepository<KnowledgeEvidence>;
-  noteVersionRepository?: NoteVersionRepository;
-  annotationRepository?: ContentAnnotationRepository;
+  repository: Pick<KnowledgeItemRepository<KnowledgeItemServiceRecord>, 'findById' | 'list' | 'save'> &
+    Partial<Pick<KnowledgeItemRepository<KnowledgeItemServiceRecord>, 'create'>>;
+  evidenceRepository: Omit<KnowledgeEvidenceRepository<KnowledgeEvidenceServiceRecord>, 'deleteByKnowledgeItemId'>;
+  noteVersionRepository?: Pick<NoteVersionRepository, 'findById'>;
+  annotationRepository?: Pick<ContentAnnotationRepository, 'findById'>;
   noteRepository?: Pick<NoteRepository, 'findById'>;
-  onItemInvalidated?: (id: string) => void;
+  onItemInvalidated?: ((id: string) => void) | null;
 }
+export type QuestionServiceRecord = Question<
+  CreateQuestionDto['questionType'],
+  CreateQuestionDto['difficulty'],
+  CreateQuestionDto['createdAt'],
+  CreateQuestionDto['updatedAt']
+>;
 export interface QuestionDependencies extends TransactionDependencies {
-  repository?: AssessmentCollectionRepository<Question<unknown, unknown, unknown, unknown>>;
-  questionObjectiveRepository?: QuestionObjectiveRepository;
-  questionSourceRepository?: QuestionSourceRepository;
-  learningObjectiveRepository?: AssessmentCollectionRepository<LearningObjective>;
-  examFocusRepository?: ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>;
+  repository: Pick<AssessmentCollectionRepository<QuestionServiceRecord>, 'findById' | 'save' | 'list'> &
+    Partial<Pick<AssessmentCollectionRepository<QuestionServiceRecord>, 'create'>>;
+  questionObjectiveRepository: Pick<
+    QuestionObjectiveRepository,
+    'listByQuestionIds' | 'listByObjectiveId' | 'replaceForQuestion'
+  >;
+  questionSourceRepository: Pick<
+    QuestionSourceRepository,
+    'findById' | 'listByQuestionIds' | 'replaceForQuestion' | 'markBySourceIds'
+  >;
+  learningObjectiveRepository: Pick<AssessmentCollectionRepository<LearningObjective>, 'findById'>;
+  examFocusRepository?: Pick<ExamFocusRepository<ExamFocus<unknown, unknown, unknown>>, 'findById'>;
   knowledgeItemRepository?: Pick<KnowledgeItemRepository, 'findById'>;
   noteRepository?: Pick<NoteRepository, 'findById'>;
-  noteVersionRepository?: NoteVersionRepository;
-  knowledgeEvidenceRepository?: KnowledgeEvidenceRepository;
+  noteVersionRepository?: Pick<NoteVersionRepository, 'findById'>;
+  knowledgeEvidenceRepository?: Pick<KnowledgeEvidenceRepository, 'findById'>;
 }
 type VersionServiceMethods = 'findByNoteIdAndContentHash' | 'save' | 'findById' | 'list' | 'listIds' | 'listPage';
 export interface NoteVersionDependencies {

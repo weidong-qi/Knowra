@@ -1,9 +1,13 @@
+import type { QuestionServiceRecord } from '../service-dependencies.ts';
+import type { QuestionDependencies } from './service-dependencies.ts';
+import type { QuestionDtoInput, QuestionSourceDto } from '../dto/assessment.dto.ts';
+import type { QuestionSourceReference } from '../formal-asset-validation.ts';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { Question } from '../../domain/question.ts';
 import { QuestionSource } from '../../domain/question-source.ts';
 import { buildCreateQuestionDto, buildUpdateQuestionDto } from '../dto/assessment.dto.ts';
 import { assertQuestionConfirmable, deriveQuestionSourceStatus } from '../formal-asset-validation.ts';
-import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
+import { conflictError, notFoundError, validationError } from '../knowledge-errors.ts';
 
 const now = () => new Date().toISOString();
 const supportedSourceTypes = new Set([
@@ -14,36 +18,47 @@ const supportedSourceTypes = new Set([
   'knowledgeEvidence'
 ]);
 
-/** @param {import('./service-dependencies.ts').QuestionDependencies} dependencies */
-export function createAsyncQuestionService({
-  repository,
-  questionObjectiveRepository,
-  questionSourceRepository,
-  learningObjectiveRepository,
-  examFocusRepository,
-  knowledgeItemRepository,
-  noteRepository,
-  noteVersionRepository,
-  knowledgeEvidenceRepository,
-  getTombstone = null,
-  runTransaction = operation => operation()
-} = {}) {
+export function createAsyncQuestionService(
+  {
+    repository,
+    questionObjectiveRepository,
+    questionSourceRepository,
+    learningObjectiveRepository,
+    examFocusRepository,
+    knowledgeItemRepository,
+    noteRepository,
+    noteVersionRepository,
+    knowledgeEvidenceRepository,
+    getTombstone = null,
+    runTransaction = operation => operation()
+  }: QuestionDependencies = {} as QuestionDependencies
+) {
   if (!repository || !questionObjectiveRepository || !questionSourceRepository || !learningObjectiveRepository)
     throw new TypeError('Async Question repositories are required');
 
-  async function requireQuestion(id, { includeArchived = false } = {}) {
+  type ServiceQuestion =
+    | QuestionServiceRecord
+    | NonNullable<Awaited<ReturnType<NonNullable<QuestionDependencies['repository']>['findById']>>>;
+  type ResolvedSource = Awaited<ReturnType<typeof resolveSourceReference>>;
+  type Links = Awaited<
+    ReturnType<NonNullable<QuestionDependencies['questionObjectiveRepository']>['listByQuestionIds']>
+  >;
+  type Sources = Awaited<
+    ReturnType<NonNullable<QuestionDependencies['questionSourceRepository']>['listByQuestionIds']>
+  >;
+  async function requireQuestion(id: string, { includeArchived = false } = {}) {
     const question = await repository.findById(id);
     if (!question || question.deletedAt || (!includeArchived && question.reviewStatus === 'archived'))
       throw notFoundError('QUESTION_NOT_FOUND', 'Question not found');
     return question;
   }
-  async function assertQuestionIdAvailable(id) {
+  async function assertQuestionIdAvailable(id: string) {
     if (await getTombstone?.('questions', id)) throw conflictError('QUESTION_ID_DELETED', '已清理的题目 ID 不能复用');
     if (await repository.findById(id)) {
       throw conflictError('QUESTION_ID_CONFLICT', 'A Question with the same id already exists');
     }
   }
-  async function requireObjectives(ids, { confirmed = false } = {}) {
+  async function requireObjectives(ids: Iterable<unknown>, { confirmed = false } = {}) {
     return Promise.all(
       [...new Set(ids)].map(async id => {
         const objective = await learningObjectiveRepository.findById(id);
@@ -55,8 +70,8 @@ export function createAsyncQuestionService({
       })
     );
   }
-  async function resolveSourceReference(source, { preserveStale = false } = {}) {
-    if (!supportedSourceTypes.has(source.sourceType))
+  async function resolveSourceReference(source: SourceView, { preserveStale = false } = {}) {
+    if (!(supportedSourceTypes as ReadonlySet<unknown>).has(source.sourceType))
       throw validationError('QUESTION_SOURCE_TYPE_UNSUPPORTED', 'QuestionSource type is not supported in Phase3.0');
     if (source.sourceType === 'manual') {
       return {
@@ -72,11 +87,12 @@ export function createAsyncQuestionService({
       noteVersion: noteVersionRepository,
       knowledgeEvidence: knowledgeEvidenceRepository
     };
-    let reference = await repositories[source.sourceType]?.findById(source.sourceId);
+    let reference = (await repositories[source.sourceType as keyof typeof repositories]?.findById(source.sourceId)) as
+      SourceReference | null | undefined;
     if (!reference || reference.deletedAt)
       throw notFoundError('QUESTION_SOURCE_NOT_FOUND', 'QuestionSource reference not found');
     if (source.sourceType === 'noteVersion' && noteRepository) {
-      const note = await noteRepository.findById(reference.noteId);
+      const note = await noteRepository.findById(reference.noteId!);
       reference = {
         ...reference,
         isCurrent: Boolean(note && !note.deleted && sameKnowraText(note.rawMarkdown, reference.content))
@@ -87,24 +103,14 @@ export function createAsyncQuestionService({
       status: preserveStale && source.status === 'stale' ? 'stale' : deriveQuestionSourceStatus(source, reference)
     };
   }
-  /**
-   * @overload
-   * @param {import('../../infrastructure/assessment-repository.ts').QuestionSourceRecord[]} sources
-   * @param {{preserveStale?: boolean}} [options]
-   * @returns {Promise<Awaited<ReturnType<typeof resolveSourceReference>>[]>}
-   */
-  /** @overload @param {unknown} sources @param {{preserveStale?: boolean}} [options] @returns {Promise<unknown[]>} */
-  /** @param {unknown} sources @param {{preserveStale?: boolean}} [options] */
-  function resolveSources(sources = [], options = {}) {
+  function resolveSources(sources: unknown = [], options: { preserveStale?: boolean } = {}): Promise<ResolvedSource[]> {
     return Promise.all(
-      /** @type {Iterable<unknown>} */ (
-        /** @type {{map(callback: (source: unknown) => Promise<object>): unknown}} */ (sources).map(source =>
-          resolveSourceReference(source, options)
-        )
-      )
+      (
+        sources as { map(callback: (source: SourceView) => Promise<ResolvedSource>): Iterable<Promise<ResolvedSource>> }
+      ).map(source => resolveSourceReference(source, options))
     );
   }
-  async function assertSourceIdsAvailable(sources, questionId) {
+  async function assertSourceIdsAvailable(sources: ResolvedSource[], questionId: string) {
     const sourceIds = new Set();
     for (const source of sources) {
       if (sourceIds.has(source.id)) {
@@ -119,7 +125,7 @@ export function createAsyncQuestionService({
       }
     }
   }
-  async function hydrate(question, links = null, sources = null) {
+  async function hydrate(question: ServiceQuestion, links: Links | null = null, sources: Sources | null = null) {
     const [resolvedLinks, resolvedSources] = await Promise.all([
       links ?? questionObjectiveRepository.listByQuestionIds([question.id]),
       sources ?? questionSourceRepository.listByQuestionIds([question.id])
@@ -133,14 +139,14 @@ export function createAsyncQuestionService({
       sources: resolvedSources.filter(source => source.questionId === question.id)
     };
   }
-  async function assertReady(question, { forConfirmation = false } = {}) {
+  async function assertReady(question: ServiceQuestion, { forConfirmation = false } = {}) {
     const links = await questionObjectiveRepository.listByQuestionIds([question.id]);
     const [objectives, persistedSources] = await Promise.all([
       requireObjectives(links.map(link => link.learningObjectiveId)),
       questionSourceRepository.listByQuestionIds([question.id])
     ]);
     const sources = await resolveSources(
-      /** @type {import('../../infrastructure/assessment-repository.ts').QuestionSourceRecord[]} */ (persistedSources),
+      /** @type {import('../../infrastructure/assessment-repository.ts').QuestionSourceRecord[]} */ persistedSources,
       { preserveStale: true }
     );
     if (sources.some((source, index) => source.status !== persistedSources[index]?.status)) {
@@ -160,7 +166,7 @@ export function createAsyncQuestionService({
     if (forConfirmation && !['candidate', 'confirmed'].includes(question.reviewStatus))
       throw conflictError('QUESTION_REVIEW_REQUIRED', 'Question must be a candidate before confirmation');
   }
-  async function validateQuestion(id) {
+  async function validateQuestion(id: string) {
     const current = await requireQuestion(id);
     await assertReady(current);
     const next =
@@ -170,13 +176,18 @@ export function createAsyncQuestionService({
     if (next !== current) await repository.save(next);
     return hydrate(next);
   }
-  async function replaceRelations(questionId, objectiveIds, sources, repositories = {}) {
+  async function replaceRelations(
+    questionId: string,
+    objectiveIds: import('../../infrastructure/postgres/assessment-repository-types.ts').RelationIds,
+    sources: ResolvedSource[] | undefined,
+    repositories: Partial<import('./service-dependencies.ts').PostgresRepositories> = {}
+  ) {
     const linkRepository = repositories.questionObjectiveRepository ?? questionObjectiveRepository;
     const sourceRepository = repositories.questionSourceRepository ?? questionSourceRepository;
-    await linkRepository.replaceForQuestion(questionId, objectiveIds);
+    await linkRepository!.replaceForQuestion(questionId, objectiveIds);
     if (sources !== undefined) {
       await assertSourceIdsAvailable(sources, questionId);
-      await sourceRepository.replaceForQuestion(
+      await sourceRepository!.replaceForQuestion(
         questionId,
         sources.map(
           source =>
@@ -185,16 +196,13 @@ export function createAsyncQuestionService({
       );
     }
   }
-  /**
-   * @template {import('../../domain/question.ts').Question<unknown, unknown, unknown, unknown>} Record
-   * @template Result
-   * @param {import('../service-dependencies.ts').AssessmentWritePort<NoInfer<Record>, Result>} targetRepository
-   * @param {Record} question
-   */
-  async function saveNew(targetRepository, question) {
+  async function saveNew(
+    targetRepository: NonNullable<QuestionDependencies['repository']>,
+    question: Parameters<NonNullable<QuestionDependencies['repository']>['save']>[0]
+  ) {
     return targetRepository.create ? targetRepository.create(question) : targetRepository.save(question);
   }
-  async function downgradeConfirmedQuestions(questionIds) {
+  async function downgradeConfirmedQuestions(questionIds: Iterable<unknown>) {
     const changed = [];
     for (const questionId of new Set(questionIds)) {
       const current = await repository.findById(questionId);
@@ -210,14 +218,14 @@ export function createAsyncQuestionService({
     }
     return changed;
   }
-  async function markSourcesStale(sourceType, sourceIds = []) {
+  async function markSourcesStale(sourceType: string, sourceIds: string[] = []) {
     const changedSources = await questionSourceRepository.markBySourceIds(sourceType, sourceIds, 'stale');
     await downgradeConfirmedQuestions(changedSources.map(source => source.questionId));
     return changedSources;
   }
 
   return {
-    async createQuestion(input = {}) {
+    async createQuestion(input: QuestionDtoInput = {}) {
       const dto = buildCreateQuestionDto(input);
       await assertQuestionIdAvailable(dto.id);
       await requireObjectives(dto.learningObjectiveIds);
@@ -232,8 +240,13 @@ export function createAsyncQuestionService({
       });
       return hydrate(saved);
     },
-    getQuestion: id => requireQuestion(id, { includeArchived: true }).then(question => hydrate(question)),
-    async listQuestions(options = {}) {
+    getQuestion: (id: string) => requireQuestion(id, { includeArchived: true }).then(question => hydrate(question)),
+    async listQuestions(
+      options: NonNullable<Parameters<NonNullable<QuestionDependencies['repository']>['list']>[0]> & {
+        learningObjectiveId?: string;
+        examFocusId?: string;
+      } = {}
+    ) {
       const questions = await repository.list(options);
       const ids = questions.map(question => question.id);
       const [links, sources] = await Promise.all([
@@ -256,7 +269,7 @@ export function createAsyncQuestionService({
       }
       return Promise.all(filtered.map(question => hydrate(question, links, sources)));
     },
-    async updateQuestion(id, input = {}) {
+    async updateQuestion(id: string, input: QuestionDtoInput = {}) {
       const current = await requireQuestion(id);
       const dto = buildUpdateQuestionDto(input);
       const existingLinks = await questionObjectiveRepository.listByQuestionIds([id]);
@@ -281,30 +294,30 @@ export function createAsyncQuestionService({
       return hydrate(saved);
     },
     validateQuestion,
-    submitForReview(id) {
+    submitForReview(id: string) {
       return validateQuestion(id);
     },
-    async confirmQuestion(id) {
+    async confirmQuestion(id: string) {
       const current = await requireQuestion(id);
       await assertReady(current, { forConfirmation: true });
       return repository.save(new Question({ ...current, reviewStatus: 'confirmed', updatedAt: now() }));
     },
-    async archiveQuestion(id) {
+    async archiveQuestion(id: string) {
       return repository.save(
         new Question({ ...(await requireQuestion(id)), reviewStatus: 'archived', updatedAt: now() })
       );
     },
-    async restoreQuestion(id) {
+    async restoreQuestion(id: string) {
       const current = await requireQuestion(id, { includeArchived: true });
       return current.reviewStatus !== 'archived'
         ? current
         : repository.save(new Question({ ...current, reviewStatus: 'draft', updatedAt: now() }));
     },
-    markSourceStale(sourceType, sourceId) {
+    markSourceStale(sourceType: string, sourceId: string) {
       return markSourcesStale(sourceType, [sourceId]);
     },
     markSourcesStale,
-    async invalidateByObjectiveId(learningObjectiveId) {
+    async invalidateByObjectiveId(learningObjectiveId: string) {
       const [changedSources, links] = await Promise.all([
         questionSourceRepository.markBySourceIds('learningObjective', [learningObjectiveId], 'stale'),
         questionObjectiveRepository.listByObjectiveId(learningObjectiveId)
@@ -317,3 +330,12 @@ export function createAsyncQuestionService({
     }
   };
 }
+
+type SourceView = Omit<QuestionSourceDto, 'sourceType'> & {
+  sourceType: string;
+  questionId?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+type SourceReference = QuestionSourceReference & { noteId?: string; content?: string };
