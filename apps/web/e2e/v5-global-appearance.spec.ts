@@ -28,6 +28,11 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
   const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
   const mode = page.getByRole('button', { name: '切换深色模式' });
   await expect(mode).toBeVisible();
+  const skip = page.getByRole('link', { name: '跳到主内容', exact: true });
+  await skip.focus();
+  await expect(skip).toBeFocused();
+  await expect(skip).toHaveCSS('outline-style', 'solid');
+  await expect(skip).toHaveCSS('outline-width', '2px');
   for (const name of ['素', '完整', '圆角', '胶囊', '黑白配色', '橙色配色']) {
     await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
   }
