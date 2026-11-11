@@ -3,7 +3,7 @@ export interface FolderDeletionPackage {
   mode: 'keep' | 'with-content';
   folderIds: string[];
   noteIds: string[];
-  destinationId: string | null;
+  destinationId: string | null | undefined;
 }
 
 export interface FolderConstructorInput<DeletionPackage = FolderDeletionPackage> {

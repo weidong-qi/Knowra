@@ -95,10 +95,10 @@ export function createAsyncFolderService({
     }
   }
 
-  async function collectSubtreeIds(folderId: string | null | undefined) {
+  async function collectSubtreeIds<Id extends string | null | undefined>(folderId: Id) {
     const allFolders = await repository!.list({ includeDeleted: true });
-    const ids = new Set([folderId]);
-    const queue = [folderId];
+    const ids = new Set<string | Id>([folderId]);
+    const queue: (string | Id)[] = [folderId];
     while (queue.length) {
       const currentId = queue.shift();
       allFolders
@@ -220,7 +220,7 @@ export function createAsyncFolderService({
       }
       return buildNodes();
     },
-    async getFolderSubtreeIds(folderId: string | null | undefined) {
+    async getFolderSubtreeIds<Id extends string | null | undefined>(folderId: Id) {
       await requireFolder(folderId);
       return collectSubtreeIds(folderId);
     }

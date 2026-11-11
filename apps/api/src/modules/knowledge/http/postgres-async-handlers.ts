@@ -2,7 +2,7 @@ import type { AnnotationHttpPort, ScopeHttpPort, KnowledgeServiceKeys, Input } f
 import type { KnowledgeHandlerInputs } from './knowledge-handlers.ts';
 import { assertCommandSearchOwner } from '../application/command-note-search.ts';
 
-import type { createPostgresKnowledgeModule } from '../postgres-async-module.js';
+import type { createPostgresKnowledgeModule } from '../postgres-async-module.ts';
 import type { createAsyncNoteDeletionCoordinator } from '../application/postgres-async/note-deletion-coordinator.ts';
 import type { createAsyncContentAnnotationService } from '../application/postgres-async/content-annotation-service.ts';
 import type { createAsyncAnnotationScopeService } from '../application/postgres-async/annotation-scope-service.ts';

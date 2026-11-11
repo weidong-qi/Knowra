@@ -14,7 +14,7 @@ import { createPrismaRuntime } from './infrastructure/prisma-client.ts';
 import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.ts';
 import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.ts';
 import { createPostgresSnapshotService } from './infrastructure/postgres-snapshot-service.ts';
-import { createPostgresKnowledgeModule } from './modules/knowledge/postgres-async-module.js';
+import { createPostgresKnowledgeModule } from './modules/knowledge/postgres-async-module.ts';
 import { createPostgresKnowledgeHttpHandlers } from './modules/knowledge/http/postgres-async-handlers.ts';
 import { createPostgresNoteRepository } from './modules/knowledge/infrastructure/postgres/note-repository.ts';
 import { createPostgresPdfAnnotationRepository } from './modules/pdf/repository.ts';
