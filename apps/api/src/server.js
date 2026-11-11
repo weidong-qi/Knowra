@@ -14,7 +14,7 @@ import { handleSyncRoute } from './modules/sync/routes.ts';
 import { handleModelSettingsRoute } from './modules/ai/model-settings-routes.ts';
 import { handleAiFeatureRoute } from './modules/ai/feature-settings-routes.ts';
 import { handleBudgetRoute } from './modules/ai/budget-routes.ts';
-import { createAiAssistantService } from './modules/ai/assistant-service.js';
+import { createAiAssistantService } from './modules/ai/assistant-service.ts';
 import { handleAssistantRoute } from './modules/ai/assistant-routes.ts';
 import { handleAiAccessRoute } from './modules/ai/access-routes.ts';
 import { handleConversationRoute } from './modules/ai/conversation-routes.ts';

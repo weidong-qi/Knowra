@@ -1,3 +1,13 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { AiJob, AiEventPayload } from './record-types.ts';
+import type { BudgetSettlement } from './boundary-types.ts';
+import type {
+  AiAssistantOptions,
+  AssistantPreview,
+  AssistantReference,
+  AssistantStartInput
+} from './assistant-service-types.ts';
+import type { PrepareReadInput } from './read-context-service-types.ts';
 import { randomUUID } from 'node:crypto';
 import { hashRecord, manifestHash } from './record-contract.ts';
 import { beijingDay } from './budget-ledger.ts';
@@ -6,14 +16,13 @@ import { usageCsv } from './usage-export.ts';
 
 const PREVIEW_TTL_MS = 5 * 60_000;
 const MAX_PREVIEWS = 32;
-/** @type {(code: string, message: string, ...ignored: Error[]) => never} */
-const fail = (code, message) => {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+const fail: (code: string, message: string, ...ignored: unknown[]) => never = (code, message) => {
+  const error: Error & Partial<Pick<AppError, 'code'>> = new Error(message);
   error.code = code;
   throw error;
 };
-const safeCode = value => (typeof value === 'string' && /^AI_[A-Z0-9_]{1,64}$/.test(value) ? value : 'AI_TASK_FAILED');
+const safeCode = (value: unknown) =>
+  typeof value === 'string' && /^AI_[A-Z0-9_]{1,64}$/.test(value) ? value : 'AI_TASK_FAILED';
 
 /** HTTP 层只传递经过白名单整理的任务视图。预览请求仅在进程内短时保留。 */
 export function createAiAssistantService({
@@ -22,9 +31,11 @@ export function createAiAssistantService({
   location = 'server',
   now = () => new Date(),
   logger = console
-}) {
-  const previews = new Map();
+}: AiAssistantOptions) {
+  const previews = new Map<string, AssistantPreview>();
   const runtime = () => getRuntime?.();
+  // 下方非空标注只保留原有直接解引用：缺失依赖仍按原路径抛错或被 catch 处理。
+  // readiness 的预算校验与 preview/start 的原守卫不因类型迁移而提前或省略。
   const identity = async () => {
     try {
       return await runtime()?.repository?.identity();
@@ -32,17 +43,21 @@ export function createAiAssistantService({
       fail('AI_PRIVATE_STORAGE_UNAVAILABLE', 'AI 私有存储不可用，核心资料仍可使用。');
     }
   };
-  async function appendDiagnostic(jobId, eventKind, safePayload) {
+  async function appendDiagnostic(jobId: string, eventKind: string, safePayload: AiEventPayload) {
     try {
-      const repository = runtime().repository;
+      const repository = runtime()!.repository!;
       const sequence = (await repository.listEvents(jobId)).length + 1;
       await repository.appendEvent({ jobId, sequence, eventKind, safePayload, createdAt: now().toISOString() });
     } catch (error) {
-      logger.warn?.('AI diagnostic event could not be saved', { jobId, eventKind, code: safeCode(error?.code) });
+      logger.warn?.('AI diagnostic event could not be saved', {
+        jobId,
+        eventKind,
+        code: safeCode((error as AppError | null | undefined)?.code)
+      });
     }
   }
 
-  function available(reference) {
+  function available(reference: AssistantReference | null | undefined) {
     const ai = runtime();
     return Boolean(
       reference &&
@@ -54,7 +69,7 @@ export function createAiAssistantService({
     );
   }
 
-  async function readiness(reference) {
+  async function readiness(reference: AssistantReference | null | undefined) {
     if (!reference) return { ready: false, reason: '请先在设置中配置模型。', budget: null };
     if (!available(reference)) {
       const profile = runtime()?.priceProfile;
@@ -65,9 +80,9 @@ export function createAiAssistantService({
       return { ready: false, reason, budget: null };
     }
     try {
-      const policy = runtime().budgetPolicy;
+      const policy = runtime()!.budgetPolicy;
       const plan = policy ? await policy.view() : null;
-      const budget = await runtime().budgetAuthority?.status('deepseek-primary', undefined, plan?.limits);
+      const budget = await runtime()!.budgetAuthority?.status('deepseek-primary', undefined, plan?.limits);
       const expected = plan ? plan.limits.daily : 20_000_000;
       const unlimited = expected === null;
       if (
@@ -82,8 +97,8 @@ export function createAiAssistantService({
         (unlimited
           ? budget.availableMicrounits !== null
           : !Number.isSafeInteger(budget.availableMicrounits) ||
-            budget.availableMicrounits < 0 ||
-            budget.availableMicrounits > budget.limitMicrounits)
+            budget.availableMicrounits! < 0 ||
+            budget.availableMicrounits! > budget.limitMicrounits!)
       ) {
         return { ready: false, reason: '预算状态无效，已阻止模型调用。', budget: null };
       }
@@ -94,7 +109,7 @@ export function createAiAssistantService({
         spentMicrounits: budget.spentMicrounits,
         heldMicrounits: budget.heldMicrounits
       };
-      const yuan = value => `${+(value / 1_000_000).toFixed(2)}`;
+      const yuan = (value: number) => `${+(value / 1_000_000).toFixed(2)}`;
       if (plan?.paused?.length) {
         return {
           ready: false,
@@ -107,13 +122,17 @@ export function createAiAssistantService({
       if (plan?.limits.monthly != null && budget.monthAvailableMicrounits === 0) {
         return { ready: false, reason: `本月 ${yuan(plan.limits.monthly)} 元预算已用完。`, budget: view };
       }
-      if (policy && (await policy.balanceBelowFloor(plan.settings))) {
+      if (policy && (await policy.balanceBelowFloor(plan!.settings))) {
         return { ready: false, reason: '账户余额低于设定的下限，已暂停模型调用。', budget: view };
       }
       return { ready: true, reason: null, budget: view };
     } catch (error) {
-      if (['AI_BUDGET_SETTINGS_INVALID', 'AI_BUDGET_ALERTS_INVALID'].includes(error?.code))
-        return { ready: false, reason: error.message, budget: null };
+      if (
+        ['AI_BUDGET_SETTINGS_INVALID', 'AI_BUDGET_ALERTS_INVALID'].includes(
+          (error as AppError | null | undefined)?.code as string
+        )
+      )
+        return { ready: false, reason: (error as AppError).message, budget: null };
       return {
         ready: false,
         reason: location === 'local' ? '本机预算账本不可用，已阻止模型调用。' : '云端预算服务不可用，已阻止模型调用。',
@@ -186,21 +205,21 @@ export function createAiAssistantService({
   async function budgetSettings() {
     const store = runtime()?.budgetSettings;
     if (!store) fail('AI_BUDGET_SETTINGS_UNAVAILABLE', '当前运行端不支持预算设置。');
-    const [settings, policy] = [await store.get(), runtime().budgetPolicy];
+    const [settings, policy] = [await store.get(), runtime()!.budgetPolicy];
     return {
       ...settings,
       basePrice: policy
         ? {
-            version: runtime().priceProfile.version,
-            inputMicrounitsPerMillion: runtime().priceProfile.inputMicrounitsPerMillion,
-            outputMicrounitsPerMillion: runtime().priceProfile.outputMicrounitsPerMillion,
-            reviewedUntil: runtime().priceProfile.expiresAt
+            version: runtime()!.priceProfile!.version,
+            inputMicrounitsPerMillion: runtime()!.priceProfile!.inputMicrounitsPerMillion,
+            outputMicrounitsPerMillion: runtime()!.priceProfile!.outputMicrounitsPerMillion,
+            reviewedUntil: runtime()!.priceProfile!.expiresAt
           }
         : null,
       location
     };
   }
-  async function saveBudgetSettings(input) {
+  async function saveBudgetSettings(input: unknown) {
     const store = runtime()?.budgetSettings;
     if (!store) fail('AI_BUDGET_SETTINGS_UNAVAILABLE', '当前运行端不支持预算设置。');
     await store.set(input);
@@ -226,15 +245,13 @@ export function createAiAssistantService({
     if (invalid) return { day, alerts: [], rules: [], overrides: [], pauses: [], stateInvalid: true, location };
     return { ...evaluateAlerts({ settings, status, marks, overrides, pauses, day }), stateInvalid: false, location };
   }
-  /** @param {{ids?: string[], kind?: string}} [input] */
-  async function markAlerts({ ids, kind } = {}) {
+  async function markAlerts({ ids, kind }: { ids?: string[]; kind?: string } = {}) {
     const store = runtime()?.budgetAlerts;
     if (!store) fail('AI_BUDGET_SETTINGS_UNAVAILABLE', '当前运行端不支持预算提醒。');
     await store.mark(ids, kind, beijingDay(now()));
     return budgetAlerts();
   }
-  /** @param {{rule?: string}} [input] */
-  async function allowRule({ rule } = {}) {
+  async function allowRule({ rule }: { rule?: string } = {}) {
     const store = runtime()?.budgetAlerts;
     if (!store) fail('AI_BUDGET_SETTINGS_UNAVAILABLE', '当前运行端不支持预算提醒。');
     const day = beijingDay(now());
@@ -242,16 +259,14 @@ export function createAiAssistantService({
     return budgetAlerts();
   }
 
-  /** @param {{rule?: string}} [input] */
-  async function pauseRule({ rule } = {}) {
+  async function pauseRule({ rule }: { rule?: string } = {}) {
     const store = runtime()?.budgetAlerts;
     if (!store) fail('AI_BUDGET_SETTINGS_UNAVAILABLE', '当前运行端不支持预算提醒。');
     const day = beijingDay(now());
     await store.pause(rule, periodOf(rule === 'monthly' ? 'monthly' : 'daily', day), day);
     return budgetAlerts();
   }
-  /** @param {{rule?: string}} [input] */
-  async function resumeRule({ rule } = {}) {
+  async function resumeRule({ rule }: { rule?: string } = {}) {
     const store = runtime()?.budgetAlerts;
     if (!store) fail('AI_BUDGET_SETTINGS_UNAVAILABLE', '当前运行端不支持预算提醒。');
     const day = beijingDay(now());
@@ -282,16 +297,19 @@ export function createAiAssistantService({
    * 手动处理“结果未知”的请求：用户对照 DeepSeek 余额或账单后，选择“释放”（确认没有产生费用）
    * 或“按实际金额结算”。只对状态为 unknown 的请求有效，已结算的不能改。
    */
-  /** @param {Pick<import('./boundary-types.ts').BudgetSettlement, 'attemptId' | 'disposition' | 'actualMicrounits'>} [input] */
-  async function resolveUnknown({ attemptId, disposition, actualMicrounits } = {}) {
+  async function resolveUnknown({
+    attemptId,
+    disposition,
+    actualMicrounits
+  }: Pick<BudgetSettlement, 'attemptId' | 'disposition' | 'actualMicrounits'> = {}) {
     const authority = runtime()?.budgetAuthority;
     if (!authority)
       fail('AI_BUDGET_UNAVAILABLE', location === 'local' ? '本机预算账本不可用。' : '云端预算服务不可用。');
     if (
       typeof attemptId !== 'string' ||
       !/^[a-zA-Z0-9_.:-]{1,128}$/.test(attemptId) ||
-      !['released', 'settled'].includes(disposition) ||
-      (disposition === 'settled' && !(Number.isSafeInteger(actualMicrounits) && actualMicrounits >= 0)) ||
+      !['released', 'settled'].includes(disposition as string) ||
+      (disposition === 'settled' && !(Number.isSafeInteger(actualMicrounits) && actualMicrounits! >= 0)) ||
       (disposition === 'released' && actualMicrounits !== undefined && actualMicrounits !== null)
     ) {
       fail('AI_BUDGET_SETTLEMENT_INVALID', '处理请求无效。');
@@ -308,7 +326,7 @@ export function createAiAssistantService({
     return usage();
   }
 
-  async function assertJob(jobId) {
+  async function assertJob(jobId: string) {
     const ai = runtime();
     const current = await identity();
     const job = await ai?.repository?.get('aiJob', jobId);
@@ -324,7 +342,7 @@ export function createAiAssistantService({
     return job;
   }
 
-  async function view(job, detailed = false) {
+  async function view(job: AiJob, detailed = false) {
     const base = {
       jobId: job.jobId,
       spaceId: job.spaceId,
@@ -337,8 +355,8 @@ export function createAiAssistantService({
     };
     if (!detailed) return base;
     const [manifest, events] = await Promise.all([
-      runtime().repository.get('contextManifest', job.manifestId),
-      runtime().repository.listEvents(job.jobId)
+      runtime()!.repository!.get('contextManifest', job.manifestId),
+      runtime()!.repository!.listEvents(job.jobId)
     ]);
     return {
       ...base,
@@ -361,15 +379,15 @@ export function createAiAssistantService({
     };
   }
 
-  async function list(spaceId) {
+  async function list(spaceId: string | null) {
     if (typeof spaceId !== 'string' || !spaceId) fail('AI_SCOPE_INVALID', '请选择知识空间。');
     const ai = runtime();
     if (!ai?.repository) return [];
     const current = await identity();
     const jobs = await ai.repository.list('aiJob', {
       ownerId,
-      datasetId: current.datasetId,
-      datasetEpoch: current.datasetEpoch,
+      datasetId: current!.datasetId,
+      datasetEpoch: current!.datasetEpoch,
       spaceId,
       jobKind: 'answer'
     });
@@ -381,11 +399,11 @@ export function createAiAssistantService({
     );
   }
 
-  async function get(jobId) {
+  async function get(jobId: string) {
     return view(await assertJob(jobId), true);
   }
 
-  async function preview(input) {
+  async function preview(input: PrepareReadInput | null | undefined) {
     const ai = runtime();
     if (ai?.unavailableReason) fail('AI_GENERATION_UNAVAILABLE', ai.unavailableReason);
     await identity();
@@ -399,7 +417,7 @@ export function createAiAssistantService({
       credentialRef: reference.credentialRef
     });
     for (const [id, item] of previews) if (item.expiresAt <= now().getTime()) previews.delete(id);
-    if (previews.size >= MAX_PREVIEWS) previews.delete(previews.keys().next().value);
+    if (previews.size >= MAX_PREVIEWS) previews.delete(previews.keys().next().value!);
     const previewId = randomUUID();
     const expiresAt = now().getTime() + PREVIEW_TTL_MS;
     previews.set(previewId, { prepared, expiresAt, credentialRef: reference.credentialRef });
@@ -412,11 +430,11 @@ export function createAiAssistantService({
     };
   }
 
-  async function start(input) {
+  async function start(input: AssistantStartInput) {
     const reference = await runtime()?.credentialReference?.();
     const state = await readiness(reference);
-    if (!state.ready) fail('AI_GENERATION_UNAVAILABLE', state.reason);
-    const item = previews.get(input?.previewId);
+    if (!state.ready) fail('AI_GENERATION_UNAVAILABLE', state.reason!);
+    const item = previews.get(input?.previewId as string);
     if (!item || item.expiresAt <= now().getTime()) fail('AI_PREVIEW_EXPIRED', '预览已过期，请重新预览。');
     if (
       input.scopeHash !== item.prepared.scopeSnapshot.scopeHash ||
@@ -428,16 +446,17 @@ export function createAiAssistantService({
     }
     const ai = runtime();
     if (reference?.credentialRef !== item.credentialRef) fail('AI_CREDENTIAL_STALE', '模型配置已改变，请重新预览。');
-    previews.delete(input.previewId);
-    const { manifest, grant, request } = await ai.readContext.authorizeRead({
+    previews.delete(input.previewId!);
+    const { manifest, grant, request } = await ai!.readContext!.authorizeRead({
       prepared: item.prepared,
       actorId: ownerId,
       approvedScopeHash: input.scopeHash,
       approvedPayloadHash: input.payloadHash
     });
     const timestamp = now().toISOString();
-    const question = JSON.parse(request.messages[1].content).question;
-    const job = await ai.repository.insert('aiJob', {
+    // authorizeRead 已核对消息载荷的 question 字符串与范围；这里只恢复其精确字段。
+    const question = (JSON.parse(request.messages[1].content) as { question: string }).question;
+    const job = await ai!.repository!.insert('aiJob', {
       contractVersion: 1,
       kind: 'aiJob',
       jobId: randomUUID(),
@@ -453,9 +472,9 @@ export function createAiAssistantService({
       inputHash: hashRecord({ question, payloadHash: manifest.payloadHash }),
       manifestId: manifest.manifestId,
       manifestHash: manifestHash(manifest),
-      credentialRef: request.credentialRef,
+      credentialRef: request.credentialRef!,
       provider: 'deepseek',
-      modelId: request.modelId,
+      modelId: request.modelId!,
       promptVersion: 'p1-read-v1',
       resultSchemaVersion: 'p1-answer-v1',
       status: 'pending',
@@ -468,12 +487,12 @@ export function createAiAssistantService({
     });
     await appendDiagnostic(job.jobId, 'taskCreated', { phase: 'preparing', status: 'pending' });
     queueMicrotask(() => {
-      void ai.worker
-        .run(job.jobId, request)
+      void ai!
+        .worker!.run(job.jobId, request)
         .catch(async error => {
-          const current = await ai.repository.get('aiJob', job.jobId);
+          const current = await ai!.repository!.get('aiJob', job.jobId);
           if (current && ['pending', 'retrying'].includes(current.status)) {
-            await ai.repository.replace(
+            await ai!.repository!.replace(
               'aiJob',
               {
                 ...current,
@@ -485,21 +504,27 @@ export function createAiAssistantService({
             );
           }
           await appendDiagnostic(job.jobId, 'taskFailed', {
-            code: safeCode(error?.code),
+            code: safeCode((error as AppError | null | undefined)?.code),
             status: 'failed'
           });
-          logger.warn?.('AI assistant task failed', { jobId: job.jobId, code: safeCode(error?.code) });
+          logger.warn?.('AI assistant task failed', {
+            jobId: job.jobId,
+            code: safeCode((error as AppError | null | undefined)?.code)
+          });
         })
         .catch(error =>
-          logger.error?.('AI task failure could not be persisted', { jobId: job.jobId, code: safeCode(error?.code) })
+          logger.error?.('AI task failure could not be persisted', {
+            jobId: job.jobId,
+            code: safeCode((error as AppError | null | undefined)?.code)
+          })
         );
     });
     return view(job, true);
   }
 
-  async function cancel(jobId) {
+  async function cancel(jobId: string) {
     await assertJob(jobId);
-    return view(await runtime().worker.cancel(jobId), true);
+    return view(await runtime()!.worker!.cancel(jobId), true);
   }
 
   return {

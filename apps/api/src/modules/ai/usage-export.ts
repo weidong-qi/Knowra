@@ -6,7 +6,7 @@ export interface UsageCsvRow {
   readonly inputTokens?: unknown;
   readonly outputTokens?: unknown;
   readonly cacheHitTokens?: unknown;
-  readonly costMicrounits: number;
+  readonly costMicrounits: number | null;
   readonly conversationId?: unknown;
   readonly priceVersion?: unknown;
   readonly attemptId?: unknown;
@@ -38,7 +38,8 @@ const HEADER = [
   '尝试ID'
 ];
 const STATUS: Record<PropertyKey, unknown> = { settled: '已结算', unknown: '结果未知(按预留占用)' };
-const yuan = (microunits: number) => (microunits / 1_000_000).toFixed(6);
+// 历史已结算记录可能保留 null，原有除法按 JavaScript 规则将其视为 0。
+const yuan = (microunits: number | null) => ((microunits as number) / 1_000_000).toFixed(6);
 
 /** 以 = + - @ 开头（或制表/回车）的单元格加前缀，避免被表格软件当成公式执行。 */
 function cell(value: unknown) {
