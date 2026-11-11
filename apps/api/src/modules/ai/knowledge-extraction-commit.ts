@@ -4,7 +4,7 @@ import type {
   ExtractionCommitContext,
   MockCommitInput,
   CommitSteps,
-  NoteRecord
+  CommitNote
 } from './knowledge-commit-service-types.ts';
 import type { KnowledgeExtractionCommitReceipt } from './knowledge-extraction-commit-types.ts';
 import type { AiJob, AiJobAttempt, AiGrant, AiContextManifest, AiScopeSnapshot } from './record-types.ts';
@@ -165,7 +165,7 @@ export function createKnowledgeExtractionCommitService<Transaction>({
     }
     const versions: NoteVersion[] = [];
     for (const binding of scope.noteVersions) {
-      const note = (yield repos.noteRepository.findById(binding.noteId)) as NoteRecord | null;
+      const note = (yield repos.noteRepository.findById(binding.noteId)) as CommitNote | null;
       if (!isAiReadableNote(note) || note!.spaceId !== job.spaceId) {
         fail('KNOWLEDGE_EXTRACTION_SOURCE_UNAVAILABLE', '原始提炼来源不在当前 AI 可读取范围，未保存任何候选。');
       }

@@ -7,7 +7,7 @@ import type {
   ProposalOrigin,
   ProposalPlan,
   CommitSteps,
-  NoteRecord,
+  CommitNote,
   FolderRecord,
   KnowledgeItemServiceRecord,
   AiAccessPolicy,
@@ -114,7 +114,7 @@ export function createAgentKnowledgeCommitService({
       ...new Set(plan.candidates.flatMap(candidate => candidate.provenance.map(source => source.noteId)))
     ];
     for (const noteId of noteIds) {
-      const note = (yield repos.noteRepository.findById(noteId)) as NoteRecord | null;
+      const note = (yield repos.noteRepository.findById(noteId)) as CommitNote | null;
       if (
         !note ||
         note.spaceId !== plan.spaceId ||
@@ -145,11 +145,11 @@ export function createAgentKnowledgeCommitService({
     const sources = plan.candidates.flatMap(candidate => candidate.provenance);
     yield* verifyExtractionSourcePrivacy(repos, sources, plan.spaceId) as CommitSteps<void>;
     const versions = new Map<string, NoteVersion | null>(),
-      notes = new Map<string, NoteRecord | null>();
+      notes = new Map<string, CommitNote | null>();
     for (const source of sources) {
       // 提议计划生成之后、保存之前笔记可能被改写：事务内对照当前正文，来源版本已不是当前正文就整批拒绝，不保存一开始就是 stale 的候选。
       if (!notes.has(source.noteId))
-        notes.set(source.noteId, (yield repos.noteRepository.findById(source.noteId)) as NoteRecord | null);
+        notes.set(source.noteId, (yield repos.noteRepository.findById(source.noteId)) as CommitNote | null);
       const current = notes.get(source.noteId);
       if (!current || calculateContentHash(current.rawMarkdown) !== source.contentHash) {
         refuse('AI_PROPOSAL_SOURCE_STALE', '来源笔记已变化，未保存任何候选。请重新读取后再提交。');
