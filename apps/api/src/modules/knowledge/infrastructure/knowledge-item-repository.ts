@@ -30,8 +30,8 @@ export interface KnowledgeItemListOptions {
 
 /** 同步本地仓库；原记录原样返回。写入函数保持严格参数方差，不能把窄仓库当宽仓库。 */
 export interface KnowledgeItemRepository<Record extends KnowledgeItemRecord<unknown> = KnowledgeItemRecord> {
-  create: (item: Record) => Record;
-  save: (item: Record, options?: KnowledgeItemSaveOptions) => Record;
+  create: <Value extends Record>(item: Value) => Value;
+  save: <Value extends Record>(item: Value, options?: KnowledgeItemSaveOptions) => Value;
   findById(id: string | null | undefined): Record | null;
   delete(id: string | null | undefined): Record | null;
   list(options?: KnowledgeItemListOptions): Record[];

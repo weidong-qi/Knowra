@@ -48,8 +48,10 @@ export type StoredKnowledgeEvidenceRecord<Record extends KnowledgeEvidenceRecord
 export interface KnowledgeEvidenceRepository<
   Record extends KnowledgeEvidenceRecord<unknown, unknown> = KnowledgeEvidenceRecord
 > {
-  create: (evidence: StoredKnowledgeEvidenceRecord<Record>) => StoredKnowledgeEvidenceRecord<Record>;
-  save: (evidence: StoredKnowledgeEvidenceRecord<Record>) => StoredKnowledgeEvidenceRecord<Record>;
+  create: <Value extends StoredKnowledgeEvidenceRecord<Record>>(
+    evidence: Value
+  ) => StoredKnowledgeEvidenceRecord<Value>;
+  save: <Value extends StoredKnowledgeEvidenceRecord<Record>>(evidence: Value) => StoredKnowledgeEvidenceRecord<Value>;
   findById(id: string | null | undefined): StoredKnowledgeEvidenceRecord<Record> | null;
   deleteByKnowledgeItemId(knowledgeItemId: string | null | undefined): StoredKnowledgeEvidenceRecord<Record>[];
   list(options?: KnowledgeEvidenceListOptions): StoredKnowledgeEvidenceRecord<Record>[];
@@ -119,14 +121,16 @@ export function createInMemoryKnowledgeEvidenceRepository<
       }
       records.push(evidence);
       persist();
-      return evidence;
+      // 返回同一对象，只拓宽仓库允许原地改写的字段，不把历史记录补成领域实体。
+      return evidence as StoredKnowledgeEvidenceRecord<typeof evidence>;
     },
     save(evidence) {
       const index = records.findIndex(record => record.id === evidence.id);
       if (index < 0) records.push(evidence);
       else records[index] = evidence;
       persist();
-      return evidence;
+      // 返回同一对象，只拓宽仓库允许原地改写的字段，不把历史记录补成领域实体。
+      return evidence as StoredKnowledgeEvidenceRecord<typeof evidence>;
     },
     findById(id) {
       return records.find(item => item.id === id) ?? null;
