@@ -14,7 +14,7 @@ export interface RevisionChange {
   tagIds?: string[];
 }
 /** HTTP/模型修订输入在既有检查中逐步验证。 */
-export interface RevisionArguments extends RevisionChange {
+export interface RevisionArguments extends Partial<RevisionChange> {
   changes?: RevisionChange[];
   rawMarkdown?: string;
   replacements?: NoteEdit[];
