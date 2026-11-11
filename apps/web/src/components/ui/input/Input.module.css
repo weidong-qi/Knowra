@@ -463,6 +463,7 @@
   background: var(--accent-solid);
 }
 .switch[data-selected] .switchThumb {
+  background: var(--text-on-accent);
   transform: translateX(14px);
 }
 .switch[data-focus-visible] .switchTrack {

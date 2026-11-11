@@ -50,9 +50,14 @@
     inset 0 1px 1px #fff, inset 0 -1px 0 #858f9f12, 0 0 0 1px #858f9f20, 0 4px 10px -4px rgb(24 30 48 / 14%);
   --shadow-action-crystal-hover: inset 0 1px 1px #fff, 0 0 0 1px #858f9f35, 0 6px 15px -5px rgb(24 30 48 / 14%);
   --shadow-action-crystal-pressed: inset 0 2px 4px rgb(24 30 48 / 14%), 0 0 0 1px #858f9f20;
-  --surface-action-satin: linear-gradient(145deg, #f5a064, #ec7a32 48%, #d86222);
+  --surface-action-satin: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--brand-base) 82%, #fff),
+    var(--brand-base) 48%,
+    color-mix(in srgb, var(--brand-base) 80%, #000)
+  );
   --text-on-action-satin: #fff9f4;
-  --border-action-satin: #c45e25;
+  --border-action-satin: color-mix(in srgb, var(--brand-base) 80%, #000);
   --shadow-action-satin:
     inset 0 1px 0 #ffd7bbaa, inset 0 -1px 1px #ab4c2030, 0 2px 3px #7e3b2520, 0 6px 12px -5px #ca632b30;
   --shadow-action-satin-hover: inset 0 1px 0 #ffe2c9, 0 3px 7px #7e3b2520, 0 7px 18px -5px #ca632b48;
@@ -66,12 +71,15 @@
   --text-on-chrome: #60656e;
   /* 图标栏未选中图标：比文字更浅一档，贴近原型的轻盈感（在 #E1E4EA 上对比度约 3.1） */
   --icon-on-chrome: #7b818b;
-  --accent-on-tint: #b5480a;
+  /* 强调色唯一来源：改这两个值即可全局换色（浅色 / 深色各一个）。其余强调色均由它派生。 */
+  --brand-base: #17181b;
+  --brand-base-dark: #ececee;
+  --accent-on-tint: color-mix(in srgb, var(--brand-base) 72%, #000);
   --text-on-accent: #fff;
-  --accent: #f26b1d;
-  --accent-text: #c4510c;
-  --accent-solid: #c4510c;
-  --accent-hover: #aa4308;
+  --accent: var(--brand-base);
+  --accent-text: color-mix(in srgb, var(--brand-base) 80%, #000);
+  --accent-solid: var(--accent-text);
+  --accent-hover: color-mix(in srgb, var(--brand-base) 70%, #000);
   --accent-soft: color-mix(in srgb, var(--accent) 9%, var(--surface-raised));
   --accent-border: color-mix(in srgb, var(--accent) 24%, var(--surface-raised));
   --border-subtle: rgb(24 30 48 / 7.5%);

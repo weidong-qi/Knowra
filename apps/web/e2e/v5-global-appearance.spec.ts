@@ -1,6 +1,63 @@
 import { test } from './fixtures/syntheticTest';
-import { expect } from '@playwright/test';
+import { expect, type Locator } from '@playwright/test';
 import { createNote, mockEditorWorkspace } from './fixtures/editorWorkspace';
+
+async function selectedControlContrast(locator: Locator, thumb = false) {
+  return locator.evaluate((element, isThumb) => {
+    const luminance = (color: string) => {
+      const channels = color
+        .match(/[\d.]+/g)!
+        .slice(0, 3)
+        .map(Number);
+      return channels.reduce((sum, value, index) => {
+        const channel = value / 255;
+        const linear = channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        return sum + linear * [0.2126, 0.7152, 0.0722][index];
+      }, 0);
+    };
+    const style = getComputedStyle(element);
+    const foreground = luminance(isThumb ? style.backgroundColor : style.color);
+    const background = luminance(
+      isThumb ? getComputedStyle(element.parentElement!).backgroundColor : style.backgroundColor
+    );
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+  }, thumb);
+}
+
+for (const mode of ['light', 'dark'] as const) {
+  test(`${mode} 强调底色上的标签勾选保持可见`, async ({ page }) => {
+    await mockEditorWorkspace(page, []);
+    await page.addInitScript(value => {
+      localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify({ mode: value }));
+    }, mode);
+    await page.goto('/#/materials');
+    await page.getByRole('button', { name: '筛选', exact: true }).click();
+    await page.getByRole('menu', { name: '筛选维度' }).getByRole('menuitem', { name: /^标签/ }).click();
+    const tag = page.getByRole('menu', { name: '标签', exact: true }).getByRole('menuitemcheckbox', { name: /^学习/ });
+    await tag.click();
+    await expect(tag).toHaveAttribute('aria-checked', 'true');
+    const box = tag.locator('[class*="box"][data-checked]');
+    await expect(box.locator('svg')).toBeVisible();
+    await expect.poll(() => selectedControlContrast(box)).toBeGreaterThanOrEqual(3);
+  });
+
+  test(`${mode} 强调底色上的显示开关圆点保持可见`, async ({ page }) => {
+    await mockEditorWorkspace(page, []);
+    await page.addInitScript(value => {
+      localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify({ mode: value }));
+    }, mode);
+    await page.goto('/#/materials');
+    await page.getByRole('button', { name: /^显示选项/ }).click();
+    const toggle = page
+      .getByRole('dialog', { name: '索引显示选项' })
+      .getByRole('switch', { name: '标签', exact: true });
+    if (!(await toggle.isChecked())) await toggle.click();
+    await expect(toggle).toBeChecked();
+    const thumb = toggle.locator('xpath=ancestor::label').locator('[class*="switchThumb"]');
+    await expect(thumb).toBeVisible();
+    await expect.poll(() => selectedControlContrast(thumb, true)).toBeGreaterThanOrEqual(3);
+  });
+}
 
 test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保留', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
@@ -28,6 +85,11 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
   const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
   const mode = page.getByRole('button', { name: '切换深色模式' });
   await expect(mode).toBeVisible();
+  const skip = page.getByRole('link', { name: '跳到主内容', exact: true });
+  await skip.focus();
+  await expect(skip).toBeFocused();
+  await expect(skip).toHaveCSS('outline-style', 'solid');
+  await expect(skip).toHaveCSS('outline-width', '2px');
   for (const name of ['素', '完整', '圆角', '胶囊', '黑白配色', '橙色配色']) {
     await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
   }

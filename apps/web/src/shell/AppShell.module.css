@@ -1,48 +1,231 @@
-/* V5：全局外壳、磨砂上下文侧栏、不透明内容面板，独立滚动。 */
+/* V5：全局外壳，上下文侧栏与内容区连成一张面板，各自独立滚动。 */
 .shell {
   --shell-content-row: 2;
-  width: 100%; height: 100dvh; min-height: 0;
+  /* 外壳主面板（侧栏 + 内容区）的圆角，比功能区内部面板大一档。 */
+  --shell-panel-radius: 12px;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
   display: grid;
   grid-template-columns: var(--rail-size) minmax(0, 1fr);
   grid-template-rows: var(--topbar-size) minmax(0, 1fr);
   background: var(--surface-chrome-glow), var(--surface-chrome);
   padding-bottom: var(--shell-gap);
 }
-.shellWithSidebar { grid-template-columns: var(--rail-size) calc(var(--sidebar-size) + var(--shell-gap)) minmax(0, 1fr); }
-.desktopShell { --shell-content-row: 2; }
-.desktopTitlebar { grid-column: 1 / -1; grid-row: 1; min-width: 0; display: flex; background: transparent; }
-.desktopShell .desktopTitlebar { padding-left: max(var(--window-controls-clearance), env(titlebar-area-x, 0px)); -webkit-app-region: drag; app-region: drag; }
-.desktopTitlebarHost { display: flex; align-items: stretch; min-width: 0; flex: 1 1 auto; height: 100%; }
-.desktopTitle { align-self: center; padding-inline: var(--space-2); color: var(--text-on-chrome); font: 500 var(--font-size-ui)/1 var(--font-ui); }
-.focusShell { grid-template-columns: minmax(0, 1fr); }
-.focusShell .stage { grid-column: 1; margin-left: var(--shell-gap); }
-.skipLink { position: fixed; left: var(--space-3); top: var(--space-2); z-index: 100; padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-control); transform: translateY(-160%); }
-.skipLink:focus { transform: translateY(0); outline: 2px solid var(--accent-text); }
-.desktopShell .skipLink:focus { top: calc(var(--topbar-size) + var(--space-2)); }
-.stage { grid-column: 2; grid-row: var(--shell-content-row); min-width: 0; min-height: 0; position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; justify-items: stretch; padding: var(--space-6); margin-right: var(--shell-gap); border-radius: var(--radius-panel); overflow: auto; background: var(--surface-page); box-shadow: var(--shadow-page); outline: 0; }
-.stage:focus-visible { outline: 0; box-shadow: var(--shadow-page); }
-.stage[data-skip-focused]:focus-visible { outline: 2px solid var(--accent-text); outline-offset: -2px; }
-.shellWithSidebar .stage { grid-column: 3; }
-.workspaceStage { align-items: stretch; padding: 0; overflow: hidden; }
-.contextSidebar { grid-column: 2; grid-row: var(--shell-content-row); min-width: 0; min-height: 0; margin-right: var(--shell-gap); overflow: hidden; overscroll-behavior: contain; border-radius: var(--radius-panel); background: var(--surface-sidebar-solid); box-shadow: var(--shadow-sidebar); }
-.contextSidebar:not([data-open]) { display: none; }
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .contextSidebar { background: var(--surface-sidebar); backdrop-filter: blur(var(--sidebar-blur)) saturate(var(--sidebar-saturation)); -webkit-backdrop-filter: blur(var(--sidebar-blur)) saturate(var(--sidebar-saturation)); }
+.shellWithSidebar {
+  grid-template-columns: var(--rail-size) var(--sidebar-size) minmax(0, 1fr);
 }
-.contextSidebar[data-compact] { display: contents; }
-.contextSidebar[data-compact]:not([data-open]) { display: none; }
-.sidebarDialog { height: min(85dvh, 760px); max-width: min(360px, calc(100vw - 32px)); padding: 0; background: var(--surface-sidebar-solid); display: flex; flex-direction: column; }
-.sidebarClose { display: flex; justify-content: flex-end; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--border-subtle); flex: 0 0 auto; }
-.liveRegion { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@media (max-width: 920px) { .stage { padding: var(--space-5); } .workspaceStage { padding: 0; } }
+.desktopShell {
+  --shell-content-row: 2;
+}
+.desktopTitlebar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-width: 0;
+  display: flex;
+  background: transparent;
+}
+.desktopShell .desktopTitlebar {
+  padding-left: max(var(--window-controls-clearance), env(titlebar-area-x, 0px));
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.desktopTitlebarHost {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 100%;
+}
+.desktopTitle {
+  align-self: center;
+  padding-inline: var(--space-2);
+  color: var(--text-on-chrome);
+  font: 500 var(--font-size-ui)/1 var(--font-ui);
+}
+.focusShell {
+  grid-template-columns: minmax(0, 1fr);
+}
+.focusShell .stage {
+  grid-column: 1;
+  margin-left: var(--shell-gap);
+}
+.skipLink {
+  position: fixed;
+  left: var(--space-3);
+  top: var(--space-2);
+  z-index: 100;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-control);
+  transform: translateY(-160%);
+}
+.skipLink:focus {
+  transform: translateY(0);
+  outline: 2px solid var(--accent-text);
+}
+.desktopShell .skipLink:focus {
+  top: calc(var(--topbar-size) + var(--space-2));
+}
+.stage {
+  grid-column: 2;
+  grid-row: var(--shell-content-row);
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  justify-items: stretch;
+  padding: var(--space-6);
+  margin-right: var(--shell-gap);
+  border-radius: var(--shell-panel-radius);
+  overflow: auto;
+  background: var(--surface-page);
+  box-shadow: var(--shadow-page);
+  outline: 0;
+}
+.stage:focus-visible {
+  outline: 0;
+  box-shadow: var(--shadow-page);
+}
+.stage[data-skip-focused]:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
+}
+.shellWithSidebar .stage {
+  grid-column: 3;
+  border-radius: 0 var(--shell-panel-radius) var(--shell-panel-radius) 0;
+}
+.workspaceStage {
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+}
+/* 上下文侧栏与内容区连成一张面板：左侧圆角归侧栏，接缝处由内容区描边充当分隔线。 */
+.contextSidebar {
+  grid-column: 2;
+  grid-row: var(--shell-content-row);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  border-radius: var(--shell-panel-radius) 0 0 var(--shell-panel-radius);
+  background: var(--ni-shell-panel, var(--surface-sidebar-solid));
+  box-shadow: var(--shadow-page);
+}
+.contextSidebar:not([data-open]) {
+  display: none;
+}
+.contextSidebar[data-compact] {
+  display: contents;
+}
+.contextSidebar[data-compact]:not([data-open]) {
+  display: none;
+}
+.sidebarDialog {
+  height: min(85dvh, 760px);
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 0;
+  background: var(--surface-sidebar-solid);
+  display: flex;
+  flex-direction: column;
+}
+.sidebarClose {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  flex: 0 0 auto;
+}
+.liveRegion {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 920px) {
+  .stage {
+    padding: var(--space-5);
+  }
+  .workspaceStage {
+    padding: 0;
+  }
+}
 @media (max-width: 767px) {
-  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--topbar-size) minmax(0, 1fr) var(--mobile-tabs-size); padding-bottom: 0; }
-  .focusShell { grid-template-rows: var(--topbar-size) minmax(0, 1fr); padding-bottom: var(--shell-gap); }
-  .stage, .shellWithSidebar .stage { grid-column: 1; grid-row: 2; margin: 0 var(--shell-gap) var(--shell-gap); padding: var(--space-4); }
-  .workspaceStage, .shellWithSidebar .workspaceStage { padding: 0; align-items: stretch; }
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--topbar-size) minmax(0, 1fr) var(--mobile-tabs-size);
+    padding-bottom: 0;
+  }
+  .focusShell {
+    grid-template-rows: var(--topbar-size) minmax(0, 1fr);
+    padding-bottom: var(--shell-gap);
+  }
+  .stage,
+  .shellWithSidebar .stage {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0 var(--shell-gap) var(--shell-gap);
+    padding: var(--space-4);
+    border-radius: var(--shell-panel-radius);
+  }
+  .workspaceStage,
+  .shellWithSidebar .workspaceStage {
+    padding: 0;
+    align-items: stretch;
+  }
 }
 
-.sidebarDialog > :last-child { flex: 1 1 auto; min-height: 0; height: auto; }
+.sidebarDialog > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
 
 /* 标签页管理与视图/外观开关之间的分隔线。 */
-.toolbarDivider { flex: 0 0 1px; align-self: center; width: 1px; height: 16px; margin-inline: var(--space-1); background: var(--border-subtle); }
+.toolbarDivider {
+  flex: 0 0 1px;
+  align-self: center;
+  width: 1px;
+  height: 16px;
+  margin-inline: var(--space-1);
+  background: var(--border-subtle);
+}
+
+/* 外壳表面（顶栏、模块栏、上下文侧栏）共用一套中性墨色与选中样式；侧栏内容自带主题类，所以对其子元素再声明一次。 */
+.shell > .desktopTitlebar,
+.shell > nav,
+.shell .contextSidebar [data-ni-mode] {
+  --ni-ink: var(--ni-shell-ink);
+  --ni-body: var(--ni-shell-ink-2);
+  --ni-ink-2: var(--ni-shell-ink-2);
+  --ni-ink-3: var(--ni-shell-ink-3);
+  --ni-ink-3-text: var(--ni-shell-ink-3);
+  --ni-ink-4: var(--ni-shell-ink-4);
+  --ni-line: var(--ni-shell-line);
+  --text-primary: var(--ni-shell-ink);
+  --text-secondary: var(--ni-shell-ink-2);
+  --text-muted: var(--ni-shell-ink-3);
+  --text-placeholder: var(--ni-shell-ink-3);
+  --text-on-chrome: var(--ni-shell-ink-2);
+  --icon-on-chrome: var(--ni-shell-ink-3);
+  --border-subtle: var(--ni-shell-line);
+  --border-strong: var(--ni-shell-line-2);
+  --surface-hover: var(--ni-shell-hover);
+  --surface-pressed: var(--ni-shell-press);
+  --surface-selected: var(--ni-shell-selected);
+  --surface-nav-selected: var(--ni-shell-card);
+  --surface-rail-selected: var(--ni-shell-tile);
+  --shadow-rail-selected: var(--ni-shell-tile-shadow);
+  --highlight-nav-selected: 0 0 transparent;
+  --nav-selected-bg: var(--ni-shell-card);
+  --nav-selected-line: transparent;
+  --nav-selected-ink: var(--ni-shell-ink);
+  --nav-selected-shadow: 0 0 transparent;
+  --nav-count-ink: var(--ni-shell-ink-3);
+}

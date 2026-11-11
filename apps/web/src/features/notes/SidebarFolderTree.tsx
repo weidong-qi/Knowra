@@ -17,7 +17,7 @@ import {
   NoteIcon,
   PdfFileIcon,
   PlusIcon,
-  SolidFolderIcon,
+  SidebarClosedFolderIcon,
   SolidExpandedFolderIcon
 } from '../../components/icons/knowra';
 import { useAppStore, useAppStoreApi } from '../../store/AppStoreProvider';
@@ -151,7 +151,7 @@ function FolderBranch({
                 onOpenIndex?.();
               }}
             >
-              {expanded ? <SolidExpandedFolderIcon size={16} /> : <SolidFolderIcon size={16} />}
+              {expanded ? <SolidExpandedFolderIcon size={16} /> : <SidebarClosedFolderIcon size={16} />}
               <span>{folder.name}</span>
               <small>{countFolderNotes(folder, notes)}</small>
             </PressableButton>

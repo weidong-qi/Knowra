@@ -59,6 +59,9 @@ test('拖拽行手柄移动数据行，表头保持在首行', async ({ page }) 
   await page.mouse.down();
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2 + 10, { steps: 3 });
   await page.mouse.move(from.x + from.width / 2, target.y + target.height - 4, { steps: 5 });
+  const indicator = page.locator('[data-table-handles] [class*="dropLine"]');
+  await expect(indicator).toBeVisible();
+  await expect(indicator).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await page.mouse.up();
   expect(await rowTexts(page)).toEqual(['名称数量', '梨3', '苹果2']);
   await expect(page.getByRole('menu')).toHaveCount(0);

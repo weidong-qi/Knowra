@@ -1,15 +1,29 @@
 /* 定稿的完整装饰与胶囊色板，由应用外壳及浮层共同继承。 */
 .theme {
+  /* 外壳：中性浅灰底，模块栏坐在底上；上下文侧栏与内容区连成一张面板，侧栏比内容纸面略灰一档。 */
   --ni-chrome: #f1f2f5;
+  --ni-shell-ink: #17181b;
+  --ni-shell-ink-2: #3d4047;
+  --ni-shell-ink-3: #6f737c;
+  --ni-shell-ink-4: #a8acb4;
+  --ni-shell-line: rgba(30, 62, 104, 0.1);
+  --ni-shell-line-2: rgba(30, 62, 104, 0.17);
+  --ni-shell-hover: rgba(36, 84, 140, 0.06);
+  --ni-shell-press: rgba(36, 84, 140, 0.1);
+  --ni-shell-selected: rgba(36, 84, 140, 0.08);
+  --ni-shell-panel: #fafafb;
+  --ni-shell-card: rgba(36, 84, 140, 0.075);
+  --ni-shell-tile: #fff;
+  --ni-shell-tile-shadow: 0 0 0 1px rgba(24, 26, 32, 0.07), 0 1px 2px rgba(24, 26, 32, 0.1);
   --ni-page: #fefefe;
-  --ni-ink: #17181b;
-  --ni-ink-2: #686d76;
-  --ni-ink-3: #8a8f99;
-  --ni-ink-4: #b4b9c6;
-  --ni-body: #2e323a;
-  --ni-ink-3-text: #6d727d;
-  --ni-line: rgba(24, 30, 48, 0.075);
-  --ni-line-2: rgba(24, 30, 48, 0.12);
+  --ni-ink: #0f1115;
+  --ni-ink-2: #4d535e;
+  --ni-ink-3: #747a86;
+  --ni-ink-4: #a0a6b3;
+  --ni-body: #262a31;
+  --ni-ink-3-text: #5f6571;
+  --ni-line: rgba(24, 30, 48, 0.1);
+  --ni-line-2: rgba(24, 30, 48, 0.17);
   --ni-hover: rgba(24, 30, 48, 0.045);
   --ni-press: rgba(24, 30, 48, 0.085);
   --ni-selected: rgba(24, 30, 48, 0.075);
@@ -19,12 +33,12 @@
   --shadow-accent:
     0 0 0 1px color-mix(in srgb, var(--ni-accent) 80%, #000), 0 1px 2px rgba(24, 30, 48, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 14px -6px color-mix(in srgb, var(--ni-accent) 55%, transparent);
-  --nav-selected-bg: linear-gradient(#ffffffb0, #ffffff65);
-  --nav-selected-line: #dfe2e9;
-  --nav-selected-ink: #283344;
-  --nav-selected-shadow: 0 1px 2px #21273506, inset 0 1px #fff;
-  --ni-accent: #f26b1d;
-  --ni-accent-ink: #c4510c;
+  --nav-selected-bg: #fff;
+  --nav-selected-line: #cfd3dc;
+  --nav-selected-ink: #0f1115;
+  --nav-selected-shadow: 0 1px 2px rgba(24, 30, 48, 0.1);
+  --ni-accent: var(--brand-base);
+  --ni-accent-ink: color-mix(in srgb, var(--brand-base) 80%, #000);
   --ni-accent-soft: color-mix(in srgb, var(--ni-accent) 9%, #fff);
   --ni-accent-line: color-mix(in srgb, var(--ni-accent) 24%, #fff);
   --ni-st-active: #ffb81f;
@@ -42,17 +56,17 @@
   --ni-surf-2: rgba(255, 255, 255, 0.55);
   --ni-ctx-bg: #fafafb;
   --ni-ctx-bg-solid: #fafafb;
-  --ni-ctx-border: rgba(24, 30, 48, 0.1);
+  --ni-ctx-border: rgba(24, 30, 48, 0.14);
   --ni-ctx-hl: #ffffffc7;
   --ni-pop-bg: rgba(252, 252, 254, 0.97);
   --ni-gh-bg: #fafbfcf2;
   --ni-toast-bg: #262b3a;
-  --ni-nv-sel: linear-gradient(#ffffffb0, #ffffff65);
-  --ni-nv-sel-line: #dfe2e9;
-  --ni-nv-sel-ink: #283344;
-  --ni-rail-sel: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.86));
-  --ni-ring: rgba(24, 30, 48, 0.08);
-  --ni-ring-2: rgba(24, 30, 48, 0.22);
+  --ni-nv-sel: #fff;
+  --ni-nv-sel-line: #cfd3dc;
+  --ni-nv-sel-ink: #0f1115;
+  --ni-rail-sel: #fff;
+  --ni-ring: rgba(24, 30, 48, 0.12);
+  --ni-ring-2: rgba(24, 30, 48, 0.28);
   --ni-ring-3: rgba(24, 30, 48, 0.4);
   --ni-fill-1: rgba(24, 30, 48, 0.045);
   --ni-fill-2: rgba(24, 30, 48, 0.06);
@@ -60,20 +74,20 @@
   --ni-fill-4: rgba(24, 30, 48, 0.014);
   --ni-sw-off: rgba(24, 30, 48, 0.18);
   --ni-scroll: rgba(24, 30, 48, 0.15);
-  --ni-hair: rgba(24, 30, 48, 0.13);
+  --ni-hair: rgba(24, 30, 48, 0.17);
   --ni-sheen: transparent;
   --ni-hl-c: #fff;
   --ni-sel-hover: color-mix(in srgb, var(--ni-accent) 12%, var(--ni-page));
   --ni-danger: #c23a3a;
   --ni-danger-soft: #fbeeee;
   --ni-danger-ring: #e5a3a3;
-  /* 浮卡靠 .10 细描边立住，模糊阴影只保留约 1/4 强度，避免发飘。 */
-  --ni-sh-page: 0 0 0 1px rgba(24, 30, 48, 0.09);
-  --ni-sh-ctx: 0 0 0 1px rgba(24, 30, 48, 0.08);
+  /* 面板靠清晰的 1px 描边加一道贴边短投影立住，不用大范围模糊阴影。 */
+  --ni-sh-page: 0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.06);
+  --ni-sh-ctx: 0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.06);
   --ni-sh-pop:
     inset 0 1px 0 var(--ni-ctx-hl), 0 0 0 1px var(--ni-ring), 0 2px 4px rgba(24, 30, 48, 0.05),
     0 10px 24px -8px rgba(24, 30, 48, 0.14), 0 28px 64px -14px rgba(24, 30, 48, 0.28);
-  --ni-sh-card: 0 0 0 1px rgba(24, 30, 48, 0.08);
+  --ni-sh-card: 0 0 0 1px rgba(24, 30, 48, 0.12);
   --ni-ui: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
   --ni-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --ni-ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -81,13 +95,13 @@
 }
 
 .theme {
-  --ni-f-back: #f2a25f;
-  --ni-f-1: #ffd2a6;
-  --ni-f-2: #ff9f56;
+  --ni-f-back: #e88f48;
+  --ni-f-1: #ffc692;
+  --ni-f-2: #f68a3c;
 }
 
 .theme {
-  --ni-dotc: rgba(24, 30, 48, 0.11);
+  --ni-dotc: rgba(24, 30, 48, 0.26);
 }
 
 .theme {
@@ -118,13 +132,19 @@
   --shadow-panel-contact: 0 2px 6px -2px rgb(0 0 0 / 32%);
   --surface-action-crystal: linear-gradient(145deg, rgb(65 71 81 / 48%), rgb(36 39 46 / 40%));
   --border-action-crystal: rgb(113 119 129 / 60%);
-  --icon-action-crystal: #ffa56d;
+  --icon-action-crystal: color-mix(in srgb, var(--brand-base-dark) 70%, #fff);
   --shadow-action-crystal:
     inset 0 1px 1px #42464e, inset 0 -1px 0 #858f9f12, 0 0 0 1px #858f9f20, 0 4px 10px -4px rgb(0 0 0 / 53%);
   --shadow-action-crystal-hover: inset 0 1px 1px #42464e, 0 0 0 1px #858f9f35, 0 6px 15px -5px rgb(0 0 0 / 53%);
   --shadow-action-crystal-pressed: inset 0 2px 4px rgb(0 0 0 / 53%), 0 0 0 1px #858f9f20;
-  --surface-action-satin: linear-gradient(145deg, #b8743d, #a3592d 55%, #8c4321);
-  --border-action-satin: #bb672f;
+  --surface-action-satin: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--brand-base-dark) 80%, #000),
+    color-mix(in srgb, var(--brand-base-dark) 66%, #000) 55%,
+    color-mix(in srgb, var(--brand-base-dark) 52%, #000)
+  );
+  --border-action-satin: color-mix(in srgb, var(--brand-base-dark) 62%, #000);
+  --text-on-action-satin: #17181b;
   --shadow-action-satin: inset 0 1px 0 #ffbf8650, 0 3px 7px #0005;
   --shadow-action-satin-hover: inset 0 1px 0 #ffbf8670, 0 0 0 2px #d48b4930, 0 4px 10px #0007;
   --shadow-action-satin-pressed: inset 0 2px 4px #4e271b80;
@@ -133,6 +153,19 @@
   --ink-bg-rgb: 26 28 32;
   /* 白天友好版：页面底色略提亮、分隔线与弱化文字加亮，保证强光下层次和文字仍可辨认。 */
   --ni-chrome: #101114;
+  --ni-shell-ink: #f5f5f7;
+  --ni-shell-ink-2: #c9ccd3;
+  --ni-shell-ink-3: #9196a0;
+  --ni-shell-ink-4: #6b707a;
+  --ni-shell-line: rgba(255, 255, 255, 0.1);
+  --ni-shell-line-2: rgba(255, 255, 255, 0.2);
+  --ni-shell-hover: rgba(255, 255, 255, 0.07);
+  --ni-shell-press: rgba(255, 255, 255, 0.11);
+  --ni-shell-selected: rgba(255, 255, 255, 0.1);
+  --ni-shell-panel: #1e2025;
+  --ni-shell-card: rgba(255, 255, 255, 0.1);
+  --ni-shell-tile: linear-gradient(180deg, #2d2f36, #25272d);
+  --ni-shell-tile-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 1px rgba(255, 255, 255, 0.07);
   --ni-page: #1a1c20;
   --ni-ink: #f5f5f7;
   --ni-ink-2: #b6bac3;
@@ -166,8 +199,8 @@
   --nav-selected-line: rgba(255, 255, 255, 0.1);
   --nav-selected-ink: #f3f4f6;
   --nav-selected-shadow: 0 1px 2px #21273506, inset 0 1px rgba(255, 255, 255, 0.07);
-  --ni-accent: #f26b1d;
-  --ni-accent-ink: #ff8a4c;
+  --ni-accent: var(--brand-base-dark);
+  --ni-accent-ink: color-mix(in srgb, var(--brand-base-dark) 75%, #fff);
   --ni-accent-soft: color-mix(in srgb, var(--ni-accent) 15%, var(--ni-page));
   --ni-accent-line: color-mix(in srgb, var(--ni-accent) 38%, var(--ni-page));
   --ni-st-active: #ffc233;
@@ -177,7 +210,7 @@
   --ni-fav: #ffc233;
   --ni-fav-line: #ffc233;
   --ni-toast-act: #ff8a4c;
-  --ni-btn-on-accent: #fff;
+  --ni-btn-on-accent: #17181b;
   --ni-danger: #ef6a6a;
   --ni-danger-soft: rgba(239, 106, 106, 0.13);
   --ni-danger-ring: #8c4444;
@@ -206,8 +239,8 @@
   --ni-hair: rgba(255, 255, 255, 0.1);
   --ni-sheen: rgba(255, 255, 255, 0.03);
   --ni-hl-c: rgba(255, 255, 255, 0.07);
-  --ni-sh-ctx: 0 0 0 1px rgba(255, 255, 255, 0.12);
-  --ni-sh-page: 0 0 0 1px rgba(255, 255, 255, 0.13);
+  --ni-sh-ctx: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --ni-sh-page: 0 0 0 1px rgba(255, 255, 255, 0.07);
   --ni-sh-pop:
     inset 0 1px 0 var(--ni-ctx-hl), 0 0 0 1px rgba(255, 255, 255, 0.11), 0 2px 4px rgba(0, 0, 0, 0.35),
     0 10px 24px -8px rgba(0, 0, 0, 0.5), 0 28px 64px -14px rgba(0, 0, 0, 0.75);
@@ -225,7 +258,7 @@
 }
 
 .theme[data-ni-mode='dark'] {
-  --ni-dotc: rgba(255, 255, 255, 0.07);
+  --ni-dotc: rgba(255, 255, 255, 0.2);
 }
 
 .theme[data-ni-mode='dark'] {

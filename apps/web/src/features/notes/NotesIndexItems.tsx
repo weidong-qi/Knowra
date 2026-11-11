@@ -1,6 +1,6 @@
 import type { Folder, Note, Tag } from '@study-accelerator/web-core';
 import { Checkbox } from '../../components/ui';
-import { NoteIcon, PdfFileIcon, SolidFolderIcon } from '../../components/icons/knowra';
+import { NoteIcon, PdfFileIcon, SidebarClosedFolderIcon } from '../../components/icons/knowra';
 import type { SidebarTreeAction } from './SidebarFolderTree';
 import { countFolderNotes, folderRecentActivity, folderTypeCounts, formatUpdatedAt } from './notesIndexModel';
 import { folderLocation, displayNoteStatus } from './notesIndexNavigation';
@@ -175,7 +175,7 @@ function IndexTableRow({
         >
           <span className={styles.entryIcon} data-art-kind={isFolder ? 'folder' : 'document'} aria-hidden="true">
             {isFolder ? (
-              <SolidFolderIcon size={16} />
+              <SidebarClosedFolderIcon size={16} />
             ) : item.kind === 'note' && item.note.contentKind === 'pdf' ? (
               <span className={styles.pdfIcon}>
                 <PdfFileIcon size={18} />

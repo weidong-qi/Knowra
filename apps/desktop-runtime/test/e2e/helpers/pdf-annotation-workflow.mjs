@@ -158,6 +158,35 @@ export async function exercisePdfAnnotationWorkflow(page) {
   };
   await choose('标注分类', '疑问');
   await choose('标注页码', '第 2 页');
+  const badge = page.getByRole('button', { name: /^筛选标注/ }).locator('[class*="countBadge"]');
+  const startedDark = await page.getByRole('button', { name: '切换浅色模式', exact: true }).isVisible();
+  for (const mode of ['light', 'dark']) {
+    const toggle = page.getByRole('button', {
+      name: mode === 'dark' ? '切换深色模式' : '切换浅色模式',
+      exact: true
+    });
+    if (await toggle.isVisible()) await toggle.click();
+    await expect(badge).toHaveText('2');
+    const contrast = await badge.evaluate(element => {
+      const luminance = color => {
+        const values = color
+          .match(/[\d.]+/g)
+          .slice(0, 3)
+          .map(Number);
+        return values.reduce((sum, value, index) => {
+          const channel = value / 255;
+          const linear = channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          return sum + linear * [0.2126, 0.7152, 0.0722][index];
+        }, 0);
+      };
+      const style = getComputedStyle(element);
+      const foreground = luminance(style.color);
+      const background = luminance(style.backgroundColor);
+      return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+    });
+    expect(contrast, `${mode} PDF 筛选数量徽标对比度`).toBeGreaterThanOrEqual(4.5);
+  }
+  if (!startedDark) await page.getByRole('button', { name: '切换浅色模式', exact: true }).click();
   await expect(page.getByText('没有匹配的标注，请调整或清除筛选。')).toBeVisible();
   await search.fill('');
   await expect(page.getByText('1 条标注')).toBeVisible();
