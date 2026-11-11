@@ -14,17 +14,17 @@ import {
   assertManualPurgeScope
 } from './application/asset-purge-guard.js';
 import { createNoteService } from './application/note-service.js';
-import { createFolderService } from './application/folder-service.js';
-import { createTagService } from './application/tag-service.js';
+import { createFolderService } from './application/folder-service.ts';
+import { createTagService } from './application/tag-service.ts';
 import { createTagGroupService } from './application/tag-group-service.js';
-import { createKnowledgeSpaceService } from './application/knowledge-space-service.js';
+import { createKnowledgeSpaceService } from './application/knowledge-space-service.ts';
 import { createSearchService } from './application/search-service.js';
 import { createContentAnnotationService } from './application/content-annotation-service.js';
 import { createInMemoryNoteRepository } from './infrastructure/note-repository.js';
-import { createInMemoryFolderRepository } from './infrastructure/folder-repository.js';
-import { createInMemoryTagRepository } from './infrastructure/tag-repository.js';
-import { createInMemoryTagGroupRepository } from './infrastructure/tag-group-repository.js';
-import { createInMemoryKnowledgeSpaceRepository } from './infrastructure/knowledge-space-repository.js';
+import { createInMemoryFolderRepository } from './infrastructure/folder-repository.ts';
+import { createInMemoryTagRepository } from './infrastructure/tag-repository.ts';
+import { createInMemoryTagGroupRepository } from './infrastructure/tag-group-repository.ts';
+import { createInMemoryKnowledgeSpaceRepository } from './infrastructure/knowledge-space-repository.ts';
 import { createInMemoryContentAnnotationRepository } from './infrastructure/content-annotation-repository.js';
 import {
   createInMemoryAnalysisScopeRepository,

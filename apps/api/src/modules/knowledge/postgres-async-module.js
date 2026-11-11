@@ -15,10 +15,10 @@ import {
   assertManualPurgeScope
 } from './application/asset-purge-guard.js';
 import { createAsyncNoteService } from './application/postgres-async/note-service.js';
-import { createAsyncFolderService } from './application/postgres-async/folder-service.js';
-import { createAsyncTagService } from './application/postgres-async/tag-service.js';
+import { createAsyncFolderService } from './application/postgres-async/folder-service.ts';
+import { createAsyncTagService } from './application/postgres-async/tag-service.ts';
 import { createAsyncTagGroupService } from './application/postgres-async/tag-group-service.js';
-import { createAsyncKnowledgeSpaceService } from './application/postgres-async/space-service.js';
+import { createAsyncKnowledgeSpaceService } from './application/postgres-async/space-service.ts';
 import { createAsyncContentAnnotationService } from './application/postgres-async/content-annotation-service.js';
 import { createAsyncNoteVersionService } from './application/note-version-service.js';
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.js';

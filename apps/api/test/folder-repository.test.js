@@ -4,7 +4,8 @@ export const folderRepositoryTests = [
   {
     name: 'FolderRepository saves and finds folder by id',
     async run() {
-      const { createInMemoryFolderRepository } = await import('../src/modules/knowledge/infrastructure/folder-repository.js');
+      const { createInMemoryFolderRepository } =
+        await import('../src/modules/knowledge/infrastructure/folder-repository.ts');
       const repository = createInMemoryFolderRepository();
 
       repository.save({
@@ -24,7 +25,8 @@ export const folderRepositoryTests = [
   {
     name: 'FolderRepository list filters by spaceId',
     async run() {
-      const { createInMemoryFolderRepository } = await import('../src/modules/knowledge/infrastructure/folder-repository.js');
+      const { createInMemoryFolderRepository } =
+        await import('../src/modules/knowledge/infrastructure/folder-repository.ts');
       const repository = createInMemoryFolderRepository();
 
       repository.save({

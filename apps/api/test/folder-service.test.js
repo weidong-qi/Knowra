@@ -4,7 +4,7 @@ export const folderServiceTests = [
   {
     name: 'createFolder returns a normalized folder entity',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       const folder = folderService.createFolder({
@@ -21,7 +21,7 @@ export const folderServiceTests = [
   {
     name: 'createFolder auto-generates an id when id is omitted',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       const folder = folderService.createFolder({
@@ -36,7 +36,7 @@ export const folderServiceTests = [
   {
     name: 'createFolder rejects a duplicate client-provided id',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -46,19 +46,20 @@ export const folderServiceTests = [
       });
 
       assert.throws(
-        () => folderService.createFolder({
-          id: 'folder-duplicate',
-          spaceId: 'space-1',
-          name: 'Replacement'
-        }),
-        (error) => error.statusCode === 409 && error.code === 'FOLDER_ID_CONFLICT'
+        () =>
+          folderService.createFolder({
+            id: 'folder-duplicate',
+            spaceId: 'space-1',
+            name: 'Replacement'
+          }),
+        error => error.statusCode === 409 && error.code === 'FOLDER_ID_CONFLICT'
       );
     }
   },
   {
     name: 'createFolder throws when name is missing',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       assert.throws(() => {
@@ -73,7 +74,7 @@ export const folderServiceTests = [
   {
     name: 'listFolders filters folders by spaceId',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -96,7 +97,7 @@ export const folderServiceTests = [
   {
     name: 'updateFolder changes name and pathCache',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -117,7 +118,7 @@ export const folderServiceTests = [
   {
     name: 'createFolder supports parent-child path building',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -140,7 +141,7 @@ export const folderServiceTests = [
   {
     name: 'updateFolder reindexes descendant paths when parent changes',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -165,7 +166,7 @@ export const folderServiceTests = [
       });
 
       const tree = folderService.listFolders({ spaceId: 'space-1' });
-      const movedChild = tree.find((folder) => folder.id === 'folder-c');
+      const movedChild = tree.find(folder => folder.id === 'folder-c');
 
       assert.equal(movedChild.pathCache, '/architecture/backend/redis');
     }
@@ -173,7 +174,7 @@ export const folderServiceTests = [
   {
     name: 'deleteFolder removes entire subtree',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -188,7 +189,13 @@ export const folderServiceTests = [
         name: 'Child'
       });
 
-      const deleted = folderService.trashFolder('folder-root', { id: 'package-1', mode: 'keep', folderIds: ['folder-root', 'folder-child'], noteIds: [], destinationId: null });
+      const deleted = folderService.trashFolder('folder-root', {
+        id: 'package-1',
+        mode: 'keep',
+        folderIds: ['folder-root', 'folder-child'],
+        noteIds: [],
+        destinationId: null
+      });
 
       assert.equal(deleted.length, 2);
       assert.equal(folderService.listFolders({ spaceId: 'space-1' }).length, 0);
@@ -198,7 +205,7 @@ export const folderServiceTests = [
   {
     name: 'listFolderTree returns nested folders',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -223,7 +230,7 @@ export const folderServiceTests = [
   {
     name: 'deleteFolder removes folder from active list',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService();
 
       folderService.createFolder({
@@ -232,7 +239,13 @@ export const folderServiceTests = [
         name: 'Delete Me'
       });
 
-      const deleted = folderService.trashFolder('folder-delete-1', { id: 'package-2', mode: 'keep', folderIds: ['folder-delete-1'], noteIds: [], destinationId: null });
+      const deleted = folderService.trashFolder('folder-delete-1', {
+        id: 'package-2',
+        mode: 'keep',
+        folderIds: ['folder-delete-1'],
+        noteIds: [],
+        destinationId: null
+      });
 
       assert.equal(deleted[0].id, 'folder-delete-1');
       assert.equal(folderService.listFolders({ spaceId: 'space-1' }).length, 0);
@@ -241,7 +254,7 @@ export const folderServiceTests = [
   {
     name: 'createFolder rejects sibling names that conflict with note titles',
     async run() {
-      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.js');
+      const { createFolderService } = await import('../src/modules/knowledge/application/folder-service.ts');
       const folderService = createFolderService({
         validateSiblingNameConflict({ spaceId, parentId, name }) {
           assert.equal(spaceId, 'space-1');

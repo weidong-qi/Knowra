@@ -4,7 +4,7 @@ export const tagServiceTests = [
   {
     name: 'createTag returns a normalized tag entity',
     async run() {
-      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.js');
+      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.ts');
       const tagService = createTagService();
 
       const tag = tagService.createTag({
@@ -20,7 +20,7 @@ export const tagServiceTests = [
   {
     name: 'createTag auto-generates a unique id when id is omitted',
     async run() {
-      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.js');
+      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.ts');
       const tagService = createTagService();
 
       const first = tagService.createTag({
@@ -39,7 +39,7 @@ export const tagServiceTests = [
   {
     name: 'createTag rejects a duplicate client-provided id',
     async run() {
-      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.js');
+      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.ts');
       const tagService = createTagService();
 
       tagService.createTag({
@@ -49,19 +49,20 @@ export const tagServiceTests = [
       });
 
       assert.throws(
-        () => tagService.createTag({
-          id: 'tag-duplicate',
-          spaceId: 'space-1',
-          name: 'replacement'
-        }),
-        (error) => error.statusCode === 409 && error.code === 'TAG_ID_CONFLICT'
+        () =>
+          tagService.createTag({
+            id: 'tag-duplicate',
+            spaceId: 'space-1',
+            name: 'replacement'
+          }),
+        error => error.statusCode === 409 && error.code === 'TAG_ID_CONFLICT'
       );
     }
   },
   {
     name: 'listTags returns created tags',
     async run() {
-      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.js');
+      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.ts');
       const tagService = createTagService();
 
       tagService.createTag({
@@ -76,7 +77,7 @@ export const tagServiceTests = [
   {
     name: 'listTags filters tags by spaceId',
     async run() {
-      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.js');
+      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.ts');
       const tagService = createTagService();
 
       tagService.createTag({
@@ -99,7 +100,7 @@ export const tagServiceTests = [
   {
     name: 'updateTag changes name and color',
     async run() {
-      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.js');
+      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.ts');
       const tagService = createTagService();
 
       tagService.createTag({
@@ -120,7 +121,7 @@ export const tagServiceTests = [
   {
     name: 'deleteTag removes tag from active list',
     async run() {
-      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.js');
+      const { createTagService } = await import('../src/modules/knowledge/application/tag-service.ts');
       const tagService = createTagService();
 
       tagService.createTag({

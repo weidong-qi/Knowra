@@ -1,5 +1,5 @@
 import { TagGroup } from '../domain/tag-group.ts';
-import { createInMemoryTagGroupRepository } from '../infrastructure/tag-group-repository.js';
+import { createInMemoryTagGroupRepository } from '../infrastructure/tag-group-repository.ts';
 import { buildCreateTagGroupDto, buildUpdateTagGroupDto } from './dto/tag-group.dto.ts';
 import { conflictError, notFoundError } from './knowledge-errors.js';
 
