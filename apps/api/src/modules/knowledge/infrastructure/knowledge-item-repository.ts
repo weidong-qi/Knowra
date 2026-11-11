@@ -30,8 +30,15 @@ export interface KnowledgeItemListOptions {
 
 /** 同步本地仓库；原记录原样返回。写入函数保持严格参数方差，不能把窄仓库当宽仓库。 */
 export interface KnowledgeItemRepository<Record extends KnowledgeItemRecord<unknown> = KnowledgeItemRecord> {
-  create: <Value extends Record>(item: Value) => Value;
-  save: <Value extends Record>(item: Value, options?: KnowledgeItemSaveOptions) => Value;
+  // 泛型保留输入额外字段；基础重载维持严格写入参数方差。
+  create: {
+    <Value extends Record>(item: Value): Value;
+    (item: Record): Record;
+  };
+  save: {
+    <Value extends Record>(item: Value, options?: KnowledgeItemSaveOptions): Value;
+    (item: Record, options?: KnowledgeItemSaveOptions): Record;
+  };
   findById(id: string | null | undefined): Record | null;
   delete(id: string | null | undefined): Record | null;
   list(options?: KnowledgeItemListOptions): Record[];
@@ -59,7 +66,7 @@ export function createInMemoryKnowledgeItemRepository<
   const records = options.records ?? [];
   const persist = () => options.onChange?.(records);
   return {
-    create(item) {
+    create<Value extends StoredKnowledgeItemRecord<Record>>(item: Value) {
       if (records.some(record => record.id === item.id)) {
         throw createAppError('KNOWLEDGE_ITEM_ID_CONFLICT', 'A KnowledgeItem with the same id already exists', 409);
       }
@@ -67,7 +74,10 @@ export function createInMemoryKnowledgeItemRepository<
       persist();
       return item;
     },
-    save(item, { expectedUpdatedAt } = {}) {
+    save<Value extends StoredKnowledgeItemRecord<Record>>(
+      item: Value,
+      { expectedUpdatedAt }: KnowledgeItemSaveOptions = {}
+    ) {
       const index = records.findIndex(record => record.id === item.id);
       if (expectedUpdatedAt && (index < 0 || records[index].updatedAt !== expectedUpdatedAt)) {
         throw createAppError('KNOWLEDGE_ITEM_UPDATE_CONFLICT', '知识已被其他操作修改，请重新加载并核对。', 409);
