@@ -53,9 +53,9 @@ const TOOL_NAMES = new Set([
 ]);
 
 export class AiGatewayError extends Error {
-  code: string;
-  retryable: boolean;
-  httpStatus: number | null;
+  declare code: string;
+  declare retryable: boolean;
+  declare httpStatus: number | null;
   constructor(
     code: string,
     message: string,
