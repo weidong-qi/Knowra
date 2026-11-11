@@ -670,7 +670,7 @@ export const phase3AssessmentTests = [
     name: 'Phase3 PostgreSQL async Question service 保持来源推导、重复 ID 与依赖降级语义',
     async run() {
       const { createAsyncQuestionService } =
-        await import('../src/modules/knowledge/application/postgres-async/question-service.js');
+        await import('../src/modules/knowledge/application/postgres-async/question-service.ts');
       const {
         createInMemoryLearningObjectiveRepository,
         createInMemoryQuestionObjectiveRepository,

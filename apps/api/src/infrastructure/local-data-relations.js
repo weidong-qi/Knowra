@@ -2,7 +2,7 @@ import { validatePdfRelations } from '@study-accelerator/shared/pdf';
 import { parseTagColor } from '@study-accelerator/shared/tag-colors';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
 import { calculateContentHash, projectMarkdown, resolveAnchor, listTracking } from '@study-accelerator/content-anchor';
-import { nextKnowledgeItemTimestamp } from '../modules/knowledge/application/knowledge-item-concurrency.js';
+import { nextKnowledgeItemTimestamp } from '../modules/knowledge/application/knowledge-item-concurrency.ts';
 import crypto from 'node:crypto';
 import { createAppError } from '../errors/app-error.js';
 import {

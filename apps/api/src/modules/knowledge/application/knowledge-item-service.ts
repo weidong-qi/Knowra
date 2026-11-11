@@ -1,6 +1,12 @@
+import type { KnowledgeItemDependencies } from './service-dependencies.ts';
+import type { KnowledgeItemDtoInput, KnowledgeEvidenceDtoInput } from './dto/knowledge-item.dto.ts';
+import type { KnowledgeItemBaselineInput } from './knowledge-item-concurrency.ts';
+import type { NoteVersionRecord } from '../infrastructure/note-version-repository.ts';
+import type { ContentAnnotationRecord } from '../infrastructure/content-annotation-repository.ts';
+import type { KnowledgeItemServiceRecord, KnowledgeEvidenceServiceRecord } from './service-dependencies.ts';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
-import { matchesKnowledgeCandidateRequest } from './knowledge-candidate-retry.js';
-import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from './knowledge-item-concurrency.js';
+import { matchesKnowledgeCandidateRequest } from './knowledge-candidate-retry.ts';
+import { assertKnowledgeItemBaseline, nextKnowledgeItemTimestamp } from './knowledge-item-concurrency.ts';
 import { KnowledgeItem } from '../domain/knowledge-item.ts';
 import { KnowledgeEvidence } from '../domain/knowledge-evidence.ts';
 import { isEvidenceUsable, legacyEvidenceApplicability } from '../domain/evidence-applicability.ts';
@@ -11,30 +17,31 @@ import {
   buildUpdateKnowledgeItemDto
 } from './dto/knowledge-item.dto.ts';
 import { assertKnowledgeItemConfirmable } from './formal-asset-validation.ts';
-import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
+import { conflictError, notFoundError, validationError } from './knowledge-errors.ts';
 
 const now = () => new Date().toISOString();
 
-/** @param {import('./service-dependencies.ts').KnowledgeItemDependencies} dependencies */
-export function createKnowledgeItemService({
-  repository,
-  evidenceRepository,
-  noteVersionRepository,
-  annotationRepository,
-  noteRepository,
-  getTombstone = null,
-  onItemInvalidated = null,
-  runTransaction = operation => operation()
-} = {}) {
+export function createKnowledgeItemService(
+  {
+    repository,
+    evidenceRepository,
+    noteVersionRepository,
+    annotationRepository,
+    noteRepository,
+    getTombstone = null,
+    onItemInvalidated = null,
+    runTransaction = operation => operation()
+  }: KnowledgeItemDependencies = {} as KnowledgeItemDependencies
+) {
   if (!repository || !evidenceRepository) throw new TypeError('KnowledgeItem repositories are required');
 
-  function requireItem(id) {
-    const item = /** @type {import('../domain/knowledge-item.ts').KnowledgeItem} */ (repository.findById(id));
+  function requireItem(id: string) {
+    const item = repository.findById(id) as KnowledgeItemServiceRecord | null;
     if (!item || item.deletedAt) throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
     return item;
   }
 
-  function assertItemIdAvailable(id) {
+  function assertItemIdAvailable(id: string) {
     if (getTombstone?.('knowledgeItems', id)) {
       throw conflictError('KNOWLEDGE_ITEM_ID_DELETED', '已永久删除的知识点 ID 不能重新使用');
     }
@@ -43,7 +50,7 @@ export function createKnowledgeItemService({
     }
   }
 
-  function assertEvidenceIdAvailable(id) {
+  function assertEvidenceIdAvailable(id: string) {
     if (getTombstone?.('knowledgeEvidence', id)) {
       throw conflictError('KNOWLEDGE_EVIDENCE_ID_DELETED', '已永久删除的来源 ID 不能重新使用');
     }
@@ -52,31 +59,37 @@ export function createKnowledgeItemService({
     }
   }
 
-  function saveNew(targetRepository, record) {
+  function saveNew<Record, Saved>(
+    targetRepository: { create?: (record: Record) => Saved; save: (record: Record) => Saved },
+    record: Record
+  ) {
     return targetRepository.create?.(record) ?? targetRepository.save(record);
   }
 
-  function notifyIfInvalidated(previous, next) {
+  function notifyIfInvalidated(
+    previous: { reviewStatus?: string | null } | null | undefined,
+    next: { id: string; reviewStatus?: string | null; deletedAt?: KnowledgeItemServiceRecord['deletedAt'] } | null
+  ) {
     if (previous?.reviewStatus === 'confirmed' && (next?.reviewStatus !== 'confirmed' || next?.deletedAt)) {
-      onItemInvalidated?.(next.id);
+      onItemInvalidated?.(next!.id);
     }
   }
 
-  function resolveEvidence(input, knowledgeItemId) {
+  function resolveEvidence(input: KnowledgeEvidenceDtoInput, knowledgeItemId: string) {
     const dto = buildCreateKnowledgeEvidenceDto(input);
     assertEvidenceIdAvailable(dto.id);
     let noteId = dto.noteId;
     let noteVersionId = dto.noteVersionId;
-    let annotationId = dto.annotationId;
-    let annotation = null;
-    let version = null;
+    const annotationId = dto.annotationId;
+    let annotation: ContentAnnotationRecord | null | undefined = null;
+    let version: NoteVersionRecord | null | undefined = null;
     let status = 'valid';
     if (dto.sourceType === 'noteVersion') {
       version = noteVersionRepository?.findById(noteVersionId);
       if (!version) throw notFoundError('NOTE_VERSION_NOT_FOUND', 'NoteVersion not found');
       if (noteId && noteId !== version.noteId)
         throw conflictError('KNOWLEDGE_EVIDENCE_NOTE_MISMATCH', 'Evidence note does not match NoteVersion');
-      noteId = version.noteId;
+      noteId = version.noteId as string;
     }
     if (dto.sourceType === 'annotation') {
       annotation = annotationRepository?.findById(annotationId);
@@ -89,11 +102,11 @@ export function createKnowledgeItemService({
       }
       if (noteId && noteId !== annotation.noteId)
         throw conflictError('KNOWLEDGE_EVIDENCE_NOTE_MISMATCH', 'Evidence note does not match annotation');
-      noteId = annotation.noteId;
+      noteId = annotation.noteId as string;
       if (dto.noteVersionId && annotation.noteVersionId && dto.noteVersionId !== annotation.noteVersionId) {
         throw conflictError('KNOWLEDGE_EVIDENCE_VERSION_MISMATCH', '标注来源版本已变化，请重新加载标注。');
       }
-      noteVersionId = annotation.noteVersionId ?? noteVersionId;
+      noteVersionId = (annotation.noteVersionId ?? noteVersionId) as string | null;
       if (!noteVersionId)
         throw validationError(
           'KNOWLEDGE_EVIDENCE_VERSION_REQUIRED',
@@ -141,9 +154,9 @@ export function createKnowledgeItemService({
     });
   }
 
-  function createCandidate(input = {}) {
+  function createCandidate(input: KnowledgeCandidateInput = {}) {
     const dto = buildCreateKnowledgeItemDto(input);
-    const evidenceInputs = Array.isArray(input.evidence) ? input.evidence : [];
+    const evidenceInputs = Array.isArray(input.evidence) ? (input.evidence as KnowledgeEvidenceDtoInput[]) : [];
     if (input.id) {
       const existing = repository.findById(dto.id);
       if (existing) {
@@ -169,7 +182,7 @@ export function createKnowledgeItemService({
     return created;
   }
 
-  function listEvidence(knowledgeItemId) {
+  function listEvidence(knowledgeItemId: string) {
     if (!repository.findById(knowledgeItemId))
       throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
     return evidenceRepository.list({ knowledgeItemId }).map(record => ({
@@ -180,13 +193,11 @@ export function createKnowledgeItemService({
     }));
   }
 
-  function updateItem(id, input = {}) {
+  function updateItem(id: string, input: KnowledgeItemDtoInput & KnowledgeItemBaselineInput = {}) {
     const current = requireItem(id);
     assertKnowledgeItemBaseline(current, input);
-    const dto = /** @type {Partial<import('../domain/knowledge-item.ts').KnowledgeItemConstructorInput>} */ (
-      buildUpdateKnowledgeItemDto(input)
-    );
-    const textChanged = ['title', 'canonicalStatement', 'userExplanation'].some(
+    const dto = buildUpdateKnowledgeItemDto(input);
+    const textChanged = (['title', 'canonicalStatement', 'userExplanation'] as const).some(
       field => Object.hasOwn(dto, field) && dto[field] !== current[field]
     );
     const nextStatus = current.reviewStatus === 'confirmed' && textChanged ? 'needsRevision' : current.reviewStatus;
@@ -198,25 +209,25 @@ export function createKnowledgeItemService({
           reviewStatus: nextStatus,
           updatedAt: nextKnowledgeItemTimestamp(current)
         }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       notifyIfInvalidated(current, next);
       return next;
     });
   }
 
-  function confirmItem(id, input = {}) {
+  function confirmItem(id: string, input: KnowledgeItemBaselineInput = {}) {
     const item = requireItem(id);
     assertKnowledgeItemBaseline(item, input);
     const evidence = evidenceRepository.list({ knowledgeItemId: id });
     assertKnowledgeItemConfirmable(item, evidence);
     return repository.save(
       new KnowledgeItem({ ...item, reviewStatus: 'confirmed', updatedAt: nextKnowledgeItemTimestamp(item) }),
-      { expectedUpdatedAt: item.updatedAt }
+      { expectedUpdatedAt: item.updatedAt as string }
     );
   }
 
-  function markNeedsRevision(id, input = {}) {
+  function markNeedsRevision(id: string, input: KnowledgeItemBaselineInput = {}) {
     const current = requireItem(id);
     assertKnowledgeItemBaseline(current, input);
     return runTransaction(() => {
@@ -226,50 +237,50 @@ export function createKnowledgeItemService({
           reviewStatus: 'needsRevision',
           updatedAt: nextKnowledgeItemTimestamp(current)
         }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       notifyIfInvalidated(current, next);
       return next;
     });
   }
 
-  function archive(id, input = {}) {
+  function archive(id: string, input: KnowledgeItemBaselineInput = {}) {
     const current = requireItem(id);
     assertKnowledgeItemBaseline(current, input);
     return runTransaction(() => {
       const next = repository.save(
         new KnowledgeItem({ ...current, reviewStatus: 'archived', updatedAt: nextKnowledgeItemTimestamp(current) }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       notifyIfInvalidated(current, next);
       return next;
     });
   }
 
-  function restore(id, input = {}) {
+  function restore(id: string, input: KnowledgeItemBaselineInput = {}) {
     const current = requireItem(id);
     assertKnowledgeItemBaseline(current, input);
     if (current.reviewStatus !== 'archived') return current;
     return repository.save(
       new KnowledgeItem({ ...current, reviewStatus: 'candidate', updatedAt: nextKnowledgeItemTimestamp(current) }),
-      { expectedUpdatedAt: current.updatedAt }
+      { expectedUpdatedAt: current.updatedAt as string }
     );
   }
 
-  function trash(id, input = {}) {
+  function trash(id: string, input: KnowledgeItemBaselineInput = {}) {
     const current = requireItem(id);
     assertKnowledgeItemBaseline(current, input);
     return runTransaction(() => {
       const next = repository.save(
         new KnowledgeItem({ ...current, deletedAt: now(), updatedAt: nextKnowledgeItemTimestamp(current) }),
-        { expectedUpdatedAt: current.updatedAt }
+        { expectedUpdatedAt: current.updatedAt as string }
       );
       notifyIfInvalidated(current, next);
       return next;
     });
   }
 
-  function restoreDeleted(id, input = {}) {
+  function restoreDeleted(id: string, input: KnowledgeItemBaselineInput = {}) {
     const current = repository.findById(id);
     if (!current || !current.deletedAt) throw notFoundError('KNOWLEDGE_ITEM_NOT_IN_TRASH', '知识点不在回收站中');
     assertKnowledgeItemBaseline(current, input);
@@ -280,17 +291,22 @@ export function createKnowledgeItemService({
         : current.reviewStatus;
     return repository.save(
       new KnowledgeItem({ ...current, deletedAt: null, reviewStatus, updatedAt: nextKnowledgeItemTimestamp(current) }),
-      { expectedUpdatedAt: current.updatedAt }
+      { expectedUpdatedAt: current.updatedAt as string }
     );
   }
 
   return {
     createCandidate,
     getItem: requireItem,
-    listItems(options = {}) {
+    listItems(
+      options: NonNullable<Parameters<NonNullable<KnowledgeItemDependencies['repository']>['list']>[0]> & {
+        evidenceStatus?: string;
+        noteId?: string;
+      } = {}
+    ) {
       const items = repository.list(options);
       if (!options.noteId) return items;
-      const evidenceByItem = new Map();
+      const evidenceByItem = new Map<string, SavedEvidence[]>();
       for (const evidence of evidenceRepository.list({ noteId: options.noteId })) {
         const records = evidenceByItem.get(evidence.knowledgeItemId) ?? [];
         records.push(evidence);
@@ -299,7 +315,7 @@ export function createKnowledgeItemService({
       return items
         .filter(item => evidenceByItem.has(item.id))
         .map(item => {
-          const evidence = evidenceByItem.get(item.id);
+          const evidence = evidenceByItem.get(item.id)!;
           return {
             ...item,
             evidenceStatus: summarizeEvidenceStatus(evidence.map(record => record.status)),
@@ -315,15 +331,13 @@ export function createKnowledgeItemService({
     trash,
     restoreDeleted,
     listEvidence,
-    createEvidence(input) {
+    createEvidence(input: KnowledgeEvidenceDtoInput & { knowledgeItemId: string }) {
       const item = requireItem(input.knowledgeItemId);
       return runTransaction(() => saveNew(evidenceRepository, resolveEvidence(input, item.id)));
     },
-    retireEvidence(knowledgeItemId, evidenceId, input = {}) {
+    retireEvidence(knowledgeItemId: string, evidenceId: string, input: KnowledgeItemBaselineInput = {}) {
       const currentItem = requireItem(knowledgeItemId);
-      const currentEvidence = /** @type {import('../domain/knowledge-evidence.ts').KnowledgeEvidence} */ (
-        evidenceRepository.findById(evidenceId)
-      );
+      const currentEvidence = evidenceRepository.findById(evidenceId) as KnowledgeEvidenceServiceRecord | null;
       if (!currentEvidence || currentEvidence.knowledgeItemId !== knowledgeItemId) {
         throw notFoundError('KNOWLEDGE_EVIDENCE_NOT_FOUND', 'KnowledgeEvidence not found');
       }
@@ -350,18 +364,16 @@ export function createKnowledgeItemService({
               reviewStatus: 'needsRevision',
               updatedAt: nextKnowledgeItemTimestamp(item)
             }),
-            { expectedUpdatedAt: item.updatedAt }
+            { expectedUpdatedAt: item.updatedAt as string }
           );
           notifyIfInvalidated(currentItem, item);
         }
         return { item, evidence };
       });
     },
-    readoptEvidence(knowledgeItemId, evidenceId, input = {}) {
+    readoptEvidence(knowledgeItemId: string, evidenceId: string, input: KnowledgeItemBaselineInput = {}) {
       const item = requireItem(knowledgeItemId);
-      const current = /** @type {import('../domain/knowledge-evidence.ts').KnowledgeEvidence} */ (
-        evidenceRepository.findById(evidenceId)
-      );
+      const current = evidenceRepository.findById(evidenceId) as KnowledgeEvidenceServiceRecord | null;
       if (!current || current.knowledgeItemId !== knowledgeItemId)
         throw notFoundError('KNOWLEDGE_EVIDENCE_NOT_FOUND', 'KnowledgeEvidence not found');
       if (input.expectedUpdatedAt && input.expectedUpdatedAt !== current.updatedAt)
@@ -370,9 +382,7 @@ export function createKnowledgeItemService({
       if (
         current.status !== 'valid' ||
         (current.sourceType !== 'manual' &&
-          (!version ||
-            version.noteId !== current.noteId ||
-            !(/** @type {string} */ (version.content).includes(current.quoteText))))
+          (!version || version.noteId !== current.noteId || !(version.content as string).includes(current.quoteText)))
       ) {
         throw conflictError('KNOWLEDGE_EVIDENCE_NOT_VERIFIABLE', '来源当前不可独立复核，不能重新采用。');
       }
@@ -382,18 +392,18 @@ export function createKnowledgeItemService({
       return { item, evidence };
     },
     /** @param {string} noteId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status */
-    markEvidenceByNoteId(noteId, status = 'invalid') {
+    markEvidenceByNoteId(noteId: string, status: KnowledgeEvidence['status'] = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteId(noteId, status));
     },
     /** @param {string} annotationId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status */
-    markEvidenceByAnnotationId(annotationId, status = 'invalid') {
+    markEvidenceByAnnotationId(annotationId: string, status: KnowledgeEvidence['status'] = 'invalid') {
       return markEvidenceAndReconcile(() => evidenceRepository.markByAnnotationId(annotationId, status));
     },
     /** @param {string[]} annotationIds */
-    reconcileEvidenceByAnnotationIds(annotationIds) {
+    reconcileEvidenceByAnnotationIds(annotationIds: string[]) {
       return runTransaction(() => {
-        const versions = new Map();
-        const affected = [];
+        const versions = new Map<string, NoteVersionRecord>();
+        const affected: SavedEvidence[] = [];
         markEvidenceAndReconcile(() => {
           const changed = [];
           for (const annotationId of new Set(annotationIds)) {
@@ -417,10 +427,7 @@ export function createKnowledgeItemService({
               const saved = evidenceRepository.save({
                 ...evidence,
                 status,
-                applicabilityStatus:
-                  /** @type {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['applicabilityStatus']} */ (
-                    legacyEvidenceApplicability(evidence)
-                  ),
+                applicabilityStatus: legacyEvidenceApplicability(evidence) as KnowledgeEvidence['applicabilityStatus'],
                 updatedAt: now()
               });
               affected.push(saved);
@@ -433,18 +440,26 @@ export function createKnowledgeItemService({
       });
     },
     /** @param {string} noteVersionId @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['sourceType']} [sourceType] */
-    markEvidenceByNoteVersionId(noteVersionId, status = 'stale', sourceType = null) {
+    markEvidenceByNoteVersionId(
+      noteVersionId: string,
+      status: KnowledgeEvidence['status'] = 'stale',
+      sourceType: KnowledgeEvidence['sourceType'] | null = null
+    ) {
       return markEvidenceAndReconcile(() => evidenceRepository.markByNoteVersionId(noteVersionId, status, sourceType));
     },
     /** @param {string[]} noteVersionIds @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['status']} status @param {import('../domain/knowledge-evidence.ts').KnowledgeEvidence['sourceType']} [sourceType] */
-    markEvidenceByNoteVersionIds(noteVersionIds, status = 'stale', sourceType = null) {
+    markEvidenceByNoteVersionIds(
+      noteVersionIds: string[],
+      status: KnowledgeEvidence['status'] = 'stale',
+      sourceType: KnowledgeEvidence['sourceType'] | null = null
+    ) {
       return markEvidenceAndReconcile(() =>
         evidenceRepository.markByNoteVersionIds(noteVersionIds, status, sourceType)
       );
     }
   };
 
-  function markEvidenceAndReconcile(markEvidence) {
+  function markEvidenceAndReconcile(markEvidence: () => SavedEvidence[]) {
     return runTransaction(() => {
       const changed = markEvidence();
       for (const knowledgeItemId of new Set(changed.map(record => record.knowledgeItemId))) {
@@ -460,7 +475,7 @@ export function createKnowledgeItemService({
             reviewStatus: 'needsRevision',
             updatedAt: nextKnowledgeItemTimestamp(current)
           }),
-          { expectedUpdatedAt: current.updatedAt }
+          { expectedUpdatedAt: current.updatedAt as string }
         );
         notifyIfInvalidated(current, next);
       }
@@ -469,14 +484,14 @@ export function createKnowledgeItemService({
   }
 }
 
-function summarizeEvidenceStatus(statuses = []) {
+function summarizeEvidenceStatus(statuses: SavedEvidence['status'][] = []) {
   if (statuses.includes('invalid')) return 'invalid';
   if (statuses.includes('stale')) return 'stale';
   if (statuses.includes('insufficient')) return 'insufficient';
   return statuses.length ? 'valid' : 'insufficient';
 }
 
-function toEvidenceSummary(evidence) {
+function toEvidenceSummary(evidence: SavedEvidence) {
   return {
     sourceType: evidence.sourceType,
     sourceId: evidence.sourceId,
@@ -486,3 +501,9 @@ function toEvidenceSummary(evidence) {
     status: evidence.status
   };
 }
+
+interface KnowledgeCandidateInput extends KnowledgeItemDtoInput {
+  evidence?: unknown;
+}
+
+type SavedEvidence = Awaited<ReturnType<NonNullable<KnowledgeItemDependencies['evidenceRepository']>['list']>>[number];

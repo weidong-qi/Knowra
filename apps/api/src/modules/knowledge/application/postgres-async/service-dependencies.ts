@@ -104,7 +104,7 @@ interface NoteTransactionContext extends Partial<PostgresRepositories> {
   ) => void | AnnotationRecord[] | Promise<void | AnnotationRecord[]>;
   onNoteDeleted?: (
     id: string
-  ) => void | Promise<void | import('../../domain/knowledge-evidence.ts').KnowledgeEvidence[]>;
+  ) => void | Promise<void | Awaited<ReturnType<PostgresRepositories['knowledgeEvidenceRepository']['list']>>>;
   onBeforePermanentDelete?: (id: string) => void | Promise<void>;
 }
 interface TransactionDependencies {
@@ -117,12 +117,12 @@ interface TransactionDependencies {
   runTransaction?: <T>(operation: (repositories?: NoteTransactionContext) => T | Promise<T>) => T | Promise<T>;
 }
 export interface KnowledgeItemDependencies extends TransactionDependencies {
-  repository?: KnowledgeItemPort;
-  evidenceRepository?: EvidencePort;
-  noteRepository?: PostgresRepositories['noteRepository'];
-  noteVersionRepository?: PostgresRepositories['noteVersionRepository'];
-  annotationRepository?: PostgresRepositories['contentAnnotationRepository'] | null;
-  onItemInvalidated?: (id: string) => void | Promise<void>;
+  repository: KnowledgeItemPort;
+  evidenceRepository: Omit<EvidencePort, 'deleteByKnowledgeItemId'>;
+  noteRepository?: Pick<PostgresRepositories['noteRepository'], 'findById'>;
+  noteVersionRepository?: Pick<PostgresRepositories['noteVersionRepository'], 'findById'>;
+  annotationRepository?: Pick<PostgresRepositories['contentAnnotationRepository'], 'findById'> | null;
+  onItemInvalidated?: ((id: string) => void | Promise<void>) | null;
 }
 export interface LearningObjectiveDependencies extends TransactionDependencies {
   repository?: Pick<PostgresRepositories['learningObjectiveRepository'], 'findById' | 'list' | 'save'> &
@@ -147,15 +147,22 @@ export interface AssessmentContextDependencies extends TransactionDependencies {
   learningObjectiveRepository?: Pick<PostgresRepositories['learningObjectiveRepository'], 'findById'>;
 }
 export interface QuestionDependencies extends TransactionDependencies {
-  repository?: PostgresRepositories['questionRepository'];
-  questionObjectiveRepository?: PostgresRepositories['questionObjectiveRepository'];
-  questionSourceRepository?: PostgresRepositories['questionSourceRepository'];
-  learningObjectiveRepository?: PostgresRepositories['learningObjectiveRepository'];
-  examFocusRepository?: PostgresRepositories['examFocusRepository'];
-  knowledgeItemRepository?: PostgresRepositories['knowledgeItemRepository'];
-  noteRepository?: PostgresRepositories['noteRepository'];
-  noteVersionRepository?: PostgresRepositories['noteVersionRepository'];
-  knowledgeEvidenceRepository?: PostgresRepositories['knowledgeEvidenceRepository'];
+  repository: Pick<PostgresRepositories['questionRepository'], 'findById' | 'save' | 'list'> &
+    Partial<Pick<PostgresRepositories['questionRepository'], 'create'>>;
+  questionObjectiveRepository: Pick<
+    PostgresRepositories['questionObjectiveRepository'],
+    'listByQuestionIds' | 'listByObjectiveId' | 'replaceForQuestion'
+  >;
+  questionSourceRepository: Pick<
+    PostgresRepositories['questionSourceRepository'],
+    'findById' | 'listByQuestionIds' | 'replaceForQuestion' | 'markBySourceIds'
+  >;
+  learningObjectiveRepository: Pick<PostgresRepositories['learningObjectiveRepository'], 'findById'>;
+  examFocusRepository?: Pick<PostgresRepositories['examFocusRepository'], 'findById'>;
+  knowledgeItemRepository?: Pick<PostgresRepositories['knowledgeItemRepository'], 'findById'>;
+  noteRepository?: Pick<PostgresRepositories['noteRepository'], 'findById'>;
+  noteVersionRepository?: Pick<PostgresRepositories['noteVersionRepository'], 'findById'>;
+  knowledgeEvidenceRepository?: Pick<PostgresRepositories['knowledgeEvidenceRepository'], 'findById'>;
 }
 export interface ContentAnnotationDependencies {
   repository?: PostgresRepositories['contentAnnotationRepository'];
