@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.ts';
 
 export const DELETION_FACTS_VERSION = '1';
 export const DELETION_FACTS_DDL = `CREATE TABLE deletion_facts (collection TEXT NOT NULL, entity_id TEXT NOT NULL,

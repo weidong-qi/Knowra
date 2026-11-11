@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.ts';
 import { createSyncService } from '../../api/src/modules/sync/service.ts';
 import { createBatchSyncService } from '../../api/src/modules/sync/batch-service.ts';
 import { createJournal, requestHash } from '../../api/src/modules/sync/journal.ts';

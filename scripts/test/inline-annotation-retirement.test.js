@@ -20,7 +20,7 @@ import { scopeHash } from '../../apps/api/src/modules/ai/record-contract.ts';
 import { createEmptyAiState } from '../../apps/api/src/modules/ai/record-state.ts';
 import { initializeDatabase } from '../../apps/desktop-runtime/src/sqlite-schema.mjs';
 import { LOCAL_DATABASE_VERSION } from '../../apps/desktop-runtime/src/sqlite-schema.mjs';
-import { LOCAL_DATA_SCHEMA_VERSION } from '../../apps/api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_SCHEMA_VERSION } from '../../apps/api/src/infrastructure/local-data-schema.ts';
 
 const cli = fileURLToPath(new URL('../inspect-inline-annotation-retirement.mjs', import.meta.url));
 const now = Date.parse('2026-11-06T00:00:00Z');

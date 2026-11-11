@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { createEmptyLocalState } from '../../apps/api/src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../../apps/api/src/infrastructure/local-data-schema.ts';
 
 const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const script = path.join(workspace, 'scripts/check-attachments.mjs');

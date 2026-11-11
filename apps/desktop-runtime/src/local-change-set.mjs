@@ -1,4 +1,4 @@
-import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.ts';
 
 const REFERENCE_FIELDS = {
   spaceId: 'spaces', folderId: 'folders', groupId: 'tagGroups', noteId: 'notes',

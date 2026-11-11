@@ -17,7 +17,7 @@ import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import { selectEntityBatch } from './entity-batches.mjs';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
-import { reconcileSyncedSourceStates } from '../../api/src/infrastructure/local-data-relations.js';
+import { reconcileSyncedSourceStates } from '../../api/src/infrastructure/local-data-relations.ts';
 import { randomUUID } from 'node:crypto';
 import {
   WRITABLE_COLLECTIONS,
@@ -34,7 +34,7 @@ import {
   createEmptyLocalState,
   validatePersistedLocalState,
   createPersistedLocalDocument
-} from '../../api/src/infrastructure/local-data-schema.js';
+} from '../../api/src/infrastructure/local-data-schema.ts';
 import { readMeta, writeMeta } from './sync-state.mjs';
 import { preserveLocalHistoryCopies } from './history-sync-retention.mjs';
 import { createEntityConflictCopy } from './entity-conflict-copy.mjs';

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { createPersistedLocalDocument } from '../../apps/api/src/infrastructure/local-data-schema.js';
+import { createPersistedLocalDocument } from '../../apps/api/src/infrastructure/local-data-schema.ts';
 import { createRuntimeBackup, inspectRuntimeBackup } from '../../apps/desktop-runtime/src/backup.mjs';
 import { exportLocalRecovery } from '../../apps/desktop-runtime/src/recovery-export.mjs';
 import { createNote, openWorkspace, temporaryDirectory } from '../../apps/desktop-runtime/test/helpers.mjs';

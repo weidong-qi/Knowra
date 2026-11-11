@@ -580,7 +580,7 @@ export const phase3AssessmentTests = [
     name: 'Phase3 local snapshot/import 复用正式资产确认门禁并重算来源健康',
     async run() {
       const { LOCAL_DATA_SCHEMA_VERSION, LOCAL_SNAPSHOT_VERSION, createEmptyLocalState, validateLocalSnapshot } =
-        await import('../src/infrastructure/local-data-schema.js');
+        await import('../src/infrastructure/local-data-schema.ts');
       const state = createEmptyLocalState();
       state.knowledgeItems.push({
         id: 'phase32-snapshot-item',

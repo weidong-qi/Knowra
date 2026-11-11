@@ -1,7 +1,7 @@
 import { TokenType } from '@streamparser/json';
 import { createAppError } from '../errors/app-error.ts';
 import { readJsonFileSync } from './json-file-reader.ts';
-import { LOCAL_DATA_COLLECTIONS, validatePersistedLocalState } from './local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS, validatePersistedLocalState } from './local-data-schema.ts';
 import type { PathLike } from 'node:fs';
 
 type InspectionScope = 'direct' | 'wrapped';

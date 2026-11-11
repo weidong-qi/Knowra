@@ -6,7 +6,7 @@ import { createRuntimeServices } from '../src/runtime-services.mjs';
 import { temporaryDirectory } from './helpers.mjs';
 import { permitsLocalRoute } from '../src/runtime-policy.mjs';
 import { entityContent } from '../../api/src/modules/sync/entity-contract.ts';
-import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.ts';
 import { applyEntityRemote, getEntitySyncState } from '../src/entity-sync-state.mjs';
 
 test('桌面 SQLite 附件核验恢复、编码历史保护、删除留存及状态不入同步差异', async t => {

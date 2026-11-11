@@ -20,7 +20,7 @@ import { prepareBatchState } from '../src/modules/sync/batch-domain.ts';
 import { listAnnotatedRanges } from '../src/modules/ai/annotation-read-tool.ts';
 import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.ts';
 import { applyPostgresState } from '../src/modules/sync/postgres-batch.ts';
-import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.ts';
 import { knowraCheck } from '@study-accelerator/shared/knowra-marks';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

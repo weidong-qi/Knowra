@@ -1,5 +1,5 @@
 import { gzipSync, gunzipSync } from 'node:zlib';
-import { LOCAL_DATA_COLLECTIONS } from '../../infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../infrastructure/local-data-schema.ts';
 import { syncKey, syncError } from './journal.ts';
 import type { SyncEntry, SyncJournal, SyncRecord, SyncState } from './journal.ts';
 

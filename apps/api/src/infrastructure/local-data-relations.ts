@@ -1,3 +1,62 @@
+import type { AnnotationStructure } from '@study-accelerator/content-anchor';
+import type { AppError } from '../errors/app-error.ts';
+import type {
+  LocalDataState,
+  LocalCollection,
+  LocalRow,
+  LocalRows,
+  StoredJsonField,
+  LocalQuestionSource
+} from './local-data-types.ts';
+type Rows<K extends LocalCollection> = LocalRows<K>;
+type Row<K extends LocalCollection> = LocalRow<K>;
+type Index<K extends LocalCollection> = Map<string | null | undefined, Row<K>>;
+interface QuestionReferences {
+  questions: Map<string | null | undefined, { id: string }>;
+  knowledgeItems: Map<string | null | undefined, SourceItem>;
+  knowledgeEvidence: Map<string | null | undefined, SourceEvidence>;
+  learningObjectives: Index<'learningObjectives'>;
+  notes: Map<string | null | undefined, ReconciliationNote>;
+  noteVersions: Index<'noteVersions'>;
+}
+interface SourceItem {
+  id: string;
+  title?: string;
+  canonicalStatement?: string;
+  reviewStatus?: string | null;
+  sourceMode?: string | null;
+  deletedAt?: unknown;
+  updatedAt?: unknown;
+}
+interface SourceEvidence {
+  id: string;
+  knowledgeItemId: string;
+  noteId?: string | null;
+  noteVersionId?: string | null;
+  annotationId?: string | null;
+  quoteText?: unknown;
+  status?: string | null;
+  applicabilityStatus?: string | null;
+  sourceType?: string | null;
+  relationType?: string | null;
+}
+type ReconciliationNote = Pick<Row<'notes'>, 'id' | 'rawMarkdown' | 'deleted'>;
+type ReconciliationAnnotation = Pick<
+  Row<'contentAnnotations'>,
+  'id' | 'noteId' | 'quoteText' | 'status' | 'anchorStatus' | 'lifecycleStatus'
+>;
+interface ReconciliationState extends Pick<
+  LocalDataState,
+  'noteVersions' | 'learningObjectives' | 'questionObjectives'
+> {
+  questions: { id: string; reviewStatus?: string }[];
+  questionSources: LocalQuestionSource[];
+  knowledgeItems: SourceItem[];
+  knowledgeEvidence: SourceEvidence[];
+  notes: ReconciliationNote[];
+  contentAnnotations: ReconciliationAnnotation[];
+}
+type NativeDate = new (value: unknown) => Date;
 import { validatePdfRelations } from '@study-accelerator/shared/pdf';
 import { parseTagColor } from '@study-accelerator/shared/tag-colors';
 import { sameKnowraText } from '@study-accelerator/shared/knowra-marks';
@@ -16,7 +75,7 @@ import { validateKnowledgeArtifactProvenanceRelations } from '../modules/knowled
 import { resolveAnalysisScopeNoteVersion } from '../modules/knowledge/domain/analysis-scope-version-alias.ts';
 import { deriveEvidenceHealth } from '../modules/knowledge/domain/evidence-health.ts';
 
-export function validateLocalDataRelations(state) {
+export function validateLocalDataRelations<State extends LocalDataState>(state: State): State {
   normalizeTagSystem(state);
   const spaces = indexById(state.spaces);
   const folders = indexById(state.folders);
@@ -45,7 +104,8 @@ export function validateLocalDataRelations(state) {
   validateAttachments(state.attachments, notes);
   try {
     validatePdfRelations(state);
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as AppError;
     throw createAppError('STORAGE_IMPORT_INVALID', error.message, 422);
   }
   validateLearningObjectives(state.learningObjectives, knowledgeItems);
@@ -69,12 +129,17 @@ export function validateLocalDataRelations(state) {
   return state;
 }
 
-function validateAnnotationExtensions(state, spaces, annotations, noteVersions) {
+function validateAnnotationExtensions(
+  state: LocalDataState,
+  spaces: Index<'spaces'>,
+  annotations: Index<'contentAnnotations'>,
+  noteVersions: Index<'noteVersions'>
+) {
   for (const exclusion of state.annotationExclusions ?? []) {
     const annotation = annotations.get(exclusion.parentAnnotationId);
     assertReference(Boolean(annotation), `AnnotationExclusion ${exclusion.id} references unknown annotation`);
     assertReference(
-      ['section', 'list'].includes(annotation.scopeType),
+      (['section', 'list'] as readonly unknown[]).includes(annotation!.scopeType),
       `AnnotationExclusion ${exclusion.id} requires a section or list annotation`
     );
     if (exclusion.noteVersionId)
@@ -92,20 +157,20 @@ function validateAnnotationExtensions(state, spaces, annotations, noteVersions) 
   for (const snapshot of state.analysisScopeSnapshots ?? []) {
     assertReference(spaces.has(snapshot.spaceId), `AnalysisScopeSnapshot ${snapshot.id} references unknown space`);
     for (const version of snapshot.noteVersions ?? []) {
-      resolveAnalysisScopeNoteVersion(snapshot, version, noteVersions);
+      resolveAnalysisScopeNoteVersion(snapshot, version, noteVersions as Map<string, Row<'noteVersions'>>);
     }
   }
 }
 
-export function normalizeLegacyNoteReferences(state, { repairBrokenReferences = false } = {}) {
+export function normalizeLegacyNoteReferences(state: LocalDataState, { repairBrokenReferences = false } = {}) {
   const spaces = indexById(state.spaces);
   const folders = indexById(state.folders);
   const onlySpaceId = state.spaces.length === 1 ? state.spaces[0].id : null;
 
   for (const note of state.notes) {
     const folderSpaceId = note.folderId ? folders.get(note.folderId)?.spaceId : null;
-    if (!note.spaceId || (repairBrokenReferences && !spaces.has(note.spaceId) && onlySpaceId)) {
-      note.spaceId = folderSpaceId ?? onlySpaceId;
+    if (!note!.spaceId || (repairBrokenReferences && !spaces.has(note!.spaceId) && onlySpaceId)) {
+      note!.spaceId = folderSpaceId ?? onlySpaceId;
     }
     if (repairBrokenReferences && note.folderId && !folders.has(note.folderId)) {
       note.folderId = null;
@@ -113,9 +178,9 @@ export function normalizeLegacyNoteReferences(state, { repairBrokenReferences = 
   }
 }
 
-function validateFolders(folderItems, spaces, folders) {
+function validateFolders(folderItems: Rows<'folders'>, spaces: Index<'spaces'>, folders: Index<'folders'>) {
   for (const folder of folderItems) {
-    assertReference(spaces.has(folder.spaceId), `Folder ${folder.id} references unknown space: ${folder.spaceId}`);
+    assertReference(spaces.has(folder!.spaceId), `Folder ${folder.id} references unknown space: ${folder!.spaceId}`);
     if (folder.parentId === null || folder.parentId === undefined) {
       continue;
     }
@@ -123,41 +188,41 @@ function validateFolders(folderItems, spaces, folders) {
     const parent = folders.get(folder.parentId);
     assertReference(Boolean(parent), `Folder ${folder.id} references unknown parent: ${folder.parentId}`);
     assertReference(
-      parent.spaceId === folder.spaceId,
+      parent!.spaceId === folder!.spaceId,
       `Folder ${folder.id} and its parent must belong to the same space`
     );
     assertReference(
-      folder.deletedAt || !parent.deletedAt,
+      folder!.deletedAt || !parent!.deletedAt,
       `Active folder ${folder.id} cannot be inside a deleted folder`
     );
   }
 }
 
-function validateTagGroups(groupItems, spaces) {
+function validateTagGroups(groupItems: Rows<'tagGroups'>, spaces: Index<'spaces'>) {
   for (const group of groupItems) {
-    assertReference(spaces.has(group.spaceId), `TagGroup ${group.id} references unknown space: ${group.spaceId}`);
+    assertReference(spaces.has(group!.spaceId), `TagGroup ${group.id} references unknown space: ${group!.spaceId}`);
     assertReference(
-      ['single', 'multiple'].includes(group.selectionMode),
+      (['single', 'multiple'] as readonly unknown[]).includes(group.selectionMode),
       `TagGroup ${group.id} has invalid selectionMode`
     );
   }
 }
 
-function validateTags(tagItems, spaces, tagGroups) {
+function validateTags(tagItems: Rows<'tags'>, spaces: Index<'spaces'>, tagGroups: Index<'tagGroups'>) {
   for (const tag of tagItems) {
-    assertReference(spaces.has(tag.spaceId), `Tag ${tag.id} references unknown space: ${tag.spaceId}`);
+    assertReference(spaces.has(tag!.spaceId), `Tag ${tag.id} references unknown space: ${tag!.spaceId}`);
     if (tag.groupId) {
       const group = tagGroups.get(tag.groupId);
       assertReference(Boolean(group), `Tag ${tag.id} references unknown group: ${tag.groupId}`);
-      assertReference(group.spaceId === tag.spaceId, `Tag ${tag.id} and its group must belong to the same space`);
+      assertReference(group!.spaceId === tag!.spaceId, `Tag ${tag.id} and its group must belong to the same space`);
     }
   }
 }
 
-function normalizeTagSystem(state) {
+function normalizeTagSystem(state: LocalDataState) {
   state.tagGroups ??= [];
   // 与原 find 保持首次匹配语义；索引仅属于本次归一化，不跨快照复用。
-  const groupsById = new Map();
+  const groupsById = new Map<string | null | undefined, Row<'tagGroups'>>();
   for (const group of state.tagGroups) {
     if (!groupsById.has(group.id)) groupsById.set(group.id, group);
   }
@@ -173,15 +238,15 @@ function normalizeTagSystem(state) {
     tag.color = parseTagColor(tag.color ?? 'neutral') ?? tag.color ?? 'neutral';
     tag.isSystem = Boolean(tag.isSystem);
     tag.sortOrder = Number(tag.sortOrder) || index + 1;
-    if (!tag.groupId) tag.groupId = `tag-group-${tag.spaceId}-ordinary`;
+    if (!tag.groupId) tag.groupId = `tag-group-${tag!.spaceId}-ordinary`;
   });
-  const tagsById = new Map();
+  const tagsById = new Map<string, Row<'tags'>>();
   for (const tag of state.tags) {
     if (!tagsById.has(tag.id)) tagsById.set(tag.id, tag);
   }
   state.notes.forEach(note => {
-    const normalizedIds = [];
-    const singleIndexes = new Map();
+    const normalizedIds: (string | null)[] = [];
+    const singleIndexes = new Map<string, number>();
     [...new Set((note.tagIds ?? []).filter(id => tagsById.has(id)))].forEach(tagId => {
       const tag = tagsById.get(tagId);
       const group = groupsById.get(tag?.groupId);
@@ -192,26 +257,31 @@ function normalizeTagSystem(state) {
       }
       normalizedIds.push(tagId);
     });
-    note.tagIds = normalizedIds.filter(Boolean);
+    note.tagIds = normalizedIds.filter(Boolean) as string[];
   });
 }
 
-function validateNotes(noteItems, spaces, folders, tags) {
+function validateNotes(
+  noteItems: Rows<'notes'>,
+  spaces: Index<'spaces'>,
+  folders: Index<'folders'>,
+  tags: Index<'tags'>
+) {
   for (const note of noteItems) {
     validateNoteSpace(note, spaces);
     validateNoteFolder(note, folders);
     validateNoteTags(note, tags);
-    if (note.annotationStructure) {
-      const structure = note.annotationStructure;
+    if (note!.annotationStructure) {
+      const structure = note!.annotationStructure as StoredJsonField<AnnotationStructure>;
       assertReference(
         structure.formatVersion === 1 &&
           Number.isInteger(structure.revision) &&
           structure.revision > 0 &&
-          structure.contentHash === calculateContentHash(note.rawMarkdown) &&
+          structure.contentHash === calculateContentHash(note!.rawMarkdown) &&
           Array.isArray(structure.nodes),
         `Note ${note.id} has invalid annotation structure`
       );
-      const blocks = projectMarkdown(note.rawMarkdown).blocks;
+      const blocks = projectMarkdown(note!.rawMarkdown).blocks;
       const ids = new Set();
       for (const node of structure.nodes) {
         assertReference(
@@ -232,25 +302,25 @@ function validateNotes(noteItems, spaces, folders, tags) {
   }
 }
 
-function validateNoteSpace(note, spaces) {
+function validateNoteSpace(note: Row<'notes'>, spaces: Index<'spaces'>) {
   assertReference(
-    Boolean(note.spaceId) && spaces.has(note.spaceId),
-    `Note ${note.id} references unknown space: ${note.spaceId}`
+    Boolean(note!.spaceId) && spaces.has(note!.spaceId),
+    `Note ${note.id} references unknown space: ${note!.spaceId}`
   );
 }
 
-function validateNoteFolder(note, folders) {
+function validateNoteFolder(note: Row<'notes'>, folders: Index<'folders'>) {
   if (note.folderId === null || note.folderId === undefined) {
     return;
   }
 
   const folder = folders.get(note.folderId);
   assertReference(Boolean(folder), `Note ${note.id} references unknown folder: ${note.folderId}`);
-  assertReference(note.spaceId === folder.spaceId, `Note ${note.id} and its folder must belong to the same space`);
-  assertReference(note.deleted || !folder.deletedAt, `Active note ${note.id} cannot be inside a deleted folder`);
+  assertReference(note!.spaceId === folder!.spaceId, `Note ${note.id} and its folder must belong to the same space`);
+  assertReference(note.deleted || !folder!.deletedAt, `Active note ${note.id} cannot be inside a deleted folder`);
 }
 
-function validateNoteTags(note, tags) {
+function validateNoteTags(note: Row<'notes'>, tags: Index<'tags'>) {
   const tagIds = note.tagIds ?? [];
   const uniqueTagIds = new Set(tagIds);
   assertReference(uniqueTagIds.size === tagIds.length, `Note ${note.id} contains duplicate tag references`);
@@ -258,51 +328,60 @@ function validateNoteTags(note, tags) {
   for (const tagId of tagIds) {
     const tag = tags.get(tagId);
     assertReference(Boolean(tag), `Note ${note.id} references unknown tag: ${tagId}`);
-    assertReference(note.spaceId === tag.spaceId, `Note ${note.id} and tag ${tagId} must belong to the same space`);
+    assertReference(note!.spaceId === tag!.spaceId, `Note ${note.id} and tag ${tagId} must belong to the same space`);
   }
 }
 
-function validateAnnotations(annotationItems, spaces, notes, noteVersions) {
+function validateAnnotations(
+  annotationItems: Rows<'contentAnnotations'>,
+  spaces: Index<'spaces'>,
+  notes: Index<'notes'>,
+  noteVersions: Index<'noteVersions'>
+) {
   for (const annotation of annotationItems) {
-    const note = notes.get(annotation.noteId);
+    const note = notes.get(annotation!.noteId);
     assertReference(
       spaces.has(annotation.spaceId),
       `Annotation ${annotation.id} references unknown space: ${annotation.spaceId}`
     );
-    assertReference(Boolean(note), `Annotation ${annotation.id} references unknown note: ${annotation.noteId}`);
+    assertReference(Boolean(note), `Annotation ${annotation.id} references unknown note: ${annotation!.noteId}`);
     assertReference(
-      note.spaceId === annotation.spaceId,
+      note!.spaceId === annotation.spaceId,
       `Annotation ${annotation.id} and its note must belong to the same space`
     );
     // v3（内联重点）的列表范围写在正文标记里，没有旧的列表身份。
     if (
-      annotation.scopeType === 'list' &&
+      annotation!.scopeType === 'list' &&
       annotation.schemaVersion !== 3 &&
       annotation.lifecycleStatus === 'active' &&
       annotation.anchorStatus === 'resolved' &&
-      annotation.noteContentHash === calculateContentHash(note.rawMarkdown)
+      annotation.noteContentHash === calculateContentHash(note!.rawMarkdown)
     ) {
-      const resolution = resolveAnchor(note.rawMarkdown, annotation.anchor);
-      const tracking = listTracking(projectMarkdown(note.rawMarkdown), annotation.anchor, note.annotationStructure);
+      const resolution = resolveAnchor(note!.rawMarkdown, annotation.anchor!);
+      const tracking = listTracking(
+        projectMarkdown(note!.rawMarkdown),
+        annotation.anchor!,
+        note!.annotationStructure as StoredJsonField<AnnotationStructure>
+      );
       assertReference(
         resolution.status === 'resolved' &&
-          tracking.rootId === annotation.anchor.tracking?.rootId &&
-          JSON.stringify(tracking.memberIds) === JSON.stringify(annotation.anchor.tracking?.memberIds) &&
-          JSON.stringify(tracking.ancestorItemIds) === JSON.stringify(annotation.anchor.tracking?.ancestorItemIds),
+          tracking.rootId === annotation.anchor!.tracking?.rootId &&
+          JSON.stringify(tracking.memberIds) === JSON.stringify(annotation.anchor!.tracking?.memberIds) &&
+          JSON.stringify(tracking.ancestorItemIds) === JSON.stringify(annotation.anchor!.tracking?.ancestorItemIds),
         `Annotation ${annotation.id} has invalid list identity`
       );
     }
     if (annotation.noteVersionId !== null && annotation.noteVersionId !== undefined) {
       const version = noteVersions.get(annotation.noteVersionId);
       assertReference(
-        Boolean(version) && version.noteId === annotation.noteId,
+        Boolean(version) && version!.noteId === annotation!.noteId,
         `Annotation ${annotation.id} references an invalid NoteVersion`
       );
     }
   }
 }
 
-function validateAttachments(attachmentItems, notes) {
+function validateAttachments(attachmentItems: Rows<'attachments'>, notes: Index<'notes'>) {
   for (const attachment of attachmentItems) {
     assertReference(
       notes.has(attachment.noteId),
@@ -311,9 +390,12 @@ function validateAttachments(attachmentItems, notes) {
   }
 }
 
-function validateNoteVersions(versionItems, notes) {
+function validateNoteVersions(versionItems: Rows<'noteVersions'>, notes: Index<'notes'>) {
   for (const version of versionItems) {
-    assertReference(notes.has(version.noteId), `NoteVersion ${version.id} references unknown note: ${version.noteId}`);
+    assertReference(
+      notes.has(version!.noteId),
+      `NoteVersion ${version.id} references unknown note: ${version!.noteId}`
+    );
     const actualContentHash = crypto
       .createHash('sha256')
       .update(String(version.content ?? ''))
@@ -325,7 +407,7 @@ function validateNoteVersions(versionItems, notes) {
   }
 }
 
-function validateKnowledgeItems(items) {
+function validateKnowledgeItems(items: Rows<'knowledgeItems'>) {
   for (const item of items) {
     assertReference(
       ['candidate', 'confirmed', 'needsRevision', 'archived'].includes(item.reviewStatus ?? 'candidate'),
@@ -334,11 +416,17 @@ function validateKnowledgeItems(items) {
   }
 }
 
-function validateKnowledgeEvidence(items, knowledgeItems, notes, noteVersions, annotations) {
+function validateKnowledgeEvidence(
+  items: SourceEvidence[],
+  knowledgeItems: Map<string | null | undefined, SourceItem>,
+  notes: Map<string | null | undefined, ReconciliationNote>,
+  noteVersions: Index<'noteVersions'>,
+  annotations: Map<string | null | undefined, ReconciliationAnnotation>
+) {
   for (const evidence of items) {
-    let note = null;
-    let version = null;
-    let annotation = null;
+    let note: ReconciliationNote | null | undefined = null;
+    let version: Row<'noteVersions'> | null | undefined = null;
+    let annotation: ReconciliationAnnotation | null | undefined = null;
     assertReference(
       knowledgeItems.has(evidence.knowledgeItemId),
       `KnowledgeEvidence ${evidence.id} references unknown KnowledgeItem: ${evidence.knowledgeItemId}`
@@ -355,7 +443,7 @@ function validateKnowledgeEvidence(items, knowledgeItems, notes, noteVersions, a
       );
       if (evidence.noteId) {
         assertReference(
-          version.noteId === evidence.noteId,
+          version!.noteId === evidence.noteId,
           `KnowledgeEvidence ${evidence.id} and its NoteVersion must reference the same note`
         );
       }
@@ -368,14 +456,14 @@ function validateKnowledgeEvidence(items, knowledgeItems, notes, noteVersions, a
       );
       if (evidence.noteId) {
         assertReference(
-          annotation.noteId === evidence.noteId,
+          annotation!.noteId === evidence.noteId,
           `KnowledgeEvidence ${evidence.id} and its annotation must reference the same note`
         );
       }
     }
     if (annotation && version) {
       assertReference(
-        annotation.noteId === version.noteId,
+        annotation!.noteId === version!.noteId,
         `KnowledgeEvidence ${evidence.id} annotation and NoteVersion must reference the same note`
       );
     }
@@ -396,7 +484,7 @@ function validateKnowledgeEvidence(items, knowledgeItems, notes, noteVersions, a
   }
 }
 
-function validateLearningObjectives(items, knowledgeItems) {
+function validateLearningObjectives(items: Rows<'learningObjectives'>, knowledgeItems: Index<'knowledgeItems'>) {
   for (const objective of items) {
     assertReference(
       knowledgeItems.has(objective.knowledgeItemId),
@@ -409,16 +497,20 @@ function validateLearningObjectives(items, knowledgeItems) {
   }
 }
 
-function validateExamProfiles(items) {
+function validateExamProfiles(items: Rows<'examProfiles'>) {
   for (const profile of items) {
     assertReference(
-      !profile.archivedAt || !Number.isNaN(new Date(profile.archivedAt).getTime()),
+      !profile.archivedAt || !Number.isNaN(new (Date as NativeDate)(profile.archivedAt).getTime()),
       `ExamProfile ${profile.id} has an invalid archivedAt`
     );
   }
 }
 
-function validateExamFocuses(items, examProfiles, learningObjectives) {
+function validateExamFocuses(
+  items: Rows<'examFocuses'>,
+  examProfiles: Index<'examProfiles'>,
+  learningObjectives: Index<'learningObjectives'>
+) {
   const unique = new Set();
   for (const focus of items) {
     assertReference(
@@ -435,10 +527,12 @@ function validateExamFocuses(items, examProfiles, learningObjectives) {
   }
 }
 
-function validateQuestions(items) {
+function validateQuestions(items: Rows<'questions'>) {
   for (const question of items) {
     assertReference(
-      ['singleChoice', 'multipleChoice', 'trueFalse', 'shortAnswer'].includes(question.questionType ?? 'shortAnswer'),
+      (['singleChoice', 'multipleChoice', 'trueFalse', 'shortAnswer'] as readonly unknown[]).includes(
+        question.questionType ?? 'shortAnswer'
+      ),
       `Question ${question.id} has an invalid questionType`
     );
     assertReference(
@@ -448,7 +542,11 @@ function validateQuestions(items) {
   }
 }
 
-function validateQuestionObjectives(items, questions, learningObjectives) {
+function validateQuestionObjectives(
+  items: Rows<'questionObjectives'>,
+  questions: Index<'questions'>,
+  learningObjectives: Index<'learningObjectives'>
+) {
   const unique = new Set();
   for (const relation of items) {
     assertReference(
@@ -466,10 +564,15 @@ function validateQuestionObjectives(items, questions, learningObjectives) {
 }
 
 function validateQuestionSources(
-  items,
-  { questions, knowledgeItems, knowledgeEvidence, learningObjectives, notes, noteVersions }
+  items: LocalQuestionSource[],
+  { questions, knowledgeItems, knowledgeEvidence, learningObjectives, notes, noteVersions }: QuestionReferences
 ) {
-  const referenceMaps = {
+  const referenceMaps: Partial<
+    Record<
+      string,
+      Map<string | null | undefined, SourceItem | SourceEvidence | Row<'learningObjectives'> | Row<'noteVersions'>>
+    >
+  > = {
     knowledgeItem: knowledgeItems,
     knowledgeEvidence,
     learningObjective: learningObjectives,
@@ -484,8 +587,15 @@ function validateQuestionSources(
       ['active', 'stale', 'reanchored'].includes(source.status ?? 'active'),
       `QuestionSource ${source.id} has an invalid status`
     );
-    let reference = null;
-    const referenceMap = referenceMaps[source.sourceType];
+    let reference:
+      | ((SourceItem | SourceEvidence | Row<'learningObjectives'> | Row<'noteVersions'>) & {
+          isCurrent?: boolean;
+          noteId?: string | null;
+          content?: unknown;
+        })
+      | null
+      | undefined = null;
+    const referenceMap = referenceMaps[source.sourceType as string];
     if (referenceMap) {
       assertReference(Boolean(source.sourceId), `QuestionSource ${source.id} requires sourceId`);
       reference = referenceMap.get(source.sourceId);
@@ -498,14 +608,17 @@ function validateQuestionSources(
       const note = notes.get(reference.noteId);
       reference = {
         ...reference,
-        isCurrent: Boolean(note && !note.deleted && sameKnowraText(note.rawMarkdown, reference.content))
+        isCurrent: Boolean(note && !note.deleted && sameKnowraText(note!.rawMarkdown, reference.content))
       };
     }
     source.status = deriveQuestionSourceStatus(source, reference);
   }
 }
 
-function validateFormalAssetGates(state, { knowledgeItems, learningObjectives }) {
+function validateFormalAssetGates(
+  state: LocalDataState,
+  { knowledgeItems, learningObjectives }: Pick<QuestionReferences, 'knowledgeItems' | 'learningObjectives'>
+) {
   const evidenceByItemId = groupBy(state.knowledgeEvidence, evidence => evidence.knowledgeItemId);
   for (const item of state.knowledgeItems) {
     if (item.reviewStatus !== 'confirmed') continue;
@@ -541,14 +654,14 @@ function validateFormalAssetGates(state, { knowledgeItems, learningObjectives })
   }
 }
 
-function assertFolderGraphHasNoCycles(folderItems, folders) {
-  const visits = new Map();
+function assertFolderGraphHasNoCycles(folderItems: Rows<'folders'>, folders: Index<'folders'>) {
+  const visits = new Map<string, string>();
   for (const folder of folderItems) {
     visitFolder(folder, folders, visits);
   }
 }
 
-function visitFolder(folder, folders, visits) {
+function visitFolder(folder: Row<'folders'>, folders: Index<'folders'>, visits: Map<string, string>) {
   const status = visits.get(folder.id);
   if (status === 'visited') {
     return;
@@ -557,17 +670,17 @@ function visitFolder(folder, folders, visits) {
 
   visits.set(folder.id, 'visiting');
   if (folder.parentId !== null && folder.parentId !== undefined) {
-    visitFolder(folders.get(folder.parentId), folders, visits);
+    visitFolder(folders.get(folder.parentId)!, folders, visits);
   }
   visits.set(folder.id, 'visited');
 }
 
-function indexById(items) {
+function indexById<T extends { id: string }>(items: T[]): Map<string | null | undefined, T> {
   return new Map(items.map(item => [item.id, item]));
 }
 
-function groupBy(items, keyForItem) {
-  const grouped = new Map();
+function groupBy<T, Key>(items: T[], keyForItem: (item: T) => Key): Map<Key, T[]> {
+  const grouped = new Map<Key, T[]>();
   for (const item of items) {
     const key = keyForItem(item);
     const group = grouped.get(key) ?? [];
@@ -577,15 +690,16 @@ function groupBy(items, keyForItem) {
   return grouped;
 }
 
-function assertFormalGate(validate, message) {
+function assertFormalGate(validate: () => void, message: string) {
   try {
     validate();
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as AppError;
     assertReference(false, `${message}: ${error?.code ?? error?.message ?? 'validation failed'}`);
   }
 }
 
-function assertReference(condition, message) {
+function assertReference(condition: unknown, message: string): asserts condition {
   if (condition) {
     return;
   }
@@ -593,7 +707,7 @@ function assertReference(condition, message) {
 }
 
 /** 同步的来源变化沿用领域失效规则；先降级已失效的确认状态，再做完整引用校验。 */
-export function reconcileSyncedSourceStates(state) {
+export function reconcileSyncedSourceStates<State extends ReconciliationState>(state: State): State {
   const notes = indexById(state.notes);
   const versions = indexById(state.noteVersions);
   const annotations = indexById(state.contentAnnotations);

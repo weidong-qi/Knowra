@@ -3,7 +3,7 @@ import {
   LOCAL_DATA_SCHEMA_VERSION,
   LOCAL_SNAPSHOT_VERSION,
   createEmptyLocalState
-} from '../../../infrastructure/local-data-schema.js';
+} from '../../../infrastructure/local-data-schema.ts';
 import { assertNoInsecureImageUrls } from './note-content-policy.ts';
 import { assertSpacesOwnedBy } from '../../../infrastructure/owner-boundary.ts';
 

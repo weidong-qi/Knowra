@@ -5,7 +5,7 @@ import type { MigrationTransaction } from './migration-client.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createAppError } from '../../errors/app-error.ts';
-import { LOCAL_DATA_SCHEMA_VERSION, validateLocalSnapshot, validatePersistedLocalState } from '../local-data-schema.js';
+import { LOCAL_DATA_SCHEMA_VERSION, validateLocalSnapshot, validatePersistedLocalState } from '../local-data-schema.ts';
 import { createMigrationReport } from './migration-report.ts';
 import {
   dbAnnotation,

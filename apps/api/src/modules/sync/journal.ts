@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { LOCAL_DATA_COLLECTIONS } from '../../infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../infrastructure/local-data-schema.ts';
 import { createAppError } from '../../errors/app-error.ts';
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
 import { validateDeviceRetirements, preserveDeviceRetirements } from './device-retirement.ts';
@@ -9,7 +9,7 @@ import type { SyncSnapshotBinding } from './protocol-contract.ts';
 
 export interface SyncRecord {
   id: string;
-  updatedAt?: string | null;
+  updatedAt?: unknown;
   spaceId?: string | null;
   [baselineHash]?: string;
 }
@@ -26,7 +26,7 @@ export interface SyncTombstone {
   revision: number;
   eventId: string;
   deletedAt: string | null;
-  previousUpdatedAt?: string | null;
+  previousUpdatedAt?: unknown;
   spaceId?: string | null;
 }
 export interface SyncReceiptResult {

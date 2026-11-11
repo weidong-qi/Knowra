@@ -14,7 +14,7 @@ import {
   assertNoKnowledgeArtifactProvenanceDowngrade,
   validateKnowledgeArtifactProvenanceRelations
 } from '../src/modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
-import { validateLocalSnapshot } from '../src/infrastructure/local-data-schema.js';
+import { validateLocalSnapshot } from '../src/infrastructure/local-data-schema.ts';
 import { resolveAnalysisScopeNoteVersion } from '../src/modules/knowledge/domain/analysis-scope-version-alias.ts';
 
 test('合法旧receipt只回填存活知识，保留用户修订与首份hash，并可幂等重跑', () => {

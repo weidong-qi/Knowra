@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { resetJournalKeepingTombstones, createJournal, syncKey } from '../../apps/api/src/modules/sync/journal.ts';
 import { syncContract } from '../../apps/api/src/modules/sync/protocol-contract.ts';
-import { createEmptyLocalState } from '../../apps/api/src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../../apps/api/src/infrastructure/local-data-schema.ts';
 import { createPostgresTestDatabase } from '../test-support/postgres-test-database.mjs';
 import { createPostgresAppContext } from '../../apps/api/src/postgres-app.factory.js';
 import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.js';

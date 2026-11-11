@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createAppError } from '../../api/src/errors/app-error.ts';
-import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.ts';
 import {
   DELETION_FACTS_DDL,
   FACT_METADATA_KEYS,
