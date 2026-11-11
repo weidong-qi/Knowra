@@ -3,7 +3,23 @@ import type { AgentWorkerOptions, BudgetSettlement, GatewayResult } from './boun
 import type { GatewayRequest } from './gateway.ts';
 import type { SourceReference } from './access-service-types.ts';
 import type { AiConversationTurn, AiConversationMessage } from './private-record-types.ts';
-import type { AgentRequest, AgentManifest, AgentResult, ToolCall, RawReadArguments, ToolReceipt, CatalogDependencies, RawCitation, RequestSources, RawWriteArguments, RawToolResult, InitialSearchResult, RawAnswer, RawSearchResult, WorkerToolOutcome } from './agent-worker-types.ts';
+import type {
+  AgentRequest,
+  AgentManifest,
+  AgentResult,
+  ToolCall,
+  RawReadArguments,
+  ToolReceipt,
+  CatalogDependencies,
+  RawCitation,
+  RequestSources,
+  RawWriteArguments,
+  RawToolResult,
+  InitialSearchResult,
+  RawAnswer,
+  RawSearchResult,
+  WorkerToolOutcome
+} from './agent-worker-types.ts';
 import { authorizedHistory, authorizedQuestion, plainMessages } from './agent-request-context.ts';
 import { analyzeProposal, proposalProgress } from './proposal-progress.ts';
 // 保留既有调用方的进度文本入口，纯规则统一在 proposal-progress.ts 维护。
@@ -60,7 +76,8 @@ const fail: (code: string, message: string) => never = (code, message) => {
   error.code = code;
   throw error;
 };
-const safeCode = (value: unknown) => (typeof value === 'string' && /^AI_[A-Z0-9_]{1,64}$/.test(value) ? value : 'AI_TASK_FAILED');
+const safeCode = (value: unknown) =>
+  typeof value === 'string' && /^AI_[A-Z0-9_]{1,64}$/.test(value) ? value : 'AI_TASK_FAILED';
 const manifestCatalogDeps = (manifest: AgentManifest) => ({
   noteIds: [
     ...new Set([
@@ -156,7 +173,13 @@ export function createAiAgentWorker({
   const provider = gateway!.capabilities?.().provider;
   const webSearch = createAssistantWebSearch(webSearchAdapter);
   const proposalNames = new Set(['notes_create', 'notes_append', 'notes_propose_patch', 'notes_propose_organize']);
-  const availableTools = (turn: AiConversationTurn, canRead: boolean, finalOnly = false, artifactRequested = false, proposalRequested = false) =>
+  const availableTools = (
+    turn: AiConversationTurn,
+    canRead: boolean,
+    finalOnly = false,
+    artifactRequested = false,
+    proposalRequested = false
+  ) =>
     finalOnly
       ? []
       : [
@@ -188,7 +211,11 @@ export function createAiAgentWorker({
   }
 
   // 用量明细只含模型名、token 数和对话 ID；结果未知时 token 为空，仍记录这次请求发生过。
-  const usageDetail = (turn: AiConversationTurn, request: GatewayRequest, usage: GatewayResult['usage'] | null): NonNullable<BudgetSettlement['usage']> => ({
+  const usageDetail = (
+    turn: AiConversationTurn,
+    request: GatewayRequest,
+    usage: GatewayResult['usage'] | null
+  ): NonNullable<BudgetSettlement['usage']> => ({
     modelId: request.modelId!,
     conversationId: turn.conversationId,
     ...(usage?.unknown === false
@@ -200,7 +227,13 @@ export function createAiAgentWorker({
       : {})
   });
 
-  async function settleOnFailure(attemptId: string, reserved: boolean, sent: boolean, error: unknown, detail: BudgetSettlement['usage']) {
+  async function settleOnFailure(
+    attemptId: string,
+    reserved: boolean,
+    sent: boolean,
+    error: unknown,
+    detail: BudgetSettlement['usage']
+  ) {
     if (!reserved) return;
     const disposition = sent ? 'unknown' : 'released';
     try {
@@ -210,13 +243,23 @@ export function createAiAgentWorker({
       return;
     }
     try {
-      await store!.advanceModelAttempt(attemptId, disposition, { errorCode: safeCode((error as Partial<AppError> | null)?.code) });
+      await store!.advanceModelAttempt(attemptId, disposition, {
+        errorCode: safeCode((error as Partial<AppError> | null)?.code)
+      });
     } catch (fault) {
       logger.warn?.('Agent attempt settlement deferred', { code: safeCode((fault as Partial<AppError> | null)?.code) });
     }
   }
 
-  async function paidCall(turn: AiConversationTurn, generation: number, request: AgentRequest, manifest: AgentManifest | null, grantId: string | null, credentialRef: string, signal: AbortSignal) {
+  async function paidCall(
+    turn: AiConversationTurn,
+    generation: number,
+    request: AgentRequest,
+    manifest: AgentManifest | null,
+    grantId: string | null,
+    credentialRef: string,
+    signal: AbortSignal
+  ) {
     if (provider !== 'mock' && !allowExternal) fail('AI_EGRESS_NOT_READY', '当前运行端未启用模型外发。');
     if ((await store!.listModelAttempts(turn.turnId)).length >= MAX_ATTEMPTS)
       fail('AI_ATTEMPT_LIMIT', '模型调用次数已达到上限。');
@@ -231,7 +274,9 @@ export function createAiAgentWorker({
     });
     if (quote.priceStale && !priceStaleWarned) {
       priceStaleWarned = true;
-      logger.warn?.('AI price profile is past its review date; costs are estimates', { version: priceProfile!.version });
+      logger.warn?.('AI price profile is past its review date; costs are estimates', {
+        version: priceProfile!.version
+      });
     }
     if (manifest && manifest.payloadHash !== quote.payloadHash) fail('AI_PAYLOAD_STALE', '实际请求与发送清单不一致。');
     const attemptId = randomUUID(),
@@ -272,7 +317,12 @@ export function createAiAgentWorker({
       await currentTurn(turn.turnId, generation, signal);
       if (beijingDay(now()) !== day) fail('AI_BUDGET_DAY_CHANGED', '预算日期已切换。');
       if (manifest)
-        await access!.assertRequest({ grantId: grantId!, manifestId: manifest.manifestId, request, recipient: 'deepseek' });
+        await access!.assertRequest({
+          grantId: grantId!,
+          manifestId: manifest.manifestId,
+          request,
+          recipient: 'deepseek'
+        });
       quoteWorstCase({
         request,
         priceProfile,
@@ -293,7 +343,12 @@ export function createAiAgentWorker({
         verifyBeforeSend: async () => {
           await currentTurn(turn.turnId, generation, signal);
           if (manifest)
-            await access!.assertRequest({ grantId: grantId!, manifestId: manifest.manifestId, request, recipient: 'deepseek' });
+            await access!.assertRequest({
+              grantId: grantId!,
+              manifestId: manifest.manifestId,
+              request,
+              recipient: 'deepseek'
+            });
         }
       });
       const usage = result.usage;
@@ -423,7 +478,11 @@ export function createAiAgentWorker({
     if (persisted.status !== 'requested') {
       for (const ref of persisted.sourceRefs) await verifyRef(grantId, ref);
       if ((persisted.resultJson as RawToolResult | null)?.actionId)
-        await actions!.resumeForTurn((persisted.resultJson as RawToolResult).actionId as string, turn, { grantId, sourceRefs, catalogDeps });
+        await actions!.resumeForTurn((persisted.resultJson as RawToolResult).actionId as string, turn, {
+          grantId,
+          sourceRefs,
+          catalogDeps
+        });
       return toolOutcome(persisted);
     }
     let receiptPending = false;
@@ -455,7 +514,12 @@ export function createAiAgentWorker({
           sourceRefs: []
         };
       } else if (call.name === 'notes_search') {
-        const found = await searchAssistantNotes({ search: search!, access: access!, grantId: grantId!, args: call.arguments });
+        const found = await searchAssistantNotes({
+          search: search!,
+          access: access!,
+          grantId: grantId!,
+          args: call.arguments
+        });
         outcome = {
           resultJson: {
             hits: found.hits.map(hit => ({ noteId: hit.noteId, title: hit.title, ref: hit.ref, text: hit.text })),
@@ -475,7 +539,12 @@ export function createAiAgentWorker({
         };
       } else if (call.name === 'notes_read') outcome = await readTool(grantId!, call.arguments);
       else if (call.name === 'annotations_list' && annotations && !turn.writeIntent) {
-        outcome = await listAnnotatedRanges({ access: access!, repository: annotations, grantId: grantId!, args: call.arguments });
+        outcome = await listAnnotatedRanges({
+          access: access!,
+          repository: annotations,
+          grantId: grantId!,
+          args: call.arguments
+        });
       } else if (
         call.name === 'knowledge_propose' &&
         proposalsOn &&
@@ -519,7 +588,9 @@ export function createAiAgentWorker({
     } catch (error) {
       if (!receiptPending && (!writeCall || deterministicWriteFailure((error as Partial<AppError> | null)?.code)))
         await store!
-          .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode((error as Partial<AppError> | null)?.code) })
+          .settleToolCall(turn.turnId, generation, callId, {
+            errorCode: safeCode((error as Partial<AppError> | null)?.code)
+          })
           .catch(() => undefined);
       if (
         [
@@ -533,7 +604,7 @@ export function createAiAgentWorker({
           'AI_PROPOSAL_CITATION_INVALID',
           'AI_PROPOSAL_INVALID',
           'AI_PROPOSAL_DUPLICATE'
-        ].includes((error as Partial<AppError> | null)?.code!)
+        ].includes((error as Partial<AppError> | null)?.code as string)
       ) {
         return {
           sourceRefs: [],
@@ -541,7 +612,9 @@ export function createAiAgentWorker({
           fallback: false,
           inspected: 0,
           errorCode: safeCode((error as Partial<AppError> | null)?.code),
-          ...(typeof (error as { hint?: unknown } | null)?.hint === 'string' ? { hint: (error as { hint: string }).hint.slice(0, 300) } : {})
+          ...(typeof (error as { hint?: unknown } | null)?.hint === 'string'
+            ? { hint: (error as { hint: string }).hint.slice(0, 300) }
+            : {})
         };
       }
       throw error;
@@ -565,22 +638,33 @@ export function createAiAgentWorker({
       sourceRefs: outcome.sourceRefs ?? [],
       truncated: (outcome.resultJson as RawToolResult | null)?.truncated === true,
       fallback: (outcome.resultJson as RawToolResult | null)?.mode === 'keyword_fallback',
-      inspected: ((outcome.resultJson as RawToolResult | null)?.inspected ?? 0),
+      inspected: (outcome.resultJson as RawToolResult | null)?.inspected ?? 0,
       actionId: (outcome.resultJson as RawToolResult | null)?.actionId,
       catalog: (outcome.resultJson as RawToolResult | null)?.catalog === true,
       progress: (outcome.resultJson as RawToolResult | null)?.status === 'saved',
-      external: (outcome.resultJson as RawToolResult | null)?.sourceType === 'external' ? outcome.resultJson as { hits: unknown } : null,
+      external:
+        (outcome.resultJson as RawToolResult | null)?.sourceType === 'external'
+          ? (outcome.resultJson as { hits: unknown })
+          : null,
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
       ...(outcome.hint ? { hint: outcome.hint } : {})
     };
   }
 
-  async function draftForContinuation(turn: AiConversationTurn, prior: AiConversationMessage[], grantId: string | undefined, content: string) {
+  async function draftForContinuation(
+    turn: AiConversationTurn,
+    prior: AiConversationMessage[],
+    grantId: string | undefined,
+    content: string
+  ) {
     if (!actions || !/(短|长|精简|扩写|补充|继续|再|改|调整|删|加|润色|这份|这个|它)/.test(content)) return '';
     const last = prior.at(-1);
     if (last?.role !== 'assistant') return '';
     const calls = await store!.listToolCalls(last.turnId);
-    const actionId = (calls.findLast(call => call.status === 'succeeded' && (call.resultJson as RawToolResult | null)?.actionId) as (typeof calls)[number] & { resultJson: RawToolResult } | undefined)?.resultJson.actionId;
+    const actionId = (
+      calls.findLast(call => call.status === 'succeeded' && (call.resultJson as RawToolResult | null)?.actionId) as
+        ((typeof calls)[number] & { resultJson: RawToolResult }) | undefined
+    )?.resultJson.actionId;
     if (!actionId) return '';
     const action = await actions!.get(actionId as string);
     if (
@@ -753,13 +837,10 @@ export function createAiAgentWorker({
       const matched = await access!.matchCatalogFolders({ grantId: grant.grantId, text: user.content }).catch(() => []);
       const ranked = rankHighlights ? { sortBy: 'annotations', limit: 10 } : {};
       const plans: ['notes_list' | 'folders_list', import('./catalog-tool.ts').CatalogArguments][] = matched.length
-        ? matched.map(
-            (item): ['notes_list', import('./catalog-tool.ts').CatalogArguments] =>
-              ([
-                'notes_list',
-                { folderId: item.folderId, ...(rankHighlights ? { ...ranked, recursive: true } : {}) }
-              ])
-          )
+        ? matched.map((item): ['notes_list', import('./catalog-tool.ts').CatalogArguments] => [
+            'notes_list',
+            { folderId: item.folderId, ...(rankHighlights ? { ...ranked, recursive: true } : {}) }
+          ])
         : rankHighlights
           ? [['notes_list', ranked]]
           : [['folders_list', {}]];
@@ -781,7 +862,9 @@ export function createAiAgentWorker({
           });
         } catch (error) {
           await store!
-            .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode((error as Partial<AppError> | null)?.code) })
+            .settleToolCall(turn.turnId, generation, callId, {
+              errorCode: safeCode((error as Partial<AppError> | null)?.code)
+            })
             .catch(() => undefined);
           if ((error as Partial<AppError> | null)?.code === 'AI_CANCELLED') throw error;
         }
@@ -806,7 +889,12 @@ export function createAiAgentWorker({
         if (initialCall.status === 'requested')
           await store!.settleToolCall(turn.turnId, generation, callId, {
             resultJson: {
-              hits: (initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => ({ noteId: hit.noteId, title: hit.title, ref: hit.ref, text: hit.text })),
+              hits: (initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => ({
+                noteId: hit.noteId,
+                title: hit.title,
+                ref: hit.ref,
+                text: hit.text
+              })),
               inspected: initial.inspected,
               truncated: initial.truncated,
               mode: initial.mode,
@@ -814,12 +902,17 @@ export function createAiAgentWorker({
             },
             sourceRefs: (initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => hit.ref)
           });
-        sourceRefs = uniqueRefs([...sourceRefs, ...(initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => hit.ref)]).slice(-12);
+        sourceRefs = uniqueRefs([
+          ...sourceRefs,
+          ...(initial.hits as NonNullable<InitialSearchResult['hits']>).map(hit => hit.ref)
+        ]).slice(-12);
         searchTruncated = initial.truncated as boolean;
         searchFallback = initial.mode === 'keyword_fallback';
       } catch (error) {
         await store!
-          .settleToolCall(turn.turnId, generation, callId, { errorCode: safeCode((error as Partial<AppError> | null)?.code) })
+          .settleToolCall(turn.turnId, generation, callId, {
+            errorCode: safeCode((error as Partial<AppError> | null)?.code)
+          })
           .catch(() => undefined);
         throw error;
       }
@@ -846,7 +939,8 @@ export function createAiAgentWorker({
             folderIds: [...new Set([...(inheritedCatalog?.folderIds ?? []), ...resumed.folderIds])]
           };
         } catch (error) {
-          if (!['AI_SCOPE_FORBIDDEN', 'AI_SOURCE_STALE'].includes((error as Partial<AppError> | null)?.code!)) throw error;
+          if (!['AI_SCOPE_FORBIDDEN', 'AI_SOURCE_STALE'].includes((error as Partial<AppError> | null)?.code as string))
+            throw error;
           await store!.rejectModelResult(turn.turnId, generation, pending.ordinal, 'AI_OUTPUT_INVALID');
           fail('AI_SOURCE_STALE', '恢复的回答依赖的目录或笔记已不在授权范围内，请重试本轮。');
         }
@@ -1117,7 +1211,10 @@ export function createAiAgentWorker({
         turn = await store!.claimTurn(turnId, 300_000, { mode });
         await runClaimed(turn, controller.signal);
       } catch (error) {
-        if (turn) await store!.failTurn(turnId, turn.leaseGeneration, safeCode((error as Partial<AppError> | null)?.code)).catch(() => undefined);
+        if (turn)
+          await store!
+            .failTurn(turnId, turn.leaseGeneration, safeCode((error as Partial<AppError> | null)?.code))
+            .catch(() => undefined);
         throw error;
       } finally {
         clearTimeout(timer);
@@ -1141,7 +1238,9 @@ export function createAiAgentWorker({
         await budget!.settle({ accountRef, attemptId: attempt.attemptId, disposition: 'unknown' });
       } catch (error) {
         if ((error as AppError).code !== 'AI_BUDGET_NOT_FOUND' && (error as AppError).code !== 'AI_BUDGET_CONFLICT') {
-          logger.warn?.('Agent budget recovery deferred', { code: safeCode((error as Partial<AppError> | null)?.code) });
+          logger.warn?.('Agent budget recovery deferred', {
+            code: safeCode((error as Partial<AppError> | null)?.code)
+          });
           continue;
         }
       }
