@@ -43,11 +43,16 @@ export interface AssistantRuntime {
   gateway?: Pick<ReturnType<typeof createAiGateway>, 'capabilities'> | null;
   actions?: object | null;
   budgetAuthority?:
-    | {
-        [Method in 'status' | 'usage' | 'usageRows' | 'settle']: (
+    | ({
+        [Method in 'status' | 'usage' | 'usageRows']: (
           ...args: Parameters<BudgetAuthority[Method]>
         ) => AiAwaitable<ReturnType<BudgetAuthority[Method]>>;
-      }
+      } & {
+        // PostgreSQL 结算事务可不返回记录；助手仅等待完成，不读取该回执。
+        settle(
+          ...args: Parameters<BudgetAuthority['settle']>
+        ): AiAwaitable<Awaited<ReturnType<BudgetAuthority['settle']>> | undefined>;
+      })
     | null;
   budgetPolicy?: Pick<ReturnType<typeof createBudgetPolicy>, 'view' | 'balanceBelowFloor'> | null;
   budgetSettings?: Pick<ReturnType<typeof createBudgetSettingsStore>, 'get' | 'set'> | null;
