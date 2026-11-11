@@ -44,7 +44,7 @@ import {
   createPostgresAnnotationExclusionRepository,
   createPostgresAnnotationRevisionRepository
 } from './infrastructure/postgres/annotation-support-repositories.ts';
-import { createAsyncAnnotationScopeService } from './application/postgres-async/annotation-scope-service.js';
+import { createAsyncAnnotationScopeService } from './application/postgres-async/annotation-scope-service.ts';
 import { createPostgresKnowledgeSpaceRepository } from './infrastructure/postgres/knowledge-space-repository.ts';
 import { createPostgresTagGroupRepository } from './infrastructure/postgres/tag-group-repository.ts';
 import { createPostgresTagRepository } from './infrastructure/postgres/tag-repository.ts';
@@ -495,9 +495,12 @@ export function createPostgresKnowledgeModule({
     (...args) =>
       runTransaction(transaction => buildTransactionAnnotationServices(transaction).scopeService[method](...args));
   const annotationScopeService = {
+    /** @param {Parameters<typeof directScopeService.previewAnnotation>} args */
     previewAnnotation: (...args) => directScopeService.previewAnnotation(...args),
+    /** @param {Parameters<typeof directScopeService.getKnowledgeLinks>} args */
     getKnowledgeLinks: (...args) => directScopeService.getKnowledgeLinks(...args),
     previewAnalysisScope: (...args) => directScopeService.previewAnalysisScope(...args),
+    /** @param {Parameters<typeof directScopeService.getAnalysisScope>} args */
     getAnalysisScope: (...args) => directScopeService.getAnalysisScope(...args),
     createExclusion: scopeMutation('createExclusion'),
     deleteExclusion: scopeMutation('deleteExclusion'),

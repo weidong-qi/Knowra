@@ -31,7 +31,7 @@ import {
   createInMemoryAnnotationExclusionRepository,
   createInMemoryAnnotationRevisionRepository
 } from './infrastructure/annotation-support-repositories.ts';
-import { createAnnotationScopeService } from './application/annotation-scope-service.js';
+import { createAnnotationScopeService } from './application/annotation-scope-service.ts';
 import { createInMemoryNoteVersionRepository } from './infrastructure/note-version-repository.ts';
 import { createInMemoryKnowledgeItemRepository } from './infrastructure/knowledge-item-repository.ts';
 import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.ts';
