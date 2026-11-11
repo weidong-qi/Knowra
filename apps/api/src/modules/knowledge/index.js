@@ -1,4 +1,4 @@
-import { createNoteDependencyLifecycle } from './application/note-dependency-lifecycle.js';
+import { createNoteDependencyLifecycle } from './application/note-dependency-lifecycle.ts';
 import {
   degradeInlineSourceEvidence,
   marksOnlyDependencies,
@@ -6,7 +6,7 @@ import {
 } from './application/inline-annotations.js';
 import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.ts';
 import { createInMemoryPdfAnnotationRepository } from '../pdf/repository.ts';
-import { createNavigationReferencePolicy } from './application/navigation-reference-policy.js';
+import { createNavigationReferencePolicy } from './application/navigation-reference-policy.ts';
 import {
   taskCoverage,
   supplementPurgePreview,
@@ -16,7 +16,7 @@ import {
 import { createNoteService } from './application/note-service.js';
 import { createFolderService } from './application/folder-service.ts';
 import { createTagService } from './application/tag-service.ts';
-import { createTagGroupService } from './application/tag-group-service.js';
+import { createTagGroupService } from './application/tag-group-service.ts';
 import { createKnowledgeSpaceService } from './application/knowledge-space-service.ts';
 import { createSearchService } from './application/search-service.ts';
 import { createContentAnnotationService } from './application/content-annotation-service.ts';
@@ -45,7 +45,7 @@ import { createInMemoryQuestionObjectiveRepository } from './infrastructure/ques
 import { createInMemoryQuestionSourceRepository } from './infrastructure/question-source-repository.js';
 import { createNoteVersionService } from './application/note-version-service.ts';
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
-import { NOTE_VERSION_COALESCE_WINDOW_MS, selectCoalescibleVersion } from './application/note-version-coalescing.js';
+import { NOTE_VERSION_COALESCE_WINDOW_MS, selectCoalescibleVersion } from './application/note-version-coalescing.ts';
 import { createKnowledgeItemService } from './application/knowledge-item-service.ts';
 import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
 import { createLearningObjectiveService } from './application/learning-objective-service.ts';

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
-import { selectCoalescibleVersion } from '../src/modules/knowledge/application/note-version-coalescing.js';
+import { selectCoalescibleVersion } from '../src/modules/knowledge/application/note-version-coalescing.ts';
 
 const minute = 60 * 1000;
 const at = offsetMs => new Date(Date.UTC(2026, 0, 1) + offsetMs).toISOString();

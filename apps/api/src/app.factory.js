@@ -35,7 +35,7 @@ import {
   createInMemoryAnnotationRevisionRepository
 } from './modules/knowledge/infrastructure/annotation-support-repositories.js';
 import { createKnowledgeBaseSnapshotService } from './modules/knowledge/application/knowledge-base-snapshot-service.ts';
-import { createNoteDeletionCoordinator } from './modules/knowledge/application/note-deletion-coordinator.js';
+import { createNoteDeletionCoordinator } from './modules/knowledge/application/note-deletion-coordinator.ts';
 import { createStorageConfig } from './config/storage.config.js';
 import { createLocalSyncService } from './modules/sync/local-provider.ts';
 import { createModelSettingsService } from './modules/ai/model-settings.ts';

@@ -274,7 +274,7 @@ export const assetLifecycleStage0Tests = [
     name: 'PostgreSQL 笔记清理在事务内阻止其他资产共用附件',
     async run() {
       const { createAsyncNoteDeletionCoordinator } =
-        await import('../src/modules/knowledge/application/postgres-async/note-deletion-coordinator.js');
+        await import('../src/modules/knowledge/application/postgres-async/note-deletion-coordinator.ts');
       let deleted = false;
       let includeOther = true;
       const coordinator = createAsyncNoteDeletionCoordinator({

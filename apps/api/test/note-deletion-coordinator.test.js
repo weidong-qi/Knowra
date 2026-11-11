@@ -5,7 +5,7 @@ export const noteDeletionCoordinatorTests = [
     name: 'note deletion coordinator removes annotations and attachment metadata before file cleanup',
     async run() {
       const { createNoteDeletionCoordinator } =
-        await import('../src/modules/knowledge/application/note-deletion-coordinator.js');
+        await import('../src/modules/knowledge/application/note-deletion-coordinator.ts');
       const events = [];
       const notes = [
         {
@@ -74,7 +74,7 @@ export const noteDeletionCoordinatorTests = [
     name: 'note deletion coordinator cleans all recycled note dependents in one transaction',
     async run() {
       const { createNoteDeletionCoordinator } =
-        await import('../src/modules/knowledge/application/note-deletion-coordinator.js');
+        await import('../src/modules/knowledge/application/note-deletion-coordinator.ts');
       const removed = [];
       const notes = [
         { id: 'note-a', spaceId: 'space-1', deleted: true },

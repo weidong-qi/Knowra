@@ -4,10 +4,10 @@ import {
   marksOnlyDependencies,
   withInlineAnnotations
 } from './application/inline-annotations.js';
-import { createAsyncNoteDependencyLifecycle } from './application/postgres-async/note-dependency-lifecycle.js';
+import { createAsyncNoteDependencyLifecycle } from './application/postgres-async/note-dependency-lifecycle.ts';
 import { createAsyncSpaceAssetLifecycle } from './application/postgres-async/space-asset-lifecycle.ts';
 import { createPostgresPdfAnnotationRepository } from '../pdf/repository.ts';
-import { createAsyncNavigationReferencePolicy } from './application/postgres-async/navigation-reference-policy.js';
+import { createAsyncNavigationReferencePolicy } from './application/postgres-async/navigation-reference-policy.ts';
 import {
   asyncTaskCoverage,
   supplementPurgePreview,
@@ -17,7 +17,7 @@ import {
 import { createAsyncNoteService } from './application/postgres-async/note-service.js';
 import { createAsyncFolderService } from './application/postgres-async/folder-service.ts';
 import { createAsyncTagService } from './application/postgres-async/tag-service.ts';
-import { createAsyncTagGroupService } from './application/postgres-async/tag-group-service.js';
+import { createAsyncTagGroupService } from './application/postgres-async/tag-group-service.ts';
 import { createAsyncKnowledgeSpaceService } from './application/postgres-async/space-service.ts';
 import { createAsyncContentAnnotationService } from './application/postgres-async/content-annotation-service.ts';
 import { createAsyncNoteVersionService } from './application/note-version-service.ts';

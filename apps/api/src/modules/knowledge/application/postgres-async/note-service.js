@@ -4,7 +4,7 @@ import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.ts';
 import { createNoteSummary } from '../note-summary.ts';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
 import { createAsyncNoteAssociationOperations } from './note-association-operations.ts';
-import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from '../note-link-relations.js';
+import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from '../note-link-relations.ts';
 
 /** @param {import('./service-dependencies.ts').NoteDependencies} dependencies */
 export function createAsyncNoteService({

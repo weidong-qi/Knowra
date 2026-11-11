@@ -55,7 +55,7 @@ import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contr
 import { assertTodoSyncChange } from './todo-batch-domain.ts';
 import { syncError } from './journal.ts';
 import { validateKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
-import { addedNoteLinkTargets } from '../knowledge/application/note-link-relations.js';
+import { addedNoteLinkTargets } from '../knowledge/application/note-link-relations.ts';
 import {
   applyInlineAnnotationChanges,
   INLINE_KEY_PREFIX,

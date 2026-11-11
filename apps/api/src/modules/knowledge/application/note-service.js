@@ -5,7 +5,7 @@ import { createNoteSummary } from './note-summary.ts';
 import { createInMemoryNoteRepository } from '../infrastructure/note-repository.js';
 import { conflictError, notFoundError, validationError } from './knowledge-errors.js';
 import { createNoteAssociationOperations } from './note-association-operations.ts';
-import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from './note-link-relations.js';
+import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from './note-link-relations.ts';
 
 export function createNoteService({
   repository = createInMemoryNoteRepository(),
