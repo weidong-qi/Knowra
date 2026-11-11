@@ -1,3 +1,15 @@
+import type {
+  LocalAttachmentDataStore,
+  AttachmentOperationError,
+  AttachmentRestoreBody
+} from './local-attachment-types.ts';
+
+interface LocalAttachmentStoreOptions {
+  dataStore: LocalAttachmentDataStore & { flush(): void };
+  uploadsDir?: string;
+  storageRootDir?: string;
+  legacyUploadsDirs?: string[];
+}
 import {
   inspectAttachmentFile,
   assertReadableStatus,
@@ -23,7 +35,7 @@ export function createLocalAttachmentStore({
   uploadsDir = path.join('storage', 'uploads'),
   storageRootDir = process.cwd(),
   legacyUploadsDirs = []
-}) {
+}: LocalAttachmentStoreOptions) {
   if (!dataStore) {
     throw new Error('Attachment store requires a data store');
   }
@@ -60,24 +72,23 @@ export function createLocalAttachmentStore({
 
   reconcileStoredAttachments();
 
-  /** @param {{noteId?: string}} query */
-  function listAttachments({ noteId } = {}) {
+  function listAttachments({ noteId }: { noteId?: string } = {}) {
     return dataStore.state.attachments
       .filter(attachment => (noteId ? attachment.noteId === noteId : true))
-      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+      .sort((left, right) => new Date(right.createdAt!).getTime() - new Date(left.createdAt!).getTime());
   }
 
-  function getAttachment(attachmentId) {
+  function getAttachment(attachmentId: string | undefined) {
     return dataStore.state.attachments.find(attachment => attachment.id === attachmentId) ?? null;
   }
 
-  function requiredAttachment(id) {
+  function requiredAttachment(id: string | undefined) {
     const attachment = getAttachment(id);
     if (!attachment) throw createAppError('ATTACHMENT_NOT_FOUND', '附件不存在。', 404);
     return attachment;
   }
 
-  function verifyAttachment(id) {
+  function verifyAttachment(id: string | undefined) {
     const attachment = requiredAttachment(id);
     const previous = { ...attachment };
     const { content, ...health } = inspectAttachmentFile(attachment, fileManager);
@@ -93,7 +104,7 @@ export function createLocalAttachmentStore({
     return requiredAttachment(id);
   }
 
-  function readAttachmentContent(id) {
+  function readAttachmentContent(id: string | undefined) {
     const attachment = requiredAttachment(id);
     assertReadableStatus(attachment);
     const health = inspectAttachmentFile(attachment, fileManager);
@@ -104,7 +115,7 @@ export function createLocalAttachmentStore({
     return { attachment, content: health.content };
   }
 
-  function restoreAttachment(id, body) {
+  function restoreAttachment(id: string, body: AttachmentRestoreBody) {
     const original = { ...requiredAttachment(id) };
     const transaction = prepareAttachmentRestore(original, body, fileManager);
     try {
@@ -126,7 +137,7 @@ export function createLocalAttachmentStore({
     }
   }
 
-  function renameAttachment(attachmentId, fileName) {
+  function renameAttachment(attachmentId: string, fileName: string | undefined) {
     const attachment = getAttachment(attachmentId);
     if (!attachment) {
       throw createAppError('ATTACHMENT_NOT_FOUND', 'Attachment not found', 404);
@@ -151,7 +162,7 @@ export function createLocalAttachmentStore({
     );
 
     if (fileMoved) {
-      moveFileSafely(currentReadablePath, nextAbsolutePath);
+      moveFileSafely(currentReadablePath!, nextAbsolutePath);
     }
 
     attachment.fileName = nextSafeName;
@@ -171,9 +182,9 @@ export function createLocalAttachmentStore({
       attachment.verifiedAt = previousVerifiedAt;
       if (fileMoved && fs.existsSync(nextAbsolutePath)) {
         try {
-          moveFileSafely(nextAbsolutePath, currentReadablePath);
+          moveFileSafely(nextAbsolutePath, currentReadablePath!);
         } catch (rollbackError) {
-          error.rollbackError = rollbackError;
+          (error as AttachmentOperationError).rollbackError = rollbackError as Error;
         }
       }
       throw error;

@@ -11,7 +11,7 @@ import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-e
 import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.ts';
 import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-handlers.js';
 import { createFileDataStore } from './infrastructure/file-data-store.js';
-import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.js';
+import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.ts';
 import { createInMemoryNoteRepository } from './modules/knowledge/infrastructure/note-repository.ts';
 import { createInMemoryPdfAnnotationRepository } from './modules/pdf/repository.ts';
 import { createInMemoryFolderRepository } from './modules/knowledge/infrastructure/folder-repository.ts';

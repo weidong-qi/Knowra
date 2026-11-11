@@ -18,7 +18,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment store uploads and lists note attachments',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-'));
       const uploadsDir = path.join(tempDir, 'uploads');
@@ -53,7 +53,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment store exports and restores attachment file contents',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-snapshot-'));
       const uploadsDir = path.join(tempDir, 'uploads');
@@ -92,7 +92,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment store deletes attachment metadata and file content together',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-delete-'));
       const uploadsDir = path.join(tempDir, 'uploads');
@@ -125,7 +125,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment upload removes the file and metadata when persistence fails',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-upload-rollback-'));
       const uploadsDir = path.join(tempDir, 'uploads');
       const dataStore = {
@@ -158,7 +158,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment delete keeps the file and metadata when persistence fails',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-delete-rollback-'));
       const uploadsDir = path.join(tempDir, 'uploads');
       let rejectFlush = false;
@@ -192,7 +192,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment store renames attachment metadata and file path together',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-rename-'));
       const uploadsDir = path.join(tempDir, 'uploads');
@@ -231,7 +231,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment store keeps chinese attachment file names when renaming',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-rename-cn-'));
       const uploadsDir = path.join(tempDir, 'uploads');
@@ -263,7 +263,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'local attachment rename restores the old path and metadata when persistence fails',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-rename-rollback-'));
       const uploadsDir = path.join(tempDir, 'uploads');
       let rejectFlush = false;
@@ -300,7 +300,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'readAttachmentContent returns 404 when the attachment record is missing',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-missing-record-'));
       const dataStore = { state: { attachments: [] }, flush() {} };
@@ -325,7 +325,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'readAttachmentContent returns 404 when the file is missing on disk',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-missing-file-'));
       const uploadsDir = path.join(tempDir, 'uploads');
@@ -368,7 +368,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'createLocalAttachmentStore normalizes Windows-style attachment paths to the current runtime uploads directory',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-portable-path-'));
       const uploadsDir = path.join(tempDir, 'storage', 'uploads');
@@ -411,7 +411,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'createLocalAttachmentStore migrates legacy api upload files into the active runtime uploads directory',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-legacy-migrate-'));
       const uploadsDir = path.join(tempDir, 'storage', 'uploads');
@@ -458,7 +458,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'attachment records cannot read or delete files outside the managed uploads directory',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-containment-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
@@ -552,7 +552,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'attachment reads and deletes never follow a managed-file symbolic link',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-symlink-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
@@ -609,7 +609,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'legacy attachment migration refuses symbolic links that escape a trusted legacy directory',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const tempContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-legacy-symlink-'));
       const storageRootDir = path.join(tempContainer, 'workspace');
       const uploadsDir = path.join(storageRootDir, 'storage', 'uploads');
@@ -666,7 +666,7 @@ export const localAttachmentStoreTests = [
   {
     name: 'deleteAttachment returns 404 when the record is missing',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'study-attachments-delete-missing-'));
       const dataStore = { state: { attachments: [] }, flush() {} };

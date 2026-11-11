@@ -1,6 +1,6 @@
 import type { PostgresTransactionHost } from './postgres-transaction-port.ts';
 import type { createMaintenanceGate } from './maintenance-gate.ts';
-import type { createPostgresAttachmentStore } from './postgres-attachment-store.js';
+import type { createPostgresAttachmentStore } from './postgres-attachment-store.ts';
 import type { createPostgresAttachmentRepository } from '../modules/knowledge/infrastructure/postgres/attachment-repository.ts';
 import type { loadPostgresAttachmentReferenceState } from './attachment-deletion-preflight.ts';
 
@@ -9,9 +9,9 @@ export interface PostgresAttachmentStoreOptions {
   uploadsDir?: string;
   storageRootDir?: string;
   legacyUploadsDirs?: string[];
-  validateAttachmentNote?: (noteId: string) => Promise<void>;
-  loadReferenceState?: () => ReturnType<typeof loadPostgresAttachmentReferenceState>;
-  runTransaction?: <T>(operation: () => Promise<T>) => Promise<T>;
+  validateAttachmentNote?: ((noteId: string) => Promise<void>) | null;
+  loadReferenceState?: (() => ReturnType<typeof loadPostgresAttachmentReferenceState>) | null;
+  runTransaction?: (<T>(operation: () => Promise<T>) => Promise<T>) | null;
 }
 
 export interface PostgresSnapshotOptions {
@@ -20,8 +20,8 @@ export interface PostgresSnapshotOptions {
   attachmentStore?: ReturnType<typeof createPostgresAttachmentStore>;
   storageRootDir?: string;
   ownerId?: string;
-  maintenanceGate?: ReturnType<typeof createMaintenanceGate>;
-  aiRepository?: { rotateEpoch: () => Promise<string> };
+  maintenanceGate?: ReturnType<typeof createMaintenanceGate> | null;
+  aiRepository?: { rotateEpoch: () => Promise<string> } | null;
 }
 
 export interface SnapshotRepositories {

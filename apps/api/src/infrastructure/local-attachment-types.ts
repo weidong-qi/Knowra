@@ -44,6 +44,8 @@ export interface AttachmentFileManager {
 /** IO 与宿主提交错误仍原样抛出，只在原对象上保留既有诊断字段。 */
 export interface AttachmentOperationError extends Partial<AppError> {
   cleanupError?: Error;
+  rollbackError?: Error;
+  recordLookupError?: Error;
   restoreError?: Error;
   statusPersistError?: Error;
 }

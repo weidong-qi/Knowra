@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createLocalAttachmentStore } from '../src/infrastructure/local-attachment-store.js';
+import { createLocalAttachmentStore } from '../src/infrastructure/local-attachment-store.ts';
 import { createAttachmentCleanupQueue } from '../src/infrastructure/attachment-cleanup-queue.ts';
 import { createLocalAttachmentFileManager } from '../src/infrastructure/local-attachment-file-manager.ts';
 import { prepareAttachmentRestore } from '../src/infrastructure/attachment-recovery.ts';
