@@ -13,7 +13,7 @@ import {
   acknowledgeEntityUpload
 } from '../src/entity-sync-state.mjs';
 import { applyRemote, nextUpload, acknowledge, resolveConflict } from '../src/sync-state.mjs';
-import { isAiReadableNote } from '../../api/src/modules/ai/note-privacy.js';
+import { isAiReadableNote } from '../../api/src/modules/ai/note-privacy.ts';
 import { openWorkspace, temporaryDirectory } from './helpers.mjs';
 
 test('普通缺省、非法值拒绝；旧PATCH及旧笔记同步缺省保留私密状态', () => {

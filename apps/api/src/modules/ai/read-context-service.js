@@ -3,7 +3,7 @@ import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { hashRecord, manifestHash, scopeHash } from './record-contract.ts';
 import { normalizeAiRequest } from './gateway.js';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
-import { isAiReadableNote, assertAiNoteUnchanged, assertAiSourcesReadable } from './note-privacy.js';
+import { isAiReadableNote, assertAiNoteUnchanged, assertAiSourcesReadable } from './note-privacy.ts';
 
 const MAX_SOURCES = 128;
 const CHUNK_CHARS = 1000;

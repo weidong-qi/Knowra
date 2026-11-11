@@ -1,6 +1,6 @@
 import { actionError } from './action-state.js';
 import organizeParameters from './contracts/note-organize-v1.schema.json' with { type: 'json' };
-import { NOTE_WRITE_TOOLS } from './note-plan.js';
+import { NOTE_WRITE_TOOLS } from './note-plan.ts';
 export type WriteIntent =
   | { toolName: 'notes_create'; noteId?: undefined }
   | { toolName: 'notes_append' | 'notes_propose_patch' | 'notes_propose_organize'; noteId: string };

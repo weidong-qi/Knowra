@@ -1,11 +1,11 @@
-import { assertAiReadableNote } from './note-privacy.js';
+import { assertAiReadableNote } from './note-privacy.ts';
 import { createActionInboxMethods, createAssistantMessageSourceGuard } from './action-inbox.js';
 import { validateWriteIntent } from './note-write-intent.ts';
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.ts';
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { actionError, actionIdentityKeys, DRAFT_LEASE_MS } from './action-state.js';
-import { assertBaseline, baseline, buildActionPlan, finalizePlan, image, runAsync, runSync } from './action-plan.js';
+import { assertBaseline, baseline, buildActionPlan, finalizePlan, image, runAsync, runSync } from './action-plan.ts';
 import { reuseCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';
 
 const id = value => typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value;

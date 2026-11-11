@@ -11,7 +11,7 @@ import {
   assertAiReadableNote,
   assertAiNoteUnchanged,
   assertAiSourcesReadable
-} from './note-privacy.js';
+} from './note-privacy.ts';
 
 const read = value => Promise.resolve(value);
 const validId = value => typeof value === 'string' && value.length > 0 && value.length <= 128;

@@ -1,6 +1,6 @@
 import { fork } from 'node:child_process';
 import { AiGatewayError } from './gateway.js';
-import { watchChildResources } from './process-resource-guard.js';
+import { watchChildResources } from './process-resource-guard.ts';
 
 export const AI_PROCESS_LIMITS = Object.freeze({
   concurrency: 2,

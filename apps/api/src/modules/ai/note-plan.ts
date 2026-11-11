@@ -1,4 +1,17 @@
-import { assertAiReadableNote } from './note-privacy.js';
+import type { AppError } from '../../errors/app-error.ts';
+import type {
+  NoteWriteInput,
+  NoteWriteArguments,
+  CreateNoteArguments,
+  AppendNoteArguments,
+  PatchNoteArguments,
+  NoteImage,
+  NoteEdit,
+  NoteBaseline,
+  NotePlanIdentity
+} from './note-plan-types.ts';
+type NativeDateConstructor = new (value: unknown) => Date;
+import { assertAiReadableNote } from './note-privacy.ts';
 import Ajv2020 from 'ajv/dist/2020.js';
 import schema from './contracts/note-tools-v1.schema.json' with { type: 'json' };
 import { hashRecord } from './record-contract.ts';
@@ -14,30 +27,29 @@ export const NOTE_WRITE_TOOLS = freeze(
   Object.entries(schema.$defs).map(([name, parameters]) => ({
     name,
     toolVersion: 1,
-    description: descriptions[name],
+    description: descriptions[name as keyof typeof descriptions],
     parameters
   }))
 );
-const ajv = new /** @type {typeof import('ajv/dist/2020.js').Ajv2020} */ (/** @type {unknown} */ (Ajv2020))({
+const ajv = new (Ajv2020 as unknown as typeof import('ajv/dist/2020.js').Ajv2020)({
   strict: false,
   allErrors: true
 });
 const validators = Object.fromEntries(
   Object.entries(schema.$defs).map(([name, definition]) => [name, ajv.compile(definition)])
 );
-const fail = (code, message) => {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+const fail: (code: string, message: string) => never = (code, message) => {
+  const error = new Error(message) as AppError;
   error.code = code;
   throw error;
 };
-const id = value =>
+const id = (value: unknown) =>
   typeof value === 'string' &&
   value.length > 0 &&
   value.length <= 200 &&
   value.trim() === value &&
   !Array.from(value).some(character => character.charCodeAt(0) <= 31);
-const boundary = (text, offset) =>
+const boundary = (text: string, offset: number) =>
   offset === 0 ||
   offset === text.length ||
   !(
@@ -46,7 +58,7 @@ const boundary = (text, offset) =>
     text.charCodeAt(offset) >= 0xdc00 &&
     text.charCodeAt(offset) <= 0xdfff
   );
-function freeze(value) {
+function freeze<T>(value: T): T {
   if (value && typeof value === 'object') {
     Object.values(value).forEach(freeze);
     Object.freeze(value);
@@ -55,10 +67,10 @@ function freeze(value) {
 }
 
 /** 此处只形成不可变计划，不判断写授权、不提交业务；trusted 只由宿主提供。 */
-export function createNoteWritePlan({ toolName, arguments: input, trusted }) {
+export function createNoteWritePlan({ toolName, arguments: input, trusted }: NoteWriteInput) {
   const validate = typeof toolName === 'string' && Object.hasOwn(validators, toolName) ? validators[toolName] : null;
   if (!validate || !validate(input)) fail('AI_NOTE_TOOL_INVALID', '笔记工具字段不符合白名单。');
-  const args = structuredClone(input);
+  const args = structuredClone(input) as unknown as NoteWriteArguments;
   const keys = [
     'actorId',
     'ownerId',
@@ -68,30 +80,36 @@ export function createNoteWritePlan({ toolName, arguments: input, trusted }) {
     'requestId',
     'operationId',
     'targetNoteId'
-  ];
+  ] as const;
   if (!trusted || keys.some(key => !id(trusted[key]))) fail('AI_NOTE_TARGET_INVALID', '缺少宿主固定的目标与请求身份。');
-  const identity = Object.fromEntries(keys.map(key => [key, trusted[key]]));
-  let before = null,
-    after,
-    edits = [],
-    baseline;
+  const identity = Object.fromEntries(keys.map(key => [key, trusted[key]])) as unknown as NotePlanIdentity;
+  let before: NoteImage | null = null,
+    after: NoteImage,
+    edits: NoteEdit[] = [],
+    baseline: NoteBaseline;
   if (toolName === 'notes_create') {
     if (trusted.note) fail('AI_NOTE_TARGET_CONFLICT', '新建目标 ID 已存在。');
-    const folderId = args.folderId ?? null,
-      tagIds = args.tagIds ?? [];
+    const folderId = (args as CreateNoteArguments).folderId ?? null,
+      tagIds = (args as CreateNoteArguments).tagIds ?? [];
     if (
       (folderId !== null && !trusted.allowedFolderIds?.includes(folderId)) ||
       tagIds.some(tag => !trusted.allowedTagIds?.includes(tag))
     )
       fail('AI_NOTE_REFERENCE_DENIED', '目录或标签不在宿主允许范围。');
-    if (!args.title.trim()) fail('AI_NOTE_TOOL_INVALID', '新笔记标题不能为空。');
-    const dto = buildCreateNoteDto({ ...args, id: trusted.targetNoteId, spaceId: trusted.spaceId, folderId, tagIds });
+    if (!(args as CreateNoteArguments).title.trim()) fail('AI_NOTE_TOOL_INVALID', '新笔记标题不能为空。');
+    const dto = buildCreateNoteDto({
+      ...(args as CreateNoteArguments),
+      id: trusted.targetNoteId,
+      spaceId: trusted.spaceId,
+      folderId,
+      tagIds
+    });
     after = {
       id: dto.id,
       spaceId: dto.spaceId,
       title: dto.title,
       folderId: dto.folderId,
-      tagIds: dto.tagIds,
+      tagIds: dto.tagIds as string[],
       rawMarkdown: dto.rawMarkdown,
       aiVisibility: 'normal'
     };
@@ -101,7 +119,7 @@ export function createNoteWritePlan({ toolName, arguments: input, trusted }) {
     if (
       !note ||
       note.id !== trusted.targetNoteId ||
-      args.noteId !== trusted.targetNoteId ||
+      (args as AppendNoteArguments | PatchNoteArguments).noteId !== trusted.targetNoteId ||
       note.spaceId !== trusted.spaceId ||
       note.deleted ||
       typeof note.rawMarkdown !== 'string'
@@ -109,7 +127,7 @@ export function createNoteWritePlan({ toolName, arguments: input, trusted }) {
       fail('AI_NOTE_TARGET_INVALID', '只能修改宿主指定的当前空间有效笔记。');
     }
     assertAiReadableNote(note);
-    const expectedUpdatedAt = new Date(note.updatedAt);
+    const expectedUpdatedAt = new (Date as NativeDateConstructor)(note.updatedAt);
     if (Number.isNaN(expectedUpdatedAt.getTime()) || note.updatedAt == null)
       fail('AI_NOTE_BASELINE_INVALID', '笔记基线时间无效。');
     before = {
@@ -144,9 +162,9 @@ export function createNoteWritePlan({ toolName, arguments: input, trusted }) {
       ) {
         fail('AI_NOTE_ANCHOR_INVALID', '追加位置不在宿主基线的合法字符边界。');
       }
-      edits = [{ start: offset, end: offset, quote: '', replacement: args.rawMarkdown }];
+      edits = [{ start: offset, end: offset, quote: '', replacement: (args as AppendNoteArguments).rawMarkdown }];
     } else {
-      edits = args.replacements.sort((a, b) => a.start - b.start);
+      edits = (args as PatchNoteArguments).replacements.sort((a, b) => a.start - b.start);
       for (let index = 0; index < edits.length; index++) {
         const edit = edits[index];
         if (

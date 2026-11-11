@@ -1,7 +1,7 @@
-import { assertAiReadableNote } from './note-privacy.js';
+import { assertAiReadableNote } from './note-privacy.ts';
 import { hashRecord } from './record-contract.ts';
 import { actionError } from './action-state.js';
-import { buildActionPlan, finalizePlan } from './action-plan.js';
+import { buildActionPlan, finalizePlan } from './action-plan.ts';
 
 const pending = ['awaitingApproval', 'authorized', 'conflicted', 'expired'];
 const validId = value => typeof value === 'string' && value.length > 0 && value.length <= 128 && value.trim() === value;

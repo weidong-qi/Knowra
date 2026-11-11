@@ -1,7 +1,12 @@
+import type { ChildProcess } from 'node:child_process';
+interface ResourceLimits {
+  cpuMs: number;
+  rssBytes: number;
+}
 import { execFile } from 'node:child_process';
 
 /** 心跳未到时从宿主读取进程资源，避免同步死循环绕过 CPU/RSS 采样。 */
-export function watchChildResources(child, limits, exceeded) {
+export function watchChildResources(child: Pick<ChildProcess, 'pid'>, limits: ResourceLimits, exceeded: () => void) {
   let lastHeartbeat = Date.now();
   let checking = false;
   const timer = setInterval(() => {
@@ -18,15 +23,17 @@ export function watchChildResources(child, limits, exceeded) {
   }, 1000);
   timer.unref?.();
   return {
-    report(resource) {
+    report(resource: Partial<ResourceLimits> | null | undefined) {
       lastHeartbeat = Date.now();
-      if (resource?.cpuMs > limits.cpuMs || resource?.rssBytes > limits.rssBytes) exceeded();
+      if ((resource?.cpuMs as number) > limits.cpuMs || (resource?.rssBytes as number) > limits.rssBytes) exceeded();
     },
-    close() { clearInterval(timer); }
+    close() {
+      clearInterval(timer);
+    }
   };
 }
 
-function parseCpuTime(value) {
+function parseCpuTime(value: string | undefined) {
   if (typeof value !== 'string') return NaN;
   const [clock, dayText = '0'] = value.includes('-') ? value.split('-').reverse() : [value, '0'];
   const parts = clock.split(':').map(Number);

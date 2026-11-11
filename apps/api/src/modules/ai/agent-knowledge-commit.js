@@ -1,9 +1,9 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.js';
 import { hashRecord } from './record-contract.ts';
-import { runAsync, runSync } from './action-plan.js';
+import { runAsync, runSync } from './action-plan.ts';
 import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.ts';
-import { assertAiReadableNote } from './note-privacy.js';
+import { assertAiReadableNote } from './note-privacy.ts';
 import {
   createKnowledgeArtifactProvenanceFromProposal,
   createKnowledgeArtifactProvenanceFromMcpProposal

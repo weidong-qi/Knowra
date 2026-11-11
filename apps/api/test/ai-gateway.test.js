@@ -3,7 +3,7 @@ import { createAiGateway, AiGatewayError } from '../src/modules/ai/gateway.js';
 import { createMockAiAdapter } from '../src/modules/ai/infrastructure/providers/mock-adapter.ts';
 import { createDeepSeekAdapter } from '../src/modules/ai/infrastructure/providers/deepseek-adapter.ts';
 import { deepSeekPayload } from '../src/modules/ai/outbound-payload.ts';
-import { runCapabilityProbe } from '../src/modules/ai/capability-probe.js';
+import { runCapabilityProbe } from '../src/modules/ai/capability-probe.ts';
 
 const messages = [{ role: 'user', content: '请总结这段合成文字。' }];
 const completion = (content, finish_reason = 'stop', extra = {}) => ({
