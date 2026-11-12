@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { createAiAssistantService } from './assistant-service.js';
+import type { createAiAssistantService } from './assistant-service.ts';
 type AssistantRoutePort = Pick<
   ReturnType<typeof createAiAssistantService>,
   | 'allowRule'
@@ -135,11 +135,19 @@ export async function handleAssistantRoute({
         return true;
       }
       if (url.pathname === `${root}/preview`) {
-        sendJson(response, 200, { data: await assistant.preview(await parseBody(request, { limitBytes: 8192 })) });
+        sendJson(response, 200, {
+          data: await assistant.preview(
+            (await parseBody(request, { limitBytes: 8192 })) as Parameters<AssistantRoutePort['preview']>[0]
+          )
+        });
         return true;
       }
       if (url.pathname === `${root}/jobs`) {
-        sendJson(response, 202, { data: await assistant.start(await parseBody(request, { limitBytes: 2048 })) });
+        sendJson(response, 202, {
+          data: await assistant.start(
+            (await parseBody(request, { limitBytes: 2048 })) as Parameters<AssistantRoutePort['start']>[0]
+          )
+        });
         return true;
       }
       if (jobMatch?.[2] === '/cancel') {

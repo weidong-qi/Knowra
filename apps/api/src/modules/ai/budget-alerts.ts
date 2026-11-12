@@ -163,14 +163,14 @@ export function createBudgetAlertStore({ filePath }: BudgetAlertStoreOptions) {
   return {
     get: () => serial(load),
     /** 标记提醒：kind 为 notified（已推送系统通知）或 dismissed（已关闭横幅）。 */
-    mark: (ids: unknown, kind: string, today: string) =>
+    mark: (ids: unknown, kind: string | undefined, today: string) =>
       serial(async () => {
         if (
           !Array.isArray(ids) ||
           ids.length === 0 ||
           ids.length > 24 ||
           !ids.every(id => typeof id === 'string' && ID_PATTERN.test(id)) ||
-          !['notified', 'dismissed'].includes(kind)
+          !['notified', 'dismissed'].includes(kind as string)
         )
           throw invalid('提醒标记无效。');
         const state = await load();
@@ -179,33 +179,36 @@ export function createBudgetAlertStore({ filePath }: BudgetAlertStoreOptions) {
           throw Object.assign(new Error('预算提醒状态文件已损坏，请先在费用提醒处重置。'), {
             code: 'AI_BUDGET_ALERTS_INVALID'
           });
-        for (const id of ids) state.marks[id] = { ...state.marks[id], [kind]: true };
+        for (const id of ids) state.marks[id] = { ...state.marks[id], [kind!]: true };
         await save(state, today);
       }),
     /** 放行：当前周期内不再因该规则拦截；同时解除该周期的暂停。 */
-    allow: (rule: AlertRule, period: string, today: string) =>
+    allow: (rule: string | undefined, period: string, today: string) =>
       serial(async () => {
-        if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('放行请求无效。');
+        if (!ALERT_RULES.includes(rule as AlertRule) || period !== periodOf(rule!, today))
+          throw invalid('放行请求无效。');
         const state = await load();
-        state.overrides[rule] = period;
-        delete state.pauses[rule];
+        state.overrides[rule as AlertRule] = period;
+        delete state.pauses[rule as AlertRule];
         await save(state, today);
       }),
     /** 暂停：到当前周期结束前不再发起付费调用，周期结束自动恢复；不改写用户的预算设置。 */
-    pause: (rule: AlertRule, period: string, today: string) =>
+    pause: (rule: string | undefined, period: string, today: string) =>
       serial(async () => {
-        if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('暂停请求无效。');
+        if (!ALERT_RULES.includes(rule as AlertRule) || period !== periodOf(rule!, today))
+          throw invalid('暂停请求无效。');
         const state = await load();
-        state.pauses[rule] = period;
-        delete state.overrides[rule];
+        state.pauses[rule as AlertRule] = period;
+        delete state.overrides[rule as AlertRule];
         await save(state, today);
       }),
     /** 恢复：提前解除当前周期的暂停。 */
-    resume: (rule: AlertRule, period: string, today: string) =>
+    resume: (rule: string | undefined, period: string, today: string) =>
       serial(async () => {
-        if (!ALERT_RULES.includes(rule) || period !== periodOf(rule, today)) throw invalid('恢复请求无效。');
+        if (!ALERT_RULES.includes(rule as AlertRule) || period !== periodOf(rule!, today))
+          throw invalid('恢复请求无效。');
         const state = await load();
-        delete state.pauses[rule];
+        delete state.pauses[rule as AlertRule];
         await save(state, today);
       })
   };
