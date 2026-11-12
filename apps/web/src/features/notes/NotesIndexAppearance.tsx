@@ -12,6 +12,10 @@ export function notesIndexAppearanceProps(appearance: NotesIndexAppearance) {
   return {
     className: styles.theme,
     style: {
+      '--shell-topbar-color':
+        (appearance.mode === 'dark' ? appearance.topbarColorDark : appearance.topbarColorLight) ?? undefined,
+      '--shell-rail-color':
+        (appearance.mode === 'dark' ? appearance.railColorDark : appearance.railColorLight) ?? undefined,
       '--ni-chrome': (appearance.mode === 'dark' ? appearance.shellColorDark : appearance.shellColorLight) ?? undefined,
       '--ni-shell-panel':
         (appearance.mode === 'dark' ? appearance.sidebarColorDark : appearance.sidebarColorLight) ?? undefined

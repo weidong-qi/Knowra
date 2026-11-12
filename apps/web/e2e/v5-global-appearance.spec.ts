@@ -294,8 +294,12 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
   );
   await page.goto('/#/settings');
   const outer = page.getByRole('heading', { name: '外栏背景', exact: true }).locator('xpath=../..');
+  const topbarSetting = page.getByRole('heading', { name: '顶部栏背景', exact: true }).locator('xpath=../..');
+  const railSetting = page.getByRole('heading', { name: '左侧模块栏背景', exact: true }).locator('xpath=../..');
   const sidebarSetting = page.getByRole('heading', { name: '上下文侧栏背景', exact: true }).locator('xpath=../..');
   await outer.getByRole('textbox', { name: '十六进制颜色' }).fill('#cdd9e6');
+  await topbarSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#ddeeff');
+  await railSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#ccddee');
   await sidebarSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#f4f0e8');
   await page.getByRole('switch', { name: '独立间距' }).check();
   await page.getByRole('switch', { name: '四角圆角' }).check();
@@ -308,6 +312,11 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
   const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
   const stage = page.locator('#feature-stage');
   await expect(shell).toHaveAttribute('data-sidebar-card', 'true');
+  await expect(page.getByRole('banner', { name: '全局顶栏' })).toHaveCSS('background-color', 'rgb(221, 238, 255)');
+  await expect(page.getByRole('navigation', { name: '工作域导航' })).toHaveCSS(
+    'background-color',
+    'rgb(204, 221, 238)'
+  );
   await expect(sidebar).toHaveCSS('background-color', 'rgb(244, 240, 232)');
   await expect(sidebar).toHaveCSS('border-top-right-radius', '12px');
   await expect(sidebar).toHaveCSS('outline-width', '1px');

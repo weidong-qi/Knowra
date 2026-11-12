@@ -9,6 +9,10 @@ export interface NotesIndexAppearance {
   dialogStyle: DialogStyle;
   accentColor: AccentColor;
   documentIconStyle: DocumentIconStyle;
+  topbarColorLight: string | null;
+  topbarColorDark: string | null;
+  railColorLight: string | null;
+  railColorDark: string | null;
   shellColorLight: string | null;
   shellColorDark: string | null;
   sidebarColorLight: string | null;
@@ -42,6 +46,10 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   dialogStyle: 'float',
   accentColor: 'ink',
   documentIconStyle: 'capsule',
+  topbarColorLight: null,
+  topbarColorDark: null,
+  railColorLight: null,
+  railColorDark: null,
   shellColorLight: null,
   shellColorDark: null,
   sidebarColorLight: null,
@@ -78,6 +86,10 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     documentIconStyle: DOCUMENT_ICON_STYLES.includes(candidate.documentIconStyle as DocumentIconStyle)
       ? (candidate.documentIconStyle as DocumentIconStyle)
       : 'capsule',
+    topbarColorLight: parseColor(candidate.topbarColorLight),
+    topbarColorDark: parseColor(candidate.topbarColorDark),
+    railColorLight: parseColor(candidate.railColorLight),
+    railColorDark: parseColor(candidate.railColorDark),
     shellColorLight: parseColor(candidate.shellColorLight),
     shellColorDark: parseColor(candidate.shellColorDark),
     sidebarColorLight: parseColor(candidate.sidebarColorLight),

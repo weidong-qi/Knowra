@@ -23,7 +23,7 @@
   grid-row: 1;
   min-width: 0;
   display: flex;
-  background: transparent;
+  background: var(--shell-topbar-color, transparent);
 }
 .desktopShell .desktopTitlebar {
   padding-left: max(var(--window-controls-clearance), env(titlebar-area-x, 0px));
@@ -195,6 +195,10 @@
   height: 16px;
   margin-inline: var(--space-1);
   background: var(--border-subtle);
+}
+
+.shell > nav {
+  background: var(--shell-rail-color, transparent);
 }
 
 /* 外壳表面（顶栏、模块栏、上下文侧栏）共用一套中性墨色与选中样式；侧栏内容自带主题类，所以对其子元素再声明一次。 */

@@ -70,6 +70,8 @@ function ShellColorSetting({
 export function OverlayMaterialSettings() {
   const appearance = useNotesIndexAppearance();
   const { mode, overlayMaterial, buttonStyle, dialogStyle, accentColor, documentIconStyle } = appearance;
+  const topbarColorKey = mode === 'dark' ? 'topbarColorDark' : 'topbarColorLight';
+  const railColorKey = mode === 'dark' ? 'railColorDark' : 'railColorLight';
   const shellColorKey = mode === 'dark' ? 'shellColorDark' : 'shellColorLight';
   const sidebarColorKey = mode === 'dark' ? 'sidebarColorDark' : 'sidebarColorLight';
   const compact = useCompactLayout();
@@ -83,6 +85,20 @@ export function OverlayMaterialSettings() {
           value={appearance[shellColorKey]}
           fallback={mode === 'dark' ? '#101114' : '#f1f2f5'}
           onChange={value => setNotesIndexAppearance({ [shellColorKey]: value })}
+        />
+        <ShellColorSetting
+          key={`topbar-${mode}`}
+          title="顶部栏背景"
+          value={appearance[topbarColorKey]}
+          fallback={appearance[shellColorKey] ?? (mode === 'dark' ? '#101114' : '#f1f2f5')}
+          onChange={value => setNotesIndexAppearance({ [topbarColorKey]: value })}
+        />
+        <ShellColorSetting
+          key={`rail-${mode}`}
+          title="左侧模块栏背景"
+          value={appearance[railColorKey]}
+          fallback={appearance[shellColorKey] ?? (mode === 'dark' ? '#101114' : '#f1f2f5')}
+          onChange={value => setNotesIndexAppearance({ [railColorKey]: value })}
         />
         <ShellColorSetting
           key={`sidebar-${mode}`}
