@@ -47,14 +47,17 @@ if (!apiReady) {
 }
 
 const webEntry = path.join(workspaceRoot, 'node_modules', 'vite', 'bin', 'vite.js');
-const webProcess = spawnNode([webEntry, '--port', String(webPort), '--strictPort', ...(lanEnabled ? ['--host', '0.0.0.0'] : [])], {
-  env: createChildEnv({
-    API_PORT: String(actualApiPort),
-    STUDY_RUNTIME_PORTS_FILE: runtimePortsFile
-  }),
-  cwd: path.join(workspaceRoot, 'apps', 'web'),
-  name: 'web'
-});
+const webProcess = spawnNode(
+  [webEntry, '--port', String(webPort), '--strictPort', ...(lanEnabled ? ['--host', '0.0.0.0'] : [])],
+  {
+    env: createChildEnv({
+      API_PORT: String(actualApiPort),
+      STUDY_RUNTIME_PORTS_FILE: runtimePortsFile
+    }),
+    cwd: path.join(workspaceRoot, 'apps', 'web'),
+    name: 'web'
+  }
+);
 attachChildShutdown(webProcess);
 
 const webReady = await waitForHttpOk(`http://localhost:${webPort}/`, 60, 250);
@@ -72,8 +75,8 @@ console.log(`Study Web: http://localhost:${webPort}`);
 if (lanEnabled) {
   const addresses = Object.values(os.networkInterfaces())
     .flat()
-    .filter((entry) => entry && entry.family === 'IPv4' && !entry.internal)
-    .map((entry) => entry.address);
+    .filter(entry => entry && entry.family === 'IPv4' && !entry.internal)
+    .map(entry => entry.address);
   console.warn('局域网预览已开启：同一网络内任何设备都能以当前 owner 身份读写知识库，仅限可信网络。');
   for (const address of addresses) console.log(`Study Web (LAN): http://${address}:${webPort}`);
 }
