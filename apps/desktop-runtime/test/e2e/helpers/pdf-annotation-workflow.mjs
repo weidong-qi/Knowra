@@ -145,18 +145,23 @@ export async function exercisePdfAnnotationWorkflow(page) {
   const choose = async (name, option) => {
     await page.getByRole('button', { name: /^筛选标注/ }).click();
     const dialog = page.getByRole('dialog', { name: '筛选标注', exact: true });
+    let escapeTarget;
     if (name === '标注页码') {
-      await dialog.getByRole('button', { name: /标注页码/ }).click();
+      escapeTarget = dialog.getByRole('button', { name: /标注页码/ });
+      await escapeTarget.click();
       await page.getByRole('option', { name: option, exact: true }).click();
       // Select 的退出动画仍可保留焦点作用域；先等嵌套列表真正卸载。
       await expect(page.getByRole('listbox', { includeHidden: true })).toHaveCount(0);
     } else {
-      await dialog.getByRole('group', { name, exact: true }).getByRole('button', { name: option, exact: true }).click();
+      escapeTarget = dialog
+        .getByRole('group', { name, exact: true })
+        .getByRole('button', { name: option, exact: true });
+      await escapeTarget.click();
+      await expect(escapeTarget).toHaveAttribute('aria-pressed', 'true');
     }
-    // 选项关闭后将焦点放回筛选弹层，再用 Escape 关闭弹层。
-    await dialog.focus();
-    await expect(dialog).toBeFocused();
-    await dialog.press('Escape');
+    // 从实际交互控件按一次 Escape，保留真实键盘焦点与浮层关闭门禁。
+    await expect(escapeTarget).toBeFocused();
+    await escapeTarget.press('Escape');
     await expect(dialog).toBeHidden();
   };
   await choose('标注分类', '疑问');
