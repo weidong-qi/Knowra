@@ -1,7 +1,8 @@
+import type { HttpInput } from './handler-input-types.ts';
 import type { IncomingMessage } from 'node:http';
 import type { ResponseWriter } from '../../../http/response.ts';
-import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
-import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.ts';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.ts';
 type KnowledgeItemRouteKnowledge = Pick<
   ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
   | 'archiveKnowledgeItem'
@@ -71,7 +72,9 @@ export async function handleKnowledgeItemRoute({
     return true;
   }
   if (request.method === 'POST' && url.pathname === root) {
-    sendJson(response, 201, { data: await knowledge.createKnowledgeItem(await parseKnowledgeInput(request)) });
+    sendJson(response, 201, {
+      data: await knowledge.createKnowledgeItem((await parseKnowledgeInput(request)) as HttpInput)
+    });
     return true;
   }
 
@@ -87,7 +90,7 @@ export async function handleKnowledgeItemRoute({
           id: decode(evidenceActionMatch[1]),
           evidenceId: decode(evidenceActionMatch[2])
         },
-        await parseBody(request)
+        (await parseBody(request)) as HttpInput
       )
     });
     return true;
@@ -109,7 +112,7 @@ export async function handleKnowledgeItemRoute({
     }
     if (action === 'permanent' && request.method === 'DELETE') {
       sendJson(response, 200, {
-        data: await knowledge.permanentlyDeleteKnowledgeItem({ id }, await parseBody(request))
+        data: await knowledge.permanentlyDeleteKnowledgeItem({ id }, (await parseBody(request)) as HttpInput)
       });
       return true;
     }
@@ -118,33 +121,45 @@ export async function handleKnowledgeItemRoute({
       return true;
     }
     if (action === 'evidence' && request.method === 'POST') {
-      sendJson(response, 201, { data: await knowledge.createKnowledgeEvidence({ id }, await parseBody(request)) });
+      sendJson(response, 201, {
+        data: await knowledge.createKnowledgeEvidence({ id }, (await parseBody(request)) as HttpInput)
+      });
       return true;
     }
     if (request.method === 'POST' && action === 'confirm') {
-      sendJson(response, 200, { data: await knowledge.confirmKnowledgeItem({ id }, await parseBody(request)) });
+      sendJson(response, 200, {
+        data: await knowledge.confirmKnowledgeItem({ id }, (await parseBody(request)) as HttpInput)
+      });
       return true;
     }
     if (request.method === 'POST' && action === 'needs-revision') {
       sendJson(response, 200, {
-        data: await knowledge.markKnowledgeItemNeedsRevision({ id }, await parseBody(request))
+        data: await knowledge.markKnowledgeItemNeedsRevision({ id }, (await parseBody(request)) as HttpInput)
       });
       return true;
     }
     if (request.method === 'POST' && action === 'archive') {
-      sendJson(response, 200, { data: await knowledge.archiveKnowledgeItem({ id }, await parseBody(request)) });
+      sendJson(response, 200, {
+        data: await knowledge.archiveKnowledgeItem({ id }, (await parseBody(request)) as HttpInput)
+      });
       return true;
     }
     if (request.method === 'POST' && action === 'restore') {
-      sendJson(response, 200, { data: await knowledge.restoreKnowledgeItem({ id }, await parseBody(request)) });
+      sendJson(response, 200, {
+        data: await knowledge.restoreKnowledgeItem({ id }, (await parseBody(request)) as HttpInput)
+      });
       return true;
     }
     if (request.method === 'POST' && action === 'trash') {
-      sendJson(response, 200, { data: await knowledge.trashKnowledgeItem({ id }, await parseBody(request)) });
+      sendJson(response, 200, {
+        data: await knowledge.trashKnowledgeItem({ id }, (await parseBody(request)) as HttpInput)
+      });
       return true;
     }
     if (request.method === 'POST' && action === 'restore-deleted') {
-      sendJson(response, 200, { data: await knowledge.restoreDeletedKnowledgeItem({ id }, await parseBody(request)) });
+      sendJson(response, 200, {
+        data: await knowledge.restoreDeletedKnowledgeItem({ id }, (await parseBody(request)) as HttpInput)
+      });
       return true;
     }
     return false;
@@ -158,7 +173,9 @@ export async function handleKnowledgeItemRoute({
     return true;
   }
   if (request.method === 'PATCH') {
-    sendJson(response, 200, { data: await knowledge.updateKnowledgeItem({ id }, await parseKnowledgeInput(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.updateKnowledgeItem({ id }, (await parseKnowledgeInput(request)) as HttpInput)
+    });
     return true;
   }
   return false;

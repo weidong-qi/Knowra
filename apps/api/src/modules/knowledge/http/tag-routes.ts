@@ -1,7 +1,8 @@
+import type { HttpInput } from './handler-input-types.ts';
 import type { IncomingMessage } from 'node:http';
 import type { ResponseWriter } from '../../../http/response.ts';
-import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
-import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.ts';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.ts';
 
 type TagRouteKnowledge = Pick<
   ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
@@ -48,14 +49,18 @@ export async function handleTagRoute({ request, response, url, knowledge }: TagR
 
   if (request.method === 'POST' && url.pathname === '/api/knowledge/tag-groups') {
     const body = await parseBody(request);
-    sendJson(response, 201, { data: await knowledge.createTagGroup(body) });
+    sendJson(response, 201, {
+      data: await knowledge.createTagGroup(body as HttpInput)
+    });
     return true;
   }
 
   const groupMatch = url.pathname.match(/^\/api\/knowledge\/tag-groups\/([^/]+)$/);
   if (request.method === 'PATCH' && groupMatch) {
     const body = await parseBody(request);
-    sendJson(response, 200, { data: await knowledge.updateTagGroup({ id: decodeURIComponent(groupMatch[1]) }, body) });
+    sendJson(response, 200, {
+      data: await knowledge.updateTagGroup({ id: decodeURIComponent(groupMatch[1]) }, body as HttpInput)
+    });
     return true;
   }
   if (request.method === 'DELETE' && groupMatch) {
@@ -66,7 +71,7 @@ export async function handleTagRoute({ request, response, url, knowledge }: TagR
   if (request.method === 'POST' && url.pathname === '/api/knowledge/tags') {
     const body = await parseBody(request);
     sendJson(response, 201, {
-      data: await knowledge.createTag(body)
+      data: await knowledge.createTag(body as HttpInput)
     });
     return true;
   }
@@ -84,7 +89,7 @@ export async function handleTagRoute({ request, response, url, knowledge }: TagR
     const tagId = tagMatch[1];
     const body = await parseBody(request);
     sendJson(response, 200, {
-      data: await knowledge.updateTag({ id: decodeURIComponent(tagId) }, body)
+      data: await knowledge.updateTag({ id: decodeURIComponent(tagId) }, body as HttpInput)
     });
     return true;
   }

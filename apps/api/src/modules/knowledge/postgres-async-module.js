@@ -462,7 +462,7 @@ export function createPostgresKnowledgeModule({
     method =>
     (...args) =>
       runTransaction(transaction => buildTransactionAnnotationServices(transaction).annotationService[method](...args));
-  const contentAnnotationService = {
+  const contentAnnotationService = /** @type {ReturnType<typeof createAsyncContentAnnotationService>} */ ({
     listAnnotationsByNote: /** @param {Parameters<typeof directAnnotationService.listAnnotationsByNote>} args */ (
       ...args
     ) => directAnnotationService.listAnnotationsByNote(...args),
@@ -480,7 +480,7 @@ export function createPostgresKnowledgeModule({
         'reconcileForNote'
       ].map(method => [method, annotationMutation(method)])
     )
-  };
+  });
   const directScopeService = createAsyncAnnotationScopeService({
     annotationRepository: contentAnnotationRepository,
     exclusionRepository: annotationExclusionRepository,
@@ -504,7 +504,11 @@ export function createPostgresKnowledgeModule({
     getAnalysisScope: (...args) => directScopeService.getAnalysisScope(...args),
     createExclusion: scopeMutation('createExclusion'),
     deleteExclusion: scopeMutation('deleteExclusion'),
-    createAnalysisScope: scopeMutation('createAnalysisScope')
+    createAnalysisScope: scopeMutation('createAnalysisScope'),
+    /** @param {Parameters<typeof directScopeService.listAnalysisScopes>} args */
+    listAnalysisScopes: (...args) => directScopeService.listAnalysisScopes(...args),
+    trashAnalysisScope: scopeMutation('trashAnalysisScope'),
+    restoreAnalysisScope: scopeMutation('restoreAnalysisScope')
   };
 
   const noteService = createAsyncNoteService({

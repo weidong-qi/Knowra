@@ -1,7 +1,8 @@
+import type { HttpInput } from './handler-input-types.ts';
 import type { IncomingMessage } from 'node:http';
 import type { ResponseWriter } from '../../../http/response.ts';
-import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
-import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.ts';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.ts';
 
 type LearningObjectiveRouteKnowledge = Pick<
   ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
@@ -53,7 +54,7 @@ export async function handleLearningObjectiveRoute({
         data: await knowledge.createLearningObjective({
           ...((await parseBody(request)) as Record<string, unknown>),
           knowledgeItemId
-        })
+        } as HttpInput)
       });
       return true;
     }
@@ -70,7 +71,9 @@ export async function handleLearningObjectiveRoute({
     return true;
   }
   if (request.method === 'POST' && url.pathname === root) {
-    sendJson(response, 201, { data: await knowledge.createLearningObjective(await parseBody(request)) });
+    sendJson(response, 201, {
+      data: await knowledge.createLearningObjective((await parseBody(request)) as HttpInput)
+    });
     return true;
   }
   const lifecycle = url.pathname.match(
@@ -79,14 +82,27 @@ export async function handleLearningObjectiveRoute({
   if (lifecycle) {
     const params = { type: 'learningObjective', id: decode(lifecycle[1]) };
     if (request.method === 'GET' && lifecycle[2] === 'purge-preview')
-      sendJson(response, 200, { data: await knowledge.inspectTrainingAssetPurge(params) });
+      sendJson(response, 200, {
+        data: await knowledge.inspectTrainingAssetPurge(
+          params as Parameters<typeof knowledge.inspectTrainingAssetPurge>[0]
+        )
+      });
     else if (request.method === 'POST' && lifecycle[2] === 'trash')
-      sendJson(response, 200, { data: await knowledge.trashTrainingAsset(params) });
+      sendJson(response, 200, {
+        data: await knowledge.trashTrainingAsset(params as Parameters<typeof knowledge.trashTrainingAsset>[0])
+      });
     else if (request.method === 'POST' && lifecycle[2] === 'restore-deleted')
-      sendJson(response, 200, { data: await knowledge.restoreDeletedTrainingAsset(params) });
+      sendJson(response, 200, {
+        data: await knowledge.restoreDeletedTrainingAsset(
+          params as Parameters<typeof knowledge.restoreDeletedTrainingAsset>[0]
+        )
+      });
     else if (request.method === 'POST' && lifecycle[2] === 'purge')
       sendJson(response, 200, {
-        data: await knowledge.permanentlyDeleteTrainingAsset(params, await parseBody(request))
+        data: await knowledge.permanentlyDeleteTrainingAsset(
+          params as Parameters<typeof knowledge.permanentlyDeleteTrainingAsset>[0],
+          (await parseBody(request)) as HttpInput
+        )
       });
     else return false;
     return true;
@@ -99,27 +115,48 @@ export async function handleLearningObjectiveRoute({
     const body =
       request.method === 'POST' && ['confirm', 'request-revision'].includes(action[2]) ? await parseBody(request) : {};
     if (request.method === 'POST' && action[2] === 'confirm')
-      sendJson(response, 200, { data: await knowledge.confirmLearningObjective(params, body) });
+      sendJson(response, 200, {
+        data: await knowledge.confirmLearningObjective(
+          params as Parameters<typeof knowledge.confirmLearningObjective>[0],
+          body as HttpInput
+        )
+      });
     else if (request.method === 'POST' && action[2] === 'request-revision')
       sendJson(response, 200, {
         data: await knowledge.requestLearningObjectiveRevision(
-          params,
+          params as Parameters<typeof knowledge.requestLearningObjectiveRevision>[0],
           body as Parameters<LearningObjectiveRouteKnowledge['requestLearningObjectiveRevision']>[1]
         )
       });
     else if (request.method === 'POST' && action[2] === 'archive')
-      sendJson(response, 200, { data: await knowledge.archiveLearningObjective(params) });
+      sendJson(response, 200, {
+        data: await knowledge.archiveLearningObjective(
+          params as Parameters<typeof knowledge.archiveLearningObjective>[0]
+        )
+      });
     else if (request.method === 'POST' && action[2] === 'restore')
-      sendJson(response, 200, { data: await knowledge.restoreLearningObjective(params) });
+      sendJson(response, 200, {
+        data: await knowledge.restoreLearningObjective(
+          params as Parameters<typeof knowledge.restoreLearningObjective>[0]
+        )
+      });
     else return false;
     return true;
   }
   const detail = url.pathname.match(/^\/api\/knowledge\/learning-objectives\/([^/]+)$/);
   if (!detail) return false;
   const params = { id: decode(detail[1]) };
-  if (request.method === 'GET') sendJson(response, 200, { data: await knowledge.getLearningObjective(params) });
+  if (request.method === 'GET')
+    sendJson(response, 200, {
+      data: await knowledge.getLearningObjective(params as Parameters<typeof knowledge.getLearningObjective>[0])
+    });
   else if (request.method === 'PATCH')
-    sendJson(response, 200, { data: await knowledge.updateLearningObjective(params, await parseBody(request)) });
+    sendJson(response, 200, {
+      data: await knowledge.updateLearningObjective(
+        params as Parameters<typeof knowledge.updateLearningObjective>[0],
+        (await parseBody(request)) as HttpInput
+      )
+    });
   else return false;
   return true;
 }

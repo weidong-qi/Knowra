@@ -1,7 +1,8 @@
+import type { HttpInput } from './handler-input-types.ts';
 import type { IncomingMessage } from 'node:http';
 import type { ResponseWriter } from '../../../http/response.ts';
-import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
-import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.ts';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.ts';
 
 type SpaceRouteMethods = Pick<
   ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
@@ -42,7 +43,7 @@ export async function handleSpaceRoute({ request, response, url, knowledge }: Sp
   if (request.method === 'POST' && url.pathname === '/api/knowledge/spaces/default') {
     const body = await parseBody(request);
     sendJson(response, 201, {
-      data: await knowledge.createDefaultKnowledgeSpace(body)
+      data: await knowledge.createDefaultKnowledgeSpace(body as HttpInput)
     });
     return true;
   }
@@ -54,7 +55,9 @@ export async function handleSpaceRoute({ request, response, url, knowledge }: Sp
     return true;
   }
   if (request.method === 'POST' && url.pathname === '/api/knowledge/spaces') {
-    sendJson(response, 201, { data: await knowledge.createKnowledgeSpace(await parseBody(request)) });
+    sendJson(response, 201, {
+      data: await knowledge.createKnowledgeSpace((await parseBody(request)) as HttpInput)
+    });
     return true;
   }
 
@@ -73,14 +76,14 @@ export async function handleSpaceRoute({ request, response, url, knowledge }: Sp
   const migrate = url.pathname.match(/^\/api\/knowledge\/spaces\/([^/]+)\/migrate$/);
   if (request.method === 'POST' && migrate) {
     sendJson(response, 200, {
-      data: await knowledge.migrateSpaceAssets({ id: decode(migrate[1]) }, await parseBody(request))
+      data: await knowledge.migrateSpaceAssets({ id: decode(migrate[1]) }, (await parseBody(request)) as HttpInput)
     });
     return true;
   }
   const space = url.pathname.match(/^\/api\/knowledge\/spaces\/([^/]+)$/);
   if (request.method === 'DELETE' && space) {
     sendJson(response, 200, {
-      data: await knowledge.deleteEmptySpace({ id: decode(space[1]) }, await parseBody(request))
+      data: await knowledge.deleteEmptySpace({ id: decode(space[1]) }, (await parseBody(request)) as HttpInput)
     });
     return true;
   }

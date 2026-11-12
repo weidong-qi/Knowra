@@ -5,7 +5,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers enforce the server owner and ignore client user ids',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({
@@ -25,14 +25,17 @@ export const knowledgeHttpTests = [
 
       assert.equal(created.userId, 'local-owner');
       assert.equal(created.id, 'space-local-owner');
-      assert.deepEqual(listed.map((space) => space.userId), ['local-owner']);
+      assert.deepEqual(
+        listed.map(space => space.userId),
+        ['local-owner']
+      );
     }
   },
   {
     name: 'knowledge handlers can create and list notes',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -58,7 +61,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can fetch a full note detail',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -81,7 +84,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers return compact note summaries and search ids on request',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const handlers = createKnowledgeHttpHandlers({
         knowledgeModule: createKnowledgeModule()
@@ -111,7 +114,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can restore deleted notes and read them with includeDeleted',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -125,10 +128,7 @@ export const knowledgeHttpTests = [
       });
       handlers.deleteNote({ id: 'http-note-restore' });
 
-      const deleted = handlers.getNote(
-        { id: 'http-note-restore' },
-        { includeDeleted: true }
-      );
+      const deleted = handlers.getNote({ id: 'http-note-restore' }, { includeDeleted: true });
       const restored = handlers.restoreNote({ id: 'http-note-restore' });
 
       assert.equal(deleted.deleted, true);
@@ -140,7 +140,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can set favorite status on a note',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -153,10 +153,7 @@ export const knowledgeHttpTests = [
         spaceId: 'space-1'
       });
 
-      const updated = handlers.setFavorite(
-        { id: 'http-favorite-note' },
-        { favorite: true }
-      );
+      const updated = handlers.setFavorite({ id: 'http-favorite-note' }, { favorite: true });
       const favorites = handlers.listNotes({
         spaceId: 'space-1',
         favoriteOnly: true
@@ -171,7 +168,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers support batch delete and batch tag assignment',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -209,7 +206,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can assign one tag to one note',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule: createKnowledgeModule() });
       handlers.createNote({
@@ -228,7 +225,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can return linked notes for a note detail',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -258,7 +255,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can import markdown notes',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -278,7 +275,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can batch import markdown notes',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -307,7 +304,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can search notes through query input',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -333,7 +330,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers pass sort options to note listing and search',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -366,15 +363,21 @@ export const knowledgeHttpTests = [
         limit: 1
       });
 
-      assert.deepEqual(listed.map((note) => note.title), ['Alpha', 'Beta']);
-      assert.deepEqual(searched.map((note) => note.title), ['Alpha']);
+      assert.deepEqual(
+        listed.map(note => note.title),
+        ['Alpha', 'Beta']
+      );
+      assert.deepEqual(
+        searched.map(note => note.title),
+        ['Alpha']
+      );
     }
   },
   {
     name: 'knowledge handlers can update and delete folders and tags',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -395,10 +398,7 @@ export const knowledgeHttpTests = [
         spaceId: 'space-1',
         name: 'redis'
       });
-      const updatedTag = handlers.updateTag(
-        { id: 'http-tag-1' },
-        { name: 'cache', color: 'amber' }
-      );
+      const updatedTag = handlers.updateTag({ id: 'http-tag-1' }, { name: 'cache', color: 'amber' });
       handlers.deleteTag({ id: 'http-tag-1' });
 
       assert.equal(updatedFolder.name, 'Final Folder');
@@ -411,7 +411,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can return a nested folder tree',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -438,7 +438,7 @@ export const knowledgeHttpTests = [
     name: 'deleting folders and tags cleans up note associations',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -475,7 +475,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can remove a tag from a note directly',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -490,9 +490,7 @@ export const knowledgeHttpTests = [
       knowledgeModule.noteService.assignTagToNote('http-note-tag-remove', 'tag-a');
       knowledgeModule.noteService.assignTagToNote('http-note-tag-remove', 'tag-b');
 
-      const updated = handlers.removeTagFromNote(
-        { id: 'http-note-tag-remove', tagId: 'tag-a' }
-      );
+      const updated = handlers.removeTagFromNote({ id: 'http-note-tag-remove', tagId: 'tag-a' });
 
       assert.deepEqual(updated.tagIds, ['tag-b']);
     }
@@ -501,7 +499,7 @@ export const knowledgeHttpTests = [
     name: 'knowledge handlers can replace note tags in one operation',
     async run() {
       const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
-      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.js');
+      const { createKnowledgeHttpHandlers } = await import('../src/modules/knowledge/http/knowledge-handlers.ts');
 
       const knowledgeModule = createKnowledgeModule();
       const handlers = createKnowledgeHttpHandlers({ knowledgeModule });
@@ -514,10 +512,7 @@ export const knowledgeHttpTests = [
         spaceId: 'space-1'
       });
 
-      const updated = handlers.setNoteTags(
-        { id: 'http-note-tag-set' },
-        { tagIds: ['tag-cache', 'tag-db'] }
-      );
+      const updated = handlers.setNoteTags({ id: 'http-note-tag-set' }, { tagIds: ['tag-cache', 'tag-db'] });
 
       assert.deepEqual(updated.tagIds, ['tag-cache', 'tag-db']);
     }
