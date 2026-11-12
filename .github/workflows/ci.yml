@@ -110,8 +110,8 @@ jobs:
         run: npm run check:boundaries -w @study-accelerator/web
       - name: Generate Prisma Client
         run: npm run prisma:generate
-      - name: Check migrated API TypeScript
-        run: npm run typecheck:migrated -w @study-accelerator/api
+      - name: Check API TypeScript (strict)
+        run: npm run typecheck:api
       - name: Check CI coverage and failure gates
         run: node --test scripts/test/ci-workflow.test.js
       - name: Audit production dependencies

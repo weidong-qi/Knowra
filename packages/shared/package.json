@@ -12,8 +12,14 @@
       "types": "./src/attachments.d.ts",
       "default": "./src/attachments.js"
     },
-    "./http-limits": "./src/http-limits.js",
-    "./http-origin": "./src/http-origin.js",
+    "./http-limits": {
+      "types": "./src/http-limits.d.ts",
+      "default": "./src/http-limits.js"
+    },
+    "./http-origin": {
+      "types": "./src/http-origin.d.ts",
+      "default": "./src/http-origin.js"
+    },
     "./knowra-marks": {
       "types": "./src/knowra-marks.d.ts",
       "default": "./src/knowra-marks.js"

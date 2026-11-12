@@ -16,7 +16,7 @@
 | 个人 Mac 纯构建（Apple Silicon，不安装） | `npm run build:mac` |
 | Mac 产物核验 / 隔离验收 / 显式安装 | `npm run verify:mac` / `npm run test:mac` / `npm run install:mac` |
 | API 测试 | `npm run test:api` |
-| API 类型检查（宽松 checkJs，本地失败返回非零、CI 仅报告；迁移计划见 `docs/后端TS迁移/`） | `npm run typecheck:api` |
+| API 类型检查（全量 strict，本地和 CI 均阻塞失败；迁移记录见 `docs/后端TS迁移/`） | `npm run typecheck:api` |
 | 前端测试 | `npm run test:web` |
 | 前端类型、架构边界和测试 | `npm run check:web` |
 | 共享工具 | `npm run test:shared` |
@@ -43,7 +43,7 @@
 - 唯一可启动前端是 `apps/web`（React、TypeScript、Vite、Zustand、CSS Modules、hash 路由），npm workspace 名称为 `@study-accelerator/web`；`apps/web-legacy` 归档 V3 源码和回归测试，不提供启动入口。现役前端不得导入 V3 模块或资源。
 - `react-aria-components` 只由现役前端的 `src/components/ui/` 包装层直接导入。`packages/web-core` 保持框架、CSS 和 DOM 无关；边界由 `scripts/check-v4-boundaries.mjs` 检查。
 - API 运行入口使用 `node:http`；路由 → 应用服务 → repository，依赖在 `apps/api/src/app.factory.ts` 装配。NestJS 依赖不代表运行中的框架。
-- `apps/api` 正在从 JS 渐进迁移到 TS：新建后端文件用 `.ts`，迁移旧文件按 [迁移规范](docs/后端TS迁移/迁移规范.md) 执行（按目录成批、只用现有测试验收、进度每批一行）。
+- `apps/api/src` 已统一使用 TS，全部纳入 strict：新建后端文件用 `.ts`，维护要求与历史迁移按 [迁移规范](docs/后端TS迁移/迁移规范.md) 执行（按目录成批、只用现有测试验收、进度每批一行）。
 - API 成功封装为 `{ data: ... }`，失败为 `{ error: { code, message } }`。保持 DTO 和共享契约一致。
 - 默认 `PERSISTENCE_DRIVER=local-json`；PostgreSQL 已实现，需显式选择 `postgres`、提供 `DATABASE_URL` 并应用迁移，失败不得静默回退 JSON。
 - `STORAGE_MODE` 默认 `local-first`；上传、导出、临时目录通过 `STORAGE_UPLOADS_DIR` / `STORAGE_EXPORTS_DIR` / `STORAGE_TEMP_DIR` 配置。
