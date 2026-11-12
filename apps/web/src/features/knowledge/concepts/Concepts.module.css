@@ -1,0 +1,88 @@
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.tabs {
+  display: flex;
+  padding: var(--space-3) var(--space-5);
+  flex: none;
+}
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.content > * {
+  flex: 1;
+  min-width: 0;
+}
+.workspace {
+  overflow: auto;
+  padding: var(--space-6);
+  color: var(--text-primary);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 40vh;
+  overflow: auto;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.conceptRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  text-align: left;
+}
+.conceptRow:hover,
+.conceptRow[data-hovered] {
+  background: var(--surface-hover);
+}
+.membership {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+@media (max-width: 680px) {
+  .workspace {
+    padding: var(--space-3);
+  }
+  .tabs {
+    padding: var(--space-2);
+  }
+}

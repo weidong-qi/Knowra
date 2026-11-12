@@ -213,6 +213,7 @@ export interface AuthoritativePurgeStatus {
   result: AuthoritativePurgeResult | null;
 }
 export interface KnowledgePurgePreview extends PurgeConfirmationInput {
+  conceptCleanup?: { links: number; relations: number };
   asset: { type: 'knowledgeItem'; id: string };
   decision: 'move-to-recycle-bin-first' | 'requires-dependency-action' | 'can-purge-no-history';
   expectedUpdatedAt: string;

@@ -55,6 +55,9 @@ export const entityNames: Record<string, string> = {
   questions: '题目',
   questionObjectives: '题目目标关系',
   questionSources: '题目来源',
+  knowledgeConcepts: '概念',
+  knowledgeConceptLinks: '知识点概念关联',
+  knowledgeConceptRelations: '概念关系',
   personalTodos: '待办'
 };
 const fieldNames: Record<string, string> = {
@@ -64,6 +67,15 @@ const fieldNames: Record<string, string> = {
   pageIndex: '页面索引',
   rect: '页面坐标',
   operationId: '操作标识',
+  conceptId: '所属概念',
+  knowledgeItemId: '关联知识点',
+  fromConceptId: '起始概念',
+  toConceptId: '目标概念',
+  basisItemId: '关系依据',
+  sense: '区分标签',
+  aliases: '别名',
+  focus: '关注状态',
+  role: '关联角色',
   id: '编号',
   title: '标题',
   name: '名称',
