@@ -67,7 +67,7 @@ export interface PrepareRequestInput {
   sourceRanges?: SourceRange[];
   omissions?: string[];
   maxTokens?: number;
-  tools?: ReturnType<typeof import('./gateway.js').normalizeAiRequest>['tools'];
+  tools?: ReturnType<typeof import('./gateway.ts').normalizeAiRequest>['tools'];
   format?: string;
   writeToolName?: string | null;
   assistantTools?: boolean;

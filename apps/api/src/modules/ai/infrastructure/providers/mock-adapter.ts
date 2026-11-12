@@ -1,4 +1,4 @@
-import { AiGatewayError } from '../../gateway.js';
+import { AiGatewayError } from '../../gateway.ts';
 import type { ProviderRequest, ProviderStreamEvent } from './deepseek-adapter.ts';
 
 export interface MockAiStep {

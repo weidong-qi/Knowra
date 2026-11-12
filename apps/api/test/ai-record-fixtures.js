@@ -1,5 +1,5 @@
 import { hashRecord, manifestHash, scopeHash } from '../src/modules/ai/record-contract.ts';
-import { normalizeAiRequest } from '../src/modules/ai/gateway.js';
+import { normalizeAiRequest } from '../src/modules/ai/gateway.ts';
 import { outboundPayloadHash } from '../src/modules/ai/outbound-payload.ts';
 
 const time = '2026-09-26T00:00:00.000Z';

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { createAiGateway } from '../src/modules/ai/gateway.js';
+import { createAiGateway } from '../src/modules/ai/gateway.ts';
 import { createMockAiAdapter } from '../src/modules/ai/infrastructure/providers/mock-adapter.ts';
 import {
   KNOWLEDGE_EXTRACTION_PROMPT_VERSION,

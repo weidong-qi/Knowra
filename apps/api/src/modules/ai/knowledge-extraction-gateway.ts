@@ -1,4 +1,4 @@
-import { normalizeAiRequest } from './gateway.js';
+import { normalizeAiRequest } from './gateway.ts';
 import { createAppError } from '../../errors/app-error.ts';
 import {
   KNOWLEDGE_EXTRACTION_OUTPUT_SCHEMA,

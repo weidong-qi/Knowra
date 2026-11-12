@@ -1,4 +1,4 @@
-import { createAiGateway } from '../../src/modules/ai/gateway.js';
+import { createAiGateway } from '../../src/modules/ai/gateway.ts';
 import { createMockAiAdapter } from '../../src/modules/ai/infrastructure/providers/mock-adapter.ts';
 
 /** 只创建领域资料和已保存范围；任务、授权、租约全部由真实 start/run 产生。 */

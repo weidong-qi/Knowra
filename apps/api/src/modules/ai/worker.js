@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { hashRecord } from './record-contract.ts';
 import { beijingDay } from './budget-ledger.ts';
-import { normalizeAiRequest } from './gateway.js';
+import { normalizeAiRequest } from './gateway.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
 
 const MAX_ATTEMPTS = 4;

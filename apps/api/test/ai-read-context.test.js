@@ -10,8 +10,8 @@ import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrast
 import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge/infrastructure/knowledge-space-repository.ts';
 import { NoteVersion } from '../src/modules/knowledge/domain/note-version.ts';
 import { createAiReadContextService } from '../src/modules/ai/read-context-service.js';
-import { normalizeAiRequest } from '../src/modules/ai/gateway.js';
-import { createAiGateway } from '../src/modules/ai/gateway.js';
+import { normalizeAiRequest } from '../src/modules/ai/gateway.ts';
+import { createAiGateway } from '../src/modules/ai/gateway.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from '../src/modules/ai/outbound-payload.ts';
 import { hashRecord, manifestHash } from '../src/modules/ai/record-contract.ts';
 import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.js';

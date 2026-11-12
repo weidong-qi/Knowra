@@ -1,4 +1,4 @@
-import { AiGatewayError } from '../../gateway.js';
+import { AiGatewayError } from '../../gateway.ts';
 import { serializedDeepSeekPayload } from '../../outbound-payload.ts';
 
 export interface ProviderRequestMessage {

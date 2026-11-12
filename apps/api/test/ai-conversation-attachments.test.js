@@ -7,7 +7,7 @@ import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import {
   createConversationAttachmentService,
   CONVERSATION_ATTACHMENT_LIMITS
-} from '../src/modules/ai/conversation-attachments.js';
+} from '../src/modules/ai/conversation-attachments.ts';
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 function assertNotParsed(row) {

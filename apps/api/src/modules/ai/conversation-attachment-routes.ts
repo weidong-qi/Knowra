@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { createConversationAttachmentService } from './conversation-attachments.js';
+import type { createConversationAttachmentService } from './conversation-attachments.ts';
 type ConversationAttachmentRoutePort = Pick<
   ReturnType<typeof createConversationAttachmentService>,
   'list' | 'readVerified' | 'remove' | 'upload'

@@ -1,7 +1,7 @@
 import { createMcpKnowledgeReadService } from './mcp-knowledge-read.js';
 import { wrapHandlersWithMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
 import { createNoteActionService } from './action-service.js';
-import { createAiGateway } from './gateway.js';
+import { createAiGateway } from './gateway.ts';
 import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.ts';
 import { createIsolatedDeepSeekAdapter } from './isolated-provider.js';
 import { createAiWorker } from './worker.js';
@@ -11,7 +11,7 @@ import { createAiAccessService } from './access-service.js';
 import { createAiConversationService } from './conversation-service.ts';
 import { createAiAgentWorker } from './agent-worker.js';
 import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.ts';
-import { createConversationAttachmentService } from './conversation-attachments.js';
+import { createConversationAttachmentService } from './conversation-attachments.ts';
 import { createBalanceService } from './balance-service.ts';
 import { createBudgetSettingsStore } from './budget-settings.ts';
 import { createBudgetPolicy } from './budget-policy.ts';

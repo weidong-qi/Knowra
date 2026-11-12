@@ -1,6 +1,6 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { aiRecords } from '../ai-record-fixtures.js';
-import { createAiGateway } from '../../src/modules/ai/gateway.js';
+import { createAiGateway } from '../../src/modules/ai/gateway.ts';
 import { createMockAiAdapter } from '../../src/modules/ai/infrastructure/providers/mock-adapter.ts';
 import { manifestHash, scopeHash, hashRecord } from '../../src/modules/ai/record-contract.ts';
 import { prepareKnowledgeExtractionGateway } from '../../src/modules/ai/knowledge-extraction-gateway.ts';
