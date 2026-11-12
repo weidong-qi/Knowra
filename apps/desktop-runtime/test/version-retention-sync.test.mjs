@@ -10,7 +10,7 @@ import {
 } from '@study-accelerator/content-anchor';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.ts';
 import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.ts';

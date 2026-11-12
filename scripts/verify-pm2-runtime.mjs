@@ -110,7 +110,7 @@ process.stdin
           }
         }
         if (phase === 'after') {
-          const script = name === 'knowra-api' ? 'apps/api/src/main.js' : 'apps/web/server.mjs';
+          const script = name === 'knowra-api' ? 'apps/api/src/main.ts' : 'apps/web/server.mjs';
           if (
             previous.status !== 'online' ||
             fs.realpathSync(previous.pm_cwd) !== root ||

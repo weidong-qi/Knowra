@@ -71,7 +71,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: '附件预检 HTTP 入口只读取引用并返回结构化结果',
     async run() {
-      const { createServer } = await import('../src/server.js');
+      const { createServer } = await import('../src/server.ts');
       let reads = 0;
       const server = createServer({
         appContext: {

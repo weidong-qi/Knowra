@@ -6,7 +6,7 @@ import { createPostgresTestDatabase } from '../../../scripts/test-support/postgr
 import { createAppContext } from '../../api/src/app.factory.ts';
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { createPostgresAiRepository } from '../../api/src/modules/ai/postgres-record-repository.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { requestHash } from '../../api/src/modules/sync/journal.ts';

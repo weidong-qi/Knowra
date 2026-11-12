@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createPersistentAppContext } from '../../../api/src/app.factory.ts';
 import { createPostgresAppContext } from '../../../api/src/postgres-app.factory.ts';
-import { createServer } from '../../../api/src/server.js';
+import { createServer } from '../../../api/src/server.ts';
 import { createV4WebServer } from '../../../web/server/app.mjs';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createOptionalAiRuntime } from '../../../api/src/modules/ai/runtime.ts';

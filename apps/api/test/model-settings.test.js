@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createModelSettingsService } from '../src/modules/ai/model-settings.ts';
 
 export const modelSettingsTests = [

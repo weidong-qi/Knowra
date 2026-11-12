@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../../api/src/app.factory.ts';
-import { createServer } from '../../../api/src/server.js';
+import { createServer } from '../../../api/src/server.ts';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 
 test('真实页面连接云端、后台刷新正文、三份冲突对照与手动合并', { timeout: 60000 }, async t => {

@@ -8,7 +8,7 @@ import { attachmentIdsInText } from '@study-accelerator/shared/attachments';
 import { createAppContext } from '../../api/src/app.factory.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { temporaryDirectory, openWorkspace } from './helpers.mjs';

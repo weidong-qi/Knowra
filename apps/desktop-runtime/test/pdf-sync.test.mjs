@@ -7,7 +7,7 @@ import { createPostgresTestDatabase } from '../../../scripts/test-support/postgr
 import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { createAppContext } from '../../api/src/app.factory.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';

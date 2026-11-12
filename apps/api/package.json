@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node src/main.js",
+    "dev": "node src/main.ts",
     "test": "node test/run-tests.js && node --test \"test/*.node.test.js\"",
     "typecheck": "tsc -p tsconfig.json",
     "prisma:validate": "npx prisma validate --schema ../../prisma/schema.prisma",

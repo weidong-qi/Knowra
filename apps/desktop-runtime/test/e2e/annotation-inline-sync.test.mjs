@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../../api/src/app.factory.ts';
-import { createServer } from '../../../api/src/server.js';
+import { createServer } from '../../../api/src/server.ts';
 import { createAttachmentTransfer } from '../../../api/src/modules/sync/attachment-transfer.ts';
 import { inlineAnnotationId } from '../../../api/src/modules/knowledge/application/inline-annotations.ts';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';

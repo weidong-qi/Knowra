@@ -189,7 +189,7 @@ function createFixture({
         : 'import fs from "node:fs"; fs.appendFileSync(process.env.CI_RELEASE_TEST_CALLS, "attachment-check " + JSON.stringify({script:process.argv[1],cwd:process.cwd(),args:process.argv.slice(2)}) + "\\n"); console.log("ready")\n'
     );
     writeFileSync(path.join(directory, 'deploy', 'ecosystem.config.cjs'), 'module.exports = {}\n');
-    writeFileSync(path.join(directory, 'apps', 'api', 'src', 'main.js'), '');
+    writeFileSync(path.join(directory, 'apps', 'api', 'src', 'main.ts'), '');
     writeFileSync(path.join(directory, 'apps', directory === root ? previousWebDir : 'web', 'server.mjs'), '');
   }
   writeFileSync(path.join(root, 'storage', 'data', 'knowledge-base.json'), '{}\n');
@@ -244,7 +244,7 @@ function createFixture({
     'if [[ "$1" == jlist ]]; then',
     '  dir="$(cat "$CI_RELEASE_TEST_PM2_STATE")"',
     '  for web in web web-v5 web-v4; do [[ -f "$dir/apps/$web/server.mjs" ]] && break; done',
-    '  printf \'[{"name":"knowra-api","pm2_env":{"status":"online","PORT":"3001","pm_cwd":"%s","pm_exec_path":"%s/apps/api/src/main.js"}},{"name":"knowra-web","pm2_env":{"status":"online","PORT":"3000","pm_cwd":"%s","pm_exec_path":"%s/apps/%s/server.mjs"}}]\' "$dir" "$dir" "$dir" "$dir" "$web"',
+    '  printf \'[{"name":"knowra-api","pm2_env":{"status":"online","PORT":"3001","pm_cwd":"%s","pm_exec_path":"%s/apps/api/src/main.ts"}},{"name":"knowra-web","pm2_env":{"status":"online","PORT":"3000","pm_cwd":"%s","pm_exec_path":"%s/apps/%s/server.mjs"}}]\' "$dir" "$dir" "$dir" "$dir" "$web"',
     'elif [[ "$1" == start && "$CI_RELEASE_TEST_PM2_STICKY" != 1 ]]; then',
     '  printf %s "$(dirname "$(dirname "$2")")" > "$CI_RELEASE_TEST_PM2_STATE"',
     'fi'

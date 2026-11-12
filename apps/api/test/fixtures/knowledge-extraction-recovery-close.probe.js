@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createKnowledgeExtractionTaskService } from '../../src/modules/ai/knowledge-extraction-task-service.ts';
 import { createMaintenanceGate } from '../../src/infrastructure/maintenance-gate.ts';
-import { createServer } from '../../src/server.js';
+import { createServer } from '../../src/server.ts';
 
 // 真实 server/task service + 受控异步事务适配器；不代表真实 PostgreSQL 验证。
 async function checkClose({ failRecovery = false, concurrentRecovery = false, holdReady = false } = {}) {

@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createPersistentAppContext } from '../src/app.factory.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createOptionalAiRuntime, createUnavailableAiRuntime } from '../src/modules/ai/runtime.ts';
 import { AI_PROCESS_LIMITS, createIsolatedDeepSeekAdapter } from '../src/modules/ai/isolated-provider.ts';
 import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.ts';

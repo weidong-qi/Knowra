@@ -13,7 +13,7 @@ import { createAiAgentWorker } from '../src/modules/ai/agent-worker.ts';
 import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
 import { createAiConversationService } from '../src/modules/ai/conversation-service.ts';
 import { beijingDay } from '../src/modules/ai/budget-ledger.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createPersistentAppContext } from '../src/app.factory.ts';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 import { createEmptyAiState, validateAiState } from '../src/modules/ai/record-state.ts';

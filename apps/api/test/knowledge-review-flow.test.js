@@ -9,7 +9,7 @@ import { createInMemoryKnowledgeItemRepository } from '../src/modules/knowledge/
 import { createInMemoryKnowledgeEvidenceRepository } from '../src/modules/knowledge/infrastructure/knowledge-evidence-repository.ts';
 import { createPostgresKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createAppContext } from '../src/app.factory.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';

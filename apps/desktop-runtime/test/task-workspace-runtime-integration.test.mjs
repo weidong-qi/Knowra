@@ -7,7 +7,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import sharp from 'sharp';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
 import { createAppContext } from '../../api/src/app.factory.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 
 const quiet = { warn() {}, error() {} };
 test('真实本地 HTTP 接线：会话、epoch、图片、重启和归档保持独立领域边界', async t => {

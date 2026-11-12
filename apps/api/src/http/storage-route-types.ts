@@ -1,9 +1,6 @@
-import type {
-  Attachment,
-  AttachmentCleanupStatus,
-  AttachmentDeleteResult,
-  AttachmentDeletionPreflight
-} from '../../../../packages/web-core/src/workspace/types.ts';
+import type { createKnowledgeBaseSnapshotService } from '../modules/knowledge/application/knowledge-base-snapshot-service.ts';
+import type { createPostgresSnapshotService } from '../infrastructure/postgres-snapshot-service.ts';
+import type { Attachment } from '../../../../packages/web-core/src/workspace/types.ts';
 import type { KnowledgeSpace } from '../modules/knowledge/domain/knowledge-space.ts';
 import type { Folder } from '../modules/knowledge/domain/folder.ts';
 import type { Tag } from '../modules/knowledge/domain/tag.ts';
@@ -19,8 +16,6 @@ import type { ExamFocus } from '../modules/knowledge/domain/exam-focus.ts';
 import type { Question } from '../modules/knowledge/domain/question.ts';
 import type { QuestionSource } from '../modules/knowledge/domain/question-source.ts';
 import type { ContentAnnotation, ContentAnnotationAnchor } from '../modules/knowledge/domain/content-annotation.ts';
-
-type StorageResult<Value> = Value | Promise<Value>;
 
 export interface AnnotationExclusionSnapshot {
   id: string;
@@ -105,20 +100,20 @@ export interface KnowledgeBaseSnapshot {
   attachmentFiles: (Attachment & { contentBase64: string })[];
 }
 
+type SnapshotServices = ReturnType<typeof createKnowledgeBaseSnapshotService | typeof createPostgresSnapshotService>;
+type StorageResponse<Method extends keyof SnapshotServices> = ReturnType<SnapshotServices[Method]>;
+// 路由只透传存储回执，不把持久化原始记录声明成已规范化的前端 DTO。
 export interface StorageRouteServices {
-  exportKnowledgeBase(): StorageResult<KnowledgeBaseSnapshot>;
-  importKnowledgeBase(body: unknown): StorageResult<KnowledgeBaseSnapshot>;
-  listAttachments(query: Record<string, string>): StorageResult<Attachment[]>;
-  listAttachmentCleanup(): StorageResult<AttachmentCleanupStatus>;
-  verifyAttachment(params: { id: string }): StorageResult<Attachment>;
-  restoreAttachment(params: { id: string }, body: unknown): StorageResult<Attachment>;
-  retryAttachmentCleanup(): StorageResult<{ completed: number; pending: number }>;
-  uploadAttachment(body: unknown): StorageResult<Attachment>;
-  getAttachmentContent(params: { id: string }): StorageResult<{
-    content: Uint8Array;
-    attachment: Pick<Attachment, 'mimeType' | 'fileName'>;
-  }>;
-  inspectAttachmentDeletion(params: { id: string }): StorageResult<AttachmentDeletionPreflight>;
-  deleteAttachment(params: { id: string }): StorageResult<AttachmentDeleteResult>;
-  updateAttachment(params: { id: string }, body: unknown): StorageResult<Attachment>;
+  exportKnowledgeBase(): StorageResponse<'exportKnowledgeBase'>;
+  importKnowledgeBase(body: unknown): StorageResponse<'importKnowledgeBase'>;
+  listAttachments(query: Record<string, string>): StorageResponse<'listAttachments'>;
+  listAttachmentCleanup(): StorageResponse<'listAttachmentCleanup'>;
+  verifyAttachment(params: { id: string }): StorageResponse<'verifyAttachment'>;
+  restoreAttachment(params: { id: string }, body: unknown): StorageResponse<'restoreAttachment'>;
+  retryAttachmentCleanup(): StorageResponse<'retryAttachmentCleanup'>;
+  uploadAttachment(body: unknown): StorageResponse<'uploadAttachment'>;
+  getAttachmentContent(params: { id: string }): StorageResponse<'getAttachmentContent'>;
+  inspectAttachmentDeletion(params: { id: string }): StorageResponse<'inspectAttachmentDeletion'>;
+  deleteAttachment(params: { id: string }): StorageResponse<'deleteAttachment'>;
+  updateAttachment(params: { id: string }, body: unknown): StorageResponse<'updateAttachment'>;
 }

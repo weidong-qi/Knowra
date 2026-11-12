@@ -11,7 +11,7 @@ import { startLocalRuntime } from '../src/runtime-server.mjs';
 import { createRuntimeServices } from '../src/runtime-services.mjs';
 import { createAppContext } from '../../api/src/app.factory.ts';
 import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
-import { createServer } from '../../api/src/server.js';
+import { createServer } from '../../api/src/server.ts';
 
 const logger = { warn() {}, error() {} };
 const tick = () => new Promise(resolve => setImmediate(resolve));

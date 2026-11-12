@@ -9,7 +9,7 @@ import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 import { createPostgresKnowledgeHttpHandlers } from '../src/modules/knowledge/http/postgres-async-handlers.ts';
 import { createAsyncSearchService } from '../src/modules/knowledge/application/postgres-async/search-service.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 
 export const COMMAND_OWNER = 'command-owner';
 export const BODY_QUERY = '中文深处命中';

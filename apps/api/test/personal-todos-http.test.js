@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createPersistentAppContext } from '../src/app.factory.ts';
-import { createServer } from '../src/server.js';
+import { createServer } from '../src/server.ts';
 import { createPersonalTodoService } from '../src/modules/personal-todos/service.ts';
 
 async function withServer(run) {
