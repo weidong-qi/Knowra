@@ -236,6 +236,18 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
 
 test('文档与 PDF 图标风格切换后在刷新及深色模式中保留', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
+  await page.route('**/api/ai/model-settings', route =>
+    route.fulfill({
+      json: {
+        data: {
+          configured: false,
+          modelId: 'deepseek-flash',
+          modelSupported: true,
+          supportedModelIds: ['deepseek-flash']
+        }
+      }
+    })
+  );
   const notes = [
     createNote('', false, 'icon-note', '图标笔记', null),
     { ...createNote('', false, 'icon-pdf', '图标 PDF', null), contentKind: 'pdf' }
