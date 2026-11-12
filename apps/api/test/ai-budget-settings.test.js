@@ -10,7 +10,7 @@ import {
   usageRows,
   usageSummary,
   validateBudgetState
-} from '../src/modules/ai/budget-ledger.js';
+} from '../src/modules/ai/budget-ledger.ts';
 import { usageCsv } from '../src/modules/ai/usage-export.ts';
 import { createBudgetPolicy } from '../src/modules/ai/budget-policy.ts';
 import {
@@ -21,7 +21,7 @@ import {
   normalizeBudgetSettings
 } from '../src/modules/ai/budget-settings.ts';
 import { actualCostMicrounits } from '../src/modules/ai/worker.js';
-import { createBudgetAlertStore, evaluateAlerts } from '../src/modules/ai/budget-alerts.js';
+import { createBudgetAlertStore, evaluateAlerts } from '../src/modules/ai/budget-alerts.ts';
 import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.js';
 import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.ts';
 

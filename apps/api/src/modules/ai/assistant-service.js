@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { hashRecord, manifestHash } from './record-contract.ts';
-import { beijingDay } from './budget-ledger.js';
-import { evaluateAlerts, periodOf } from './budget-alerts.js';
+import { beijingDay } from './budget-ledger.ts';
+import { evaluateAlerts, periodOf } from './budget-alerts.ts';
 import { usageCsv } from './usage-export.ts';
 
 const PREVIEW_TTL_MS = 5 * 60_000;

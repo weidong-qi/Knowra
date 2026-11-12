@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { createJsonBudgetAuthority } from './budget-ledger.js';
+import type { createJsonBudgetAuthority } from './budget-ledger.ts';
 type BudgetRoutePort = Pick<ReturnType<typeof createJsonBudgetAuthority>, 'reserve' | 'settle' | 'status'>;
 import type { createBudgetPolicy } from './budget-policy.ts';
 interface BudgetRouteContext {

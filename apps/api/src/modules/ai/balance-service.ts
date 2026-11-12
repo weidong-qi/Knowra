@@ -1,3 +1,37 @@
+import type { AppError } from '../../errors/app-error.ts';
+interface BalanceRow {
+  currency: string;
+  totalMicrounits: number;
+  grantedMicrounits: number;
+  toppedUpMicrounits: number;
+}
+interface Balance {
+  isAvailable: boolean;
+  balances: BalanceRow[];
+}
+interface BalanceSnapshot extends Balance {
+  at: string;
+  credentialRef: string;
+}
+interface BalanceConsumption {
+  currency: string;
+  sinceAt: string;
+  snapshots: number;
+  consumedMicrounits: number;
+  addedMicrounits: number;
+  currentMicrounits: number;
+}
+interface BalanceFetchOptions {
+  apiKey: string;
+  fetchImpl?: typeof fetch;
+}
+interface BalanceServiceOptions {
+  credentialReference(): { credentialRef: string } | null | Promise<{ credentialRef: string } | null>;
+  resolveCredential(ref: string): { apiKey: string } | Promise<{ apiKey: string }>;
+  filePath: string;
+  fetchImpl?: typeof fetch;
+  now?: () => Date;
+}
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -9,16 +43,25 @@ const MAX_SNAPSHOTS = 2000;
 const DEDUPE_MS = 10 * 60_000;
 const CURRENCIES = new Set(['CNY', 'USD']);
 
-const failure = (code, message) => Object.assign(new Error(message), { code });
+const failure = (code: string, message: string) => Object.assign(new Error(message), { code });
 
 /** DeepSeek 以字符串返回金额（如 "110.00"）；按十进制文本换算成百万分之一元，避免浮点误差。 */
-export function parseMicrounits(text) {
+export function parseMicrounits(text: unknown) {
   if (typeof text !== 'string' || !/^\d{1,12}(\.\d{1,8})?$/.test(text)) return null;
   const [whole, fraction = ''] = text.split('.');
   return Number(whole) * 1_000_000 + Number(fraction.padEnd(6, '0').slice(0, 6));
 }
 
-export function normalizeBalance(body) {
+export function normalizeBalance(input: unknown): Balance {
+  const body = input as {
+    is_available?: unknown;
+    balance_infos?: {
+      total_balance?: unknown;
+      granted_balance?: unknown;
+      topped_up_balance?: unknown;
+      currency?: string;
+    }[];
+  } | null;
   if (
     !body ||
     typeof body !== 'object' ||
@@ -31,11 +74,11 @@ export function normalizeBalance(body) {
     const total = parseMicrounits(item?.total_balance);
     const granted = parseMicrounits(item?.granted_balance);
     const toppedUp = parseMicrounits(item?.topped_up_balance);
-    if (!CURRENCIES.has(item?.currency) || total === null || granted === null || toppedUp === null) {
+    if (!CURRENCIES.has(item?.currency as string) || total === null || granted === null || toppedUp === null) {
       throw failure('AI_BALANCE_INVALID', 'DeepSeek 返回的余额格式无效。');
     }
     return {
-      currency: item.currency,
+      currency: item.currency as string,
       totalMicrounits: total,
       grantedMicrounits: granted,
       toppedUpMicrounits: toppedUp
@@ -44,7 +87,7 @@ export function normalizeBalance(body) {
   return { isAvailable: body.is_available, balances };
 }
 
-export async function fetchDeepSeekBalance({ apiKey, fetchImpl = fetch }) {
+export async function fetchDeepSeekBalance({ apiKey, fetchImpl = fetch }: BalanceFetchOptions) {
   let response;
   try {
     response = await fetchImpl(ENDPOINT, {
@@ -73,9 +116,9 @@ export async function fetchDeepSeekBalance({ apiKey, fetchImpl = fetch }) {
  * 按币种用相邻快照的差值推算账户总消耗：余额下降计为消耗，上升视为充值或赠送。
  * 两次快照之间同时发生充值与消耗时，消耗会被低估；同一 Key 在别处使用的消耗也会计入，所以只是推算。
  */
-export function inferConsumption(snapshots) {
-  const result = new Map();
-  let previous = null;
+export function inferConsumption(snapshots: BalanceSnapshot[]) {
+  const result = new Map<string, BalanceConsumption>();
+  let previous: BalanceSnapshot | null = null;
   for (const snapshot of snapshots) {
     for (const row of snapshot.balances) {
       const item = result.get(row.currency) ?? {
@@ -101,11 +144,11 @@ export function inferConsumption(snapshots) {
   return [...result.values()];
 }
 
-function validSnapshots(value) {
+function validSnapshots(value: unknown): value is BalanceSnapshot[] {
   return (
     Array.isArray(value) &&
     value.every(
-      item =>
+      (item: BalanceSnapshot) =>
         item &&
         typeof item.at === 'string' &&
         typeof item.credentialRef === 'string' &&
@@ -135,27 +178,27 @@ export function createBalanceService({
   filePath,
   fetchImpl = fetch,
   now = () => new Date()
-}) {
+}: BalanceServiceOptions) {
   if (!path.isAbsolute(filePath ?? '')) throw new TypeError('余额快照需要绝对路径。');
-  let queue = Promise.resolve();
+  let queue: Promise<unknown> = Promise.resolve();
 
-  async function load() {
+  async function load(): Promise<BalanceSnapshot[]> {
     let raw;
     try {
       raw = await fs.readFile(filePath, 'utf8');
     } catch (error) {
-      if (error?.code === 'ENOENT') return [];
+      if ((error as AppError | null)?.code === 'ENOENT') return [];
       throw failure('AI_BALANCE_STORAGE_INVALID', '余额快照无法读取。');
     }
     try {
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(raw) as { snapshots?: unknown } | null;
       if (!validSnapshots(parsed?.snapshots)) throw new Error('invalid');
       return parsed.snapshots;
     } catch {
       throw failure('AI_BALANCE_STORAGE_INVALID', '余额快照文件已损坏，原文件已保留。');
     }
   }
-  async function save(snapshots) {
+  async function save(snapshots: BalanceSnapshot[]) {
     await fs.mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
     const temp = `${filePath}.${randomUUID()}.tmp`;
     try {
@@ -165,14 +208,13 @@ export function createBalanceService({
       await fs.rm(temp, { force: true }).catch(() => undefined);
     }
   }
-  /** @template T @param {() => Promise<T>} work @returns {Promise<T>} */
-  const serial = work => {
+  const serial = <T>(work: () => Promise<T>): Promise<T> => {
     const run = queue.then(work);
     queue = run.catch(() => undefined);
     return run;
   };
 
-  const view = (all, ref, live = null) => {
+  const view = (all: BalanceSnapshot[], ref: string | null, live: BalanceSnapshot | null = null) => {
     const snapshots = all.filter(item => item.credentialRef === ref);
     const latest = snapshots.at(-1) ?? null;
     return { latest: live ?? latest, checkedAt: latest?.at ?? null, inferred: inferConsumption(snapshots) };

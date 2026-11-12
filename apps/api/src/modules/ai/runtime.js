@@ -12,10 +12,10 @@ import { createAiConversationService } from './conversation-service.js';
 import { createAiAgentWorker } from './agent-worker.js';
 import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.js';
 import { createConversationAttachmentService } from './conversation-attachments.js';
-import { createBalanceService } from './balance-service.js';
+import { createBalanceService } from './balance-service.ts';
 import { createBudgetSettingsStore } from './budget-settings.ts';
 import { createBudgetPolicy } from './budget-policy.ts';
-import { createBudgetAlertStore } from './budget-alerts.js';
+import { createBudgetAlertStore } from './budget-alerts.ts';
 import { createAiTranslationService } from './translation-service.ts';
 
 /** 生成入口由 AI-01-04 的预算服务注入 authorizePaidCall 后才可启用。 */

@@ -11,7 +11,7 @@ import type {
   BudgetReserveInput,
   BudgetSettlement
 } from './private-store-types.ts';
-import { beijingDay, budgetStatus, reserveBudget, settleBudget, usageRows, usageSummary } from './budget-ledger.js';
+import { beijingDay, budgetStatus, reserveBudget, settleBudget, usageRows, usageSummary } from './budget-ledger.ts';
 
 const retryable = (error: AiSqlError | null | undefined) =>
   ['P2034', '23505', '40001'].includes(error?.code as string) ||

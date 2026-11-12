@@ -18,7 +18,7 @@ import { emptyActionState, validateActionState } from './action-state.js';
 import { randomUUID } from 'node:crypto';
 import { AI_RECORD_KINDS, validateAiEvent, validateAiRecord } from './record-contract.ts';
 import { createAiRecordRepository } from './record-repository.ts';
-import { validateBudgetState } from './budget-ledger.js';
+import { validateBudgetState } from './budget-ledger.ts';
 import {
   ACCESS_KINDS,
   createJsonAiAccessStore,

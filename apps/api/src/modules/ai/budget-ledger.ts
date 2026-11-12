@@ -1,23 +1,36 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type {
+  BudgetState,
+  BudgetReservation,
+  BudgetReserveInput,
+  BudgetSettlement,
+  BudgetLimits
+} from './private-store-types.ts';
+
+interface JsonBudgetAuthorityOptions {
+  getState(): BudgetState;
+  runTransaction<Result>(work: () => Result): Result | Promise<Result>;
+  onChange(): void;
+}
 import { randomUUID } from 'node:crypto';
 
 export const DAILY_LIMIT_MICROUNITS = 20_000_000;
 export const JOB_LIMIT_MICROUNITS = 2_000_000;
 
-function fail(code, message) {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+function fail(code: string, message: string): never {
+  const error = new Error(message) as AppError;
   error.code = code;
   throw error;
 }
-function amount(value) {
-  return Number.isSafeInteger(value) && value >= 0;
+function amount(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
 }
-function day(value) {
+function day(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
-const count = value => (Number.isSafeInteger(value) && value >= 0 ? value : null);
+const count = (value: unknown) => (Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : null);
 // 模型名与会话 ID 只做长度和控制字符检查：会话 ID 可能含中文等字符（如“会话/已导入”），不能因此拒绝结算。
-const label = value =>
+const label = (value: unknown) =>
   typeof value === 'string' &&
   value.length >= 1 &&
   value.length <= 128 &&
@@ -29,17 +42,18 @@ const label = value =>
  * 用量明细只含模型名、token 数和所属对话 ID，不含任何对话内容；旧账本没有该字段，视为未记录。
  * 明细只用于展示，所以这里只清洗、不拒绝：付费调用已经发生，明细异常绝不能让结算失败而继续占用预算。
  */
-export function normalizeUsage(usage) {
+export function normalizeUsage(usage: unknown) {
   if (!usage || typeof usage !== 'object' || Array.isArray(usage)) return null;
-  const inputTokens = count(usage.inputTokens);
-  const cacheHitTokens = count(usage.cacheHitTokens);
+  const fields = usage as Record<string, unknown>;
+  const inputTokens = count(fields.inputTokens);
+  const cacheHitTokens = count(fields.cacheHitTokens);
   return {
-    modelId: label(usage.modelId),
+    modelId: label(fields.modelId),
     inputTokens,
-    outputTokens: count(usage.outputTokens),
+    outputTokens: count(fields.outputTokens),
     cacheHitTokens:
       cacheHitTokens !== null && inputTokens !== null && cacheHitTokens > inputTokens ? null : cacheHitTokens,
-    conversationId: label(usage.conversationId)
+    conversationId: label(fields.conversationId)
   };
 }
 
@@ -52,7 +66,8 @@ export function beijingDay(now = new Date()) {
   }).format(now);
 }
 
-export function validateBudgetState(state) {
+export function validateBudgetState(input: object) {
+  const state = input as BudgetState;
   // 只有“字段不存在”（旧版本账本）才补空集合；显式的 null 或其他类型是损坏，必须报错，
   // 否则损坏的月汇总会被静默清空，累计费用随之丢失，下一次写盘还会覆盖原文件。
   if (state.budgetDays === undefined) state.budgetDays = [];
@@ -99,7 +114,7 @@ export function validateBudgetState(state) {
       !row.attemptId ||
       !amount(row.reservedMicrounits) ||
       !['held', 'settled', 'unknown', 'released'].includes(row.status) ||
-      (row.status === 'settled' && (!amount(row.actualMicrounits) || row.actualMicrounits > row.reservedMicrounits)) ||
+      (row.status === 'settled' && (!amount(row.actualMicrounits) || row.actualMicrounits! > row.reservedMicrounits)) ||
       (row.status !== 'settled' && row.actualMicrounits !== null) ||
       (row.usage !== undefined && row.usage !== null && (typeof row.usage !== 'object' || Array.isArray(row.usage))) ||
       !keys.has(`${row.accountRef}:${row.day}`) ||
@@ -121,7 +136,7 @@ export function validateBudgetState(state) {
       // 日已花费 = 已折叠进月汇总的部分 + 仍保留明细的已结算请求；折叠只丢明细，不改日账本的金额。
       row.spentMicrounits !==
         (row.archivedSpentMicrounits ?? 0) +
-          entries.filter(item => item.status === 'settled').reduce((sum, item) => sum + item.actualMicrounits, 0)
+          entries.filter(item => item.status === 'settled').reduce((sum, item) => sum + item.actualMicrounits!, 0)
     ) {
       fail('AI_BUDGET_INVALID', '预算日账本与预留记录不一致。');
     }
@@ -136,14 +151,16 @@ export const DEFAULT_LIMITS = Object.freeze({
   turn: JOB_LIMIT_MICROUNITS
 });
 
-function checkLimits(limits) {
+function checkLimits(limits?: BudgetLimits) {
   if (limits === undefined) return DEFAULT_LIMITS;
   if (
     !limits ||
     typeof limits !== 'object' ||
     Object.keys(limits).some(key => !['daily', 'monthly', 'turn'].includes(key)) ||
     !['daily', 'monthly', 'turn'].every(
-      key => limits[key] === null || (Number.isSafeInteger(limits[key]) && limits[key] >= 1)
+      key =>
+        limits[key as keyof BudgetLimits] === null ||
+        (Number.isSafeInteger(limits[key as keyof BudgetLimits]) && limits[key as keyof BudgetLimits]! >= 1)
     )
   ) {
     fail('AI_BUDGET_REQUEST_INVALID', '预算上限参数无效。');
@@ -153,7 +170,7 @@ function checkLimits(limits) {
 
 // 预算统计只看日账本：折叠只丢请求明细，日账本（含折叠进月汇总的金额 archivedSpentMicrounits）永久保留，
 // 所以无论系统时钟怎样，某一天、某个月的已花费都是准确的，不依赖明细是否还在。
-const monthTotals = (state, accountRef, date) =>
+const monthTotals = (state: Pick<BudgetState, 'budgetDays'>, accountRef: string, date: string) =>
   state.budgetDays
     .filter(row => row.accountRef === accountRef && row.day.startsWith(date.slice(0, 7)))
     .reduce((sum, row) => ({ spent: sum.spent + row.spentMicrounits, held: sum.held + row.heldMicrounits }), {
@@ -162,7 +179,12 @@ const monthTotals = (state, accountRef, date) =>
     });
 
 /** limitMicrounits / availableMicrounits 为 null 表示当日规则不是“达到即停”，不限制调用。 */
-export function budgetStatus(state, accountRef, date = beijingDay(), limits) {
+export function budgetStatus(
+  state: Pick<BudgetState, 'budgetDays'>,
+  accountRef: string,
+  date = beijingDay(),
+  limits?: BudgetLimits
+) {
   const { daily, monthly } = checkLimits(limits);
   const row = state.budgetDays.find(item => item.accountRef === accountRef && item.day === date);
   const spentMicrounits = row?.spentMicrounits ?? 0;
@@ -182,8 +204,8 @@ export function budgetStatus(state, accountRef, date = beijingDay(), limits) {
   };
 }
 
-export function reserveBudget(state, input) {
-  const { accountRef, jobId, attemptId, priceVersion, reservedMicrounits } = input ?? {};
+export function reserveBudget(state: BudgetState, input: Partial<BudgetReserveInput> & { day?: string }) {
+  const { accountRef, jobId, attemptId, priceVersion, reservedMicrounits } = (input ?? {}) as BudgetReserveInput;
   const { daily: dailyLimit, monthly: monthlyLimit, turn: turnLimit } = checkLimits(input?.limits);
   const date = input?.day ?? beijingDay();
   if (
@@ -228,7 +250,7 @@ export function reserveBudget(state, input) {
       fail('AI_MONTHLY_BUDGET_EXCEEDED', '本月预算不足。');
   }
   daily.heldMicrounits += reservedMicrounits;
-  const record = {
+  const record: BudgetReservation = {
     reservationId: randomUUID(),
     accountRef,
     day: date,
@@ -245,11 +267,9 @@ export function reserveBudget(state, input) {
   return structuredClone(record);
 }
 
-/** @param {Parameters<typeof reserveBudget>[0]} state
- * @param {import('./boundary-types.ts').BudgetSettlement} [input] */
 export function settleBudget(
-  state,
-  { accountRef, attemptId, actualMicrounits = null, disposition = 'unknown', usage } = {}
+  state: BudgetState,
+  { accountRef, attemptId, actualMicrounits = null, disposition = 'unknown', usage }: BudgetSettlement = {}
 ) {
   const detail = normalizeUsage(usage);
   const row = state.budgetReservations.find(item => item.accountRef === accountRef && item.attemptId === attemptId);
@@ -262,13 +282,13 @@ export function settleBudget(
     !['settled', 'unknown', 'released'].includes(disposition) ||
     (disposition === 'settled' && !amount(actualMicrounits)) ||
     (disposition !== 'settled' && actualMicrounits !== null) ||
-    (disposition === 'settled' && actualMicrounits > row.reservedMicrounits)
+    (disposition === 'settled' && actualMicrounits! > row.reservedMicrounits)
   ) {
     fail('AI_BUDGET_SETTLEMENT_INVALID', '预算结算无效或超过预留额。');
   }
   const daily = state.budgetDays.find(item => item.accountRef === row.accountRef && item.day === row.day);
-  if (disposition !== 'unknown') daily.heldMicrounits -= row.reservedMicrounits;
-  if (disposition === 'settled') daily.spentMicrounits += actualMicrounits;
+  if (disposition !== 'unknown') daily!.heldMicrounits -= row.reservedMicrounits;
+  if (disposition === 'settled') daily!.spentMicrounits += actualMicrounits!;
   row.status = disposition;
   row.actualMicrounits = actualMicrounits;
   if (detail) row.usage = detail;
@@ -280,7 +300,7 @@ const RECENT_LIMIT = 50;
 const DETAIL_KEEP_DAYS = 90;
 const UNKNOWN_LIMIT = 100;
 
-const shiftDay = (value, days) =>
+const shiftDay = (value: string, days: number) =>
   new Date(Date.parse(`${value}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
 /**
@@ -291,7 +311,7 @@ const shiftDay = (value, days) =>
  * 此时最多提前丢失请求明细，金额统计不受影响）。
  * 返回被折叠的请求数。
  */
-export function pruneBudgetState(state, accountRef, today = beijingDay()) {
+export function pruneBudgetState(state: BudgetState, accountRef: string | undefined, today = beijingDay()) {
   const days = state.budgetDays.filter(row => row.accountRef === accountRef).map(row => row.day);
   if (days.length === 0) return 0;
   const newest = days.reduce((a, b) => (a > b ? a : b));
@@ -313,7 +333,7 @@ export function pruneBudgetState(state, accountRef, today = beijingDay()) {
       let entry = state.budgetMonths.find(item => item.accountRef === accountRef && item.month === month);
       if (!entry) {
         entry = {
-          accountRef,
+          accountRef: accountRef!,
           month,
           requests: 0,
           spentMicrounits: 0,
@@ -324,12 +344,12 @@ export function pruneBudgetState(state, accountRef, today = beijingDay()) {
         state.budgetMonths.push(entry);
       }
       entry.requests += 1;
-      entry.spentMicrounits += row.actualMicrounits;
+      entry.spentMicrounits += row.actualMicrounits!;
       const detail = normalizeUsage(row.usage); // 折叠进月汇总前同样清洗，损坏的明细不会污染累计
       entry.inputTokens += detail?.inputTokens ?? 0;
       entry.outputTokens += detail?.outputTokens ?? 0;
       entry.cacheHitTokens += detail?.cacheHitTokens ?? 0;
-      daily.archivedSpentMicrounits = (daily.archivedSpentMicrounits ?? 0) + row.actualMicrounits;
+      daily!.archivedSpentMicrounits = (daily!.archivedSpentMicrounits ?? 0) + row.actualMicrounits!;
       folded += 1;
     }
   }
@@ -351,7 +371,7 @@ const emptyTotals = () => ({
  * 用量汇总：只读，不拦截任何请求。今日/本月按北京时间自然日归属，累计覆盖账本内全部记录。
  * 已结算的请求按实际费用计入；结果未知的请求单独计数，其预留额仍占用额度，不计入“已花费”。
  */
-export function usageSummary(state, accountRef, date = beijingDay(), limit = RECENT_LIMIT) {
+export function usageSummary(state: BudgetState, accountRef: string, date = beijingDay(), limit = RECENT_LIMIT) {
   const month = date.slice(0, 7);
   const periods = { today: emptyTotals(), month: emptyTotals(), total: emptyTotals() };
   // 已折叠的月汇总只计入累计（以及仍落在当前月内的部分）。
@@ -377,7 +397,7 @@ export function usageSummary(state, accountRef, date = beijingDay(), limit = REC
     if (row.day.startsWith(month)) targets.push(periods.month);
     for (const totals of targets) {
       totals.requests += 1;
-      if (row.status === 'settled') totals.spentMicrounits += row.actualMicrounits;
+      if (row.status === 'settled') totals.spentMicrounits += row.actualMicrounits!;
       else {
         totals.unknownRequests += 1;
         totals.unknownMicrounits += row.reservedMicrounits;
@@ -393,7 +413,7 @@ export function usageSummary(state, accountRef, date = beijingDay(), limit = REC
     (state.budgetDays ?? []).find(row => row.accountRef === accountRef && row.day === date)?.archivedSpentMicrounits ??
     0;
   // 先倒序再稳定排序：同一毫秒内结算的请求，后写入的排前面。
-  const view = row => ({
+  const view = (row: BudgetReservation) => ({
     attemptId: row.attemptId,
     day: row.day,
     at: row.settledAt ?? row.createdAt,
@@ -428,7 +448,7 @@ export function usageSummary(state, accountRef, date = beijingDay(), limit = REC
 }
 
 /** 导出用的全部明细（升序）与月汇总。 */
-export function usageRows(state, accountRef) {
+export function usageRows(state: BudgetState, accountRef: string) {
   const rows = state.budgetReservations
     .filter(row => row.accountRef === accountRef && ['settled', 'unknown'].includes(row.status))
     .toSorted((a, b) => (a.settledAt ?? a.createdAt).localeCompare(b.settledAt ?? b.createdAt));
@@ -452,18 +472,19 @@ export function usageRows(state, accountRef) {
   };
 }
 
-export function createJsonBudgetAuthority({ getState, runTransaction, onChange }) {
+export function createJsonBudgetAuthority({ getState, runTransaction, onChange }: JsonBudgetAuthorityOptions) {
   return {
-    status: (accountRef, date, limits) => budgetStatus(getState(), accountRef, date, limits),
-    usage: (accountRef, date) => usageSummary(getState(), accountRef, date),
-    usageRows: accountRef => usageRows(getState(), accountRef),
-    reserve: input =>
+    status: (accountRef: string, date?: string, limits?: BudgetLimits) =>
+      budgetStatus(getState(), accountRef, date, limits),
+    usage: (accountRef: string, date?: string) => usageSummary(getState(), accountRef, date),
+    usageRows: (accountRef: string) => usageRows(getState(), accountRef),
+    reserve: (input: Partial<BudgetReserveInput> & { day?: string }) =>
       runTransaction(() => {
         const result = reserveBudget(getState(), input);
         onChange();
         return result;
       }),
-    settle: input =>
+    settle: (input: BudgetSettlement) =>
       runTransaction(() => {
         const result = settleBudget(getState(), input);
         pruneBudgetState(getState(), input.accountRef);

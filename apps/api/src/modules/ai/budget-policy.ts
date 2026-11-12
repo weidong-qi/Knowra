@@ -1,6 +1,6 @@
 import { effectivePriceProfile, enforcedLimits } from './budget-settings.ts';
-import { beijingDay } from './budget-ledger.js';
-import { periodOf } from './budget-alerts.js';
+import { beijingDay } from './budget-ledger.ts';
+import { periodOf } from './budget-alerts.ts';
 import type { BudgetPolicyLimits, BudgetPolicyOptions, BudgetSettings } from './budget-types.ts';
 
 const FRESH_MS = 5 * 60_000;

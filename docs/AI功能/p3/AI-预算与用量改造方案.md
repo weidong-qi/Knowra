@@ -10,7 +10,7 @@
 
 ## 现状（改造前）
 
-- 限额写死：每日 20 元（`budget-ledger.js` 的 `DAILY_LIMIT_MICROUNITS`）、单任务 2 元（`JOB_LIMIT_MICROUNITS`）。界面只有一句文字提示，没有任何用量展示。
+- 限额写死：每日 20 元（`budget-ledger.ts` 的 `DAILY_LIMIT_MICROUNITS`）、单任务 2 元（`JOB_LIMIT_MICROUNITS`）。界面只有一句文字提示，没有任何用量展示。
 - 预留→结算：发请求前按最坏情况预留，返回后按实际用量结算；结果未知的请求持续占额度。
 - 两套互相独立的账本（D23）：Web 用云端预算权威（`/api/ai/budget/*`），Mac 用本机 `ai-budget.json`（`apps/desktop-runtime/src/local-budget-authority.mjs`）。多设备的每日额度各算各的。
 - 价格表 `reviewed-price-profile.js` 用于 token → 钱的换算；原先过期即停止所有付费调用（B1 已改为只提示）。

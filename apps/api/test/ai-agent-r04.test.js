@@ -12,7 +12,7 @@ import { createAiAccessService } from '../src/modules/ai/access-service.js';
 import { createAiAgentWorker } from '../src/modules/ai/agent-worker.js';
 import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
 import { createAiConversationService } from '../src/modules/ai/conversation-service.js';
-import { beijingDay } from '../src/modules/ai/budget-ledger.js';
+import { beijingDay } from '../src/modules/ai/budget-ledger.ts';
 import { createServer } from '../src/server.js';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';

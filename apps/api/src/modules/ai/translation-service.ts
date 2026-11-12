@@ -1,5 +1,6 @@
+import type { BudgetReservation, BudgetReserveInput, BudgetSettlement } from './private-store-types.ts';
 import { randomUUID } from 'node:crypto';
-import { beijingDay } from './budget-ledger.js';
+import { beijingDay } from './budget-ledger.ts';
 import { actualCostMicrounits, quoteWorstCase } from './worker.js';
 import { createAiRecoveryScope } from './recovery-scope.ts';
 import { createTranslationTasks } from './translation-tasks.ts';
@@ -28,8 +29,10 @@ interface TranslationOptions {
     complete(request: Record<string, unknown>): Promise<{ content?: unknown; usage?: Usage; finishReason?: unknown }>;
   };
   budget: {
-    reserve(input: Record<string, unknown>): Promise<Record<string, unknown> | null>;
-    settle(input: Record<string, unknown>): Promise<unknown>;
+    reserve(
+      input: Partial<BudgetReserveInput> & { day?: string }
+    ): BudgetReservation | null | Promise<BudgetReservation | null>;
+    settle(input: BudgetSettlement): BudgetReservation | Promise<BudgetReservation>;
   };
   priceProfile: PriceProfile;
   policy?: {
