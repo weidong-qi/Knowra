@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  ApiRequestError,
   applyConceptCommand,
   emptyConceptState,
   mergeConceptChanges,
@@ -90,6 +91,26 @@ describe('概念首版界面', () => {
     expect(screen.queryByRole('button', { name: '编辑概念' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '删除概念' })).not.toBeInTheDocument();
     expect(server.request.mock.calls.filter(([url]) => url.endsWith('/commands'))).toHaveLength(0);
+  });
+  it('旧端不支持概念时保留升级说明和重试入口，禁止新建', async () => {
+    const store = createConceptStore(
+      vi.fn(async () => {
+        throw new ApiRequestError('不支持概念', { status: 503, code: 'KNOWLEDGE_CONCEPTS_UNAVAILABLE' });
+      }) as never
+    );
+    setSharedConceptStore(store);
+    render(
+      <ConceptWorkspace
+        selectedId={null}
+        canWrite
+        onListItems={async () => []}
+        onSelect={vi.fn()}
+        onOpenItem={vi.fn()}
+      />
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('请升级云端与 Mac 应用');
+    expect(screen.getByRole('button', { name: '新建概念' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '重新加载概念' })).toBeEnabled();
   });
   it('直接合并提示不可撤销，删除确认列出关系数量', async () => {
     fixture(

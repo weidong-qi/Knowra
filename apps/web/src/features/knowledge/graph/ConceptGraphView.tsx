@@ -209,7 +209,12 @@ export function ConceptGraphView({ data: sample = CONCEPT_GRAPH_SAMPLE }: { data
           {query ? (
             <div className={styles.searchResults} role="region" aria-label="图中概念搜索结果">
               {data.concepts
-                .filter(concept => concept.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+                .filter(concept =>
+                  [concept.name, concept.sense, ...concept.aliases]
+                    .join(' ')
+                    .toLocaleLowerCase()
+                    .includes(query.trim().toLocaleLowerCase())
+                )
                 .map(concept => (
                   <Button
                     key={concept.id}
@@ -223,7 +228,12 @@ export function ConceptGraphView({ data: sample = CONCEPT_GRAPH_SAMPLE }: { data
                     {concept.name}
                   </Button>
                 ))}
-              {!data.concepts.some(concept => concept.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())) ? (
+              {!data.concepts.some(concept =>
+                [concept.name, concept.sense, ...concept.aliases]
+                  .join(' ')
+                  .toLocaleLowerCase()
+                  .includes(query.trim().toLocaleLowerCase())
+              ) ? (
                 <span>没有匹配的概念</span>
               ) : null}
             </div>
