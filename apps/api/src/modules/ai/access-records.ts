@@ -1,3 +1,17 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { ValidateFunction } from 'ajv';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { AccessKind, AccessIndexRecord } from './private-store-types.ts';
+import type {
+  AccessRecord,
+  AccessRecordByKind,
+  AiAccessPolicy,
+  AiRunGrant,
+  AiRequestManifest,
+  RecordBoundary,
+  ValidatedAccessState
+} from './private-record-types.ts';
+
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import schema from './contracts/ai-v2.schema.json' with { type: 'json' };
@@ -7,53 +21,63 @@ export const ACCESS_KINDS = Object.freeze({
   aiAccessPolicy: { collection: 'accessPolicies', id: 'policyId' },
   aiRunGrant: { collection: 'runGrants', id: 'grantId' },
   aiRequestManifest: { collection: 'requestManifests', id: 'manifestId' }
-});
+} as const);
 
-const ajv = new /** @type {typeof import('ajv/dist/2020.js').Ajv2020} */ (/** @type {unknown} */ (Ajv2020))({
+const ajv = new (Ajv2020 as unknown as typeof import('ajv/dist/2020.js').Ajv2020)({
   strict: false,
   allErrors: true
 });
-/** @type {import('ajv-formats').FormatsPlugin} */ (/** @type {unknown} */ (addFormats))(ajv);
+(addFormats as unknown as import('ajv-formats').FormatsPlugin)(ajv);
 ajv.addSchema(schema);
-/** @type {Record<string, (value: unknown) => boolean>} */
-const validators = Object.fromEntries(
-  Object.keys(ACCESS_KINDS).map(kind => [kind, ajv.compile({ $ref: `${schema.$id}#/$defs/${kind}` })])
+const validators: Record<string, ValidateFunction<AccessRecord>> = Object.fromEntries(
+  Object.keys(ACCESS_KINDS).map(kind => [kind, ajv.compile<AccessRecord>({ $ref: `${schema.$id}#/$defs/${kind}` })])
 );
 
-export function accessError(code, message) {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+export function accessError(code: string, message: string): never {
+  const error = new Error(message) as AppError;
   error.code = code;
   throw error;
 }
 
-export function validateAccessRecord(kind, input) {
+export function validateAccessRecord<K extends AccessKind>(kind: K, input: unknown): AccessRecordByKind[K];
+export function validateAccessRecord(kind: string, input: unknown): AccessRecord;
+export function validateAccessRecord(kind: string, input: unknown): AccessRecord {
   const validate = validators[kind];
   if (!validate || !input || typeof input !== 'object' || !validate(input) || input.kind !== kind) {
     accessError('AI_RECORD_INVALID', `AI ${kind} v2 记录无效。`);
   }
   if (
     kind === 'aiAccessPolicy' &&
-    (Date.parse(input.expiresAt) <= Date.parse(input.issuedAt) ||
-      !input.read ||
-      (input.egress && !input.recipients.length) ||
-      (!input.egress && input.recipients.length))
+    (Date.parse((input as AiAccessPolicy).expiresAt) <= Date.parse((input as AiAccessPolicy).issuedAt) ||
+      !(input as AiAccessPolicy).read ||
+      ((input as AiAccessPolicy).egress && !(input as AiAccessPolicy).recipients.length) ||
+      (!(input as AiAccessPolicy).egress && (input as AiAccessPolicy).recipients.length))
   ) {
     accessError('AI_RECORD_INVALID', '持续授权的有效期或权限无效。');
   }
-  if (kind === 'aiRunGrant' && Date.parse(input.expiresAt) <= Date.parse(input.issuedAt)) {
+  if (
+    kind === 'aiRunGrant' &&
+    Date.parse((input as AiRunGrant).expiresAt) <= Date.parse((input as AiRunGrant).issuedAt)
+  ) {
     accessError('AI_RECORD_INVALID', '运行授权有效期无效。');
   }
-  if (kind === 'aiRequestManifest' && [...input.sources, ...input.historySources].some(ref => ref.end <= ref.start))
+  if (
+    kind === 'aiRequestManifest' &&
+    [...(input as AiRequestManifest).sources, ...(input as AiRequestManifest).historySources].some(
+      ref => ref.end <= ref.start
+    )
+  )
     accessError('AI_RECORD_INVALID', '发送清单来源范围无效。');
   return structuredClone(input);
 }
 
-export function validateAccessRelationships(state) {
+export function validateAccessRelationships(
+  state: Pick<ValidatedAccessState, 'accessPolicies' | 'runGrants' | 'requestManifests'>
+) {
   const policies = new Map(state.accessPolicies.map(row => [row.policyId, row]));
   const grants = new Map(state.runGrants.map(row => [row.grantId, row]));
-  const boundary = (left, right) =>
-    ['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'].every(key => left[key] === right[key]);
+  const boundary = (left: RecordBoundary, right: RecordBoundary) =>
+    (['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'] as const).every(key => left[key] === right[key]);
   for (const grant of grants.values()) {
     const policy = policies.get(grant.policyId);
     if (
@@ -81,79 +105,92 @@ export function validateAccessRelationships(state) {
 }
 
 /** v2 私有记录与 v1 并存；适配器的 compareAndSwap 必须是原子操作。 */
-export function createAiAccessStore(adapter) {
-  async function assertBoundary(record) {
+type Awaitable<T> = T | Promise<T>;
+interface AccessStoreAdapter {
+  identity(): Awaitable<DatasetIdentity>;
+  get(kind: AccessKind, id: string): Awaitable<AccessRecord | null>;
+  list(kind: AccessKind): Awaitable<(AccessRecord | null)[]>;
+  insert(kind: AccessKind, record: AccessRecord): Awaitable<void>;
+  compareAndSwap(record: AiAccessPolicy, expectedHash: string): Awaitable<void>;
+}
+export function createAiAccessStore(adapter: AccessStoreAdapter) {
+  async function assertBoundary(record: RecordBoundary) {
     const identity = await adapter.identity();
     if (record.datasetId !== identity.datasetId || record.datasetEpoch !== identity.datasetEpoch) {
       accessError('AI_DATASET_STALE', '资料集已切换，请重新授权。');
     }
   }
-  async function assertParent(kind, record) {
+  async function assertParent(kind: AccessKind, record: AccessRecord) {
     if (kind === 'aiAccessPolicy') return;
-    const policy = await adapter.get('aiAccessPolicy', record.policyId);
+    const policy = (await adapter.get(
+      'aiAccessPolicy',
+      (record as AiRunGrant | AiRequestManifest).policyId
+    )) as AiAccessPolicy | null;
     if (
       !policy ||
       policy.ownerId !== record.ownerId ||
       policy.datasetId !== record.datasetId ||
       policy.datasetEpoch !== record.datasetEpoch ||
       policy.spaceId !== record.spaceId ||
-      policy.revision !== record.policyRevision ||
+      policy.revision !== (record as AiRunGrant | AiRequestManifest).policyRevision ||
       policy.revokedAt ||
-      (kind === 'aiRunGrant' && policy.actorId !== record.actorId)
+      (kind === 'aiRunGrant' && policy.actorId !== (record as AiRunGrant).actorId)
     ) {
       accessError('AI_REFERENCE_INVALID', 'v2 授权策略引用不匹配。');
     }
     if (kind === 'aiRequestManifest') {
-      const grant = await adapter.get('aiRunGrant', record.grantId);
+      const grant = (await adapter.get('aiRunGrant', (record as AiRequestManifest).grantId)) as AiRunGrant | null;
       if (
         !grant ||
         grant.policyId !== policy.policyId ||
-        grant.policyRevision !== record.policyRevision ||
+        grant.policyRevision !== (record as AiRunGrant | AiRequestManifest).policyRevision ||
         grant.ownerId !== record.ownerId ||
         grant.datasetId !== record.datasetId ||
         grant.datasetEpoch !== record.datasetEpoch ||
         grant.spaceId !== record.spaceId ||
         !policy.egress ||
-        !policy.recipients.includes(record.recipient) ||
-        hashRecord(record.excludedNoteIds) !== hashRecord(policy.excludedNoteIds)
+        !policy.recipients.includes((record as AiRequestManifest).recipient) ||
+        hashRecord((record as AiRequestManifest).excludedNoteIds) !== hashRecord(policy.excludedNoteIds)
       ) {
         accessError('AI_REFERENCE_INVALID', '逐请求清单的运行授权不匹配。');
       }
     }
   }
   return {
-    peek(kind, id) {
+    peek<K extends AccessKind>(kind: K, id: string): Awaitable<AccessRecordByKind[K] | null> {
       if (!ACCESS_KINDS[kind]) accessError('AI_RECORD_INVALID', '未知的 v2 AI 记录。');
       const row = adapter.get(kind, id);
-      const validate = value => (value ? validateAccessRecord(kind, value) : null);
-      return row?.then ? row.then(validate) : validate(row);
+      const validate = (value: AccessRecord | null) => (value ? validateAccessRecord(kind, value) : null);
+      return (row as Promise<AccessRecord | null> | null)?.then
+        ? (row as Promise<AccessRecord | null>).then(validate)
+        : validate(row as AccessRecord | null);
     },
     // 本机 MCP 最后一个 await 之后同步复核资料集边界；异步后端不伪装成原子快照。
     peekIdentity() {
       const identity = adapter.identity();
-      if (identity?.then) throw new TypeError('同步授权快照不支持异步资料集存储。');
-      return structuredClone(identity);
+      if ((identity as Promise<DatasetIdentity>)?.then) throw new TypeError('同步授权快照不支持异步资料集存储。');
+      return structuredClone(identity as DatasetIdentity);
     },
     async identity() {
       return structuredClone(await adapter.identity());
     },
-    async get(kind, id) {
+    async get<K extends AccessKind>(kind: K, id: string) {
       if (!ACCESS_KINDS[kind]) accessError('AI_RECORD_INVALID', '未知的 v2 AI 记录。');
       const row = await adapter.get(kind, id);
       return row ? validateAccessRecord(kind, row) : null;
     },
-    async list(kind) {
+    async list<K extends AccessKind>(kind: K) {
       if (!ACCESS_KINDS[kind]) accessError('AI_RECORD_INVALID', '未知的 v2 AI 记录。');
       return (await adapter.list(kind)).map(row => validateAccessRecord(kind, row));
     },
-    async insert(kind, input) {
+    async insert<K extends AccessKind>(kind: K, input: unknown) {
       const record = validateAccessRecord(kind, input);
       await assertBoundary(record);
       await assertParent(kind, record);
       await adapter.insert(kind, record);
       return record;
     },
-    async replacePolicy(input, expectedHash) {
+    async replacePolicy(input: unknown, expectedHash: string) {
       const record = validateAccessRecord('aiAccessPolicy', input);
       await assertBoundary(record);
       if (!/^[a-f0-9]{64}$/.test(expectedHash)) accessError('AI_RECORD_INVALID', '策略版本哈希无效。');
@@ -163,16 +200,25 @@ export function createAiAccessStore(adapter) {
   };
 }
 
-export function createJsonAiAccessStore({ getState, runTransaction, onChange }) {
-  const idField = kind => ACCESS_KINDS[kind].id;
-  const rows = kind => getState()[ACCESS_KINDS[kind].collection];
+interface JsonAccessStoreOptions {
+  getState(): ValidatedAccessState;
+  runTransaction<Result>(operation: () => Result): Awaitable<Result>;
+  onChange(): void;
+}
+export function createJsonAiAccessStore({ getState, runTransaction, onChange }: JsonAccessStoreOptions) {
+  const idField = (kind: AccessKind) => ACCESS_KINDS[kind].id;
+  const rows = <K extends AccessKind>(kind: K) => getState()[ACCESS_KINDS[kind].collection] as AccessRecordByKind[K][];
   return createAiAccessStore({
     identity: () => ({ datasetId: getState().datasetId, datasetEpoch: getState().datasetEpoch }),
-    get: (kind, id) => rows(kind).find(row => row[idField(kind)] === id) ?? null,
+    get: (kind, id) => rows(kind).find(row => (row as AccessIndexRecord)[idField(kind)] === id) ?? null,
     list: kind => rows(kind),
     insert: (kind, record) =>
       runTransaction(() => {
-        if (rows(kind).some(row => row[idField(kind)] === record[idField(kind)])) {
+        if (
+          rows(kind).some(
+            row => (row as AccessIndexRecord)[idField(kind)] === (record as AccessIndexRecord)[idField(kind)]
+          )
+        ) {
           accessError('AI_RECORD_DUPLICATE', 'AI v2 记录 ID 已存在。');
         }
         rows(kind).push(record);

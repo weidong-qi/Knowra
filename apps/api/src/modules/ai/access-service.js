@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { hashRecord } from './record-contract.ts';
-import { accessError } from './access-records.js';
+import { accessError } from './access-records.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from './outbound-payload.ts';
 import { normalizeAiRequest } from './gateway.js';
 import { normalizeCatalogSpec, MAX_CATALOG_SPECS } from './catalog-tool.ts';
@@ -138,6 +138,7 @@ export function createAiAccessService({
     await assertAiNoteUnchanged(noteRepository, note);
     return { version, contentHash };
   }
+  /** @returns {Promise<import('./private-record-types.ts').AiAccessPolicy['scope']>} */
   async function validateScope(scope, spaceId) {
     if (!own(scope, ['kind', 'folderId', 'noteIds']) || !['library', 'folder', 'fixed'].includes(scope.kind)) {
       fail('AI_SCOPE_INVALID', '授权范围无效。');
@@ -541,7 +542,8 @@ export function createAiAccessService({
         return (
           name.length >= 2 &&
           haystack.includes(name) &&
-          (policy.scope.kind === 'library' || withinFolder(folder.id, policy.scope.folderId, byId))
+          (policy.scope.kind === 'library' ||
+            withinFolder(folder.id, /** @type {{kind: 'folder', folderId: string}} */ (policy.scope).folderId, byId))
         );
       })
       .sort((a, b) => b.name.length - a.name.length || sortFolders(a, b))
@@ -834,7 +836,8 @@ export function createAiAccessService({
     inheritedCatalog = null
   } = {}) {
     const { grant, policy } = await activeGrant(grantId);
-    if (!policy.egress || !policy.recipients.includes(recipient)) fail('AI_EGRESS_FORBIDDEN', '接收方不在外发授权内。');
+    if (!policy.egress || !(/** @type {readonly string[]} */ (policy.recipients).includes(recipient)))
+      fail('AI_EGRESS_FORBIDDEN', '接收方不在外发授权内。');
     if (
       recipient !== 'deepseek' ||
       !validId(modelId) ||
@@ -1040,7 +1043,7 @@ export function createAiAccessService({
       manifest.policyRevision !== policy.revision ||
       manifest.recipient !== recipient ||
       !policy.egress ||
-      !policy.recipients.includes(recipient) ||
+      !(/** @type {readonly string[]} */ (policy.recipients).includes(recipient)) ||
       manifest.payloadHash !== outboundPayloadHash(request)
     ) {
       fail('AI_EGRESS_FORBIDDEN', '请求清单与当前外发授权不一致。');

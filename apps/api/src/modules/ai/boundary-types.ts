@@ -8,7 +8,7 @@ import type { createAiConversationStore } from './conversation-store.js';
 import type { createNoteActionService } from './action-service.js';
 import type { createAgentKnowledgeCommitService } from './agent-knowledge-commit.js';
 import type { createKnowledgeModule } from '../knowledge/index.js';
-import type { createAiAccessStore } from './access-records.js';
+import type { createAiAccessStore } from './access-records.ts';
 
 export type AccessService = ReturnType<typeof createAiAccessService>;
 export type Gateway = ReturnType<typeof createAiGateway>;

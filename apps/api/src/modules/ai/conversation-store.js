@@ -16,7 +16,7 @@ import {
   conversationError,
   validateConversationRecord,
   validateConversationState
-} from './conversation-records.js';
+} from './conversation-records.ts';
 // 保留已有消费者的入口；新消费者直接依赖纯记录契约。
 export {
   CONVERSATION_KINDS,
@@ -24,7 +24,7 @@ export {
   conversationError,
   validateConversationRecord,
   validateConversationState
-} from './conversation-records.js';
+} from './conversation-records.ts';
 
 /** 每次修改在私有存储事务中完成；适配器负责跨进程并发串行化。 */
 export function createAiConversationStore(adapter, { now = () => new Date() } = {}) {

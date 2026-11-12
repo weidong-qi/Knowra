@@ -1,3 +1,17 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { ValidateFunction } from 'ajv';
+import type { ConversationKind, ConversationIndexRecord, ConversationCollection } from './private-store-types.ts';
+import type {
+  ConversationRecord,
+  ConversationRecordByKind,
+  AiConversationTurn,
+  AiConversationMessage,
+  AiConversationToolCall,
+  AiConversationModelAttempt,
+  AiConversationAttachment,
+  RecordBoundary,
+  ValidatedConversationState
+} from './private-record-types.ts';
 import { readAnnotationToolHistory } from './annotation-history.ts';
 import { validateWriteIntent } from './note-write-intent.ts';
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -14,102 +28,122 @@ export const CONVERSATION_KINDS = Object.freeze({
   aiConversationToolCall: { collection: 'conversationToolCalls', id: 'callId' },
   aiConversationModelAttempt: { collection: 'conversationModelAttempts', id: 'attemptId' },
   aiConversationAttachment: { collection: 'conversationAttachments', id: 'attachmentId' }
-});
+} as const);
 const collections = Object.values(CONVERSATION_KINDS).map(item => item.collection);
-const ajv = new /** @type {typeof import('ajv/dist/2020.js').Ajv2020} */ (/** @type {unknown} */ (Ajv2020))({
+const ajv = new (Ajv2020 as unknown as typeof import('ajv/dist/2020.js').Ajv2020)({
   strict: false,
   allErrors: true
 });
-/** @type {import('ajv-formats').FormatsPlugin} */ (/** @type {unknown} */ (addFormats))(ajv);
+(addFormats as unknown as import('ajv-formats').FormatsPlugin)(ajv);
 ajv.addSchema(schema);
-/** @type {Record<string, (value: unknown) => boolean>} */
-const validators = Object.fromEntries(
-  Object.keys(CONVERSATION_KINDS).map(kind => [kind, ajv.compile({ $ref: `${schema.$id}#/$defs/${kind}` })])
+const validators: Record<string, ValidateFunction<ConversationRecord>> = Object.fromEntries(
+  Object.keys(CONVERSATION_KINDS).map(kind => [
+    kind,
+    ajv.compile<ConversationRecord>({ $ref: `${schema.$id}#/$defs/${kind}` })
+  ])
 );
-export const emptyConversationState = () => Object.fromEntries(collections.map(name => [name, []]));
+export const emptyConversationState = (): ValidatedConversationState =>
+  Object.fromEntries(collections.map(name => [name, []])) as unknown as ValidatedConversationState;
 
-export function conversationError(code, message) {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+export function conversationError(code: string, message: string): never {
+  const error = new Error(message) as AppError;
   error.code = code;
   throw error;
 }
 
-export function validateConversationRecord(kind, record) {
+export function validateConversationRecord<K extends ConversationKind>(
+  kind: K,
+  record: unknown
+): ConversationRecordByKind[K];
+export function validateConversationRecord(kind: string, record: unknown): ConversationRecord;
+export function validateConversationRecord(kind: string, record: unknown): ConversationRecord {
   if (!validators[kind]?.(record) || record.kind !== kind) {
     conversationError('AI_RECORD_INVALID', `AI ${kind} 会话记录无效。`);
   }
-  if (kind === 'aiConversationTurn' && record.writeIntent) {
+  if (kind === 'aiConversationTurn' && (record as AiConversationTurn).writeIntent) {
     try {
-      validateWriteIntent(record.writeIntent);
+      validateWriteIntent((record as AiConversationTurn).writeIntent);
     } catch {
       conversationError('AI_RECORD_INVALID', '恢复的写入意图缺少固定目标。');
     }
   }
-  if (kind === 'aiConversationTurn' && record.checkpoint) validateAgentCheckpoint(record.checkpoint);
-  if (kind === 'aiConversationModelAttempt' && record.modelResult) {
-    validateDurableModelResult(record.modelResult);
-    if (!['settled', 'unknown'].includes(record.status))
+  if (kind === 'aiConversationTurn' && (record as AiConversationTurn).checkpoint)
+    validateAgentCheckpoint((record as AiConversationTurn).checkpoint);
+  if (kind === 'aiConversationModelAttempt' && (record as AiConversationModelAttempt).modelResult) {
+    validateDurableModelResult((record as AiConversationModelAttempt).modelResult);
+    if (!['settled', 'unknown'].includes((record as AiConversationModelAttempt).status))
       conversationError('AI_RECORD_INVALID', '响应与费用结算状态不一致。');
   }
   if (
     kind === 'aiConversationModelAttempt' &&
-    (Boolean(record.responseRejectedCode) !== Boolean(record.responseRejectedAt) ||
-      (record.responseRejectedCode &&
-        (!record.modelResult || !REJECTED_RESPONSE_CODES.has(record.responseRejectedCode))))
+    (Boolean((record as AiConversationModelAttempt).responseRejectedCode) !==
+      Boolean((record as AiConversationModelAttempt).responseRejectedAt) ||
+      ((record as AiConversationModelAttempt).responseRejectedCode &&
+        (!(record as AiConversationModelAttempt).modelResult ||
+          !REJECTED_RESPONSE_CODES.has((record as AiConversationModelAttempt).responseRejectedCode as string))))
   ) {
     conversationError('AI_RECORD_INVALID', '模型响应拒绝状态无效。');
   }
-  if (kind === 'aiConversationTurn' && record.turnId !== record.jobId) {
+  if (kind === 'aiConversationTurn' && (record as AiConversationTurn).turnId !== (record as AiConversationTurn).jobId) {
     conversationError('AI_RECORD_INVALID', '会话轮次与任务 ID 不一致。');
   }
   if (kind === 'aiConversationAttachment') {
     if (
-      record.segments.length ||
-      record.parsedTextHash !== null ||
-      record.parserVersion !== null ||
-      record.imageMetadata !== null ||
-      Boolean(record.removedAt) !== (record.storageStatus === 'removed') ||
-      (record.removedAt && record.cleanupStatus === 'none') ||
-      (record.storageStatus !== 'removed' && record.cleanupStatus !== 'none') ||
-      (['missing', 'removed'].includes(record.storageStatus) && record.parseStatus !== 'failed') ||
-      (['pending', 'ready'].includes(record.storageStatus) &&
-        (record.parseStatus !== 'not_parsed' || record.errorCode !== 'AI_ATTACHMENT_NOT_PARSED'))
+      (record as AiConversationAttachment).segments.length ||
+      (record as AiConversationAttachment).parsedTextHash !== null ||
+      (record as AiConversationAttachment).parserVersion !== null ||
+      (record as AiConversationAttachment).imageMetadata !== null ||
+      Boolean((record as AiConversationAttachment).removedAt) !==
+        ((record as AiConversationAttachment).storageStatus === 'removed') ||
+      ((record as AiConversationAttachment).removedAt &&
+        (record as AiConversationAttachment).cleanupStatus === 'none') ||
+      ((record as AiConversationAttachment).storageStatus !== 'removed' &&
+        (record as AiConversationAttachment).cleanupStatus !== 'none') ||
+      (['missing', 'removed'].includes((record as AiConversationAttachment).storageStatus) &&
+        (record as AiConversationAttachment).parseStatus !== 'failed') ||
+      (['pending', 'ready'].includes((record as AiConversationAttachment).storageStatus) &&
+        ((record as AiConversationAttachment).parseStatus !== 'not_parsed' ||
+          (record as AiConversationAttachment).errorCode !== 'AI_ATTACHMENT_NOT_PARSED'))
     ) {
       conversationError('AI_RECORD_INVALID', '附件读取、解析或移除状态无效。');
     }
   }
   if (
     kind === 'aiConversationTurn' &&
-    ((record.status === 'running') !== Boolean(record.leaseExpiresAt) ||
-      (record.status === 'running' && record.leaseGeneration < 1) ||
-      ['succeeded', 'failed', 'cancelled'].includes(record.status) !== (record.phase === 'finished') ||
-      (record.status === 'staged' && record.leaseGeneration !== 0) ||
-      ((record.status === 'failed') !== Boolean(record.errorCode) && record.status !== 'cancelled'))
+    (((record as AiConversationTurn).status === 'running') !== Boolean((record as AiConversationTurn).leaseExpiresAt) ||
+      ((record as AiConversationTurn).status === 'running' && (record as AiConversationTurn).leaseGeneration < 1) ||
+      ['succeeded', 'failed', 'cancelled'].includes((record as AiConversationTurn).status) !==
+        ((record as AiConversationTurn).phase === 'finished') ||
+      ((record as AiConversationTurn).status === 'staged' && (record as AiConversationTurn).leaseGeneration !== 0) ||
+      (((record as AiConversationTurn).status === 'failed') !== Boolean((record as AiConversationTurn).errorCode) &&
+        (record as AiConversationTurn).status !== 'cancelled'))
   )
     conversationError('AI_RECORD_INVALID', '任务状态、租约或错误码不一致。');
-  if (kind === 'aiConversationMessage' && record.sourceRefs.some(ref => ref.end <= ref.start)) {
+  if (
+    kind === 'aiConversationMessage' &&
+    (record as AiConversationMessage).sourceRefs.some(ref => ref.end <= ref.start)
+  ) {
     conversationError('AI_RECORD_INVALID', '消息来源区间无效。');
   }
   if (
     kind === 'aiConversationMessage' &&
-    (record.role === 'user'
-      ? record.sourceRefs.length ||
-        record.citations?.length ||
-        !record.sourceFree ||
-        record.provenanceManifestId ||
-        record.finishReason
-      : record.finishReason !== 'stop' ||
-        record.sourceFree === Boolean(record.sourceRefs.length) ||
-        (!record.sourceFree && !record.provenanceManifestId))
+    ((record as AiConversationMessage).role === 'user'
+      ? (record as AiConversationMessage).sourceRefs.length ||
+        (record as AiConversationMessage).citations?.length ||
+        !(record as AiConversationMessage).sourceFree ||
+        (record as AiConversationMessage).provenanceManifestId ||
+        (record as AiConversationMessage).finishReason
+      : (record as AiConversationMessage).finishReason !== 'stop' ||
+        (record as AiConversationMessage).sourceFree === Boolean((record as AiConversationMessage).sourceRefs.length) ||
+        (!(record as AiConversationMessage).sourceFree && !(record as AiConversationMessage).provenanceManifestId))
   ) {
     conversationError('AI_RECORD_INVALID', '消息角色、终止状态或来源声明无效。');
   }
   if (
     kind === 'aiConversationMessage' &&
-    record.citations?.some(
+    (record as AiConversationMessage).citations?.some(
       citation =>
-        !record.sourceRefs.some(
+        !(record as AiConversationMessage).sourceRefs.some(
           ref =>
             ref.noteId === citation.noteId &&
             ref.noteVersionId === citation.noteVersionId &&
@@ -123,40 +157,54 @@ export function validateConversationRecord(kind, record) {
   }
   if (
     kind === 'aiConversationToolCall' &&
-    ((record.status === 'requested' &&
-      (record.resultJson || record.errorCode || record.sourceRefs.length || record.provenanceManifestId)) ||
-      (record.status === 'succeeded' && (!record.resultJson || record.errorCode)) ||
-      (record.status === 'failed' &&
-        (!record.errorCode || record.resultJson || record.sourceRefs.length || record.provenanceManifestId)) ||
-      record.sourceRefs.some(ref => ref.end <= ref.start))
+    (((record as AiConversationToolCall).status === 'requested' &&
+      ((record as AiConversationToolCall).resultJson ||
+        (record as AiConversationToolCall).errorCode ||
+        (record as AiConversationToolCall).sourceRefs.length ||
+        (record as AiConversationToolCall).provenanceManifestId)) ||
+      ((record as AiConversationToolCall).status === 'succeeded' &&
+        (!(record as AiConversationToolCall).resultJson || (record as AiConversationToolCall).errorCode)) ||
+      ((record as AiConversationToolCall).status === 'failed' &&
+        (!(record as AiConversationToolCall).errorCode ||
+          (record as AiConversationToolCall).resultJson ||
+          (record as AiConversationToolCall).sourceRefs.length ||
+          (record as AiConversationToolCall).provenanceManifestId)) ||
+      (record as AiConversationToolCall).sourceRefs.some(ref => ref.end <= ref.start))
   )
     conversationError('AI_RECORD_INVALID', '工具调用与结果状态不一致。');
   if (
     kind === 'aiConversationModelAttempt' &&
-    ((record.status === 'settled') !== (record.actualMicrounits !== null) ||
-      (record.actualMicrounits !== null && record.actualMicrounits > record.reservedMicrounits) ||
-      Boolean(record.manifestId) !== Boolean(record.grantId))
+    (((record as AiConversationModelAttempt).status === 'settled') !==
+      ((record as AiConversationModelAttempt).actualMicrounits !== null) ||
+      ((record as AiConversationModelAttempt).actualMicrounits !== null &&
+        ((record as AiConversationModelAttempt).actualMicrounits as number) >
+          (record as AiConversationModelAttempt).reservedMicrounits) ||
+      Boolean((record as AiConversationModelAttempt).manifestId) !==
+        Boolean((record as AiConversationModelAttempt).grantId))
   )
     conversationError('AI_RECORD_INVALID', '模型尝试状态或授权引用无效。');
   if (kind === 'aiConversationToolCall') readAnnotationToolHistory(record);
   return structuredClone(record);
 }
 
-export function validateConversationState(input) {
-  const state = structuredClone(input);
+export function validateConversationState(input: unknown): ValidatedConversationState {
+  const state = structuredClone(input) as ValidatedConversationState;
   for (const [kind, { collection, id }] of Object.entries(CONVERSATION_KINDS)) {
-    if (!Array.isArray(state[collection])) conversationError('AI_RECORD_INVALID', `AI ${collection} 集合无效。`);
+    if (!Array.isArray(state[collection as ConversationCollection] as ConversationRecord[]))
+      conversationError('AI_RECORD_INVALID', `AI ${collection} 集合无效。`);
     const ids = new Set();
-    for (const record of state[collection]) {
+    for (const record of state[collection as ConversationCollection] as ConversationRecord[]) {
       validateConversationRecord(kind, record);
-      if (ids.has(record[id])) conversationError('AI_RECORD_DUPLICATE', `AI ${collection} ID 重复。`);
-      ids.add(record[id]);
+      if (ids.has((record as ConversationIndexRecord)[id as keyof ConversationIndexRecord]))
+        conversationError('AI_RECORD_DUPLICATE', `AI ${collection} ID 重复。`);
+      ids.add((record as ConversationIndexRecord)[id as keyof ConversationIndexRecord]);
     }
   }
   const conversations = new Map(state.conversations.map(row => [row.conversationId, row]));
   const turns = new Map(state.conversationTurns.map(row => [row.turnId, row]));
   const messages = new Map(state.conversationMessages.map(row => [row.messageId, row]));
-  const boundary = (a, b) => ['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'].every(key => a[key] === b[key]);
+  const boundary = (a: RecordBoundary, b: RecordBoundary) =>
+    (['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'] as const).every(key => a[key] === b[key]);
   const ordinals = new Set(),
     sequences = new Set(),
     callOrdinals = new Set(),
@@ -286,7 +334,7 @@ export function validateConversationState(input) {
     if (
       turn.checkpoint?.handledAttemptOrdinal &&
       !state.conversationModelAttempts.some(
-        row => row.turnId === turn.turnId && row.ordinal === turn.checkpoint.handledAttemptOrdinal && row.modelResult
+        row => row.turnId === turn.turnId && row.ordinal === turn.checkpoint!.handledAttemptOrdinal && row.modelResult
       )
     ) {
       conversationError('AI_REFERENCE_INVALID', '检查点引用的模型响应不存在。');

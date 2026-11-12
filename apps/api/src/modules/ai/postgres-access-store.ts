@@ -1,5 +1,6 @@
+import type { AccessRecord } from './private-record-types.ts';
 import type { PrivateStoreOptions, AccessKind, AccessIndexRecord, AccessSqlRow } from './private-store-types.ts';
-import { ACCESS_KINDS, accessError, createAiAccessStore, validateAccessRecord } from './access-records.js';
+import { ACCESS_KINDS, accessError, createAiAccessStore, validateAccessRecord } from './access-records.ts';
 import { hashRecord } from './record-contract.ts';
 
 const definitions = {
@@ -12,16 +13,16 @@ const definitions = {
 export function createPostgresAiAccessStore({ client, repository, ownerId }: PrivateStoreOptions) {
   if (!client || !repository || !ownerId)
     throw new TypeError('PostgreSQL AI access store needs client, repository and owner');
-  function decode(kind: AccessKind, row: AccessSqlRow | undefined): AccessIndexRecord | null {
+  function decode(kind: AccessKind, row: AccessSqlRow | undefined): AccessRecord | null {
     if (!row) return null;
-    const record: AccessIndexRecord = validateAccessRecord(kind, JSON.parse(row.record_json));
+    const record = validateAccessRecord(kind, JSON.parse(row.record_json));
     if (
-      record[ACCESS_KINDS[kind].id as keyof AccessIndexRecord] !== row[definitions[kind].id] ||
+      (record as AccessIndexRecord)[ACCESS_KINDS[kind].id as keyof AccessIndexRecord] !== row[definitions[kind].id] ||
       record.ownerId !== row.owner_id ||
       record.datasetId !== row.dataset_id ||
       record.datasetEpoch !== row.dataset_epoch ||
       record.spaceId !== row.space_id ||
-      (kind === 'aiAccessPolicy' && record.revision !== row.revision) ||
+      (kind === 'aiAccessPolicy' && (record as AccessIndexRecord).revision !== row.revision) ||
       hashRecord(record) !== row.record_hash
     )
       throw new Error('AI v2 私有索引与正文不一致。');
@@ -59,7 +60,7 @@ export function createPostgresAiAccessStore({ client, repository, ownerId }: Pri
         'record_json'
       ];
       const values = [
-        record[ACCESS_KINDS[kind].id as keyof AccessIndexRecord],
+        (record as AccessIndexRecord)[ACCESS_KINDS[kind].id as keyof AccessIndexRecord],
         ...(parent ? [record[parent === 'policy_id' ? 'policyId' : 'grantId']] : []),
         record.ownerId,
         record.datasetId,
