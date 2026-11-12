@@ -379,7 +379,7 @@ export function createPersistentAppContext({
       uploadsDir,
       balanceFile: path.join(storageRootDir, 'ai-balance.json'),
       budgetSettingsFile: path.join(storageRootDir, 'ai-budget-settings.json'),
-      budgetAlertsFile: path.join(storageRootDir, 'ai-budget-alerts.tson'),
+      budgetAlertsFile: path.join(storageRootDir, 'ai-budget-alerts.json'),
       accessStore: dataStore.aiAccessStore,
       conversationStore: dataStore.aiConversationStore,
       actionStore: dataStore.aiActionStore,
