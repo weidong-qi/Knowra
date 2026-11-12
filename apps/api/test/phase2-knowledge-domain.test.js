@@ -426,9 +426,9 @@ export const phase2KnowledgeDomainTests = [
       const { createAsyncKnowledgeItemService } =
         await import('../src/modules/knowledge/application/postgres-async/knowledge-domain-service.ts');
       const { createInMemoryKnowledgeItemRepository } =
-        await import('../src/modules/knowledge/infrastructure/knowledge-item-repository.js');
+        await import('../src/modules/knowledge/infrastructure/knowledge-item-repository.ts');
       const { createInMemoryKnowledgeEvidenceRepository } =
-        await import('../src/modules/knowledge/infrastructure/knowledge-evidence-repository.js');
+        await import('../src/modules/knowledge/infrastructure/knowledge-evidence-repository.ts');
       const notes = [
         {
           id: 'phase32-async-evidence-note',

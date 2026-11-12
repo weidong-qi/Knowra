@@ -676,7 +676,7 @@ export const phase3AssessmentTests = [
         createInMemoryQuestionObjectiveRepository,
         createInMemoryQuestionRepository,
         createInMemoryQuestionSourceRepository
-      } = await import('../src/modules/knowledge/infrastructure/assessment-repository.js');
+      } = await import('../src/modules/knowledge/infrastructure/assessment-repository.ts');
       const objective = {
         id: 'phase32-async-objective',
         knowledgeItemId: 'phase32-async-item',

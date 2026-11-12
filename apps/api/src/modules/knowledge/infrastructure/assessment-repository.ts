@@ -1,5 +1,5 @@
 import { createAppError } from '../../../errors/app-error.js';
-import { questionObjectiveRecords } from './question-objective-identity.js';
+import { questionObjectiveRecords } from './question-objective-identity.ts';
 import type { QuestionObjectiveIdentityRecord } from './question-objective-identity.ts';
 
 /** 只描述仓库读取的字段，不把历史快照冒充完整领域对象。 */

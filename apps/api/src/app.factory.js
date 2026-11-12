@@ -12,7 +12,7 @@ import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-ext
 import { createKnowledgeHttpHandlers } from './modules/knowledge/http/knowledge-handlers.js';
 import { createFileDataStore } from './infrastructure/file-data-store.js';
 import { createLocalAttachmentStore } from './infrastructure/local-attachment-store.js';
-import { createInMemoryNoteRepository } from './modules/knowledge/infrastructure/note-repository.js';
+import { createInMemoryNoteRepository } from './modules/knowledge/infrastructure/note-repository.ts';
 import { createInMemoryPdfAnnotationRepository } from './modules/pdf/repository.ts';
 import { createInMemoryFolderRepository } from './modules/knowledge/infrastructure/folder-repository.ts';
 import { createInMemoryTagRepository } from './modules/knowledge/infrastructure/tag-repository.ts';
@@ -20,20 +20,20 @@ import { createInMemoryTagGroupRepository } from './modules/knowledge/infrastruc
 import { createInMemoryKnowledgeSpaceRepository } from './modules/knowledge/infrastructure/knowledge-space-repository.ts';
 import { createInMemoryContentAnnotationRepository } from './modules/knowledge/infrastructure/content-annotation-repository.ts';
 import { createInMemoryNoteVersionRepository } from './modules/knowledge/infrastructure/note-version-repository.ts';
-import { createInMemoryKnowledgeItemRepository } from './modules/knowledge/infrastructure/knowledge-item-repository.js';
-import { createInMemoryKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/knowledge-evidence-repository.js';
+import { createInMemoryKnowledgeItemRepository } from './modules/knowledge/infrastructure/knowledge-item-repository.ts';
+import { createInMemoryKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/knowledge-evidence-repository.ts';
 import { createInMemoryKnowledgeArtifactProvenanceRepository } from './modules/knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
-import { createInMemoryLearningObjectiveRepository } from './modules/knowledge/infrastructure/learning-objective-repository.js';
-import { createInMemoryExamProfileRepository } from './modules/knowledge/infrastructure/exam-profile-repository.js';
-import { createInMemoryExamFocusRepository } from './modules/knowledge/infrastructure/exam-focus-repository.js';
-import { createInMemoryQuestionRepository } from './modules/knowledge/infrastructure/question-repository.js';
-import { createInMemoryQuestionObjectiveRepository } from './modules/knowledge/infrastructure/question-objective-repository.js';
-import { createInMemoryQuestionSourceRepository } from './modules/knowledge/infrastructure/question-source-repository.js';
+import { createInMemoryLearningObjectiveRepository } from './modules/knowledge/infrastructure/assessment-repository.ts';
+import { createInMemoryExamProfileRepository } from './modules/knowledge/infrastructure/assessment-repository.ts';
+import { createInMemoryExamFocusRepository } from './modules/knowledge/infrastructure/assessment-repository.ts';
+import { createInMemoryQuestionRepository } from './modules/knowledge/infrastructure/assessment-repository.ts';
+import { createInMemoryQuestionObjectiveRepository } from './modules/knowledge/infrastructure/assessment-repository.ts';
+import { createInMemoryQuestionSourceRepository } from './modules/knowledge/infrastructure/assessment-repository.ts';
 import {
   createInMemoryAnalysisScopeRepository,
   createInMemoryAnnotationExclusionRepository,
   createInMemoryAnnotationRevisionRepository
-} from './modules/knowledge/infrastructure/annotation-support-repositories.js';
+} from './modules/knowledge/infrastructure/annotation-support-repositories.ts';
 import { createKnowledgeBaseSnapshotService } from './modules/knowledge/application/knowledge-base-snapshot-service.ts';
 import { createNoteDeletionCoordinator } from './modules/knowledge/application/note-deletion-coordinator.ts';
 import { createStorageConfig } from './config/storage.config.js';
