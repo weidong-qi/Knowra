@@ -4,7 +4,7 @@ import type { AiAnswerResult, AiJob, AiRecordRepositoryPort } from './record-typ
 import type { createJsonBudgetAuthority } from './budget-ledger.ts';
 import type { createBudgetPolicy } from './budget-policy.ts';
 import type { createModelSettingsService } from './model-settings.ts';
-import type { createAiConversationStore } from './conversation-store.js';
+import type { createAiConversationStore } from './conversation-store.ts';
 import type { createNoteActionService } from './action-service.js';
 import type { createAgentKnowledgeCommitService } from './agent-knowledge-commit.js';
 import type { createKnowledgeModule } from '../knowledge/index.js';

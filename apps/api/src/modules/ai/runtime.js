@@ -8,7 +8,7 @@ import { createAiWorker } from './worker.js';
 import { createIsolatedAiWorker } from './isolated-worker.js';
 import { createAiReadContextService } from './read-context-service.js';
 import { createAiAccessService } from './access-service.js';
-import { createAiConversationService } from './conversation-service.js';
+import { createAiConversationService } from './conversation-service.ts';
 import { createAiAgentWorker } from './agent-worker.js';
 import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.js';
 import { createConversationAttachmentService } from './conversation-attachments.js';

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { emptyAgentCheckpoint } from '../src/modules/ai/agent-checkpoint.ts';
-import { createJsonAiConversationStore } from '../src/modules/ai/conversation-store.js';
+import { createJsonAiConversationStore } from '../src/modules/ai/conversation-store.ts';
 import { createEmptyAiState } from '../src/modules/ai/record-state.ts';
 
 const result = {

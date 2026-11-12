@@ -26,7 +26,7 @@ import {
   validateAccessRelationships
 } from './access-records.ts';
 import { CONVERSATION_KINDS, emptyConversationState, validateConversationState } from './conversation-records.ts';
-import { createJsonAiConversationStore } from './conversation-store.js';
+import { createJsonAiConversationStore } from './conversation-store.ts';
 
 export const AI_PRIVATE_STATE_VERSION = 6;
 const collections = Object.values(AI_RECORD_KINDS).map(value => value.collection);

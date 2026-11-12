@@ -4,7 +4,7 @@ import {
   validateConversationRecord,
   validateConversationState
 } from '../../api/src/modules/ai/conversation-records.ts';
-import { createAiConversationStore } from '../../api/src/modules/ai/conversation-store.js';
+import { createAiConversationStore } from '../../api/src/modules/ai/conversation-store.ts';
 import { hashRecord } from '../../api/src/modules/ai/record-contract.ts';
 
 function loadRows(db) {
