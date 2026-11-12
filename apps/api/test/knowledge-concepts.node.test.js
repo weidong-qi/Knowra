@@ -84,6 +84,30 @@ test('旧 JSON 文件自动补空集合，非法引用拒绝写入', () => {
   const migrated = validatePersistedLocalState({ schemaVersion: 8, ...old });
   assert.deepEqual(migrated.knowledgeConcepts, []);
   assert.equal(LOCAL_DATA_SCHEMA_VERSION, 9);
+  assert.throws(
+    () =>
+      validatePersistedLocalState({
+        schemaVersion: 9,
+        ...createEmptyLocalState(),
+        knowledgeConceptLinks: [
+          {
+            id: 'link',
+            operationId: 'invalid-reference',
+            revision: 1,
+            createdAt: '2026-11-12T00:00:00Z',
+            updatedAt: '2026-11-12T00:00:00Z',
+            deletedAt: null,
+            deletedBy: null,
+            knowledgeItemId: 'missing',
+            conceptId: 'missing',
+            role: 'subject',
+            reviewStatus: 'confirmed',
+            sourceMode: 'manual'
+          }
+        ]
+      }),
+    { code: 'CONCEPT_NOT_FOUND', statusCode: 422 }
+  );
 });
 
 test(
