@@ -176,7 +176,7 @@ test('桌面运行端：没有连接任何云端也能使用预算，账本在�
   // 余额快照、预算设置、提醒状态都要真正传给 AI 运行实例，并与预算账本同在数据目录根。
   assert.deepEqual(
     [captured.balanceFile, captured.budgetSettingsFile, captured.budgetAlertsFile],
-    ['ai-balance.json', 'ai-budget-settings.json', 'ai-budget-alerts.tson'].map(name => path.join(dataDirectory, name))
+    ['ai-balance.json', 'ai-budget-settings.json', 'ai-budget-alerts.json'].map(name => path.join(dataDirectory, name))
   );
   await reserve(captured.budgetAuthority, 1, 1_500_000);
   assert.equal(fs.existsSync(path.join(dataDirectory, 'ai-budget.json')), true);
@@ -346,7 +346,7 @@ test('桌面运行端用真实 AI 运行实例：用量、余额、预算设置�
   );
   const resolve = await call('/usage/resolve', { attemptId: 'nope', disposition: 'released' });
   assert.notEqual(resolve.error?.code, 'LOCAL_FEATURE_UNAVAILABLE');
-  assert.equal(fs.existsSync(path.join(dataDirectory, 'ai-budget-alerts.tson')), true, '提醒状态落在数据目录根');
+  assert.equal(fs.existsSync(path.join(dataDirectory, 'ai-budget-alerts.json')), true, '提醒状态落在数据目录根');
 });
 
 test('本机账本的月汇总字段为 null 或非数组时按损坏处理：拒绝调用并保留原文件，不静默清空', async t => {

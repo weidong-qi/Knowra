@@ -183,7 +183,7 @@ export async function createPostgresAppContext({
     uploadsDir,
     balanceFile: path.join(storageRootDir, 'ai-balance.json'),
     budgetSettingsFile: path.join(storageRootDir, 'ai-budget-settings.json'),
-    budgetAlertsFile: path.join(storageRootDir, 'ai-budget-alerts.tson'),
+    budgetAlertsFile: path.join(storageRootDir, 'ai-budget-alerts.json'),
     conversationStore: aiConversationStore,
     actionStore: createPostgresActionStore({ client: db, repository: aiRepository, ownerId: normalizedOwnerId }),
     coreOperationStore: createPostgresCoreOperationStore({ client: db, ownerId: normalizedOwnerId }),
