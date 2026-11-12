@@ -1,8 +1,40 @@
+import type { IncomingMessage } from 'node:http';
+import type { ResponseWriter } from '../../../http/response.ts';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+type KnowledgeItemRouteKnowledge = Pick<
+  ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
+  | 'archiveKnowledgeItem'
+  | 'confirmKnowledgeItem'
+  | 'createKnowledgeEvidence'
+  | 'createKnowledgeItem'
+  | 'getKnowledgeItem'
+  | 'getKnowledgeProvenance'
+  | 'inspectKnowledgePurge'
+  | 'listKnowledgeEvidence'
+  | 'listKnowledgeItems'
+  | 'listWorkspaceKnowledgeItems'
+  | 'markKnowledgeItemNeedsRevision'
+  | 'permanentlyDeleteKnowledgeItem'
+  | 'readoptKnowledgeEvidence'
+  | 'restoreDeletedKnowledgeItem'
+  | 'restoreKnowledgeItem'
+  | 'retireKnowledgeEvidence'
+  | 'trashKnowledgeItem'
+  | 'updateKnowledgeItem'
+>;
+export interface KnowledgeItemRouteContext {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  knowledge: KnowledgeItemRouteKnowledge;
+}
+
 import { parseBody, toQueryObject } from '../../../http/request.ts';
 import { sendJson } from '../../../http/response.ts';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
-function decode(value) {
+function decode(value: string) {
   try {
     return decodeURIComponent(value);
   } catch {
@@ -10,9 +42,9 @@ function decode(value) {
   }
 }
 
-async function parseKnowledgeInput(request) {
+async function parseKnowledgeInput(request: IncomingMessage) {
   const body = await parseBody(request);
-  if (/** @type {{ sourceMode?: unknown }} */ (body)?.sourceMode === 'ai') {
+  if ((body as { sourceMode?: unknown } | null | undefined)?.sourceMode === 'ai') {
     throw createAppError(
       'KNOWLEDGE_ITEM_AI_SOURCE_RESERVED',
       'AI 来源只能由经过校验的提炼结果接纳，不能手动声明。',
@@ -22,7 +54,12 @@ async function parseKnowledgeInput(request) {
   return body;
 }
 
-export async function handleKnowledgeItemRoute({ request, response, url, knowledge }) {
+export async function handleKnowledgeItemRoute({
+  request,
+  response,
+  url,
+  knowledge
+}: KnowledgeItemRouteContext): Promise<boolean> {
   const root = '/api/knowledge/items';
   if (request.method === 'GET' && url.pathname === root) {
     const query = toQueryObject(url);

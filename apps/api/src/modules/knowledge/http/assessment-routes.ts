@@ -1,9 +1,56 @@
+import type { IncomingMessage } from 'node:http';
+import type { ResponseWriter } from '../../../http/response.ts';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+type AssessmentRouteKnowledge = Pick<
+  ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
+  | 'archiveExamFocus'
+  | 'archiveExamProfile'
+  | 'archiveQuestion'
+  | 'confirmExamFocus'
+  | 'confirmQuestion'
+  | 'createExamFocus'
+  | 'createExamProfile'
+  | 'createQuestion'
+  | 'getExamFocus'
+  | 'getExamProfile'
+  | 'getQuestion'
+  | 'inspectTrainingAssetPurge'
+  | 'listExamFocuses'
+  | 'listExamProfiles'
+  | 'listQuestions'
+  | 'listWorkspaceExamProfiles'
+  | 'listWorkspaceQuestions'
+  | 'permanentlyDeleteTrainingAsset'
+  | 'restoreDeletedTrainingAsset'
+  | 'restoreExamFocus'
+  | 'restoreExamProfile'
+  | 'restoreQuestion'
+  | 'submitQuestionForReview'
+  | 'trashTrainingAsset'
+  | 'updateExamFocus'
+  | 'updateExamProfile'
+  | 'updateQuestion'
+  | 'validateQuestion'
+>;
+export interface AssessmentRouteContext {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  knowledge: AssessmentRouteKnowledge;
+}
+
 import { parseBody, toQueryObject } from '../../../http/request.ts';
 import { sendJson } from '../../../http/response.ts';
 
-const decode = value => decodeURIComponent(value);
+const decode = (value: string) => decodeURIComponent(value);
 
-export async function handleAssessmentRoute({ request, response, url, knowledge }) {
+export async function handleAssessmentRoute({
+  request,
+  response,
+  url,
+  knowledge
+}: AssessmentRouteContext): Promise<boolean> {
   const profileRoot = '/api/knowledge/exam-profiles';
   if (request.method === 'GET' && url.pathname === profileRoot) {
     const query = toQueryObject(url);
@@ -47,7 +94,7 @@ export async function handleAssessmentRoute({ request, response, url, knowledge 
     if (request.method === 'POST') {
       sendJson(response, 201, {
         data: await knowledge.createExamFocus({
-          .../** @type {Record<string, unknown>} */ (await parseBody(request)),
+          ...((await parseBody(request)) as Record<string, unknown>),
           examProfileId
         })
       });
