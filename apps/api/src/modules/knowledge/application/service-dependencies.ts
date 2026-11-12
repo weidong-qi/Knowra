@@ -25,7 +25,7 @@ import type { ExamFocus } from '../domain/exam-focus.ts';
 import type { Question } from '../domain/question.ts';
 
 interface TransactionDependencies {
-  getTombstone?: ((collection: string, id: string) => object | null) | null;
+  getTombstone?: ((collection: string, id: string) => { previousUpdatedAt?: unknown } | null) | null;
   runTransaction?: <T>(operation: () => T) => T;
 }
 export interface AssessmentWritePort<Record, Result = Record> {
