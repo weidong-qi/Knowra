@@ -10,6 +10,7 @@ import type {
   ConceptCommand,
   ConceptItem,
   ConceptState,
+  KnowledgeConcept,
   KnowledgeConceptLink,
   KnowledgeConceptRelation
 } from '../../../../../packages/web-core/src/knowledge-concepts/types.ts';
@@ -117,6 +118,7 @@ export function createKnowledgeConceptService({
 export type KnowledgeConceptService = ReturnType<typeof createKnowledgeConceptService>;
 /** 永久删除知识点时在宿主的同一事务内调用；不提供独立硬删除入口。 */
 export function conceptPurgeChanges(
+  concepts: KnowledgeConcept[],
   links: KnowledgeConceptLink[],
   relations: KnowledgeConceptRelation[],
   id: string,
@@ -131,18 +133,33 @@ export function conceptPurgeChanges(
     revision: row.revision + 1,
     updatedAt: now
   });
+  const changedLinks = links.filter(row => !row.deletedAt && row.knowledgeItemId === id).map(remove);
+  const changedRelations = relations.filter(row => !row.deletedAt && row.basisItemId === id).map(remove);
+  const affected = new Set([
+    ...changedLinks.map(row => row.conceptId),
+    ...changedRelations.flatMap(row => [row.fromConceptId, row.toConceptId])
+  ]);
   return {
-    links: links.filter(row => !row.deletedAt && row.knowledgeItemId === id).map(remove),
-    relations: relations.filter(row => !row.deletedAt && row.basisItemId === id).map(remove)
+    concepts: concepts
+      .filter(row => !row.deletedAt && affected.has(row.id))
+      .map(row => ({ ...row, revision: row.revision + 1, updatedAt: now, operationId: marker })),
+    links: changedLinks,
+    relations: changedRelations
   };
 }
 export function purgeStateBackedConceptItem(data: StateBackedConceptData, id: string) {
   const changes = conceptPurgeChanges(
+    data.state.knowledgeConcepts,
     data.state.knowledgeConceptLinks,
     data.state.knowledgeConceptRelations,
     id,
     new Date().toISOString()
   );
+  for (const row of changes.concepts)
+    Object.assign(
+      data.state.knowledgeConcepts.find(current => current.id === row.id)!,
+      row
+    );
   for (const row of changes.links)
     Object.assign(
       data.state.knowledgeConceptLinks.find(current => current.id === row.id)!,

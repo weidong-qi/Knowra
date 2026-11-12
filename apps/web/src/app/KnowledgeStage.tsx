@@ -13,7 +13,7 @@ function KnowledgeStageContent({ pathname, onOpenNote }: { pathname: string; onO
   const state = useAppStore(value => value);
   const navigate = useNavigate();
   const { listKnowledgeItems } = state;
-  const listConceptItems = useCallback(() => listKnowledgeItems({ includeArchived: true }), [listKnowledgeItems]);
+  const listConceptItems = useCallback(() => listKnowledgeItems(), [listKnowledgeItems]);
   // 概念图原型只读取本地示例数据，不依赖资料库连接。
   if (pathname.split('?')[0] === '/knowledge/graph') return <ConceptGraphView />;
   if (state.dataMode === 'loading') return <LoadingState label="正在加载知识库…" />;

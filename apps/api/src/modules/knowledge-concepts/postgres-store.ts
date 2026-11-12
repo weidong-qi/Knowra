@@ -76,7 +76,7 @@ export async function purgePostgresConceptItem(
   id: string
 ) {
   const state = await readPostgresConceptState(connection);
-  const changes = conceptPurgeChanges(state.links, state.relations, id, new Date().toISOString());
-  await write(connection, { concepts: [], ...changes });
+  const changes = conceptPurgeChanges(state.concepts, state.links, state.relations, id, new Date().toISOString());
+  await write(connection, changes);
   return { links: changes.links.length, relations: changes.relations.length };
 }

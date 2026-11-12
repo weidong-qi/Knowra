@@ -68,7 +68,6 @@ const fieldNames: Record<string, string> = {
   rect: '页面坐标',
   operationId: '操作标识',
   conceptId: '所属概念',
-  knowledgeItemId: '关联知识点',
   fromConceptId: '起始概念',
   toConceptId: '目标概念',
   basisItemId: '关系依据',
@@ -223,9 +222,16 @@ const ignored = new Set([
   'updatedAt',
   'storagePath',
   'verifiedAt',
-  'pathCache'
+  'pathCache',
+  'operations',
+  'deletedBy'
 ]);
 const referenceCollections: Record<string, string> = {
+  conceptId: 'knowledgeConcepts',
+  fromConceptId: 'knowledgeConcepts',
+  toConceptId: 'knowledgeConcepts',
+  basisItemId: 'knowledgeItems',
+  mergedInto: 'knowledgeConcepts',
   knowledgeItemId: 'knowledgeItems',
   learningObjectiveId: 'learningObjectives',
   learningObjectiveIds: 'learningObjectives',
@@ -243,6 +249,17 @@ const referenceCollections: Record<string, string> = {
   parentAnnotationId: 'contentAnnotations'
 };
 const enumNames: Record<string, Record<string, string>> = {
+  role: { subject: '主体', mentions: '提及' },
+  focus: { active: '关注', muted: '不关注' },
+  type: {
+    partOf: '组成部分',
+    prerequisiteOf: '前置知识',
+    contrastsWith: '对比',
+    causes: '导致',
+    appliesTo: '适用于',
+    relatedTo: '相关',
+    isA: '是一种'
+  },
   sourceType: {
     learningObjective: '学习目标',
     knowledgeItem: '知识',

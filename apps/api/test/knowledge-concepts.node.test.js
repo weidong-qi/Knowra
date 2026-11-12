@@ -137,3 +137,48 @@ test(
     assert.equal((await app.knowledgeConcepts.list()).relations[0].id, 'r');
   }
 );
+
+test('JSON 知识点永久删除：预览连带数量，关联和关系同事务软删除，概念版本推进', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-concept-purge-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const dataStore = createFileDataStore(path.join(root, 'cloud.json'));
+  const app = createAppContext({ dataStore, storageRootDir: root });
+  const knowledge = app.modules.knowledge;
+  knowledge.knowledgeItemService.createCandidate({
+    id: 'k',
+    title: '手工知识',
+    canonicalStatement: '关系说明。',
+    knowledgeType: 'concept',
+    sourceMode: 'manual'
+  });
+  for (const id of ['a', 'b'])
+    await app.knowledgeConcepts.execute({
+      type: 'createConcept',
+      id,
+      name: id,
+      itemIds: ['k'],
+      expectedRevision: 0,
+      operationId: `create-${id}`
+    });
+  await app.knowledgeConcepts.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    operationId: 'relation',
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'relatedTo',
+    basisItemId: 'k'
+  });
+  const item = knowledge.knowledgeItemService.getItem('k');
+  const trashed = knowledge.knowledgeItemService.trash('k', { expectedUpdatedAt: item.updatedAt });
+  assert.equal((await app.knowledgeConcepts.list()).links.length, 2);
+  const preview = knowledge.inspectKnowledgePurge('k');
+  assert.deepEqual(preview.conceptCleanup, { links: 2, relations: 1 });
+  knowledge.permanentlyDeleteKnowledgeItem('k', { expectedUpdatedAt: trashed.updatedAt });
+  const state = await app.knowledgeConcepts.list();
+  assert.equal(state.links.length, 0);
+  assert.equal(state.relations.length, 0);
+  assert.equal(state.concepts.find(row => row.id === 'a').revision, 3);
+  assert.equal(dataStore.state.knowledgeConceptLinks.length, 2);
+});

@@ -98,3 +98,54 @@ test('概念在两台 SQLite 设备间同步：直接合并、三集合原子迁
   assert.deepEqual((await b.concepts.list()).concepts[0].aliases, ['CNN']);
   assert.equal(cloudStore.state.knowledgeConcepts.find(row => row.id === 'a').mergedInto, 'b');
 });
+
+test('SQLite 概念三集合及命令回执随备份保留，复制恢复后可正常读取', async t => {
+  const { createRuntimeBackup, inspectRuntimeBackup } = await import('../src/backup.mjs');
+  const { createSqliteDataStore } = await import('../src/sqlite-data-store.mjs');
+  const fs = await import('node:fs');
+  const root = temporaryDirectory(t);
+  const directory = path.join(root, 'source');
+  const source = openWorkspace(directory);
+  t.after(() => source.store.close());
+  source.knowledge.knowledgeItemService.createCandidate({
+    id: 'k',
+    title: '手工知识',
+    canonicalStatement: '关系说明',
+    knowledgeType: 'concept',
+    sourceMode: 'manual'
+  });
+  const service = createKnowledgeConceptService({ store: createStateBackedConceptStore(source.store) });
+  for (const id of ['a', 'b'])
+    await service.execute({
+      type: 'createConcept',
+      id,
+      operationId: `create-${id}`,
+      expectedRevision: 0,
+      name: id,
+      itemIds: ['k']
+    });
+  await service.execute({
+    type: 'createRelation',
+    id: 'a',
+    operationId: 'relation',
+    expectedRevision: 1,
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'relatedTo',
+    basisItemId: 'k'
+  });
+  const backup = createRuntimeBackup(source.store, directory);
+  assert.doesNotThrow(() => inspectRuntimeBackup(backup));
+  const restoredPath = path.join(root, 'restored', 'local.sqlite');
+  fs.mkdirSync(path.dirname(restoredPath));
+  fs.copyFileSync(path.join(backup, 'local.sqlite'), restoredPath);
+  const restored = createSqliteDataStore(restoredPath);
+  try {
+    assert.equal(restored.state.knowledgeConcepts.length, 2);
+    assert.equal(restored.state.knowledgeConceptLinks.length, 2);
+    assert.equal(restored.state.knowledgeConceptRelations.length, 1);
+    assert.equal(restored.state.knowledgeConcepts[0].operations.length, 2);
+  } finally {
+    restored.close();
+  }
+});
