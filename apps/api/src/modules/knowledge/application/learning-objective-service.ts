@@ -22,14 +22,14 @@ export function createLearningObjectiveService({
   if (!repository || !knowledgeItemRepository) throw new TypeError('LearningObjective repositories are required');
 
   function requireObjective(id: string, { includeArchived = false } = {}) {
-    const objective = repository!.findById(id) as LearningObjective;
+    const objective = repository!.findById(id);
     if (!objective || objective.deletedAt || (!includeArchived && objective.reviewStatus === 'archived')) {
       throw notFoundError('LEARNING_OBJECTIVE_NOT_FOUND', 'LearningObjective not found');
     }
     return objective;
   }
 
-  function requireKnowledgeItem(id: string, { confirmed = false } = {}) {
+  function requireKnowledgeItem(id: unknown, { confirmed = false } = {}) {
     const item = knowledgeItemRepository!.findById(id);
     if (!item || item.deletedAt || item.reviewStatus === 'archived') {
       throw notFoundError('KNOWLEDGE_ITEM_NOT_FOUND', 'KnowledgeItem not found');
@@ -43,9 +43,12 @@ export function createLearningObjectiveService({
     return item;
   }
 
-  function assertConfirmable(
-    objective: Pick<ObjectiveRecord, 'knowledgeItemId' | 'objective' | 'actionVerb' | 'cognitiveLevel'>
-  ) {
+  function assertConfirmable(objective: {
+    knowledgeItemId?: unknown;
+    objective?: unknown;
+    actionVerb?: unknown;
+    cognitiveLevel?: unknown;
+  }) {
     const item = knowledgeItemRepository!.findById(objective.knowledgeItemId);
     return assertLearningObjectiveConfirmable(objective, item);
   }
@@ -63,8 +66,8 @@ export function createLearningObjectiveService({
   }
 
   function notifyIfInvalidated(
-    previous: Pick<ObjectiveRecord, 'reviewStatus'> | null | undefined,
-    next: Pick<ObjectiveRecord, 'id' | 'reviewStatus'>
+    previous: { reviewStatus?: unknown } | null | undefined,
+    next: { id: unknown; reviewStatus?: unknown }
   ) {
     if (previous?.reviewStatus === 'confirmed' && next?.reviewStatus !== 'confirmed') {
       onObjectiveInvalidated?.(next.id);

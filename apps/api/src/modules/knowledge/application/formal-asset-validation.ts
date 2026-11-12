@@ -13,8 +13,8 @@ export interface ConfirmedAssetReference {
 }
 
 export interface LearningObjectiveConfirmationInput {
-  objective?: string | null;
-  actionVerb?: string | null;
+  objective?: unknown;
+  actionVerb?: unknown;
   cognitiveLevel?: unknown;
 }
 
@@ -85,20 +85,26 @@ export function assertLearningObjectiveConfirmable(
       'LearningObjective confirmation requires a confirmed KnowledgeItem'
     );
   }
-  if (!objective?.objective?.trim?.() || !objective?.actionVerb || !objective?.cognitiveLevel) {
+  if (
+    !(objective?.objective as { trim?: () => unknown } | null | undefined)?.trim?.() ||
+    !objective?.actionVerb ||
+    !objective?.cognitiveLevel
+  ) {
     throw validationError(
       'LEARNING_OBJECTIVE_CONTENT_REQUIRED',
       'Confirmed LearningObjective requires objective, actionVerb and cognitiveLevel'
     );
   }
-  if (VAGUE_OBJECTIVE_PREFIX.test(objective.objective.trim())) {
+  if (
+    (VAGUE_OBJECTIVE_PREFIX.test as (value: unknown) => boolean)((objective.objective as { trim(): unknown }).trim())
+  ) {
     throw validationError(
       'LEARNING_OBJECTIVE_VAGUE_VERB',
       'LearningObjective must use an observable action instead of 了解、熟悉 or 掌握'
     );
   }
   // 保留动态原型属性读取和原 has 调用；此视图不验证未知 actionVerb。
-  const compatibleLevels = ACTION_VERB_LEVELS[objective.actionVerb] as
+  const compatibleLevels = ACTION_VERB_LEVELS[objective.actionVerb as string] as
     { has(value: unknown): unknown } | null | undefined;
   if (!compatibleLevels?.has(objective.cognitiveLevel)) {
     throw validationError(

@@ -1,6 +1,6 @@
 /** 校验只读取这些字段，不要求输入已构造成 Question。 */
 export interface QuestionStructureInput {
-  stem?: string | null;
+  stem?: unknown;
   questionType?: unknown;
   options?: unknown;
   referenceAnswer?: unknown;
@@ -19,7 +19,7 @@ const CHOICE_TYPES = new Set<unknown>(['singleChoice', 'multipleChoice']);
 
 export function validateQuestionStructure(question: QuestionStructureInput): true {
   const errors: string[] = [];
-  if (!question.stem?.trim()) errors.push('QUESTION_STEM_REQUIRED');
+  if (!(question.stem as { trim(): unknown } | null | undefined)?.trim()) errors.push('QUESTION_STEM_REQUIRED');
   if (CHOICE_TYPES.has(question.questionType)) {
     const options: readonly unknown[] = Array.isArray(question.options) ? question.options : [];
     if (options.length < 2) errors.push('QUESTION_OPTIONS_REQUIRED');

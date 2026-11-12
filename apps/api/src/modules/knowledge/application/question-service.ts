@@ -123,8 +123,8 @@ export function createQuestionService(
     }
   }
 
-  function hydrate(
-    question: ServiceQuestion,
+  function hydrate<Record extends ServiceQuestion>(
+    question: Record,
     links = questionObjectiveRepository.listByQuestionIds([question.id]),
     sources = questionSourceRepository.listByQuestionIds([question.id])
   ) {
@@ -138,7 +138,7 @@ export function createQuestionService(
     };
   }
 
-  function assertReady(question: ServiceQuestion, { forConfirmation = false } = {}) {
+  function assertReady(question: ServiceQuestion & { id: string }, { forConfirmation = false } = {}) {
     const links = questionObjectiveRepository.listByQuestionIds([question.id]);
     const objectives = requireObjectives(links.map(link => link.learningObjectiveId));
     const persistedSources = questionSourceRepository.listByQuestionIds([question.id]);
@@ -157,7 +157,7 @@ export function createQuestionService(
       );
     }
     assertQuestionConfirmable(question, { objectives, sources });
-    if (forConfirmation && !['candidate', 'confirmed'].includes(question.reviewStatus))
+    if (forConfirmation && !(['candidate', 'confirmed'] as readonly unknown[]).includes(question.reviewStatus))
       throw conflictError('QUESTION_REVIEW_REQUIRED', 'Question must be a candidate before confirmation');
   }
   function validateQuestion(id: string) {
@@ -189,7 +189,7 @@ export function createQuestionService(
     }
   }
 
-  function saveNew(question: ServiceQuestion) {
+  function saveNew<Record extends ServiceQuestion>(question: Record) {
     return repository.create?.(question) ?? repository.save(question);
   }
 
@@ -270,7 +270,8 @@ export function createQuestionService(
       const next = new Question({
         ...current,
         ...dto,
-        version: changed ? current.version + 1 : current.version,
+        // 只标注原 + 操作；历史字符串仍拼接，随后由构造器执行原校验与 Number 转换。
+        version: changed ? (current.version as number) + 1 : current.version,
         reviewStatus: current.reviewStatus === 'confirmed' && changed ? 'candidate' : current.reviewStatus,
         updatedAt: now()
       });
@@ -301,7 +302,7 @@ export function createQuestionService(
       return markSourcesStale(sourceType, [sourceId]);
     },
     markSourcesStale,
-    invalidateByObjectiveId(learningObjectiveId: string) {
+    invalidateByObjectiveId(learningObjectiveId: unknown) {
       return runTransaction(() => {
         const changedSources = questionSourceRepository.markBySourceIds(
           'learningObjective',

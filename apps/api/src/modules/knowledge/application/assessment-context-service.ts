@@ -25,13 +25,13 @@ export function createAssessmentContextService({
   if (!examProfileRepository || !examFocusRepository || !learningObjectiveRepository)
     throw new TypeError('Assessment context repositories are required');
 
-  function requireProfile(id: string, { includeArchived = false } = {}) {
+  function requireProfile<Id>(id: Id, { includeArchived = false } = {}) {
     const profile = examProfileRepository!.findById(id);
     if (!profile || profile.deletedAt || (!includeArchived && profile.archivedAt))
       throw notFoundError('EXAM_PROFILE_NOT_FOUND', 'ExamProfile not found');
     return profile;
   }
-  function requireObjective(id: string, { confirmed = false } = {}) {
+  function requireObjective<Id>(id: Id, { confirmed = false } = {}) {
     const objective = learningObjectiveRepository!.findById(id);
     if (!objective || objective.deletedAt || objective.reviewStatus === 'archived')
       throw notFoundError('LEARNING_OBJECTIVE_NOT_FOUND', 'LearningObjective not found');
