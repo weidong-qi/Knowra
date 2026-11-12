@@ -226,7 +226,7 @@ test('main pushes and PRs remain automatic; branch candidates have manual fallba
     const text = read(file);
     assert.match(text, / {2}pull_request:/);
     assert.match(text, / {2}workflow_dispatch:/);
-    assert.match(text, / {2}push:\n {4}branches:(?:\n      - main| \[main\])/);
+    assert.match(text, / {2}push:\n {4}branches:(?:\n {6}- main| \[main\])/);
     assert.doesNotMatch(text, /codex\/\*\*/);
   }
   assert.match(workflow, /\[\[ "\$EVENT_NAME" == "push" && -n "\$BEFORE_SHA"/);
