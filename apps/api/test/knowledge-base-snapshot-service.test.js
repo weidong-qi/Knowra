@@ -131,7 +131,7 @@ export const knowledgeBaseSnapshotServiceTests = [
 async function createFixture(suffix) {
   const { createAppContext } = await import('../src/app.factory.js');
   const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
-  const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+  const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `study-import-${suffix}-`));
   const dataStore = createFileDataStore(path.join(tempDir, 'data', 'knowledge-base.json'));
   dataStore.state.spaces.push(createSpace('space-current'));

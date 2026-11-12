@@ -11,9 +11,9 @@ import { createPostgresSyncRuntime, readPostgresPdfSnapshot } from './modules/sy
 import { createPersonalTodoService } from './modules/personal-todos/service.ts';
 import { createPostgresTodoStore } from './modules/personal-todos/postgres-store.ts';
 import { createPrismaRuntime } from './infrastructure/prisma-client.js';
-import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.js';
+import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.ts';
 import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.ts';
-import { createPostgresSnapshotService } from './infrastructure/postgres-snapshot-service.js';
+import { createPostgresSnapshotService } from './infrastructure/postgres-snapshot-service.ts';
 import { createPostgresKnowledgeModule } from './modules/knowledge/postgres-async-module.js';
 import { createPostgresKnowledgeHttpHandlers } from './modules/knowledge/http/postgres-async-handlers.js';
 import { createPostgresNoteRepository } from './modules/knowledge/infrastructure/postgres/note-repository.ts';

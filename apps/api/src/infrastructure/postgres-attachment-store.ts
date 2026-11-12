@@ -1,3 +1,15 @@
+import type { PostgresAttachmentStoreOptions } from './postgres-storage-types.ts';
+import type {
+  AttachmentFileManager,
+  AttachmentOperationError,
+  AttachmentFileHealth,
+  AttachmentRestoreBody
+} from './local-attachment-types.ts';
+import type { LocalAttachmentUploadInput } from './local-attachment-upload.ts';
+import type { createPostgresAttachmentRepository } from '../modules/knowledge/infrastructure/postgres/attachment-repository.ts';
+type StoredAttachment = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof createPostgresAttachmentRepository>['findById']>>
+>;
 import {
   inspectAttachmentFile,
   assertReadableStatus,
@@ -24,7 +36,6 @@ import {
   writeFileAtomicallyAsync
 } from './local-attachment-store-utils.ts';
 
-/** @param {import('./postgres-storage-types.ts').PostgresAttachmentStoreOptions} options */
 export function createPostgresAttachmentStore({
   attachmentRepository,
   uploadsDir = path.join('storage', 'uploads'),
@@ -33,7 +44,7 @@ export function createPostgresAttachmentStore({
   validateAttachmentNote = null,
   loadReferenceState = null,
   runTransaction = null
-} = {}) {
+}: PostgresAttachmentStoreOptions = {}) {
   if (!attachmentRepository) throw new TypeError('PostgreSQL attachment store requires a repository');
   const fileManager = createLocalAttachmentFileManager({
     uploadsDir,
@@ -42,7 +53,12 @@ export function createPostgresAttachmentStore({
   });
   const cleanupQueue = createAttachmentCleanupQueue({ storageRootDir, fileManager });
 
-  async function uploadAttachment({ noteId, fileName, mimeType = 'application/octet-stream', contentBase64 }) {
+  async function uploadAttachment({
+    noteId,
+    fileName,
+    mimeType = 'application/octet-stream',
+    contentBase64
+  }: LocalAttachmentUploadInput) {
     if (!noteId?.trim()) throw new Error('Attachment noteId is required');
     await validateAttachmentNote?.(noteId);
     if (!fileName?.trim()) throw new Error('Attachment fileName is required');
@@ -53,28 +69,28 @@ export function createPostgresAttachmentStore({
     const contentSha256 = sha256Buffer(buffer);
     const storagePath = fileManager.buildStoragePath(id, safeName);
     const absoluteFilePath = fileManager.resolveManagedAbsolutePath(id, safeName);
-    const attachment = {
+    const attachment: StoredAttachment = {
       id,
       noteId,
       fileName: safeName,
       mimeType,
       size: buffer.byteLength,
       sha256: contentSha256,
-      status: /** @type {import('./attachment-status.ts').AttachmentStatus} */ (ATTACHMENT_STATUS.PENDING),
+      status: ATTACHMENT_STATUS.PENDING,
       storagePath,
       verifiedAt: null,
       createdAt: new Date().toISOString()
     };
 
-    await attachmentRepository.save(attachment);
+    await attachmentRepository!.save(attachment);
     try {
       await writeFileAtomicallyAsync(absoluteFilePath, buffer);
     } catch (error) {
       attachment.status = ATTACHMENT_STATUS.FAILED;
       try {
-        await attachmentRepository.save(attachment);
+        await attachmentRepository!.save(attachment);
       } catch (statusError) {
-        error.statusPersistError = statusError;
+        (error as AttachmentOperationError).statusPersistError = statusError as Error;
       }
       throw error;
     }
@@ -82,23 +98,23 @@ export function createPostgresAttachmentStore({
     attachment.status = ATTACHMENT_STATUS.READY;
     attachment.verifiedAt = new Date().toISOString();
     try {
-      return await attachmentRepository.save(attachment);
+      return await attachmentRepository!.save(attachment);
     } catch (error) {
       attachment.status = ATTACHMENT_STATUS.PENDING;
       attachment.verifiedAt = null;
       let pendingRecordRestored = false;
       try {
-        await attachmentRepository.save(attachment);
+        await attachmentRepository!.save(attachment);
         pendingRecordRestored = true;
       } catch (statusError) {
-        error.statusPersistError = statusError;
+        (error as AttachmentOperationError).statusPersistError = statusError as Error;
       }
       if (!pendingRecordRestored) {
         let currentRecord;
         try {
-          currentRecord = await attachmentRepository.findById(attachment.id);
+          currentRecord = await attachmentRepository!.findById(attachment.id);
         } catch (lookupError) {
-          error.recordLookupError = lookupError;
+          (error as AttachmentOperationError).recordLookupError = lookupError as Error;
         }
         if (currentRecord === null) {
           await removeFileOrSchedule(attachment, fileManager, error);
@@ -108,37 +124,37 @@ export function createPostgresAttachmentStore({
     }
   }
 
-  async function listAttachments(query = {}) {
-    return attachmentRepository.list(query);
+  async function listAttachments(query: { noteId?: string } = {}) {
+    return attachmentRepository!.list(query);
   }
 
-  async function getAttachment(attachmentId) {
-    return attachmentRepository.findById(attachmentId);
+  async function getAttachment(attachmentId: string | undefined) {
+    return attachmentRepository!.findById(attachmentId!);
   }
 
-  async function getRequiredAttachment(attachmentId) {
+  async function getRequiredAttachment(attachmentId: string) {
     const attachment = await getAttachment(attachmentId);
     if (!attachment) throw createAppError('ATTACHMENT_NOT_FOUND', 'Attachment not found', 404);
     return attachment;
   }
 
-  async function saveHealth(original, health) {
+  async function saveHealth(original: StoredAttachment, health: Omit<AttachmentFileHealth, 'content'>) {
     const save = async () => {
       const current = await getAttachment(original.id);
       assertSameAttachment(current, original);
-      return attachmentRepository.save({ ...current, ...health });
+      return attachmentRepository!.save({ ...current, ...health });
     };
     return runTransaction ? runTransaction(save) : save();
   }
 
-  async function verifyAttachment(id) {
+  async function verifyAttachment(id: string) {
     const attachment = await getRequiredAttachment(id);
     const { content, ...health } = inspectAttachmentFile(attachment, fileManager);
     if (attachment.status === health.status && attachment.verifiedAt === health.verifiedAt) return attachment;
     return saveHealth(attachment, health);
   }
 
-  async function readAttachmentContent(id) {
+  async function readAttachmentContent(id: string) {
     const attachment = await getRequiredAttachment(id);
     assertReadableStatus(attachment);
     const health = inspectAttachmentFile(attachment, fileManager);
@@ -149,7 +165,7 @@ export function createPostgresAttachmentStore({
     return { attachment, content: health.content };
   }
 
-  async function restoreAttachment(id, body) {
+  async function restoreAttachment(id: string, body: AttachmentRestoreBody) {
     if (!runTransaction) throw createAppError('ATTACHMENT_RESTORE_UNAVAILABLE', '附件事务保护暂不可用。', 503);
     const original = await getRequiredAttachment(id);
     const transaction = prepareAttachmentRestore(original, body, fileManager);
@@ -168,7 +184,7 @@ export function createPostgresAttachmentStore({
     }
   }
 
-  async function renameAttachment(attachmentId, fileName) {
+  async function renameAttachment(attachmentId: string, fileName: string | undefined) {
     const attachment = await getRequiredAttachment(attachmentId);
     if (!String(fileName ?? '').trim()) throw new Error('Attachment fileName is required');
     const nextSafeName = sanitizeFileName(fileName);
@@ -179,7 +195,7 @@ export function createPostgresAttachmentStore({
     const fileMoved = Boolean(
       currentReadablePath && path.normalize(currentReadablePath) !== path.normalize(nextAbsolutePath)
     );
-    if (fileMoved) moveFileSafely(currentReadablePath, nextAbsolutePath);
+    if (fileMoved) moveFileSafely(currentReadablePath!, nextAbsolutePath);
     const updated = {
       ...attachment,
       fileName: nextSafeName,
@@ -187,7 +203,7 @@ export function createPostgresAttachmentStore({
       size: attachment.size
     };
     try {
-      return await attachmentRepository.save(updated);
+      return await attachmentRepository!.save(updated);
     } catch (error) {
       if (fileMoved && fs.existsSync(nextAbsolutePath) && currentReadablePath) {
         moveFileSafely(nextAbsolutePath, currentReadablePath);
@@ -197,7 +213,7 @@ export function createPostgresAttachmentStore({
     }
   }
 
-  async function deleteAttachment(attachmentId) {
+  async function deleteAttachment(attachmentId: string) {
     if (!runTransaction) {
       throw createAppError('ATTACHMENT_PREFLIGHT_UNAVAILABLE', '附件事务保护暂不可用，已阻止删除。', 503);
     }
@@ -212,12 +228,12 @@ export function createPostgresAttachmentStore({
       if (preflight.references.length) {
         throw createAppError('ATTACHMENT_REFERENCED', '保留的资产仍引用此附件，不能删除。', 409);
       }
-      return attachmentRepository.delete(attachmentId);
+      return attachmentRepository!.delete(attachmentId);
     });
     return { ...deleted, cleanup: cleanupQueue.finish(deleted) };
   }
 
-  async function inspectDeletion(attachmentId) {
+  async function inspectDeletion(attachmentId: string) {
     await getRequiredAttachment(attachmentId);
     if (!loadReferenceState) {
       throw createAppError('ATTACHMENT_PREFLIGHT_UNAVAILABLE', '附件引用检查暂不可用，已阻止删除。', 503);
@@ -225,11 +241,11 @@ export function createPostgresAttachmentStore({
     return inspectAttachmentDeletion(attachmentId, await loadReferenceState());
   }
 
-  async function detachAttachmentsForNotes(noteIds) {
-    return attachmentRepository.deleteByNoteIds(noteIds);
+  async function detachAttachmentsForNotes(noteIds: string[]) {
+    return attachmentRepository!.deleteByNoteIds(noteIds);
   }
 
-  async function removeDetachedAttachmentFiles(attachments) {
+  async function removeDetachedAttachmentFiles(attachments: StoredAttachment[]) {
     return attachments.map(attachment => ({ id: attachment.id, cleanup: cleanupQueue.finish(attachment) }));
   }
 
@@ -257,20 +273,25 @@ export function createPostgresAttachmentStore({
     deleteAttachment,
     inspectAttachmentDeletion: inspectDeletion,
     detachAttachmentsForNotes,
-    prepareAttachmentCleanup: attachments => attachments.forEach(attachment => cleanupQueue.enqueue(attachment)),
+    prepareAttachmentCleanup: (attachments: StoredAttachment[]) =>
+      attachments.forEach(attachment => cleanupQueue.enqueue(attachment)),
     removeDetachedAttachmentFiles,
-    listAttachmentCleanup: () => cleanupQueue.list(id => attachmentRepository.findById(id)),
-    retryAttachmentCleanup: () => cleanupQueue.retry(id => attachmentRepository.findById(id)),
+    listAttachmentCleanup: () => cleanupQueue.list(id => attachmentRepository!.findById(id)),
+    retryAttachmentCleanup: () => cleanupQueue.retry(id => attachmentRepository!.findById(id)),
     exportAttachmentsSnapshot,
     fileManager
   };
 }
 
-async function removeFileOrSchedule(attachment, fileManager, originalError) {
+async function removeFileOrSchedule(
+  attachment: StoredAttachment,
+  fileManager: AttachmentFileManager,
+  originalError: unknown
+) {
   try {
     fileManager.removeAttachmentFile(attachment);
   } catch (cleanupError) {
     scheduleFileCleanup(fileManager.resolveManagedAttachmentPath(attachment));
-    originalError.cleanupError = cleanupError;
+    (originalError as AttachmentOperationError).cleanupError = cleanupError as Error;
   }
 }

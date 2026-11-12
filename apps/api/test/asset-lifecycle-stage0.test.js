@@ -108,7 +108,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: 'JSON 附件删除在历史引用存在时保留元数据和文件，执行时重新预检',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-stage0-local-'));
       const state = { attachments: [], notes: [], noteVersions: [] };
       try {
@@ -140,7 +140,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: 'PostgreSQL 附件删除在事务内复核引用，阻断时不删除记录',
     async run() {
-      const { createPostgresAttachmentStore } = await import('../src/infrastructure/postgres-attachment-store.js');
+      const { createPostgresAttachmentStore } = await import('../src/infrastructure/postgres-attachment-store.ts');
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-stage0-postgres-'));
       const attachment = {
         id: 'attachment-pg',
@@ -204,7 +204,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: 'JSON 笔记清理不能顺带删除其他笔记仍引用的附件',
     async run() {
-      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.js');
+      const { createLocalAttachmentStore } = await import('../src/infrastructure/local-attachment-store.ts');
       const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-stage0-note-attachment-'));
       const state = { attachments: [], notes: [], noteVersions: [] };
       try {

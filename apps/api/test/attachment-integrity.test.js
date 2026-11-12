@@ -115,7 +115,7 @@ export const attachmentIntegrityTests = [
   {
     name: 'PostgreSQL attachment upload removes an orphan file when its pending row disappeared',
     async run() {
-      const { createPostgresAttachmentStore } = await import('../src/infrastructure/postgres-attachment-store.js');
+      const { createPostgresAttachmentStore } = await import('../src/infrastructure/postgres-attachment-store.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-postgres-attachment-race-'));
       let saveCount = 0;
       const attachmentRepository = {
