@@ -26,7 +26,7 @@ import {
   taskError,
   validateExtractionTask
 } from './knowledge-extraction-task-contract.ts';
-import { isAiReadableNote } from './note-privacy.js';
+import { isAiReadableNote } from './note-privacy.ts';
 
 export function* verifyExtractionSourcePrivacy(
   repos: Pick<ExtractionQueryContext['repositories'], 'noteRepository'>,

@@ -1,6 +1,15 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { CapabilityProbeOptions, GatewayResult } from './boundary-types.ts';
+interface ProbeScenario {
+  status: string;
+  latencyMs?: number;
+  finishReason?: string;
+  usage?: GatewayResult['usage'] | null;
+  errorCode?: string;
+}
 /** 仅使用合成提示词；每次真实探测仍必须经过 Gateway 的预算预留。 */
 /** @param {import('./boundary-types.ts').CapabilityProbeOptions} [options] */
-export async function runCapabilityProbe({ gateway, credentialRef, modelId } = {}) {
+export async function runCapabilityProbe({ gateway, credentialRef, modelId }: CapabilityProbeOptions = {}) {
   if (!gateway) throw new TypeError('AI gateway is required');
   const base = { credentialRef, modelId };
   const report = {
@@ -9,10 +18,9 @@ export async function runCapabilityProbe({ gateway, credentialRef, modelId } = {
     protocol: gateway.capabilities().protocol,
     checkedAt: new Date().toISOString(),
     source: gateway.capabilities().provider === 'mock' ? 'mock' : 'live',
-    scenarios: {}
+    scenarios: {} as Record<string, ProbeScenario>
   };
-  /** @type {[string, () => Promise<import('./boundary-types.ts').GatewayResult>, (result: import('./boundary-types.ts').GatewayResult) => boolean][]} */
-  const samples = [
+  const samples: [string, () => Promise<GatewayResult>, (result: GatewayResult) => boolean][] = [
     [
       'text',
       () =>
@@ -52,7 +60,9 @@ export async function runCapabilityProbe({ gateway, credentialRef, modelId } = {
           ],
           maxTokens: 128
         }),
-      result => result.finishReason === 'tool_calls' && result.toolCalls.some(call => call.name === 'notes_read')
+      result =>
+        result.finishReason === 'tool_calls' &&
+        result.toolCalls.some((call: { name: string }) => call.name === 'notes_read')
     ],
     [
       'truncation',
@@ -85,7 +95,8 @@ export async function runCapabilityProbe({ gateway, credentialRef, modelId } = {
         finishReason: result.finishReason,
         usage: result.usage
       };
-    } catch (error) {
+    } catch (caught) {
+      const error = caught as AppError;
       report.scenarios[name] = {
         status: error.code === 'AI_BUDGET_NOT_AUTHORIZED' ? 'blocked' : 'failed',
         latencyMs: Date.now() - start,
@@ -96,7 +107,7 @@ export async function runCapabilityProbe({ gateway, credentialRef, modelId } = {
   }
   const start = Date.now();
   try {
-    let result = null;
+    let result: GatewayResult | null | undefined = null;
     for await (const event of gateway.stream({
       ...base,
       messages: [{ role: 'user', content: '只回答“流式合成测试”。' }],
@@ -109,7 +120,8 @@ export async function runCapabilityProbe({ gateway, credentialRef, modelId } = {
       latencyMs: Date.now() - start,
       usage: result?.usage ?? null
     };
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as AppError;
     report.scenarios.streaming = {
       status: error.code === 'AI_BUDGET_NOT_AUTHORIZED' ? 'blocked' : 'failed',
       latencyMs: Date.now() - start,
@@ -121,7 +133,8 @@ export async function runCapabilityProbe({ gateway, credentialRef, modelId } = {
   try {
     await gateway.complete({ ...base, messages: [{ role: 'user', content: '取消测试' }], signal: controller.signal });
     report.scenarios.cancel = { status: 'notObserved' };
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as AppError;
     report.scenarios.cancel = {
       status: error.code === 'AI_CANCELLED' ? 'observed' : 'failed',
       errorCode: error.code ?? 'AI_PROBE_FAILED'

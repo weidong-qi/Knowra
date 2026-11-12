@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createNoteWritePlan, NOTE_WRITE_TOOLS } from '../src/modules/ai/note-plan.js';
+import { createNoteWritePlan, NOTE_WRITE_TOOLS } from '../src/modules/ai/note-plan.ts';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 
 const base = {
