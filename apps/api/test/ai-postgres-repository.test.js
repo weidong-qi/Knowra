@@ -5,7 +5,7 @@ import { createPostgresAiRepository } from '../src/modules/ai/postgres-record-re
 import { createPostgresAiAccessStore } from '../src/modules/ai/postgres-access-store.ts';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
 import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.ts';
-import { createAiWorker } from '../src/modules/ai/worker.js';
+import { createAiWorker } from '../src/modules/ai/worker.ts';
 import { aiRecords } from './ai-record-fixtures.js';
 
 export const aiPostgresRepositoryTests = process.env.KNOWRA_SYNC_TEST_DATABASE_URL

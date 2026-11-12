@@ -9,7 +9,7 @@ import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createMaintenanceGate } from '../src/infrastructure/maintenance-gate.ts';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
-import { createAiWorker } from '../src/modules/ai/worker.js';
+import { createAiWorker } from '../src/modules/ai/worker.ts';
 import {
   createExtractionTaskSources,
   extractionTaskGateway,

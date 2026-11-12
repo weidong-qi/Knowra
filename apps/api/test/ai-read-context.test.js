@@ -14,7 +14,7 @@ import { normalizeAiRequest } from '../src/modules/ai/gateway.ts';
 import { createAiGateway } from '../src/modules/ai/gateway.ts';
 import { outboundPayloadHash, serializedDeepSeekPayload } from '../src/modules/ai/outbound-payload.ts';
 import { hashRecord, manifestHash } from '../src/modules/ai/record-contract.ts';
-import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.js';
+import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.ts';
 import { aiRecords } from './ai-record-fixtures.js';
 
 const instant = new Date('2026-09-26T00:00:00.000Z');

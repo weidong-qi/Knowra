@@ -40,10 +40,11 @@ export interface WorkerOptions {
   allowExternal?: boolean;
   authorizeAttempt?: (attemptId: string) => void;
   revokeAttempt?: (attemptId: string) => void;
-  verifySources?: ReturnType<typeof import('./read-context-service.ts').createAiReadContextService>['verifyJobSources'];
-  validateResult?: (job: Pick<AiJob, 'jobId'>, result: GatewayResult) => Promise<AiAnswerResult>;
+  verifySources?:
+    ReturnType<typeof import('./read-context-service.ts').createAiReadContextService>['verifyJobSources'] | null;
+  validateResult?: ((job: Pick<AiJob, 'jobId'>, result: GatewayResult) => Promise<AiAnswerResult>) | null;
   logger?: Pick<Console, 'warn' | 'error'>;
-  policy?: ReturnType<typeof createBudgetPolicy>;
+  policy?: ReturnType<typeof createBudgetPolicy> | null;
   limits?: BudgetLimits;
 }
 export interface CandidateReference {

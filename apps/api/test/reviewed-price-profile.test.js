@@ -7,7 +7,7 @@ import { beijingDay, createJsonBudgetAuthority } from '../src/modules/ai/budget-
 import { createJsonAiConversationStore } from '../src/modules/ai/conversation-store.ts';
 import { createEmptyAiState } from '../src/modules/ai/record-state.ts';
 import { createAiAgentWorker } from '../src/modules/ai/agent-worker.js';
-import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.js';
+import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.ts';
 import { reviewedDeepSeekPriceProfile as profile } from '../src/modules/ai/reviewed-price-profile.ts';
 import { aiRecords } from './ai-record-fixtures.js';
 
