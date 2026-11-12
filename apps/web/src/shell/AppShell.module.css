@@ -201,7 +201,7 @@
   background: var(--shell-rail-color, transparent);
 }
 
-/* 外壳表面（顶栏、模块栏、上下文侧栏）共用一套中性墨色与选中样式；侧栏内容自带主题类，所以对其子元素再声明一次。 */
+/* 外壳表面共用中性墨色与悬停层级；侧栏内容自带主题类，所以对其子元素再声明一次。 */
 .shell > .desktopTitlebar,
 .shell > nav,
 .shell .contextSidebar [data-ni-mode] {
@@ -223,15 +223,20 @@
   --surface-hover: var(--ni-shell-hover);
   --surface-pressed: var(--ni-shell-press);
   --surface-selected: var(--ni-shell-selected);
-  --surface-nav-selected: var(--ni-shell-card);
   --surface-rail-selected: var(--ni-shell-tile);
   --shadow-rail-selected: var(--ni-shell-tile-shadow);
+  --nav-count-ink: var(--ni-shell-ink-3);
+}
+
+/* 顶栏与模块栏保持外壳选中态，上下文侧栏使用主题中的浮起卡片。 */
+.shell > .desktopTitlebar,
+.shell > nav {
+  --surface-nav-selected: var(--ni-shell-card);
   --highlight-nav-selected: 0 0 transparent;
   --nav-selected-bg: var(--ni-shell-card);
   --nav-selected-line: transparent;
   --nav-selected-ink: var(--ni-shell-ink);
   --nav-selected-shadow: 0 0 transparent;
-  --nav-count-ink: var(--ni-shell-ink-3);
 }
 
 /* 侧栏间距、圆角和边线独立组合；窄屏侧栏仍使用弹层。 */
