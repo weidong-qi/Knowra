@@ -275,24 +275,26 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
   const activeItems = useMemo(() => items.filter(item => !item.deletedAt), [items]);
   const visible = useMemo(
     () =>
-      sortKnowledge(
-        status === 'trash'
-          ? items.filter(
-              item =>
-                item.deletedAt &&
-                (!query ||
-                  [item.title, item.canonicalStatement].some(value =>
-                    value.toLocaleLowerCase().includes(query.toLocaleLowerCase())
-                  ))
-            )
-          : filterKnowledgeItems(activeItems, status === 'ungrouped' ? 'all' : status, query).filter(
-              item =>
-                status !== 'ungrouped' ||
-                !conceptState.links.some(link => !link.deletedAt && link.knowledgeItemId === item.id)
-            ),
-        display.sort
-      ),
-    [activeItems, items, status, query, display.sort, conceptState.links]
+      status === 'ungrouped' && conceptState.status !== 'ready'
+        ? []
+        : sortKnowledge(
+            status === 'trash'
+              ? items.filter(
+                  item =>
+                    item.deletedAt &&
+                    (!query ||
+                      [item.title, item.canonicalStatement].some(value =>
+                        value.toLocaleLowerCase().includes(query.toLocaleLowerCase())
+                      ))
+                )
+              : filterKnowledgeItems(activeItems, status === 'ungrouped' ? 'all' : status, query).filter(
+                  item =>
+                    status !== 'ungrouped' ||
+                    !conceptState.links.some(link => !link.deletedAt && link.knowledgeItemId === item.id)
+                ),
+            display.sort
+          ),
+    [activeItems, items, status, query, display.sort, conceptState.links, conceptState.status]
   );
   const sections = useMemo(
     () => groupKnowledge(visible, display.group, Date.now(), conceptState),
@@ -311,8 +313,17 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
     [activeItems]
   );
   const filterCounts = useMemo(
-    () => ({ ...counts, all: activeItems.length - (counts.archived ?? 0), trash: items.length - activeItems.length }),
-    [counts, activeItems, items]
+    () => ({
+      ...counts,
+      all: activeItems.length - (counts.archived ?? 0),
+      trash: items.length - activeItems.length,
+      ungrouped: activeItems.filter(
+        item =>
+          item.reviewStatus !== 'archived' &&
+          !conceptState.links.some(link => !link.deletedAt && link.knowledgeItemId === item.id)
+      ).length
+    }),
+    [counts, activeItems, items, conceptState.links]
   );
 
   function acceptItem(item: KnowledgeItem) {
@@ -692,7 +703,10 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                     正在加载知识…
                   </p>
                 ) : null}
-                {!listLoading && !listError && visible.length === 0 ? (
+                {!listLoading &&
+                !listError &&
+                visible.length === 0 &&
+                (status !== 'ungrouped' || conceptState.status === 'ready') ? (
                   <div className={indexStyles.empty}>
                     <EmptyArt variant={items.length === 0 ? 'knowledge' : 'search'} />
                     <strong>{items.length === 0 ? '还没有知识' : '没有符合条件的知识。'}</strong>
@@ -727,6 +741,12 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                         清除搜索与筛选
                       </Button>
                     )}
+                  </div>
+                ) : null}
+                {status === 'ungrouped' && conceptState.status !== 'ready' ? (
+                  <div className={indexStyles.empty} role="status">
+                    <p>{conceptState.error || '正在加载概念归属…'}</p>
+                    {conceptState.error ? <Button onPress={() => void conceptStore.load()}>重试加载概念</Button> : null}
                   </div>
                 ) : null}
                 <KnowledgeIndexSections

@@ -112,7 +112,6 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  pointer-events: none;
   z-index: 8;
 }
 .drawer.drawer {
@@ -145,4 +144,17 @@
   justify-content: space-between;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.inspector[hidden] {
+  display: none;
+}
+.header[data-compact]:has(input:focus) .tools [role='toolbar'] > :not(:has(input)) {
+  display: none;
+}
+.header[data-compact]:has(input:focus) .tools [role='toolbar'],
+.header[data-compact]:has(input:focus) .tools [role='toolbar'] > div:has(input) {
+  flex: 1;
+  width: auto;
+  min-width: 0;
 }

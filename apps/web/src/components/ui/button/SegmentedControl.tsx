@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
-import { Button as RAButton, type ButtonProps as RAButtonProps } from 'react-aria-components';
+import { PressableButton, type PressableButtonProps } from './PressableButton';
 import { cx } from '../classnames';
 import styles from './SegmentedControl.module.css';
 
@@ -30,7 +30,7 @@ export function SegmentedControl({
   );
 }
 
-export interface SegmentedButtonProps extends Omit<RAButtonProps, 'className' | 'children'> {
+export interface SegmentedButtonProps extends Omit<PressableButtonProps, 'className' | 'children'> {
   count?: number;
   iconOnly?: boolean;
   children: ReactNode;
@@ -42,7 +42,7 @@ export const SegmentedButton = forwardRef<HTMLButtonElement, SegmentedButtonProp
   ref
 ) {
   return (
-    <RAButton ref={ref} className={cx(styles.segment, iconOnly && styles.iconOnly, className)} {...rest}>
+    <PressableButton ref={ref} className={cx(styles.segment, iconOnly && styles.iconOnly, className)} {...rest}>
       {children}
       {count !== undefined ? (
         <>
@@ -50,6 +50,6 @@ export const SegmentedButton = forwardRef<HTMLButtonElement, SegmentedButtonProp
           <span className={styles.count}>{count}</span>
         </>
       ) : null}
-    </RAButton>
+    </PressableButton>
   );
 });

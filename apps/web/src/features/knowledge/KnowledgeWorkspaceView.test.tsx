@@ -82,7 +82,7 @@ function props(overrides: Partial<KnowledgeWorkspaceViewProps> = {}): KnowledgeW
 
 async function clickDetailAction(name: string) {
   await userEvent.click(await screen.findByRole('button', { name: '知识详情更多操作' }));
-  await userEvent.click(await screen.findByRole('menuitem', { name, exact: true }));
+  await userEvent.click(await screen.findByRole('menuitem', { name }));
 }
 
 describe('KnowledgeWorkspaceView', () => {
@@ -393,7 +393,7 @@ describe('KnowledgeWorkspaceView', () => {
     await user.clear(screen.getByRole('searchbox', { name: '搜索知识' }));
     await user.type(screen.getByRole('searchbox', { name: '搜索知识' }), '变换样本');
     expect(within(list).getByRole('button', { name: /数据增强/ })).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole('tab', { name: '来源', exact: true }));
+    await userEvent.click(await screen.findByRole('tab', { name: '来源' }));
     expect(screen.getByRole('region', { name: '知识来源' })).toHaveTextContent('样本变换');
     await user.click(screen.getByRole('button', { name: '打开来源笔记' }));
     expect(input.onOpenNote).toHaveBeenCalledWith('n1');
@@ -446,7 +446,7 @@ describe('KnowledgeWorkspaceView', () => {
     await user.click(screen.getByRole('button', { name: '确认移入回收站' }));
     await waitFor(() => expect(input.onTrash).toHaveBeenCalledWith('k1', { expectedUpdatedAt: candidate.updatedAt }));
     expect(await screen.findByRole('button', { name: '从回收站恢复' })).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole('tab', { name: '来源', exact: true }));
+    await userEvent.click(await screen.findByRole('tab', { name: '来源' }));
     expect(screen.getByRole('region', { name: '知识来源' })).toHaveTextContent('样本变换');
     await user.click(screen.getByRole('button', { name: '从回收站恢复' }));
     await waitFor(() =>
@@ -461,7 +461,7 @@ describe('KnowledgeWorkspaceView', () => {
       />
     );
     expect(await screen.findByText('原标注已移除')).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole('tab', { name: '来源', exact: true }));
+    await userEvent.click(await screen.findByRole('tab', { name: '来源' }));
     expect(screen.getByRole('region', { name: '知识来源' })).toHaveTextContent('样本变换');
   });
 
@@ -525,7 +525,7 @@ describe('KnowledgeWorkspaceView', () => {
     } as Annotation;
     const input = props({ notes: [sourceNote], onListAnnotations: vi.fn().mockResolvedValue([replacement]) });
     render(<KnowledgeWorkspaceView {...input} />);
-    await user.click(await screen.findByRole('tab', { name: '来源', exact: true }));
+    await user.click(await screen.findByRole('tab', { name: '来源' }));
     await screen.findByText('样本变换');
 
     await user.click(await screen.findByRole('button', { name: '添加来源' }));

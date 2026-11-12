@@ -12,7 +12,7 @@ export function KnowledgeLibraryProvider({ children }: { children: ReactNode }) 
   const mode = useAppStore(state => state.dataMode);
   const active = useLocation().pathname.startsWith('/knowledge');
   const cache = useMemo(
-    () => ({ ...createKnowledgeLibraryCache(() => list({ includeArchived: true, includeDeleted: true })), space }),
+    () => ({ ...createKnowledgeLibraryCache(() => list({ includeDeleted: true })), space }),
     [list, space]
   );
   const previous = useRef({ cache, generation, mode });

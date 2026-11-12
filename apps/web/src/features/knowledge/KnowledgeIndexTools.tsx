@@ -225,12 +225,18 @@ export function KnowledgeIndexTools(props: KnowledgeIndexToolsProps) {
       {displayMenu}
       {inspector}
       <span className={styles.separator} />
-      <TooltipTrigger>
-        <IconButton size={28} aria-label="刷新" isDisabled={props.busy} onPress={props.onRefresh}>
-          <RefreshIcon size={16} />
+      <MenuTrigger>
+        <IconButton size={28} aria-label="更多操作">
+          <MoreHorizontalIcon size={16} />
         </IconButton>
-        <Tooltip>刷新</Tooltip>
-      </TooltipTrigger>
+        <MenuPopover>
+          <Menu ariaLabel="更多操作" onAction={() => props.onRefresh()}>
+            <MenuItem id="refresh" icon={<RefreshIcon size={14} />} isDisabled={props.busy}>
+              刷新
+            </MenuItem>
+          </Menu>
+        </MenuPopover>
+      </MenuTrigger>
       {create}
     </div>
   );

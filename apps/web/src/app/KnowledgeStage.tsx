@@ -19,7 +19,7 @@ function KnowledgeStageContent({ pathname, onOpenNote }: { pathname: string; onO
     navigate(knowledgeLibraryPath({ ...route, ...patch }), { replace });
   const { listKnowledgeItems } = state;
   const listConceptItems = useCallback(
-    () => (cache ? cache.list() : listKnowledgeItems({ includeArchived: true, includeDeleted: true })),
+    () => (cache ? cache.list() : listKnowledgeItems({ includeDeleted: true })),
     [cache, listKnowledgeItems]
   );
   // 概念图原型只读取本地示例数据，不依赖资料库连接。
