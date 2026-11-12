@@ -5,7 +5,7 @@ import path from 'node:path';
 import { createServer } from '../src/server.js';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
-import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.js';
+import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.ts';
 import { createAiAgentWorker } from '../src/modules/ai/agent-worker.ts';
 import { aiRuntimeLifecycle } from '../src/modules/ai/runtime-lifecycle.ts';
 import { createMaintenanceGate } from '../src/infrastructure/maintenance-gate.ts';
