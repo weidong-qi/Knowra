@@ -112,6 +112,7 @@ export function KnowledgeItemConcepts({ item, canWrite }: { item: KnowledgeItem;
           <DialogBody>
             <div className={styles.form}>
               <Select
+                isDisabled={!write || state.pending}
                 label="选择概念"
                 value={targetId || null}
                 onChange={key => setTargetId(String(key ?? ''))}
@@ -125,6 +126,7 @@ export function KnowledgeItemConcepts({ item, canWrite }: { item: KnowledgeItem;
                   .map(row => ({ id: row.id, label: `${row.name}${row.sense ? ` · ${row.sense}` : ''}` }))}
               />
               <Select
+                isDisabled={!write || state.pending}
                 label="关联角色"
                 value={role}
                 onChange={key => setRole(key as typeof role)}

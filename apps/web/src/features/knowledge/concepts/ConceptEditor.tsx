@@ -89,8 +89,17 @@ export function ConceptEditor({
       >
         <DialogBody>
           <div className={styles.form}>
-            <TextField label="概念名称" value={name} onChange={setName} maxLength={80} isRequired />
             <TextField
+              autoFocus
+              isDisabled={!canWrite || state.pending}
+              label="概念名称"
+              value={name}
+              onChange={setName}
+              maxLength={80}
+              isRequired
+            />
+            <TextField
+              isDisabled={!canWrite || state.pending}
               label="区分标签"
               value={sense}
               onChange={setSense}
@@ -98,6 +107,7 @@ export function ConceptEditor({
               description="同名概念用不同语境区分，例如“线性代数”。"
             />
             <TextField
+              isDisabled={!canWrite || state.pending}
               label="别名"
               value={aliases}
               onChange={setAliases}

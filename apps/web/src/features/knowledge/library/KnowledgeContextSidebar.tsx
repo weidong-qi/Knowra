@@ -97,7 +97,11 @@ export function KnowledgeContextSidebar() {
                     density="compact"
                     icon={<KnowledgeIcon size={16} />}
                     label={label}
-                    count={section.ready ? section.counts[scope] : undefined}
+                    count={
+                      section.ready && (scope !== 'ungrouped' || concepts.status === 'ready')
+                        ? section.counts[scope]
+                        : undefined
+                    }
                     aria-current={route.page === section.page && route.scope === scope ? 'page' : undefined}
                     onPress={() => navigate(knowledgeLibraryPath({ page: section.page, scope, query: '', id: null }))}
                   />

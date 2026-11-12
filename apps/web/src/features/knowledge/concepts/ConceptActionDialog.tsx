@@ -62,6 +62,7 @@ export function ConceptActionDialog({
                 ”的知识点关联和关系迁到目标概念，并把原名称保留为别名。重复关联按主体优先去重，重复关系合为一条，概念内部的关系会删除。合并不可撤销。
               </p>
               <Select
+                isDisabled={!canWrite || state.pending}
                 label="合并目标"
                 value={targetId || null}
                 onChange={key => setTargetId(String(key ?? ''))}

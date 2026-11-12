@@ -424,6 +424,26 @@ describe('KnowledgeWorkspaceView', () => {
     expect(canNavigate()).toBe(true);
   });
 
+  it('详情页签支持方向键，内容与来源互不干扰且保留来源异常提示', async () => {
+    const user = userEvent.setup();
+    render(
+      <KnowledgeWorkspaceView
+        {...props({ onListEvidence: vi.fn().mockResolvedValue([{ ...evidence, status: 'stale' }]) })}
+      />
+    );
+    await screen.findByRole('button', { name: '确认知识' });
+    expect(screen.getByText('有来源需要重新核对；保存的摘录仍可在“来源”中查看。')).toBeVisible();
+    expect(screen.queryByRole('region', { name: '知识来源' })).not.toBeInTheDocument();
+    const content = screen.getByRole('tab', { name: '内容' });
+    content.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: '来源' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('region', { name: '知识来源' })).toHaveTextContent('样本变换');
+    await user.keyboard('{Home}');
+    expect(content).toHaveFocus();
+    expect(screen.getByText('有来源需要重新核对；保存的摘录仍可在“来源”中查看。')).toBeVisible();
+  });
+
   it('归档先确认，恢复回到候选', async () => {
     const user = userEvent.setup();
     const input = props();
