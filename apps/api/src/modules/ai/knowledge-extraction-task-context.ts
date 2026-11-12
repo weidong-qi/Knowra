@@ -29,7 +29,21 @@ import {
 import { isAiReadableNote } from './note-privacy.ts';
 
 export function* verifyExtractionSourcePrivacy(
-  repos: Pick<ExtractionQueryContext['repositories'], 'noteRepository'>,
+  repos: {
+    noteRepository: {
+      findById(
+        id: string
+      ): import('./knowledge-extraction-query-types.ts').Awaitable<Pick<
+        NoteRecord,
+        'id' | 'spaceId' | 'deleted' | 'contentKind' | 'aiVisibility'
+      > | null>;
+      findByIds?(
+        ids: string[]
+      ): import('./knowledge-extraction-query-types.ts').Awaitable<
+        Pick<NoteRecord, 'id' | 'spaceId' | 'deleted' | 'contentKind' | 'aiVisibility'>[]
+      >;
+    };
+  },
   sourceRefs: { noteId: string }[],
   spaceId: string
 ): ExtractionQuerySteps<void> {

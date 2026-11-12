@@ -10,7 +10,7 @@ import { createAiReadContextService } from './read-context-service.js';
 import { createAiAccessService } from './access-service.js';
 import { createAiConversationService } from './conversation-service.ts';
 import { createAiAgentWorker } from './agent-worker.js';
-import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.js';
+import { createAgentKnowledgeCommitService } from './agent-knowledge-commit.ts';
 import { createConversationAttachmentService } from './conversation-attachments.js';
 import { createBalanceService } from './balance-service.ts';
 import { createBudgetSettingsStore } from './budget-settings.ts';

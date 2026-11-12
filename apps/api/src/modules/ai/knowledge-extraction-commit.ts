@@ -1,3 +1,15 @@
+import type { NoteVersion } from '../knowledge/domain/note-version.ts';
+import type {
+  ExtractionCommitOptions,
+  ExtractionCommitContext,
+  MockCommitInput,
+  CommitSteps,
+  CommitNote
+} from './knowledge-commit-service-types.ts';
+import type { KnowledgeExtractionCommitReceipt } from './knowledge-extraction-commit-types.ts';
+import type { AiJob, AiJobAttempt, AiGrant, AiContextManifest, AiScopeSnapshot } from './record-types.ts';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { ExtractionScope } from '../knowledge/application/knowledge-extraction-types.ts';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.ts';
 import { hashRecord, manifestHash } from './record-contract.ts';
@@ -12,37 +24,43 @@ import { createKnowledgeArtifactProvenanceFromReceipt } from '../../infrastructu
 import { isAiReadableNote } from './note-privacy.ts';
 import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.ts';
 
-const fail = (code, message) => {
+const fail: (code: string, message: string) => never = (code, message) => {
   throw createAppError(code, message, 409);
 };
-const sameBoundary = (left, right) =>
-  ['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'].every(key => left[key] === right[key]);
-const nextTime = (now, previous) => new Date(Math.max(now.getTime(), Date.parse(previous) + 1)).toISOString();
+const sameBoundary = (left: AiJob, right: AiGrant | AiContextManifest | AiScopeSnapshot) =>
+  (['ownerId', 'datasetId', 'datasetEpoch', 'spaceId'] as const).every(key => left[key] === right[key]);
+const nextTime = (now: Date, previous: string) =>
+  new Date(Math.max(now.getTime(), Date.parse(previous) + 1)).toISOString();
 
-function runSync(steps) {
+function runSync<Result>(steps: CommitSteps<Result>) {
   let step = steps.next();
   while (!step.done) {
-    if (step.value?.then) throw new TypeError('本地提炼事务不能包含异步操作。');
-    step = steps.next(step.value);
+    if ((step.value as { then?: object } | null)?.then) throw new TypeError('本地提炼事务不能包含异步操作。');
+    step = steps.next(step.value as import('./knowledge-commit-service-types.ts').CommitValue);
   }
   return step.value;
 }
-async function runAsync(steps) {
+async function runAsync<Result>(steps: CommitSteps<Result>) {
   let step = steps.next();
   while (!step.done) step = steps.next(await step.value);
   return step.value;
 }
 
 /** 受信宿主的 Mock 接纳入口；没有 HTTP/IPC 路由，也不发起模型请求或读取凭据。 */
-export function createKnowledgeExtractionCommitService({ store, createContext, ownerId, clock = () => new Date() }) {
+export function createKnowledgeExtractionCommitService<Transaction>({
+  store,
+  createContext,
+  ownerId,
+  clock = () => new Date()
+}: ExtractionCommitOptions<Transaction>) {
   if (!store || !createContext || !ownerId) throw new TypeError('提炼接纳需要宿主事务、仓库和 owner。');
   return {
-    commit(input) {
+    commit(input: MockCommitInput) {
       if (
         !input ||
         Object.keys(input).length !== 4 ||
         ['jobId', 'attemptId', 'scopeId', 'result'].some(key => !Object.hasOwn(input, key)) ||
-        ['jobId', 'attemptId', 'scopeId'].some(key => typeof input[key] !== 'string' || !input[key]) ||
+        (['jobId', 'attemptId', 'scopeId'] as const).some(key => typeof input[key] !== 'string' || !input[key]) ||
         input.result?.provider !== 'mock'
       )
         fail('KNOWLEDGE_EXTRACTION_MOCK_ONLY', '当前提炼接纳仅供受信宿主的模拟验收。');
@@ -53,10 +71,14 @@ export function createKnowledgeExtractionCommitService({ store, createContext, o
     }
   };
 
-  function* accept(context, input, now) {
+  function* accept(
+    context: ExtractionCommitContext<Transaction>,
+    input: MockCommitInput,
+    now: Date
+  ): CommitSteps<KnowledgeExtractionCommitReceipt> {
     const { aiRepository: ai, repositories: repos, knowledgeItemService } = context;
-    const job = yield ai.get('aiJob', input.jobId);
-    const identity = yield ai.identity();
+    const job = (yield ai.get('aiJob', input.jobId)) as AiJob | null;
+    const identity = (yield ai.identity()) as DatasetIdentity;
     if (
       !job ||
       job.ownerId !== ownerId ||
@@ -88,8 +110,8 @@ export function createKnowledgeExtractionCommitService({ store, createContext, o
       }
       return receipt;
     }
-    const attempt = yield ai.get('aiJobAttempt', input.attemptId);
-    const attempts = yield ai.list('aiJobAttempt', { jobId: job.jobId });
+    const attempt = (yield ai.get('aiJobAttempt', input.attemptId)) as AiJobAttempt | null;
+    const attempts = (yield ai.list('aiJobAttempt', { jobId: job.jobId })) as AiJobAttempt[];
     if (
       job.status !== 'running' ||
       job.acceptedAttemptId ||
@@ -104,9 +126,9 @@ export function createKnowledgeExtractionCommitService({ store, createContext, o
     ) {
       fail('KNOWLEDGE_EXTRACTION_ATTEMPT_STALE', '提炼任务已取消、结束或租约失效，迟到结果不能入库。');
     }
-    const grant = yield ai.get('aiGrant', job.grantId);
-    const manifest = yield ai.get('contextManifest', job.manifestId);
-    const aiScope = grant && (yield ai.get('scopeSnapshot', grant.scopeSnapshotId));
+    const grant = (yield ai.get('aiGrant', job.grantId)) as AiGrant | null;
+    const manifest = (yield ai.get('contextManifest', job.manifestId)) as AiContextManifest | null;
+    const aiScope = grant && ((yield ai.get('scopeSnapshot', grant.scopeSnapshotId)) as AiScopeSnapshot | null);
     if (
       !grant ||
       !manifest ||
@@ -132,19 +154,23 @@ export function createKnowledgeExtractionCommitService({ store, createContext, o
     ) {
       fail('KNOWLEDGE_EXTRACTION_GRANT_INVALID', '提炼创建授权或上下文已失效。');
     }
-    const scope = yield repos.analysisScopeRepository.findById(input.scopeId);
-    const space = yield repos.knowledgeSpaceRepository.findById(job.spaceId);
+    const scope = (yield repos.analysisScopeRepository.findById(input.scopeId)) as ExtractionScope & {
+      deletedAt?: string | null;
+    };
+    const space = (yield repos.knowledgeSpaceRepository.findById(job.spaceId)) as Awaited<
+      ReturnType<typeof repos.knowledgeSpaceRepository.findById>
+    >;
     if (!scope || scope.deletedAt || scope.spaceId !== job.spaceId || !space || space.userId !== ownerId) {
       fail('KNOWLEDGE_EXTRACTION_SCOPE_FORBIDDEN', '保存的提炼范围不属于当前知识空间。');
     }
-    const versions = [];
+    const versions: NoteVersion[] = [];
     for (const binding of scope.noteVersions) {
-      const note = yield repos.noteRepository.findById(binding.noteId);
-      if (!isAiReadableNote(note) || note.spaceId !== job.spaceId) {
+      const note = (yield repos.noteRepository.findById(binding.noteId)) as CommitNote | null;
+      if (!isAiReadableNote(note) || note!.spaceId !== job.spaceId) {
         fail('KNOWLEDGE_EXTRACTION_SOURCE_UNAVAILABLE', '原始提炼来源不在当前 AI 可读取范围，未保存任何候选。');
       }
-      const version = yield repos.noteVersionRepository.findById(binding.noteVersionId);
-      if (!version || version.noteId !== note.id) {
+      const version = (yield repos.noteVersionRepository.findById(binding.noteVersionId)) as NoteVersion | null;
+      if (!version || version.noteId !== note!.id) {
         fail(
           'KNOWLEDGE_EXTRACTION_SOURCE_UNAVAILABLE',
           '原始提炼版本不可用或来源已删除、迁移；请重新保存范围，未保存任何候选。'
@@ -152,7 +178,7 @@ export function createKnowledgeExtractionCommitService({ store, createContext, o
       }
       versions.push(version);
     }
-    yield* verifyExtractionSourcePrivacy(repos, versions, job.spaceId);
+    yield* verifyExtractionSourcePrivacy(repos, versions, job.spaceId) as CommitSteps<void>;
     const prepared = prepareKnowledgeExtractionGateway({
       scope,
       noteVersions: versions,
@@ -169,9 +195,13 @@ export function createKnowledgeExtractionCommitService({ store, createContext, o
       quoteHash: calculateContentHash(source.markdown),
       characters: source.end - source.start
     }));
-    const refsMatch = refs =>
+    const refsMatch = (refs: AiContextManifest['sources'][number][]) =>
       refs.length === sourceRefs.length &&
-      sourceRefs.every(source => refs.some(ref => Object.keys(source).every(key => ref[key] === source[key])));
+      sourceRefs.every(source =>
+        refs.some(ref =>
+          Object.keys(source).every(key => ref[key as keyof typeof source] === source[key as keyof typeof source])
+        )
+      );
     if (
       request.requestId !== job.requestId ||
       request.inputHash !== job.inputHash ||

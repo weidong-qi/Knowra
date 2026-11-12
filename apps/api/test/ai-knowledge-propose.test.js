@@ -9,7 +9,7 @@ import { buildKnowledgeProposalPlan, proposeKnowledge } from '../src/modules/ai/
 import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.ts';
 import { proposalProgress } from '../src/modules/ai/agent-worker.js';
 import { markParagraphs } from './fixtures/inline-annotation-seed.js';
-import { createAgentKnowledgeCommitService } from '../src/modules/ai/agent-knowledge-commit.js';
+import { createAgentKnowledgeCommitService } from '../src/modules/ai/agent-knowledge-commit.ts';
 import {
   createCoreOperationReceipt,
   validateCoreOperationReceipt

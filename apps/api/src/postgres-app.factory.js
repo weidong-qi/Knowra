@@ -55,7 +55,7 @@ import { createAiFeatureSettings } from './modules/ai/feature-settings.ts';
 import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { createPostgresAiRepository } from './modules/ai/postgres-record-repository.ts';
-import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.js';
+import { createKnowledgeExtractionCommitService } from './modules/ai/knowledge-extraction-commit.ts';
 import { createKnowledgeExtractionTaskService } from './modules/ai/knowledge-extraction-task-service.ts';
 import { createPostgresKnowledgeExtractionTaskStore } from './modules/ai/postgres-knowledge-extraction-task-store.ts';
 import {

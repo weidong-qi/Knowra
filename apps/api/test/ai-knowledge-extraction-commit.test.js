@@ -6,7 +6,7 @@ import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
 import { validateKnowledgeExtractionCommit } from '../src/modules/ai/knowledge-extraction-commit-contract.ts';
-import { createKnowledgeExtractionCommitService } from '../src/modules/ai/knowledge-extraction-commit.js';
+import { createKnowledgeExtractionCommitService } from '../src/modules/ai/knowledge-extraction-commit.ts';
 import { createKnowledgeExtractionJobFixture } from './fixtures/knowledge-extraction-job.fixture.js';
 import { assertMinimalProvenanceTransport } from './fixtures/knowledge-artifact-provenance.fixture.js';
 
