@@ -129,7 +129,7 @@
   height: min(85dvh, 760px);
   max-width: min(360px, calc(100vw - 32px));
   padding: 0;
-  background: var(--surface-sidebar-solid);
+  background: var(--ni-shell-panel, var(--surface-sidebar-solid));
   display: flex;
   flex-direction: column;
 }
