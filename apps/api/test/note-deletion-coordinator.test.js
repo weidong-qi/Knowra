@@ -4,15 +4,16 @@ export const noteDeletionCoordinatorTests = [
   {
     name: 'note deletion coordinator removes annotations and attachment metadata before file cleanup',
     async run() {
-      const { createNoteDeletionCoordinator } = await import(
-        '../src/modules/knowledge/application/note-deletion-coordinator.js'
-      );
+      const { createNoteDeletionCoordinator } =
+        await import('../src/modules/knowledge/application/note-deletion-coordinator.ts');
       const events = [];
-      const notes = [{
-        id: 'note-1',
-        spaceId: 'space-1',
-        deleted: true
-      }];
+      const notes = [
+        {
+          id: 'note-1',
+          spaceId: 'space-1',
+          deleted: true
+        }
+      ];
       const coordinator = createNoteDeletionCoordinator({
         noteService: {
           permanentlyDeleteNote(noteId) {
@@ -72,9 +73,8 @@ export const noteDeletionCoordinatorTests = [
   {
     name: 'note deletion coordinator cleans all recycled note dependents in one transaction',
     async run() {
-      const { createNoteDeletionCoordinator } = await import(
-        '../src/modules/knowledge/application/note-deletion-coordinator.js'
-      );
+      const { createNoteDeletionCoordinator } =
+        await import('../src/modules/knowledge/application/note-deletion-coordinator.ts');
       const removed = [];
       const notes = [
         { id: 'note-a', spaceId: 'space-1', deleted: true },
@@ -91,7 +91,7 @@ export const noteDeletionCoordinatorTests = [
         },
         noteRepository: {
           list({ spaceId }) {
-            return notes.filter((note) => note.spaceId === spaceId);
+            return notes.filter(note => note.spaceId === spaceId);
           }
         },
         contentAnnotationRepository: {
