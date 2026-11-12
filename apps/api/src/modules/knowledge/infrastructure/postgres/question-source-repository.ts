@@ -3,6 +3,7 @@ import type {
   SourceRepositoryOptions,
   RelationIds,
   SourceWriteInput,
+  SourceWriteData,
   SourceProjection,
   MappedSourceProjection
 } from './assessment-repository-types.ts';
@@ -22,7 +23,7 @@ export function createPostgresQuestionSourceRepository({ db }: SourceRepositoryO
       return withRepositoryErrors(() =>
         db.questionSource
           .findUnique({
-            where: { id }
+            where: { id: id as string }
           })
           .then<SyncMappedEntityMap['questionSources'] | null>(mapQuestionSource)
       );
@@ -31,7 +32,7 @@ export function createPostgresQuestionSourceRepository({ db }: SourceRepositoryO
       if (!questionIds.length) return [];
       return withRepositoryErrors(() =>
         db.questionSource
-          .findMany({ where: { questionId: { in: questionIds } }, orderBy: { createdAt: 'asc' } })
+          .findMany({ where: { questionId: { in: questionIds as string[] } }, orderBy: { createdAt: 'asc' } })
           .then(rows => rows.map(mapQuestionSource))
       );
     },
@@ -58,7 +59,7 @@ export function createPostgresQuestionSourceRepository({ db }: SourceRepositoryO
           createdAt: toDate(source.createdAt),
           updatedAt: toDate(source.updatedAt)
         }));
-        await db.questionSource.createMany({ data });
+        await db.questionSource.createMany({ data: data as SourceWriteData[] });
         return data.map(mapQuestionSource as (row: SourceProjection) => MappedSourceProjection);
       });
     },
@@ -69,7 +70,7 @@ export function createPostgresQuestionSourceRepository({ db }: SourceRepositoryO
       if (!sourceIds.length) return [];
       return withRepositoryErrors(async () => {
         const rows = await db.questionSource.findMany({
-          where: { sourceType, sourceId: { in: sourceIds }, status: { not: status } }
+          where: { sourceType, sourceId: { in: sourceIds as string[] }, status: { not: status } }
         });
         if (!rows.length) return [];
         await db.questionSource.updateMany({

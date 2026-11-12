@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import type {
   ObjectiveRelationRepositoryOptions,
   RelationIds,
@@ -20,7 +21,7 @@ export function createPostgresQuestionObjectiveRepository({ db }: ObjectiveRelat
       if (!questionIds.length) return [];
       return withRepositoryErrors(() =>
         db.questionObjective
-          .findMany({ where: { questionId: { in: questionIds } }, orderBy: { order: 'asc' } })
+          .findMany({ where: { questionId: { in: questionIds as string[] } }, orderBy: { order: 'asc' } })
           .then(rows => rows.map(mapQuestionObjective))
       );
     },
@@ -37,7 +38,7 @@ export function createPostgresQuestionObjectiveRepository({ db }: ObjectiveRelat
         await db.questionObjective.deleteMany({ where: { questionId } });
         if (!objectiveIds.length) return [];
         const records = questionObjectiveRecords(questionId, objectiveIds, previous, new Date());
-        await db.questionObjective.createMany({ data: records });
+        await db.questionObjective.createMany({ data: records as Prisma.QuestionObjectiveCreateManyInput[] });
         return records.map(
           mapQuestionObjective as (row: (typeof records)[number]) => MappedObjectiveProjection<(typeof records)[number]>
         );

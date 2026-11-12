@@ -1,7 +1,12 @@
 import { createAppError } from '../../../../errors/app-error.ts';
 import { mapKnowledgeItem, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
-import type { ItemRepositoryOptions, ItemWriteInput, ItemListOptions } from './knowledge-graph-repository-types.ts';
+import type {
+  ItemRepositoryOptions,
+  ItemWriteInput,
+  ItemListOptions,
+  ItemWriteData
+} from './knowledge-graph-repository-types.ts';
 import type { Prisma } from '@prisma/client';
 import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
 
@@ -32,7 +37,7 @@ export function createPostgresKnowledgeItemRepository({ db }: ItemRepositoryOpti
       return withRepositoryErrors(() =>
         db.knowledgeItem
           .create({
-            data: toData(item)
+            data: toData(item) as ItemWriteData
           })
           .then(mapKnowledgeItem)
       );
@@ -44,7 +49,7 @@ export function createPostgresKnowledgeItemRepository({ db }: ItemRepositoryOpti
           const { id, createdAt: _createdAt, ...update } = data;
           const result = await db.knowledgeItem.updateMany({
             where: { id, updatedAt: toDate(expectedUpdatedAt) },
-            data: update
+            data: update as Partial<ItemWriteData>
           });
           if (result.count !== 1)
             throw createAppError('KNOWLEDGE_ITEM_UPDATE_CONFLICT', '知识已被其他操作修改，请重新加载并核对。', 409);
@@ -55,11 +60,11 @@ export function createPostgresKnowledgeItemRepository({ db }: ItemRepositoryOpti
         db.knowledgeItem
           .upsert({
             where: { id: data.id },
-            create: data,
+            create: data as ItemWriteData,
             update: (() => {
               const { id: _ignoredId, createdAt: _ignoredCreatedAt, ...updateData } = data;
               return updateData;
-            })()
+            })() as Partial<ItemWriteData>
           })
           .then(mapKnowledgeItem)
       );
@@ -67,12 +72,14 @@ export function createPostgresKnowledgeItemRepository({ db }: ItemRepositoryOpti
     async findById(id: unknown) {
       return withRepositoryErrors(() =>
         db.knowledgeItem
-          .findUnique({ where: { id } })
+          .findUnique({ where: { id: id as string } })
           .then<SyncMappedEntityMap['knowledgeItems'] | null>(mapKnowledgeItem)
       );
     },
     async delete(id: unknown) {
-      return withRepositoryErrors(() => db.knowledgeItem.delete({ where: { id } }).then(mapKnowledgeItem));
+      return withRepositoryErrors(() =>
+        db.knowledgeItem.delete({ where: { id: id as string } }).then(mapKnowledgeItem)
+      );
     },
     list({ reviewStatus, query = '', includeArchived = false, includeDeleted = false }: ItemListOptions = {}) {
       const search = String(query).trim();

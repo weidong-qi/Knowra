@@ -1,6 +1,6 @@
 import type * as Models from '@prisma/client';
 import type { NavigationDates } from './navigation-repository-types.ts';
-import type { QuestionObjectiveIdentityRecord } from '../question-objective-identity.ts';
+import type { Prisma } from '@prisma/client';
 
 export interface ObjectiveWriteInput extends NavigationDates {
   id: string;
@@ -37,24 +37,10 @@ export interface FocusWriteInput extends NavigationDates {
   reviewStatus?: string | null;
   deletedAt?: unknown;
 }
-type Dates = { createdAt: Date; updatedAt: Date; deletedAt: Date | null };
-export type ObjectiveWriteData = Omit<ObjectiveWriteInput, keyof Dates | 'difficultyHint' | 'reviewNote'> &
-  Dates & {
-    difficultyHint: unknown;
-    reviewNote: string | null;
-  };
-export type ProfileWriteData = Omit<ProfileWriteInput, keyof Dates | 'archivedAt' | 'description' | 'language'> &
-  Dates & {
-    archivedAt: Date | null;
-    description: string;
-    language: string;
-  };
-export type FocusWriteData = Omit<FocusWriteInput, keyof Dates | 'description' | 'sourceType' | 'reviewStatus'> &
-  Dates & {
-    description: string;
-    sourceType: string;
-    reviewStatus: string;
-  };
+// SQL 输入与未校验的仓储输入分开，JSON 写值使用 Prisma 的完整哨兵类型。
+export type ObjectiveWriteData = Prisma.LearningObjectiveUncheckedCreateInput;
+export type ProfileWriteData = Prisma.ExamProfileUncheckedCreateInput;
+export type FocusWriteData = Prisma.ExamFocusUncheckedCreateInput;
 export interface ReviewListOptions {
   reviewStatus?: string;
   includeArchived?: boolean;
@@ -89,7 +75,6 @@ export interface ReviewOrder {
   updatedAt?: 'desc';
 }
 type IdWhere = { id: string };
-type RawIdWhere = { id: unknown };
 type FocusIdentity =
   IdWhere | { examProfileId_learningObjectiveId: { examProfileId: string; learningObjectiveId: string } };
 export interface AssessmentDelegate<Row, Data, Where, Identity = IdWhere> {
@@ -103,7 +88,7 @@ export interface ObjectiveDelegate extends AssessmentDelegate<
   Models.LearningObjective,
   ObjectiveWriteData,
   ObjectiveWhere,
-  RawIdWhere
+  IdWhere
 > {
   updateMany(input: {
     where: { id: string; updatedAt: Date };
@@ -123,7 +108,7 @@ export interface RelationIds extends Iterable<unknown> {
   readonly length: number;
 }
 export interface ObjectiveRelationWhere {
-  questionId?: string | { in: RelationIds };
+  questionId?: string | { in: string[] };
   learningObjectiveId?: string;
 }
 export interface ObjectiveRelationDelegate {
@@ -132,9 +117,7 @@ export interface ObjectiveRelationDelegate {
     orderBy?: { order: 'asc' };
   }): PromiseLike<Models.QuestionObjective[]>;
   deleteMany(input: { where: { questionId: string } }): PromiseLike<{ count: number }>;
-  createMany(input: {
-    data: QuestionObjectiveIdentityRecord<string, string, unknown, Date>[];
-  }): PromiseLike<{ count: number }>;
+  createMany(input: { data: Prisma.QuestionObjectiveCreateManyInput[] }): PromiseLike<{ count: number }>;
 }
 export interface ObjectiveRelationRepositoryOptions {
   db: { questionObjective: ObjectiveRelationDelegate };
@@ -173,11 +156,7 @@ export interface SourceProjection extends Omit<SourceWriteInput, 'locator' | 'cr
   createdAt: Date;
   updatedAt: Date;
 }
-export type SourceWriteData = Omit<SourceWriteInput, 'createdAt' | 'updatedAt'> & {
-  questionId: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+export type SourceWriteData = Prisma.QuestionSourceCreateManyInput;
 export interface MappedSourceProjection<Input extends SourceProjection = SourceProjection> {
   id: Input['id'];
   questionId: Input['questionId'];
@@ -191,13 +170,13 @@ export interface MappedSourceProjection<Input extends SourceProjection = SourceP
   updatedAt: string;
 }
 export interface SourceWhere {
-  questionId?: string | { in: RelationIds };
+  questionId?: string | { in: string[] };
   sourceType?: string;
-  sourceId?: { in: RelationIds };
+  sourceId?: { in: string[] };
   status?: { not: string };
 }
 export interface SourceDelegate {
-  findUnique(input: { where: RawIdWhere }): PromiseLike<Models.QuestionSource | null>;
+  findUnique(input: { where: IdWhere }): PromiseLike<Models.QuestionSource | null>;
   findMany(input: { where: SourceWhere; orderBy?: { createdAt: 'asc' } }): PromiseLike<Models.QuestionSource[]>;
   deleteMany(input: { where: { questionId: string } }): PromiseLike<{ count: number }>;
   createMany(input: { data: SourceWriteData[] }): PromiseLike<{ count: number }>;

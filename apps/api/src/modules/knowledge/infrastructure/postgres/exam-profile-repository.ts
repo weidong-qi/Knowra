@@ -1,10 +1,16 @@
 import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
-import type { ProfileRepositoryOptions, ProfileWriteInput, ReviewListOptions } from './assessment-repository-types.ts';
+import type {
+  ProfileRepositoryOptions,
+  ProfileWriteData,
+  ProfileWriteInput,
+  ReviewListOptions
+} from './assessment-repository-types.ts';
 import { mapExamProfile, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresExamProfileRepository({ db }: ProfileRepositoryOptions) {
   if (!db?.examProfile) throw new TypeError('PostgreSQL ExamProfile repository requires db.examProfile');
+  // 原始输入仍交给 Prisma 校验，只在 SQL 调用处描述其目标类型。
   function toData(profile: ProfileWriteInput) {
     return {
       id: profile.id,
@@ -25,7 +31,7 @@ export function createPostgresExamProfileRepository({ db }: ProfileRepositoryOpt
       return withRepositoryErrors(() =>
         db.examProfile
           .create({
-            data: toData(profile)
+            data: toData(profile) as ProfileWriteData
           })
           .then(mapExamProfile)
       );
@@ -36,11 +42,11 @@ export function createPostgresExamProfileRepository({ db }: ProfileRepositoryOpt
         db.examProfile
           .upsert({
             where: { id: data.id },
-            create: data,
+            create: data as ProfileWriteData,
             update: (() => {
               const { id: _id, createdAt: _createdAt, ...rest } = data;
               return rest;
-            })()
+            })() as Partial<ProfileWriteData>
           })
           .then(mapExamProfile)
       );

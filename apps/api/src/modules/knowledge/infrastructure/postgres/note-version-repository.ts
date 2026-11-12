@@ -1,29 +1,14 @@
 import type * as Models from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { NoteVersion } from '../../domain/note-version.ts';
 import type { VersionPageCursor } from '../../domain/note-version-page.ts';
 import { mapNoteVersion, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 import { versionPage } from '../../domain/note-version-page.ts';
 
-type VersionIdRow = Pick<Models.NoteVersion, 'id'>;
-type VersionPageRow = Omit<Models.NoteVersion, 'content'>;
-type VersionKey = { id: string } | { noteId_contentHash: { noteId: string; contentHash: string } };
-interface VersionWhere {
-  noteId?: string | { in: string[] };
-  OR?: ({ createdAt: { lt: Date } } | { createdAt: Date; id: { lt: string } })[];
-}
-interface NoteVersionDelegate {
-  create(input: { data: Models.NoteVersion }): PromiseLike<Models.NoteVersion>;
-  findUnique(input: { where: VersionKey; select: { id: true } }): PromiseLike<VersionIdRow | null>;
-  findUnique(input: { where: VersionKey }): PromiseLike<Models.NoteVersion | null>;
-  findMany(input: { where: VersionWhere; select: { id: true } }): PromiseLike<VersionIdRow[]>;
-  findMany(input: {
-    where: VersionWhere;
-    orderBy: { createdAt: 'desc' } | [{ createdAt: 'desc' }, { id: 'desc' }];
-    take: number;
-    select: { id: true; noteId: true; contentHash: true; createdAt: true; createdBy: true };
-  }): PromiseLike<VersionPageRow[]>;
-  findMany(input: { where: VersionWhere; orderBy?: { createdAt: 'desc' } }): PromiseLike<Models.NoteVersion[]>;
+// Prisma 的查询签名保留 select 与返回字段的关联，不能用重载伪造完整行。
+interface NoteVersionDelegate extends Pick<Prisma.TransactionClient['noteVersion'], 'findUnique' | 'findMany'> {
+  create(input: { data: Prisma.NoteVersionUncheckedCreateInput }): PromiseLike<Models.NoteVersion>;
   count(input: { where: { noteId: string } }): PromiseLike<number>;
   deleteMany(input: { where: { noteId: { in: string[] } } }): PromiseLike<{ count: number }>;
 }

@@ -5,17 +5,6 @@ import type { CreateContentAnnotationDto } from '../../application/dto/content-a
 import { mapAnnotation, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 
-type AnnotationIdentity =
-  Pick<ContentAnnotation, 'identityBinding'> | Pick<NonNullable<ReturnType<typeof mapAnnotation>>, 'identityBinding'>;
-type AnnotationWriteData<Input extends AnnotationIdentity> = Omit<
-  Input,
-  'createdAt' | 'updatedAt' | 'deletedAt' | 'identityBinding'
-> & {
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-  identityBinding: NonNullable<Input['identityBinding']> | Prisma.NullTypes.DbNull;
-};
 interface AnnotationWhere {
   id?: { in: string[] };
   noteId?: string | { in: string[] };
@@ -32,10 +21,10 @@ interface AnnotationWhere {
   schemaVersion?: { not: number };
 }
 interface ContentAnnotationDelegate {
-  upsert<Input extends AnnotationIdentity>(input: {
+  upsert(input: {
     where: { id: string };
-    create: AnnotationWriteData<Input>;
-    update: Omit<AnnotationWriteData<Input>, 'id' | 'createdAt'>;
+    create: Prisma.ContentAnnotationUncheckedCreateInput;
+    update: Prisma.ContentAnnotationUncheckedUpdateInput;
   }): PromiseLike<Models.ContentAnnotation>;
   findUnique(input: {
     where: { id: string } | { noteId_idempotencyKey: { noteId: string; idempotencyKey: string } };
@@ -117,15 +106,16 @@ export function createPostgresContentAnnotationRepository({ db }: ContentAnnotat
         updatedAt: toDate(annotation.updatedAt),
         deletedAt: annotation.deletedAt ? toDate(annotation.deletedAt) : null
       };
+      // 仅在原 SQL 调用处描述写入输入；历史 JSON 值仍由 Prisma 校验。
       return withRepositoryErrors(async () =>
         mapAnnotation(
-          await db.contentAnnotation.upsert<typeof annotation>({
+          await db.contentAnnotation.upsert({
             where: { id: data.id },
-            create: data,
+            create: data as Prisma.ContentAnnotationUncheckedCreateInput,
             update: (() => {
               const { id: _ignoredId, createdAt: _ignoredCreatedAt, ...updateData } = data;
               return updateData;
-            })()
+            })() as Prisma.ContentAnnotationUncheckedUpdateInput
           })
         )
       );

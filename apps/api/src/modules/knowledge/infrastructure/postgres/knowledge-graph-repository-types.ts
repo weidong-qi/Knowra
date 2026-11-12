@@ -42,12 +42,10 @@ export interface EvidenceWriteInput extends NavigationDates {
   status?: string | null;
   applicabilityStatus?: string | null;
 }
-type Dates = { createdAt: Date; updatedAt: Date };
-export type QuestionWriteData = Omit<QuestionWriteInput, keyof Dates | 'deletedAt' | 'explanation' | 'difficulty'> &
-  Dates & { deletedAt: Date | null; explanation: string; difficulty: string | null };
-export type ItemWriteData = Omit<ItemWriteInput, keyof Dates | 'deletedAt' | 'importance'> &
-  Dates & { deletedAt: Date | null; importance: number | null };
-export type EvidenceWriteData = Omit<EvidenceWriteInput, keyof Dates> & Dates;
+// SQL 写端口使用 Prisma 输入；未验证的历史投影仍保留在仓储调用边界。
+export type QuestionWriteData = Prisma.QuestionUncheckedCreateInput;
+export type ItemWriteData = Prisma.KnowledgeItemUncheckedCreateInput;
+export type EvidenceWriteData = Prisma.KnowledgeEvidenceUncheckedCreateInput;
 export interface ProvenanceWriteData {
   id: string;
   artifactId: string;
@@ -81,14 +79,16 @@ export interface EvidenceWhere {
   id?: { in: string[] };
   status?: string | { not: string } | { notIn: string[] };
 }
-interface ReadCreateDelegate<Row, Data, Where, Identity = { id: unknown }> {
+interface ReadCreateDelegate<
+  Row,
+  Data,
+  Where,
+  Identity = { id: string },
+  Order = { updatedAt: 'desc' } | { createdAt: 'asc' } | { id: 'asc' }
+> {
   create(input: { data: Data }): PromiseLike<Row>;
   findUnique(input: { where: Identity }): PromiseLike<Row | null>;
-  findMany(input: {
-    where: Where;
-    orderBy?: { updatedAt: 'desc' } | { createdAt: 'asc' } | { id: 'asc' };
-    take?: number;
-  }): PromiseLike<Row[]>;
+  findMany(input: { where: Where; orderBy?: Order; take?: number }): PromiseLike<Row[]>;
 }
 interface UpsertInput<Data> {
   where: { id: string };
@@ -97,7 +97,7 @@ interface UpsertInput<Data> {
 }
 export interface QuestionDelegate extends ReadCreateDelegate<Models.Question, QuestionWriteData, ReviewWhere> {
   upsert(input: UpsertInput<QuestionWriteData>): PromiseLike<Models.Question>;
-  delete(input: { where: { id: unknown } }): PromiseLike<Models.Question>;
+  delete(input: { where: { id: string } }): PromiseLike<Models.Question>;
 }
 export interface ItemDelegate extends ReadCreateDelegate<
   Models.KnowledgeItem,
@@ -105,7 +105,7 @@ export interface ItemDelegate extends ReadCreateDelegate<
   Prisma.KnowledgeItemWhereInput
 > {
   upsert(input: UpsertInput<ItemWriteData>): PromiseLike<Models.KnowledgeItem>;
-  delete(input: { where: { id: unknown } }): PromiseLike<Models.KnowledgeItem>;
+  delete(input: { where: { id: string } }): PromiseLike<Models.KnowledgeItem>;
   updateMany(input: {
     where: { id: string; updatedAt: Date };
     data: Partial<ItemWriteData>;
@@ -114,27 +114,28 @@ export interface ItemDelegate extends ReadCreateDelegate<
 export interface EvidenceDelegate extends ReadCreateDelegate<
   Models.KnowledgeEvidence,
   EvidenceWriteData,
-  EvidenceWhere
+  Prisma.KnowledgeEvidenceWhereInput
 > {
   upsert(input: UpsertInput<EvidenceWriteData>): PromiseLike<Models.KnowledgeEvidence>;
   updateMany(input: {
     where: { id: { in: string[] } };
     data: { status: string; updatedAt: Date };
   }): PromiseLike<{ count: number }>;
-  deleteMany(input: { where: { knowledgeItemId: unknown } }): PromiseLike<{ count: number }>;
+  deleteMany(input: { where: { knowledgeItemId: string } }): PromiseLike<{ count: number }>;
 }
-type ProvenanceIdentity = { id: unknown } | { artifactId: unknown };
+type ProvenanceIdentity = { id: string } | { artifactId: string };
 export interface ProvenanceDelegate extends ReadCreateDelegate<
   Models.KnowledgeArtifactProvenance,
-  ProvenanceWriteData,
-  { artifactId?: unknown },
-  ProvenanceIdentity
+  Prisma.KnowledgeArtifactProvenanceUncheckedCreateInput,
+  { artifactId?: string },
+  ProvenanceIdentity,
+  { id: 'asc' }
 > {
   updateMany(input: {
     where: { id: string; state: 'legacy-unavailable'; provenanceHash: string };
-    data: ProvenanceWriteData;
+    data: Prisma.KnowledgeArtifactProvenanceUncheckedCreateInput;
   }): PromiseLike<{ count: number }>;
-  deleteMany(input: { where: { artifactId: unknown } }): PromiseLike<{ count: number }>;
+  deleteMany(input: { where: { artifactId: string } }): PromiseLike<{ count: number }>;
 }
 export interface QuestionRepositoryOptions {
   db: { question: QuestionDelegate };

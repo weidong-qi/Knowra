@@ -1,6 +1,7 @@
 import type { SyncMappedEntityMap } from '../../../sync/postgres-state-types.ts';
 import type {
   FocusRepositoryOptions,
+  FocusWriteData,
   FocusWriteInput,
   FocusListOptions,
   FocusWhere
@@ -10,6 +11,7 @@ import { withRepositoryErrors } from './repository-utils.ts';
 
 export function createPostgresExamFocusRepository({ db }: FocusRepositoryOptions) {
   if (!db?.examFocus) throw new TypeError('PostgreSQL ExamFocus repository requires db.examFocus');
+  // 原始输入仍交给 Prisma 校验，只在 SQL 调用处描述其目标类型。
   function toData(focus: FocusWriteInput) {
     return {
       id: focus.id,
@@ -47,7 +49,7 @@ export function createPostgresExamFocusRepository({ db }: FocusRepositoryOptions
       return withRepositoryErrors(() =>
         db.examFocus
           .create({
-            data: toData(focus)
+            data: toData(focus) as FocusWriteData
           })
           .then(mapExamFocus)
       );
@@ -58,11 +60,11 @@ export function createPostgresExamFocusRepository({ db }: FocusRepositoryOptions
         db.examFocus
           .upsert({
             where: { id: data.id },
-            create: data,
+            create: data as FocusWriteData,
             update: (() => {
               const { id: _id, createdAt: _createdAt, ...rest } = data;
               return rest;
-            })()
+            })() as Partial<FocusWriteData>
           })
           .then(mapExamFocus)
       );
