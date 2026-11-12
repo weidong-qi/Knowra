@@ -383,12 +383,10 @@ describe('KnowledgeSourceComparisonDialog', () => {
   it('历史 Markdown 按原文展示，打开当前笔记是独立导航动作', async () => {
     const user = userEvent.setup();
     const props = input({
-      onGetVersion: vi
-        .fn()
-        .mockResolvedValue({
-          ...version,
-          content: '<img src="https://external.invalid/tracker"><script>window.bad=true</script>'
-        })
+      onGetVersion: vi.fn().mockResolvedValue({
+        ...version,
+        content: '<img src="https://external.invalid/tracker"><script>window.bad=true</script>'
+      })
     });
     render(<KnowledgeSourceComparisonDialog {...props} />);
     await waitFor(() => expect(screen.getByLabelText('历史版本正文')).toHaveTextContent('<img'));

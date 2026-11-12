@@ -1,9 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { useAppStore } from '../../../store/AppStoreProvider';
 import { useLocation } from '../../../app/router';
 import { sharedConceptStore } from '../concepts/conceptStore';
 import { createKnowledgeLibraryCache } from './knowledgeLibraryCache';
-const LibraryContext = createContext<ReturnType<typeof createKnowledgeLibraryCache> | null>(null);
+export const KnowledgeLibraryContext = createContext<ReturnType<typeof createKnowledgeLibraryCache> | null>(null);
 /** 侧栏与页面共享列表请求；每个资料空间持有独立缓存。 */
 export function KnowledgeLibraryProvider({ children }: { children: ReactNode }) {
   const list = useAppStore(state => state.listKnowledgeItems);
@@ -28,8 +28,21 @@ export function KnowledgeLibraryProvider({ children }: { children: ReactNode }) 
       void sharedConceptStore().load();
     }
   }, [active, mode, cache, generation]);
-  return <LibraryContext.Provider value={cache}>{children}</LibraryContext.Provider>;
+  return <KnowledgeLibraryContext.Provider value={cache}>{children}</KnowledgeLibraryContext.Provider>;
 }
 export function useKnowledgeLibraryCache() {
-  return useContext(LibraryContext);
+  return useContext(KnowledgeLibraryContext);
+}
+
+const emptyLibrary = {
+  items: [] as import('@study-accelerator/web-core').KnowledgeItem[],
+  status: 'idle' as const,
+  error: ''
+};
+const emptySnapshot = () => emptyLibrary;
+const emptySubscribe = () => () => {};
+export function useKnowledgeLibraryData() {
+  const cache = useKnowledgeLibraryCache();
+  const data = useSyncExternalStore(cache?.subscribe ?? emptySubscribe, cache?.getState ?? emptySnapshot);
+  return { cache, ...data };
 }

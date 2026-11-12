@@ -111,6 +111,7 @@ test('桌面人工训练：目标候选重启审阅、配置考点题目保存�
       await page.getByRole('button', { name: '确认知识', exact: true }).click();
       await expect.poll(() => a.store.state.knowledgeItems[0]?.reviewStatus).toBe('confirmed');
       const knowledge = structuredClone(a.store.state.knowledgeItems[0]);
+      await page.getByRole('tab', { name: '学习目标', exact: true }).click();
       await page.getByRole('button', { name: '新建学习目标候选', exact: true }).click();
       const objectiveDialog = page.getByRole('dialog', { name: '新建学习目标候选', exact: true });
       await objectiveDialog.getByLabel('可观察的学习目标').fill('能够计算函数 x² 在指定点的变化率');
@@ -132,6 +133,7 @@ test('桌面人工训练：目标候选重启审阅、配置考点题目保存�
       assert.equal(objective.reviewStatus, 'candidate');
       assert.equal(a.store.state.learningObjectives.filter(row => row.reviewStatus === 'confirmed').length, 0);
       await expect(objectiveDialog).toHaveCount(0);
+      await page.getByRole('tab', { name: '学习目标', exact: true }).click();
       await page.getByRole('button', { name: '查看并审阅目标', exact: true }).click();
       const candidateEdit = page.getByRole('dialog', { name: '审阅学习目标', exact: true });
       await expect(candidateEdit.getByRole('button', { name: '保存候选', exact: true })).toBeEnabled();
@@ -187,6 +189,7 @@ test('桌面人工训练：目标候选重启审阅、配置考点题目保存�
       assert.equal(restartedObjective.updatedAt, objective.updatedAt);
       await page.goto(a.launchUrl);
       await page.goto(`${a.origin}/#/knowledge?item=${knowledge.id}`);
+      await page.getByRole('tab', { name: '学习目标', exact: true }).click();
       await page.getByRole('button', { name: '查看并审阅目标', exact: true }).click();
       const review = page.getByRole('dialog', { name: '审阅学习目标', exact: true });
       await expect(review.getByRole('button', { name: '确认已审阅目标', exact: true })).toBeEnabled();

@@ -1,6 +1,6 @@
 import { useLibraryInspector } from '../../components/workspace/useLibraryInspector';
 import { LibraryIndexHeader, LibraryInspector } from '../../components/workspace/LibraryIndex';
-import { useKnowledgeLibraryCache } from './library/KnowledgeLibraryProvider';
+import { useKnowledgeLibraryData } from './library/KnowledgeLibraryProvider';
 import { sharedConceptStore, useConceptState } from './concepts/conceptStore';
 import { MathText } from '../../components/math/MathText';
 import { ExtractionDemoNotice } from '../editor/ExtractionEnvironment';
@@ -104,8 +104,10 @@ export interface KnowledgeWorkspaceViewProps {
 export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
   const navigate = useNavigate();
   const { selectedItemId, refreshKey, canWrite, readOnlyReason, onList, onGet, onListEvidence } = props;
-  const [items, setItems] = useState<KnowledgeItem[]>([]);
-  const cache = useKnowledgeLibraryCache();
+  const [localItems, setItems] = useState<KnowledgeItem[]>([]);
+  const data = useKnowledgeLibraryData();
+  const cache = data.cache;
+  const items = cache ? data.items : localItems;
   const [localStatus, setLocalStatus] = useState('all');
   const [localQuery, setLocalQuery] = useState('');
   const status = props.scope ?? localStatus;
@@ -113,8 +115,10 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
   const setStatus = props.onScopeChange ?? setLocalStatus;
   const setQuery = props.onQueryChange ?? setLocalQuery;
   const [inspectorOpen, setInspectorOpen] = useLibraryInspector('knowra:knowledge-inspector-open', selectedItemId);
-  const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState('');
+  const [localListLoading, setListLoading] = useState(true);
+  const [localListError, setListError] = useState('');
+  const listLoading = localListLoading || Boolean(cache && data.status === 'loading');
+  const listError = localListError || (cache ? data.error : '');
   const [detail, setDetail] = useState<{ item: KnowledgeItem; evidence: KnowledgeEvidence[] } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');

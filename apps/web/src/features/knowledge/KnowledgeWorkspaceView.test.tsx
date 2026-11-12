@@ -1,3 +1,5 @@
+import { KnowledgeLibraryContext } from './library/KnowledgeLibraryProvider';
+import { createKnowledgeLibraryCache } from './library/knowledgeLibraryCache';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -283,6 +285,26 @@ describe('KnowledgeWorkspaceView', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('数据增强');
     expect(within(screen.getByRole('region', { name: '知识详情面板' })).queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: archived.title })).toBeInTheDocument();
+  });
+
+  it('同步只刷新共享缓存时，列表立即显示新快照，不依赖重复请求', async () => {
+    const loader = vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([candidate]);
+    const cache = createKnowledgeLibraryCache(loader);
+    await cache.list();
+    render(
+      <KnowledgeLibraryContext.Provider value={cache}>
+        <KnowledgeWorkspaceView {...props({ selectedItemId: null, onList: cache.list })} />
+      </KnowledgeLibraryContext.Provider>
+    );
+    await screen.findByText('还没有知识');
+    await act(async () => {
+      cache.invalidate();
+      await cache.list();
+    });
+    expect(
+      await within(screen.getByRole('region', { name: '知识列表内容' })).findByRole('button', { name: /数据增强/ })
+    ).toBeInTheDocument();
+    expect(loader).toHaveBeenCalledTimes(2);
   });
 
   it('列表与详情滚动区支持键盘聚焦，选中条目仍独立标识', async () => {

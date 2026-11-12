@@ -17,7 +17,7 @@ import { randomId } from '../../../browser/randomId';
 import { notesIndexAppearanceProps } from '../../notes/NotesIndexAppearance';
 import { useNotesIndexAppearance } from '../../notes/notesIndexAppearanceModel';
 import { formatUpdatedAt } from '../../notes/notesIndexModel';
-import { useKnowledgeLibraryCache } from '../library/KnowledgeLibraryProvider';
+import { useKnowledgeLibraryData } from '../library/KnowledgeLibraryProvider';
 import { CONCEPT_SCOPES } from '../library/knowledgeLibraryRoute';
 import { handleKnowledgeListKeys } from '../KnowledgeIndexItems';
 import { ConceptActionDialog } from './ConceptActionDialog';
@@ -59,13 +59,16 @@ export function ConceptWorkspace({
 }: ConceptWorkspaceProps) {
   const store = sharedConceptStore();
   const state = useConceptState(store);
-  const cache = useKnowledgeLibraryCache();
+  const data = useKnowledgeLibraryData();
+  const cache = data.cache;
   const theme = notesIndexAppearanceProps(useNotesIndexAppearance());
   const navigate = useNavigate();
   const display = useConceptDisplay();
-  const [items, setItems] = useState<KnowledgeItem[]>([]);
+  const [localItems, setItems] = useState<KnowledgeItem[]>([]);
   const [itemError, setItemError] = useState('');
-  const [itemsReady, setItemsReady] = useState(false);
+  const [localItemsReady, setItemsReady] = useState(false);
+  const items = cache ? data.items : localItems;
+  const itemsReady = localItemsReady && (!cache || data.status === 'ready');
   const [refresh, setRefresh] = useState(0);
   const [localQuery, setQuery] = useState('');
   const [localScope, setScope] = useState('all');
