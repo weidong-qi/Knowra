@@ -6,7 +6,7 @@ import { once } from 'node:events';
 import { test } from 'node:test';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
-import { createAppContext } from '../src/app.factory.js';
+import { createAppContext } from '../src/app.factory.ts';
 import { createServer } from '../src/server.js';
 import { syncContract, syncContractQuery } from '../src/modules/sync/protocol-contract.ts';
 import { createSyncService } from '../src/modules/sync/service.ts';

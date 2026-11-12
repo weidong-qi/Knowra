@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createNoteLinkUrl } from '@study-accelerator/content-anchor';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 import { withCommandServer } from './command-search-http.test.js';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';

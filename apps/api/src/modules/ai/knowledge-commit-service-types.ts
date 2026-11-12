@@ -69,10 +69,10 @@ export interface CommitKnowledge {
     ): Awaitable<CandidateResult>;
   };
 }
-export interface ExtractionCommitContext<Transaction> extends Omit<
+export type ExtractionCommitContext<Transaction> = Omit<
   ExtractionTaskContext<Transaction>,
   'repositories' | 'transaction'
-> {
+> & {
   transaction?: Transaction;
   repositories: Omit<
     CommitRepositories,
@@ -82,14 +82,17 @@ export interface ExtractionCommitContext<Transaction> extends Omit<
     knowledgeArtifactProvenanceRepository: Pick<CommitRepositories['knowledgeArtifactProvenanceRepository'], 'create'>;
   };
   knowledgeItemService: CommitKnowledge['knowledgeItemService'];
-}
+};
 export interface ExtractionCommitStore<Transaction> {
   supportsAsync: boolean;
   runTransaction<Result>(
     operation: (tx: Transaction) => Awaitable<Result>,
     input: { jobId: string }
   ): Awaitable<Result>;
-  get(input: DatasetIdentity & { jobId: string }, tx?: Transaction): Awaitable<KnowledgeExtractionCommitReceipt | null>;
+  get(
+    input: DatasetIdentity & { ownerId: string; jobId: string },
+    tx?: Transaction
+  ): Awaitable<KnowledgeExtractionCommitReceipt | null>;
   insert(input: KnowledgeExtractionCommitReceipt, tx?: Transaction): Awaitable<void | number>;
 }
 export interface ExtractionCommitOptions<Transaction> {

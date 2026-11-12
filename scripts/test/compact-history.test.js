@@ -7,7 +7,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { compactHistory, fileDigest } from '../compact-history.mjs';
 import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.ts';
 import { acquireDataFileWriteLock } from '../../apps/api/src/infrastructure/data-file-write-lock.ts';
-import { createAppContext } from '../../apps/api/src/app.factory.js';
+import { createAppContext } from '../../apps/api/src/app.factory.ts';
 import { NoteVersion } from '../../apps/api/src/modules/knowledge/domain/note-version.ts';
 import { fileURLToPath } from 'node:url';
 

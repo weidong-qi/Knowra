@@ -193,7 +193,7 @@ export function createExtractionTaskLifecycle<Transaction>({
         identity = (yield ai.identity()) as DatasetIdentity;
       const descriptors = (yield store.list(
         { ownerId, ...identity },
-        context.transaction
+        context.transaction as Transaction
       )) as ExtractionTaskDescriptor[];
       const changed = [];
       for (const descriptor of descriptors) {

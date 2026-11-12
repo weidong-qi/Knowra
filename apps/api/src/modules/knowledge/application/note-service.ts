@@ -68,7 +68,7 @@ export function createNoteService({
       return saved;
     });
   }
-  function requireNote(noteId: string, options: NoteOptions = {}) {
+  function requireNote(noteId: string | undefined, options: NoteOptions = {}) {
     const note = repository.findById(noteId);
 
     if (!note) {
@@ -144,7 +144,7 @@ export function createNoteService({
 
       return items.map(item => this.importMarkdown(item));
     },
-    getNote(noteId: string, options: NoteOptions = {}) {
+    getNote(noteId: string | undefined, options: NoteOptions = {}) {
       return requireNote(noteId, options);
     },
     getLinkedNotes(noteId: string) {

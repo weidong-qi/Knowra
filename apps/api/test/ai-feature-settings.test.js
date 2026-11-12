@@ -7,7 +7,7 @@ import { once } from 'node:events';
 import { createServer } from '../src/server.js';
 import { createAiFeatureSettings } from '../src/modules/ai/feature-settings.ts';
 import { createModelSettingsService } from '../src/modules/ai/model-settings.ts';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 
 const temporary = () => fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-ai-features-'));
 

@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { observeRemoteDeletionFacts } from '../src/sqlite-deletion-facts.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createLocalAttachmentStore } from '../../api/src/infrastructure/local-attachment-store.ts';
 import { createLegacyKnowledgeArtifactProvenance } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { syntheticProvenanceFixture } from '../../api/test/fixtures/knowledge-artifact-provenance.fixture.js';

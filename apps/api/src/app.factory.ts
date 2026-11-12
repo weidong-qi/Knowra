@@ -45,11 +45,101 @@ import { aiRuntimeLifecycle } from './modules/ai/runtime-lifecycle.ts';
 import { reviewedDeepSeekPriceProfile } from './modules/ai/reviewed-price-profile.ts';
 import { assertSpacesOwnedBy, resolveSingleOwnerId } from './infrastructure/owner-boundary.ts';
 
+import type { KnowledgeModuleOptions } from './modules/knowledge/index.ts';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { LocalCollection } from './infrastructure/local-data-types.ts';
+import type { KnowledgeItemRecord } from './modules/knowledge/infrastructure/knowledge-item-repository.ts';
+import type { KnowledgeEvidenceRecord } from './modules/knowledge/infrastructure/knowledge-evidence-repository.ts';
+import type {
+  LearningObjectiveRecord,
+  ExamProfileRecord,
+  ExamFocusRecord,
+  QuestionRecord
+} from './modules/knowledge/infrastructure/assessment-repository.ts';
+
+type FileDataStore = ReturnType<typeof createFileDataStore>;
+// 注入宿主可能不提供事务能力；不把缺失能力补成运行时默认值。
+type OptionalHostCapability =
+  | 'runTransaction'
+  | 'getSyncJournal'
+  | 'getPurgeTaskState'
+  | 'taskWorkspaceStore'
+  | 'knowledgeExtractionCommitStore'
+  | 'knowledgeExtractionTaskStore'
+  | 'aiRepository'
+  | 'coreOperationStore'
+  | 'coreOperationStoreError';
+interface LocalAppDataStore
+  extends Omit<FileDataStore, OptionalHostCapability>, Partial<Pick<FileDataStore, OptionalHostCapability>> {
+  deletionFacts?: { has(collection: 'noteVersions', id: unknown): boolean };
+}
+export interface AppContextOptions extends KnowledgeModuleOptions {
+  dataStore?: LocalAppDataStore;
+  ownerId?: string;
+  uploadsDir?: string;
+  storageRootDir?: string;
+  legacyUploadsDirs?: string[];
+  attachmentStore?: ReturnType<typeof createLocalAttachmentStore> | null;
+  knowledgeExtractionMock?: Omit<
+    Parameters<typeof createKnowledgeExtractionTaskService<void>>[0],
+    'ownerId' | 'store' | 'createContext' | 'commit' | 'receiptStore'
+  > | null;
+  taskWorkspaceFiles?: Parameters<typeof createTaskWorkspaceService>[0]['files'];
+  authorizeTaskWorkspace?: Parameters<typeof createTaskWorkspaceService>[0]['authorize'];
+}
+export interface PersistentAppContextOptions {
+  storageRootDir?: string;
+  dataFilePath?: string;
+  uploadsDir?: string;
+  persistenceDriver?: 'postgres' | 'local-json';
+  databaseUrl?: string;
+  client?: import('./infrastructure/postgres-transaction-port.ts').PostgresTransactionHost | null;
+  ownerId?: string;
+}
+// 持久化入口按原顺序逐项添加这些能力；普通内存上下文仍没有这些属性。
+interface PersistentContextExtensions {
+  ai?: ReturnType<typeof createOptionalAiRuntime>;
+  aiOwnerId?: string;
+  aiLocation?: 'server';
+  close?: () => Promise<void>;
+}
+interface PersistentHttpExtensions {
+  modelSettings?: ReturnType<typeof createModelSettingsService>;
+  aiFeatures?: ReturnType<typeof createAiFeatureSettings>;
+  aiBudget?: FileDataStore['aiBudgetAuthority'];
+}
+
+export interface AppContext extends PersistentContextExtensions {
+  taskWorkspaces: ReturnType<typeof createTaskWorkspaceService>;
+  taskWorkspaceContext(
+    request: IncomingMessage,
+    response?: ServerResponse
+  ): {
+    actor: { kind: string; id: string };
+    datasetId: string | null;
+    datasetEpoch: string | null;
+    guard(): boolean;
+  };
+  personalTodos: ReturnType<typeof createPersonalTodoService>;
+  knowledgeExtractionCommit: ReturnType<typeof createKnowledgeExtractionCommitService<void>> | null;
+  knowledgeExtractionTasks: ReturnType<typeof createKnowledgeExtractionTaskService<void>> | null;
+  dataStore: LocalAppDataStore | undefined;
+  coreOperationStore: FileDataStore['coreOperationStore'];
+  coreOperationStoreError: FileDataStore['coreOperationStoreError'];
+  modules: { knowledge: ReturnType<typeof createKnowledgeModule> };
+  http: PersistentHttpExtensions & {
+    pdf: ReturnType<typeof createPdfService>;
+    sync: ReturnType<typeof createLocalSyncService> | null;
+    storage: ReturnType<typeof createKnowledgeBaseSnapshotService>;
+    knowledge: ReturnType<typeof createKnowledgeHttpHandlers>;
+  };
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '..', '..', '..');
 
-export function createAppContext(options = {}) {
+export function createAppContext(options: AppContextOptions = {}): AppContext {
   const dataStore = options.dataStore;
   ensureDataCollections(dataStore, [
     'pdfAnnotations',
@@ -168,12 +258,15 @@ export function createAppContext(options = {}) {
     knowledgeItemRepository:
       options.knowledgeItemRepository ??
       (dataStore
-        ? createInMemoryKnowledgeItemRepository({ records: dataStore.state.knowledgeItems, onChange: dataStore.flush })
+        ? createInMemoryKnowledgeItemRepository<KnowledgeItemRecord<unknown>>({
+            records: dataStore.state.knowledgeItems,
+            onChange: dataStore.flush
+          })
         : undefined),
     knowledgeEvidenceRepository:
       options.knowledgeEvidenceRepository ??
       (dataStore
-        ? createInMemoryKnowledgeEvidenceRepository({
+        ? createInMemoryKnowledgeEvidenceRepository<KnowledgeEvidenceRecord<unknown, unknown>>({
             records: dataStore.state.knowledgeEvidence,
             onChange: dataStore.flush
           })
@@ -189,7 +282,7 @@ export function createAppContext(options = {}) {
     learningObjectiveRepository:
       options.learningObjectiveRepository ??
       (dataStore
-        ? createInMemoryLearningObjectiveRepository({
+        ? createInMemoryLearningObjectiveRepository<LearningObjectiveRecord>({
             records: dataStore.state.learningObjectives,
             onChange: dataStore.flush
           })
@@ -197,17 +290,26 @@ export function createAppContext(options = {}) {
     examProfileRepository:
       options.examProfileRepository ??
       (dataStore
-        ? createInMemoryExamProfileRepository({ records: dataStore.state.examProfiles, onChange: dataStore.flush })
+        ? createInMemoryExamProfileRepository<ExamProfileRecord>({
+            records: dataStore.state.examProfiles,
+            onChange: dataStore.flush
+          })
         : undefined),
     examFocusRepository:
       options.examFocusRepository ??
       (dataStore
-        ? createInMemoryExamFocusRepository({ records: dataStore.state.examFocuses, onChange: dataStore.flush })
+        ? createInMemoryExamFocusRepository<ExamFocusRecord>({
+            records: dataStore.state.examFocuses,
+            onChange: dataStore.flush
+          })
         : undefined),
     questionRepository:
       options.questionRepository ??
       (dataStore
-        ? createInMemoryQuestionRepository({ records: dataStore.state.questions, onChange: dataStore.flush })
+        ? createInMemoryQuestionRepository<QuestionRecord>({
+            records: dataStore.state.questions,
+            onChange: dataStore.flush
+          })
         : undefined),
     questionObjectiveRepository:
       options.questionObjectiveRepository ??
@@ -225,16 +327,21 @@ export function createAppContext(options = {}) {
             onChange: dataStore.flush
           })
         : undefined),
-    runTransaction: dataStore?.runTransaction ? operation => dataStore.runTransaction(operation) : undefined,
+    runTransaction: dataStore?.runTransaction ? operation => dataStore.runTransaction!(operation) : undefined,
     getPurgeTombstone: dataStore?.getSyncJournal
-      ? (collection, id) => dataStore.getSyncJournal().tombstones?.[JSON.stringify([collection, id])] ?? null
+      ? (collection, id) => dataStore.getSyncJournal!().tombstones?.[JSON.stringify([collection, id])] ?? null
       : undefined,
     readPurgeTaskState: createLocalPurgeTaskReader(dataStore),
-    getPurgeDatasetEpoch: dataStore?.getSyncJournal ? () => dataStore.getSyncJournal().epoch : undefined,
+    getPurgeDatasetEpoch: dataStore?.getSyncJournal ? () => dataStore.getSyncJournal!().epoch : undefined,
     enforceReferences: options.enforceReferences ?? true,
     noteVersionCoalescing: options.noteVersionCoalescing
   });
-  const noteDeletionCoordinator = createNoteDeletionCoordinator({
+  const noteDeletionCoordinator = createNoteDeletionCoordinator<
+    ReturnType<typeof knowledge.noteService.permanentlyDeleteNote>,
+    ReturnType<typeof knowledge.noteService.emptyRecycleBin>,
+    string,
+    ReturnType<NonNullable<typeof attachmentStore>['detachAttachmentsForNotes']>
+  >({
     noteService: knowledge.noteService,
     noteRepository: knowledge.repositories.noteRepository,
     noteVersionRepository: knowledge.repositories.noteVersionRepository,
@@ -247,17 +354,17 @@ export function createAppContext(options = {}) {
         for (let i = dataStore.state.pdfAnnotations.length - 1; i >= 0; i--)
           if (ids.includes(dataStore.state.pdfAnnotations[i].noteId)) dataStore.state.pdfAnnotations.splice(i, 1);
     },
-    runTransaction: dataStore?.runTransaction ? operation => dataStore.runTransaction(operation) : undefined
+    runTransaction: dataStore?.runTransaction ? operation => dataStore.runTransaction!(operation) : undefined
   });
 
   const extractionContext = () => ({
     repositories: knowledge.repositories,
     knowledgeItemService: knowledge.knowledgeItemService,
-    aiRepository: dataStore.aiRepository
+    aiRepository: dataStore!.aiRepository!
   });
   const knowledgeExtractionCommit =
     dataStore?.knowledgeExtractionCommitStore && dataStore.aiRepository
-      ? createKnowledgeExtractionCommitService({
+      ? createKnowledgeExtractionCommitService<void>({
           store: dataStore.knowledgeExtractionCommitStore,
           ownerId,
           createContext: extractionContext,
@@ -265,14 +372,14 @@ export function createAppContext(options = {}) {
         })
       : null;
   const knowledgeExtractionTasks =
-    options.knowledgeExtractionMock && knowledgeExtractionCommit && dataStore.knowledgeExtractionTaskStore
-      ? createKnowledgeExtractionTaskService({
+    options.knowledgeExtractionMock && knowledgeExtractionCommit && dataStore!.knowledgeExtractionTaskStore
+      ? createKnowledgeExtractionTaskService<void>({
           ...options.knowledgeExtractionMock,
           ownerId,
-          store: dataStore.knowledgeExtractionTaskStore,
+          store: dataStore!.knowledgeExtractionTaskStore!,
           createContext: extractionContext,
           commit: knowledgeExtractionCommit,
-          receiptStore: dataStore.knowledgeExtractionCommitStore
+          receiptStore: dataStore!.knowledgeExtractionCommitStore!
         })
       : null;
   const taskStore = dataStore?.taskWorkspaceStore ?? null;
@@ -291,7 +398,7 @@ export function createAppContext(options = {}) {
     files: taskFiles,
     authorize: options.authorizeTaskWorkspace ?? (ctx => ctx.actor?.kind === 'user' && ctx.actor.id === ownerId)
   });
-  const taskWorkspaceContext = (request, response) => {
+  const taskWorkspaceContext = (request: IncomingMessage, response?: ServerResponse) => {
     const deadline = Date.now() + 30_000;
     return {
       actor: { kind: 'user', id: ownerId },
@@ -300,7 +407,10 @@ export function createAppContext(options = {}) {
     };
   };
   const personalTodos = createPersonalTodoService({
-    store: dataStore?.state && dataStore.runTransaction ? createStateBackedTodoStore(dataStore) : null
+    store:
+      dataStore?.state && dataStore.runTransaction
+        ? createStateBackedTodoStore(dataStore as LocalAppDataStore & Pick<FileDataStore, 'runTransaction'>)
+        : null
   });
   return {
     taskWorkspaces,
@@ -357,7 +467,7 @@ export function createPersistentAppContext({
   databaseUrl = createStorageConfig(process.env).databaseUrl,
   client = null,
   ownerId
-} = {}) {
+}: PersistentAppContextOptions = {}) {
   if (persistenceDriver === 'postgres') {
     return createPostgresAppContext({
       databaseUrl,
@@ -388,7 +498,7 @@ export function createPersistentAppContext({
       budgetAuthority: dataStore.aiBudgetAuthority,
       priceProfile: reviewedDeepSeekPriceProfile,
       // 每个提炼回合开始时读取当前开关；关闭（默认）时模型拿不到 knowledge_propose。
-      knowledgeProposals: async () => (await context.http.aiFeatures.get()).knowledgeProposals,
+      knowledgeProposals: async () => (await context.http.aiFeatures!.get()).knowledgeProposals,
       allowExternal: process.env.KNOWRA_AI_EGRESS_ENABLED !== '0',
       contextSources: {
         ...context.modules.knowledge.repositories,
@@ -403,7 +513,7 @@ export function createPersistentAppContext({
   );
   context.aiOwnerId = resolveOwnerId(ownerId, dataStore.state.spaces);
   context.aiLocation = 'server';
-  let closing;
+  let closing: Promise<void> | undefined;
   context.close = () =>
     (closing ??= (async () => {
       const results = await Promise.allSettled([
@@ -416,7 +526,7 @@ export function createPersistentAppContext({
   return context;
 }
 
-export function resolveStoragePath(targetPath, storageRootDir = workspaceRoot) {
+export function resolveStoragePath(targetPath: string, storageRootDir = workspaceRoot) {
   if (path.isAbsolute(targetPath)) {
     return targetPath;
   }
@@ -424,7 +534,7 @@ export function resolveStoragePath(targetPath, storageRootDir = workspaceRoot) {
   return path.resolve(storageRootDir, targetPath);
 }
 
-function resolveOwnerId(value, spaces = []) {
+function resolveOwnerId(value: string | undefined, spaces: Parameters<typeof assertSpacesOwnedBy>[0] = []) {
   const configuredOwnerId = value ?? process.env.KNOWRA_OWNER_ID;
   const ownerId = resolveSingleOwnerId({
     configuredOwnerId,
@@ -435,7 +545,7 @@ function resolveOwnerId(value, spaces = []) {
   return ownerId;
 }
 
-function ensureDataCollections(dataStore, collectionNames) {
+function ensureDataCollections(dataStore: AppContextOptions['dataStore'], collectionNames: LocalCollection[]) {
   if (!dataStore?.state) return;
   for (const collectionName of collectionNames) {
     if (!Array.isArray(dataStore.state[collectionName])) {
@@ -444,9 +554,10 @@ function ensureDataCollections(dataStore, collectionNames) {
   }
 }
 
-async function createPostgresAppContext(options) {
+async function createPostgresAppContext(options: PersistentAppContextOptions) {
   const { createPostgresAppContext: createContext } = await import('./postgres-app.factory.js');
-  return createContext(options);
+  // 尚未迁移的 JS 入口只在此声明既有调用参数，不改变或伪造其返回形状。
+  return (createContext as (options: PersistentAppContextOptions) => ReturnType<typeof createContext>)(options);
 }
 
 export { createPostgresAppContext };

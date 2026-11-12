@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.ts';
-import { createAppContext } from '../../apps/api/src/app.factory.js';
+import { createAppContext } from '../../apps/api/src/app.factory.ts';
 import { ContentAnnotation } from '../../apps/api/src/modules/knowledge/domain/content-annotation.ts';
 import { temporaryDirectory, openWorkspace } from '../../apps/desktop-runtime/test/helpers.mjs';
 import { readRetirementInspection } from '../inspect-inline-annotation-retirement.mjs';

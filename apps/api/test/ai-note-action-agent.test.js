@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 import { validateConversationRecord } from '../src/modules/ai/conversation-store.ts';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.ts';
 const priceProfile = {

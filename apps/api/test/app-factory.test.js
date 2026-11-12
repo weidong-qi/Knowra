@@ -7,12 +7,8 @@ export const appFactoryTests = [
   {
     name: 'persistent app context permanently deletes note dependents and attachment files',
     async run() {
-      const { createPersistentAppContext } = await import(
-        '../src/app.factory.js'
-      );
-      const tempRoot = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-cascade-delete-')
-      );
+      const { createPersistentAppContext } = await import('../src/app.factory.ts');
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'study-cascade-delete-'));
       const app = createPersistentAppContext({
         storageRootDir: tempRoot,
         ownerId: 'cascade-owner'
@@ -39,10 +35,7 @@ export const appFactoryTests = [
           status: 'active'
         });
         app.dataStore.flush();
-        const attachmentPath = path.resolve(
-          tempRoot,
-          attachment.storagePath
-        );
+        const attachmentPath = path.resolve(tempRoot, attachment.storagePath);
         assert.equal(fs.existsSync(attachmentPath), true);
         assert.equal(app.dataStore.state.noteVersions.length, 1);
 
@@ -56,10 +49,7 @@ export const appFactoryTests = [
         assert.equal(fs.existsSync(attachmentPath), false);
 
         const persisted = JSON.parse(
-          fs.readFileSync(
-            path.join(tempRoot, 'storage', 'data', 'knowledge-base.json'),
-            'utf8'
-          )
+          fs.readFileSync(path.join(tempRoot, 'storage', 'data', 'knowledge-base.json'), 'utf8')
         );
         assert.equal(persisted.notes.length, 0);
         assert.equal(persisted.noteVersions.length, 0);
@@ -80,12 +70,8 @@ export const appFactoryTests = [
   {
     name: 'persistent recycle-bin cleanup preserves formal sources and atomically removes unreferenced note versions',
     async run() {
-      const { createPersistentAppContext } = await import(
-        '../src/app.factory.js'
-      );
-      const tempRoot = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'study-recycle-version-cleanup-')
-      );
+      const { createPersistentAppContext } = await import('../src/app.factory.ts');
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'study-recycle-version-cleanup-'));
       const app = createPersistentAppContext({
         storageRootDir: tempRoot,
         ownerId: 'recycle-owner'
@@ -112,10 +98,12 @@ export const appFactoryTests = [
           title: 'Protected knowledge',
           canonicalStatement: 'Formal evidence must remain traceable.',
           sourceMode: 'selection',
-          evidence: [{
-            sourceType: 'noteVersion',
-            noteVersionId: protectedVersion.id
-          }]
+          evidence: [
+            {
+              sourceType: 'noteVersion',
+              noteVersionId: protectedVersion.id
+            }
+          ]
         });
 
         app.http.knowledge.deleteNote({ id: protectedNote.id });
@@ -123,10 +111,10 @@ export const appFactoryTests = [
 
         assert.throws(
           () => app.http.knowledge.emptyRecycleBin({}),
-          (error) => error.code === 'NOTE_HAS_KNOWLEDGE_EVIDENCE'
+          error => error.code === 'NOTE_HAS_KNOWLEDGE_EVIDENCE'
         );
         assert.deepEqual(
-          app.dataStore.state.notes.map((note) => note.id).sort(),
+          app.dataStore.state.notes.map(note => note.id).sort(),
           [disposableNote.id, protectedNote.id].sort()
         );
         assert.equal(app.dataStore.state.noteVersions.length, 2);
@@ -138,11 +126,11 @@ export const appFactoryTests = [
           noteIds: [disposableNote.id]
         });
         assert.deepEqual(
-          app.dataStore.state.notes.map((note) => note.id),
+          app.dataStore.state.notes.map(note => note.id),
           [protectedNote.id]
         );
         assert.deepEqual(
-          app.dataStore.state.noteVersions.map((version) => version.noteId),
+          app.dataStore.state.noteVersions.map(version => version.noteId),
           [protectedNote.id]
         );
 
@@ -151,11 +139,11 @@ export const appFactoryTests = [
           ownerId: 'recycle-owner'
         });
         assert.deepEqual(
-          restarted.dataStore.state.notes.map((note) => note.id),
+          restarted.dataStore.state.notes.map(note => note.id),
           [protectedNote.id]
         );
         assert.deepEqual(
-          restarted.dataStore.state.noteVersions.map((version) => version.noteId),
+          restarted.dataStore.state.noteVersions.map(version => version.noteId),
           [protectedNote.id]
         );
       } finally {
@@ -166,26 +154,29 @@ export const appFactoryTests = [
   {
     name: 'createAppContext rejects attachments for missing or deleted notes',
     async run() {
-      const { createAppContext } = await import('../src/app.factory.js');
+      const { createAppContext } = await import('../src/app.factory.ts');
       const uploaded = [];
       const dataStore = {
         state: {
           spaces: [],
           folders: [],
           tags: [],
-          notes: [{
-            id: 'note-active',
-            title: 'Active',
-            rawMarkdown: 'body',
-            spaceId: 'space-1',
-            deleted: false
-          }, {
-            id: 'note-deleted',
-            title: 'Deleted',
-            rawMarkdown: 'body',
-            spaceId: 'space-1',
-            deleted: true
-          }],
+          notes: [
+            {
+              id: 'note-active',
+              title: 'Active',
+              rawMarkdown: 'body',
+              spaceId: 'space-1',
+              deleted: false
+            },
+            {
+              id: 'note-deleted',
+              title: 'Deleted',
+              rawMarkdown: 'body',
+              spaceId: 'space-1',
+              deleted: true
+            }
+          ],
           attachments: [],
           contentAnnotations: []
         },
@@ -204,20 +195,22 @@ export const appFactoryTests = [
       });
 
       assert.throws(
-        () => app.http.storage.uploadAttachment({
-          noteId: 'note-missing',
-          fileName: 'missing.txt',
-          contentBase64: 'YQ=='
-        }),
-        (error) => error.code === 'NOTE_NOT_FOUND'
+        () =>
+          app.http.storage.uploadAttachment({
+            noteId: 'note-missing',
+            fileName: 'missing.txt',
+            contentBase64: 'YQ=='
+          }),
+        error => error.code === 'NOTE_NOT_FOUND'
       );
       assert.throws(
-        () => app.http.storage.uploadAttachment({
-          noteId: 'note-deleted',
-          fileName: 'deleted.txt',
-          contentBase64: 'YQ=='
-        }),
-        (error) => error.code === 'NOTE_NOT_FOUND'
+        () =>
+          app.http.storage.uploadAttachment({
+            noteId: 'note-deleted',
+            fileName: 'deleted.txt',
+            contentBase64: 'YQ=='
+          }),
+        error => error.code === 'NOTE_NOT_FOUND'
       );
 
       const result = app.http.storage.uploadAttachment({
@@ -232,7 +225,7 @@ export const appFactoryTests = [
   {
     name: 'createAppContext wires knowledge module and handlers together',
     async run() {
-      const { createAppContext } = await import('../src/app.factory.js');
+      const { createAppContext } = await import('../src/app.factory.ts');
 
       const app = createAppContext();
 
@@ -248,18 +241,20 @@ export const appFactoryTests = [
   {
     name: 'createAppContext storage handlers can export and import persistent data',
     async run() {
-      const { createAppContext } = await import('../src/app.factory.js');
+      const { createAppContext } = await import('../src/app.factory.ts');
 
       const dataStore = {
         state: {
           spaces: [{ id: 'space-1' }],
           folders: [],
           tags: [],
-          notes: [{
-            id: 'note-1',
-            title: 'Persisted note',
-            rawMarkdown: '# Persisted note'
-          }],
+          notes: [
+            {
+              id: 'note-1',
+              title: 'Persisted note',
+              rawMarkdown: '# Persisted note'
+            }
+          ],
           attachments: [{ id: 'attachment-1', noteId: 'note-1', fileName: 'hello.txt' }]
         },
         flush() {},
@@ -323,11 +318,13 @@ export const appFactoryTests = [
           spaces: [{ id: 'space-2' }],
           folders: [],
           tags: [],
-          notes: [{
-            id: 'note-2',
-            title: 'Imported note',
-            rawMarkdown: '# Imported note'
-          }],
+          notes: [
+            {
+              id: 'note-2',
+              title: 'Imported note',
+              rawMarkdown: '# Imported note'
+            }
+          ],
           attachments: [{ id: 'attachment-2', noteId: 'note-2', fileName: 'imported.txt' }]
         },
         attachmentFiles: [
@@ -351,7 +348,7 @@ export const appFactoryTests = [
   {
     name: 'createPersistentAppContext resolves storage paths from the workspace root instead of cwd',
     async run() {
-      const { createPersistentAppContext, resolveStoragePath } = await import('../src/app.factory.js');
+      const { createPersistentAppContext, resolveStoragePath } = await import('../src/app.factory.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'study-app-factory-'));
       const originalCwd = process.cwd();
       const apiCwd = originalCwd.endsWith(path.join('apps', 'api'))

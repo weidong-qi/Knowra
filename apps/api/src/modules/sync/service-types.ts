@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Prisma } from '@prisma/client';
-import type { Note } from '../knowledge/domain/note.ts';
+import type { LocalRow } from '../../infrastructure/local-data-types.ts';
 import type { SyncContract, SyncSnapshotBinding } from './protocol-contract.ts';
 import type { SyncEntry, SyncJournal, SyncReceiptResult, SyncSnapshot } from './journal.ts';
 import type {
@@ -70,7 +70,7 @@ export interface SyncNoteProvider<Backend extends SyncBackend = 'local'> extends
   snapshotPage?: (request: SyncSnapshotRequest) => SyncAwaitable<SyncSnapshotPage>;
   applyNote(
     operation: SyncNoteOperation,
-    current: Pick<Note, 'deleted'> | null
+    current: Pick<LocalRow<'notes'>, 'deleted'> | null
   ): SyncAwaitable<SyncNoteMutationResult | void>;
 }
 /** HTTP 边界保留原始请求；各方法沿现有校验流程解释载荷。 */

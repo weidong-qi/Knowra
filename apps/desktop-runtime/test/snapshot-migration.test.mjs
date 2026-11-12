@@ -4,14 +4,22 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { importJsonSnapshot } from '../src/snapshot-migration.mjs';
 import { createNote, openWorkspace, temporaryDirectory } from './helpers.mjs';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 
 test('JSON 快照迁移保留正文、附件与 ID，迁移失败不发布目标，原快照不变', t => {
   const root = temporaryDirectory(t);
   const source = openWorkspace(path.join(root, 'source'));
   const note = createNote(source);
-  const sourceContext = createAppContext({ dataStore: source.store, storageRootDir: path.join(root, 'source'), uploadsDir: path.join(root, 'source', 'uploads') });
-  const attachment = sourceContext.http.storage.uploadAttachment({ noteId: note.id, fileName: '样本.txt', contentBase64: Buffer.from('附件迁移验证').toString('base64') });
+  const sourceContext = createAppContext({
+    dataStore: source.store,
+    storageRootDir: path.join(root, 'source'),
+    uploadsDir: path.join(root, 'source', 'uploads')
+  });
+  const attachment = sourceContext.http.storage.uploadAttachment({
+    noteId: note.id,
+    fileName: '样本.txt',
+    contentBase64: Buffer.from('附件迁移验证').toString('base64')
+  });
   const snapshot = sourceContext.http.storage.exportKnowledgeBase();
   const sourcePath = path.join(root, 'snapshot.json');
   const bytes = JSON.stringify(snapshot);
@@ -21,8 +29,15 @@ test('JSON 快照迁移保留正文、附件与 ID，迁移失败不发布目标
   importJsonSnapshot(sourcePath, destination);
   const restored = openWorkspace(destination);
   assert.equal(restored.knowledge.noteService.getNote(note.id).rawMarkdown, '初始正文');
-  const targetContext = createAppContext({ dataStore: restored.store, storageRootDir: destination, uploadsDir: path.join(destination, 'uploads') });
-  assert.equal(targetContext.http.storage.getAttachmentContent({ id: attachment.id }).content.toString(), '附件迁移验证');
+  const targetContext = createAppContext({
+    dataStore: restored.store,
+    storageRootDir: destination,
+    uploadsDir: path.join(destination, 'uploads')
+  });
+  assert.equal(
+    targetContext.http.storage.getAttachmentContent({ id: attachment.id }).content.toString(),
+    '附件迁移验证'
+  );
   assert.equal(fs.readFileSync(sourcePath, 'utf8'), bytes);
   restored.store.close();
   assert.throws(() => importJsonSnapshot(sourcePath, destination), /新目录/);

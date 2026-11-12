@@ -12,12 +12,12 @@ import type {
   ExtractionPageRow
 } from './knowledge-extraction-query-types.ts';
 
-export interface ExtractionTaskContext<Transaction> extends ExtractionQueryContext<Transaction> {
+export type ExtractionTaskContext<Transaction> = ExtractionQueryContext<Transaction> & {
   aiRepository: Pick<
     AiRecordRepositoryPort,
     'identity' | 'get' | 'list' | 'listEvents' | 'insert' | 'replace' | 'appendEvent'
   >;
-}
+};
 export interface ExtractionTaskStore<Transaction> {
   supportsAsync: boolean;
   runTransaction<Result>(

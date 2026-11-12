@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { chromium, expect } from '@playwright/test';
 import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
-import { createAppContext } from '../../../api/src/app.factory.js';
+import { createAppContext } from '../../../api/src/app.factory.ts';
 import { createServer } from '../../../api/src/server.js';
 import { createV4WebServer } from '../../../web/server/app.mjs';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';

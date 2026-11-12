@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { hashRecord } from '../../api/src/modules/ai/record-contract.ts';
 import { extractionCreationHash } from '../../api/src/modules/ai/knowledge-extraction-task-contract.ts';
 import { createKnowledgeExtractionJobFixture } from '../../api/test/fixtures/knowledge-extraction-job.fixture.js';
-import { createAppContext } from '../../api/src/app.factory.js';
+import { createAppContext } from '../../api/src/app.factory.ts';
 import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.ts';
 import { createRuntimeBackup, inspectRuntimeBackup } from '../src/backup.mjs';
 import { prepareRestoredDirectory } from '../src/restore-directory.mjs';

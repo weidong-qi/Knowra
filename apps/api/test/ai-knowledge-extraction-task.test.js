@@ -5,7 +5,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
-import { createAppContext } from '../src/app.factory.js';
+import { createAppContext } from '../src/app.factory.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createMaintenanceGate } from '../src/infrastructure/maintenance-gate.ts';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
-import { createAppContext } from '../src/app.factory.js';
+import { createAppContext } from '../src/app.factory.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createSqliteDataStore } from '../../desktop-runtime/src/sqlite-data-store.mjs';
 import { createLocalBudgetAuthority } from '../../desktop-runtime/src/local-budget-authority.mjs';

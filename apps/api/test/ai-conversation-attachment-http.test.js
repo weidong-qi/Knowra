@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createPersistentAppContext } from '../src/app.factory.js';
+import { createPersistentAppContext } from '../src/app.factory.ts';
 import { createServer } from '../src/server.js';
 import { createEmptyAiState, validateAiState } from '../src/modules/ai/record-state.ts';
 const png = () =>

@@ -231,7 +231,7 @@ export function* requireTask<Transaction>(
 ): ExtractionQuerySteps<ExtractionLoadedTask> {
   const identity = (yield context.aiRepository.identity()) as DatasetIdentity;
   const job = (yield context.aiRepository.get('aiJob', jobId)) as AiJob | null;
-  const raw = yield store.get({ ownerId, ...identity, jobId }, context.transaction);
+  const raw = yield store.get({ ownerId, ...identity, jobId }, context.transaction as Transaction);
   if (!job || !raw) throw taskError('KNOWLEDGE_EXTRACTION_TASK_NOT_FOUND', '提炼任务不存在。', 404);
   const descriptor = validateExtractionTask(raw);
   const space = (yield context.repositories.knowledgeSpaceRepository.findById(
