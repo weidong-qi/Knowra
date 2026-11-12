@@ -78,14 +78,14 @@ export async function exercisePdfDictionary(page) {
   assert.equal((await marks()).length, 0, '查询不会自动创建标注');
   // 结果由点击触发，鼠标移开后仍能阅读、滚动和选择释义。
   await page.mouse.move(5, 5);
-  await lookup.getByRole('button', { name: '保存的释义' }).click();
+  await lookup.getByRole('button', { name: '附带的释义' }).click();
   await page.getByRole('option', { name: /n\. 倾斜度, 梯度/ }).click();
   await expect(page.getByRole('listbox')).toHaveCount(0);
   if (process.env.KNOWRA_E2E_OUTPUT) {
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
     await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-dictionary.png') });
   }
-  await lookup.getByRole('button', { name: '保存为标注' }).click();
+  await lookup.getByRole('button', { name: '标注并保存释义' }).click();
   await expect(lookup).toHaveCount(0);
   await expect.poll(async () => (await marks()).length).toBe(1);
   const saved = (await marks())[0];
@@ -96,9 +96,9 @@ export async function exercisePdfDictionary(page) {
   assert.doesNotMatch(saved.comment, /a\. 渐升的/);
   // 同一位置再保存同一释义，直接定位已有标注。
   await openWord('Gradients');
-  await lookup.getByRole('button', { name: '保存的释义' }).click();
+  await lookup.getByRole('button', { name: '附带的释义' }).click();
   await page.getByRole('option', { name: /n\. 倾斜度, 梯度/ }).click();
-  await lookup.getByRole('button', { name: '保存为标注' }).click();
+  await lookup.getByRole('button', { name: '标注并保存释义' }).click();
   assert.equal((await marks()).length, 1);
   await page.getByRole('button', { name: '撤销标注操作' }).click();
   await expect.poll(async () => (await marks()).length).toBe(0);
@@ -113,7 +113,12 @@ export async function exercisePdfDictionary(page) {
   // 未收录词给出明确提示，不能误存空标注。
   await openWord('zzzqvunknown');
   await expect(lookup).toContainText('本地词典未收录');
-  await expect(lookup.getByRole('button', { name: '保存为标注' })).toHaveCount(0);
+  await expect(lookup.getByRole('button', { name: '标注并保存释义' })).toBeDisabled();
+  await expect(lookup.getByRole('button', { name: '仅标注原文' })).toBeEnabled();
+  await lookup.getByRole('button', { name: '仅标注原文' }).click();
+  await expect.poll(async () => (await marks()).length).toBe(2);
+  assert((await marks()).some(mark => mark.quoteText === 'zzzqvunknown' && mark.comment === ''));
+  await openWord('zzzqvunknown');
   await page.keyboard.press('Escape');
   await expect(lookup).toHaveCount(0);
   // 拖选词组后，从已有标注工具条进入查询。
@@ -128,7 +133,7 @@ export async function exercisePdfDictionary(page) {
   await page.getByRole('button', { name: '查词', exact: true }).click();
   await expect(lookup).toContainText('本地词典未收录');
   await lookup.getByRole('button', { name: '关闭' }).click();
-  assert.equal((await marks()).length, 1);
+  assert.equal((await marks()).length, 2);
   assert.deepEqual(external, []);
   assert.deepEqual(errors, []);
 }
