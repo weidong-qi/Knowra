@@ -72,10 +72,15 @@ export function createLocalAttachmentStore({
 
   reconcileStoredAttachments();
 
+  // Date 保留原生强制转换/异常，不把历史 createdAt 宣称为已验证时间戳。
   function listAttachments({ noteId }: { noteId?: string } = {}) {
     return dataStore.state.attachments
       .filter(attachment => (noteId ? attachment.noteId === noteId : true))
-      .sort((left, right) => new Date(right.createdAt!).getTime() - new Date(left.createdAt!).getTime());
+      .sort(
+        (left, right) =>
+          new (Date as new (value: unknown) => Date)(right.createdAt!).getTime() -
+          new (Date as new (value: unknown) => Date)(left.createdAt!).getTime()
+      );
   }
 
   function getAttachment(attachmentId: string | undefined) {

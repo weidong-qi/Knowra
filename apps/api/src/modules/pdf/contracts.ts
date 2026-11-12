@@ -2,7 +2,7 @@ import type { PrismaClient, Prisma } from '@prisma/client';
 import type { PdfAnnotation, PdfSource } from '@study-accelerator/shared/pdf';
 import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
 import type { FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
-import type { Note, NoteConstructorInput } from '../knowledge/domain/note.ts';
+import type { NoteConstructorInput } from '../knowledge/domain/note.ts';
 import type { LocalAttachmentRecord } from '../../infrastructure/local-attachment-types.ts';
 import type { createMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
 import type { buildNoteData, mapNote } from '../knowledge/infrastructure/postgres/mappers.ts';
@@ -11,20 +11,25 @@ import type { createPdfFiles } from './files.ts';
 
 export type BinaryStream = AsyncIterable<Uint8Array | string>;
 export type Awaitable<T> = T | PromiseLike<T>;
-export type PdfNoteRecord = Omit<Note, 'internalLinks' | 'annotationStructure' | 'deletionPackage'> & {
-  internalLinks?: unknown[];
-  annotationStructure?: unknown;
-  deletionPackage?: unknown;
-  deletedAt?: string | Date | null;
-};
+/** 历史持久记录不是 Note 构造器产物；只依赖实际读取的字段。 */
+export type PdfNoteRecord = NoteRecord & { deletedAt?: unknown };
 export type PdfNewNote = NoteConstructorInput & { contentKind: 'pdf'; pdfSource: PdfSource; spaceId: string };
-export type PdfAttachment = LocalAttachmentRecord & { mimeType: string };
+export type PdfAttachment = LocalAttachmentRecord;
+/** 新导入文件已经过 stagePdf，写入所需元数据与历史读取分开。 */
+export interface PdfNewAttachment extends LocalAttachmentRecord {
+  storagePath: string;
+  size: number;
+  mimeType: string;
+  sha256: string;
+  createdAt: string;
+  verifiedAt: string;
+}
 export type PdfStoredAnnotation = PdfAnnotation & { requestHash?: string; importRequestHash?: string };
 export interface PdfFolder {
   id: string;
   spaceId: string;
   name: string;
-  parentId: string | null;
+  parentId?: string | null;
   deletedAt?: string | Date | null;
 }
 export interface PdfSpace {

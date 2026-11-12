@@ -1,25 +1,23 @@
 import type { AppError } from '../errors/app-error.ts';
-import type { AttachmentStatus } from './attachment-status.ts';
 
 /** 文件定位与完整性巡检也接受尚未补齐的旧元数据。 */
 export interface AttachmentFileMetadata {
   id?: string | null;
   fileName?: string | null;
-  storagePath?: string | null;
-  size?: number;
-  sha256?: string | null;
+  storagePath?: unknown;
+  size?: unknown;
+  sha256?: unknown;
 }
 
+/** 历史记录只有身份字段必需；未校验元数据保留原值，由既有巡检/恢复流程读取。 */
 export interface LocalAttachmentRecord extends AttachmentFileMetadata {
   id: string;
   noteId: string;
   fileName: string;
-  storagePath: string;
-  size: number;
-  mimeType?: string;
-  status?: AttachmentStatus;
-  verifiedAt?: string | null;
-  createdAt?: string;
+  mimeType?: unknown;
+  status?: string;
+  verifiedAt?: unknown;
+  createdAt?: unknown;
 }
 /** PG status 仍是数据库原始字符串；恢复流程只与已知状态比较。 */
 export type AttachmentRecoveryRecord = Omit<LocalAttachmentRecord, 'status'> & { status?: string };
@@ -50,8 +48,8 @@ export interface AttachmentOperationError extends Partial<AppError> {
   statusPersistError?: Error;
 }
 
-export type AttachmentFileHealth =
-  | { status: 'ready'; verifiedAt: string; content: Buffer }
+export type AttachmentFileHealth<VerifiedAt = unknown> =
+  | { status: 'ready'; verifiedAt: VerifiedAt | string; content: Buffer }
   | { status: 'missing' | 'failed' | 'corrupt'; verifiedAt: null; content?: undefined };
 
 export interface AttachmentRestoreBody {

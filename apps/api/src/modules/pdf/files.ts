@@ -60,7 +60,8 @@ export function createPdfFiles(fileManager: AttachmentFileManager) {
     if (!file) throw pdfError('ATTACHMENT_MISSING', 'PDF 原文件缺失，请恢复原文件。', 409);
     const stat = fs.statSync(file, { bigint: true });
     const key = `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
-    if (!stat.isFile() || stat.size !== BigInt(attachment.size))
+    // 原生 BigInt 自行转换或抛错；未在读取端额外验证历史 size。
+    if (!stat.isFile() || stat.size !== (BigInt as (value: unknown) => bigint)(attachment.size))
       throw pdfError('ATTACHMENT_CORRUPT', 'PDF 原文件大小不匹配。', 409);
     if (verified.get(attachment.id) !== `${key}:${attachment.sha256}`) {
       const hash = createHash('sha256');
