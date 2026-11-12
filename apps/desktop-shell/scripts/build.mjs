@@ -39,10 +39,10 @@ await build({
     js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);"
   }
 });
-for (const name of ['worker-child', 'provider-child']) {
+for (const name of ['worker-child.js', 'provider-child.ts']) {
   await build({
-    entryPoints: [path.join(repo, 'apps/api/src/modules/ai', `${name}.js`)],
-    outfile: path.join(staging, `${name}.js`),
+    entryPoints: [path.join(repo, 'apps/api/src/modules/ai', name)],
+    outfile: path.join(staging, name),
     bundle: true,
     platform: 'node',
     format: 'esm',

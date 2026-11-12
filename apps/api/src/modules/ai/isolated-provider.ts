@@ -1,3 +1,5 @@
+import type { GatewayOptions } from './boundary-types.ts';
+import type { ProviderRequest } from './infrastructure/providers/deepseek-adapter.ts';
 import { fork } from 'node:child_process';
 import { AiGatewayError } from './gateway.ts';
 import { watchChildResources } from './process-resource-guard.ts';
@@ -13,14 +15,36 @@ export const AI_PROCESS_LIMITS = Object.freeze({
   responseBytes: 4_194_304
 });
 
+interface IsolatedProviderOptions {
+  childUrl?: URL;
+  limits?: { [Key in keyof typeof AI_PROCESS_LIMITS]: number };
+  spawn?: typeof fork;
+}
+interface WaitingEntry {
+  resolve: () => void;
+  reject: (error: AiGatewayError) => void;
+  signal: AbortSignal | undefined;
+  abort: (() => void) | null;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+// IPC 是外部输入；这里只描述原有字段访问，结果仍交给 Gateway 校验。
+interface RawProviderMessage {
+  type?: unknown;
+  id?: unknown;
+  result?: unknown;
+  error?: { code?: unknown; message?: unknown; retryable?: unknown; httpStatus?: unknown } | null;
+  cpuMs?: unknown;
+  rssBytes?: unknown;
+}
+
 /** 仅供应商网络调用进入子进程；业务读写、授权及预算始终留在宿主。 */
 export function createIsolatedDeepSeekAdapter({
-  childUrl = new URL('./provider-child.js', import.meta.url),
+  childUrl = new URL('./provider-child.ts', import.meta.url),
   limits = AI_PROCESS_LIMITS,
   spawn = fork
-} = {}) {
+}: IsolatedProviderOptions = {}) {
   let active = 0;
-  const waiting = [];
+  const waiting: WaitingEntry[] = [];
   const capabilities = () => ({
     provider: 'deepseek',
     protocol: 'chat-completions',
@@ -37,7 +61,7 @@ export function createIsolatedDeepSeekAdapter({
 
   const queueTimeout = () => new AiGatewayError('AI_QUEUE_TIMEOUT', 'AI 请求排队超时，请重试。', { retryable: true });
 
-  function enter(signal, expiresAt) {
+  function enter(signal: AbortSignal | undefined, expiresAt: number | undefined): Promise<void> {
     if (signal?.aborted) return Promise.reject(new AiGatewayError('AI_CANCELLED', '模型请求已取消。'));
     const remaining = expiresAt === undefined ? limits.wallMs : Math.min(limits.wallMs, expiresAt - Date.now());
     if (!Number.isFinite(remaining) || remaining <= 0) return Promise.reject(queueTimeout());
@@ -46,14 +70,14 @@ export function createIsolatedDeepSeekAdapter({
       return Promise.resolve();
     }
     if (waiting.length >= limits.queue) return Promise.reject(new AiGatewayError('AI_QUEUE_FULL', 'AI 请求队列已满。'));
-    return new Promise((resolve, reject) => {
-      const item = { resolve, reject, signal, abort: null, timer: null };
-      const cancel = error => {
+    return new Promise<void>((resolve, reject) => {
+      const item: WaitingEntry = { resolve, reject, signal, abort: null, timer: null };
+      const cancel = (error: AiGatewayError) => {
         const index = waiting.indexOf(item);
         if (index < 0) return;
         waiting.splice(index, 1);
-        clearTimeout(item.timer);
-        signal?.removeEventListener('abort', item.abort);
+        clearTimeout(item.timer!);
+        signal?.removeEventListener('abort', item.abort!);
         reject(error);
       };
       item.abort = () => cancel(new AiGatewayError('AI_CANCELLED', '模型请求已取消。'));
@@ -66,8 +90,8 @@ export function createIsolatedDeepSeekAdapter({
   function leave() {
     const item = waiting.shift();
     if (item) {
-      clearTimeout(item.timer);
-      item.signal?.removeEventListener('abort', item.abort);
+      clearTimeout(item.timer!);
+      item.signal?.removeEventListener('abort', item.abort!);
       item.resolve();
     } else active--;
   }
@@ -76,10 +100,10 @@ export function createIsolatedDeepSeekAdapter({
     provider: 'deepseek',
     deferredSendValidation: true,
     capabilities,
-    /** @param {import('./infrastructure/providers/deepseek-adapter.ts').ProviderRequest} request
-     * @param {Parameters<import('./boundary-types.ts').GatewayOptions['adapter']['complete']>[1]} [control]
-     */
-    async complete(request, { verifyBeforeSend, onSend, expiresAt } = {}) {
+    async complete(
+      request: ProviderRequest,
+      { verifyBeforeSend, onSend, expiresAt }: Parameters<GatewayOptions['adapter']['complete']>[1] = {}
+    ): Promise<unknown> {
       // 信号不可通过 IPC 克隆；其余字段必须有上限，防止子进程内存积压。
       const { signal, ...payload } = request;
       const size = Buffer.byteLength(JSON.stringify(payload));
@@ -92,7 +116,7 @@ export function createIsolatedDeepSeekAdapter({
         if (signal?.aborted) throw new AiGatewayError('AI_CANCELLED', '模型请求已取消。');
         if (deadline <= Date.now()) throw queueTimeout();
         onSend?.();
-        return await new Promise((resolve, reject) => {
+        return await new Promise<unknown>((resolve, reject) => {
           const child = spawn(childUrl, [], {
             execArgv: [`--max-old-space-size=${limits.heapMb}`],
             env: { NODE_ENV: 'production', ...(process.versions.electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}) },
@@ -102,7 +126,7 @@ export function createIsolatedDeepSeekAdapter({
           const guard = watchChildResources(child, limits, () =>
             finish(new AiGatewayError('AI_PROCESS_LIMIT', '模型执行进程超出资源限额。'))
           );
-          const finish = (error, result) => {
+          const finish = (error: AiGatewayError | null, result?: unknown) => {
             if (finished) return;
             finished = true;
             clearTimeout(timer);
@@ -123,9 +147,10 @@ export function createIsolatedDeepSeekAdapter({
             finish(new AiGatewayError('AI_PROCESS_FAILED', '模型执行进程异常退出。', { retryable: true }))
           );
           child.on('message', rawMessage => {
-            const message = /** @type {import('./boundary-types.ts').ProviderMessage} */ (rawMessage);
+            const message = rawMessage as RawProviderMessage | null | undefined;
             if (message?.type === 'resource') {
-              guard.report(message);
+              // 只在原有数值比较入口断言；不转换原值，保留 > 的强制转换语义。
+              guard.report(message as { cpuMs?: number; rssBytes?: number });
               return;
             }
             if (message?.id !== 1) return;
@@ -134,12 +159,16 @@ export function createIsolatedDeepSeekAdapter({
               return;
             }
             if (message.type === 'result') finish(null, message.result);
+            // 错误字段按原协议直接透传，断言不代表已验证，也不增加运行时过滤。
             else if (message.type === 'error')
               finish(
                 new AiGatewayError(
-                  message.error?.code ?? 'AI_PROCESS_FAILED',
-                  message.error?.message ?? '模型执行失败。',
-                  { retryable: message.error?.retryable, httpStatus: message.error?.httpStatus }
+                  (message.error?.code ?? 'AI_PROCESS_FAILED') as string,
+                  (message.error?.message ?? '模型执行失败。') as string,
+                  {
+                    retryable: message.error?.retryable as boolean | undefined,
+                    httpStatus: message.error?.httpStatus as number | null | undefined
+                  }
                 )
               );
           });
