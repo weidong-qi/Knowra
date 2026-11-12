@@ -128,25 +128,49 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   await expect(lookup).toContainText('梯度');
   await expect(lookup.getByRole('toolbar', { name: '选择标注分类' })).toBeVisible();
   await lookup.getByRole('button', { name: '标注样式：下划线', exact: true }).click();
+  await lookup.getByRole('button', { name: '选择分类：重点', exact: true }).click();
   await expect(lookup).toBeVisible();
   await expect(lookup).toContainText('梯度');
+  assert.equal((await marks()).length, 1, '选择样式和颜色不会创建标注');
+  await lookup.getByRole('button', { name: '关闭', exact: true }).click();
+  await expect(lookup).toHaveCount(0);
+  assert.equal((await marks()).length, 1, '关闭查词卡片不会提交标注设置');
+  await openWord();
+  await expect(lookup.getByRole('button', { name: '选择分类：重点' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(lookup.getByRole('button', { name: '标注样式：下划线' })).toHaveAttribute('aria-pressed', 'true');
   if (process.env.KNOWRA_E2E_OUTPUT) {
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
     await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-dictionary-and-annotation.png') });
   }
-  await lookup.getByRole('button', { name: '标注为重点', exact: true }).click();
+  await lookup.getByRole('button', { name: '仅标注原文', exact: true }).click();
   await expect(lookup).toHaveCount(0);
   await save();
   const wordMark = (await marks()).find(mark => mark.quoteText === 'Gradients');
   assert.equal(wordMark.type, 'underline');
   assert.equal(wordMark.kind, 'important');
+  assert.equal(wordMark.comment, '', '仅标注原文不写入词典释义');
   // 双击已有标注仍可查词，同时可按原入口保存释义。
   await openWord();
   await expect(lookup).toContainText('梯度');
   await expect(lookup.getByRole('toolbar', { name: '选择标注分类' })).toBeVisible();
-  await lookup.getByRole('button', { name: '保存为标注', exact: true }).click();
+  await expect(lookup.getByRole('button', { name: '选择分类：重点' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(lookup.getByRole('button', { name: '标注样式：下划线' })).toHaveAttribute('aria-pressed', 'true');
+  await lookup.getByRole('button', { name: '选择分类：疑问' }).click();
+  await lookup.getByRole('button', { name: '标注并保存释义', exact: true }).click();
   await save();
   assert((await marks()).some(mark => mark.quoteText === 'Gradients' && mark.comment.includes('词典 · ECDICT')));
+  assert((await marks()).some(mark => mark.kind === 'question' && mark.comment.includes('词典 · ECDICT')));
+  // 相同释义改用另一分类时保留两条标注，同分类重复提交则定位已有记录。
+  await openWord();
+  await lookup.getByRole('button', { name: '选择分类：重点' }).click();
+  await lookup.getByRole('button', { name: '标注并保存释义', exact: true }).click();
+  await save();
+  assert.equal((await marks()).length, 4);
+  assert((await marks()).some(mark => mark.kind === 'important' && mark.comment.includes('词典 · ECDICT')));
+  await openWord();
+  await lookup.getByRole('button', { name: '标注并保存释义', exact: true }).click();
+  await expect(lookup).toHaveCount(0);
+  assert.equal((await marks()).length, 4);
   await page.reload();
   await expect(page.locator('.textLayer')).toContainText('Gradients');
   assert.equal((await marks()).filter(mark => mark.type === 'note').length, 1);
