@@ -1,7 +1,45 @@
+import type { IncomingMessage } from 'node:http';
+import type { ResponseWriter } from '../../../http/response.ts';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+
+type ContentAnnotationRouteKnowledge = Pick<
+  ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
+  | 'confirmAnnotationRange'
+  | 'createAnalysisScope'
+  | 'createAnnotation'
+  | 'createAnnotationExclusion'
+  | 'deleteAnnotation'
+  | 'deleteAnnotationExclusion'
+  | 'getAnalysisScope'
+  | 'getAnnotation'
+  | 'getAnnotationKnowledgeLinks'
+  | 'listAnalysisScopes'
+  | 'listAnnotations'
+  | 'previewAnalysisScope'
+  | 'previewAnnotation'
+  | 'restoreAnnotation'
+  | 'restoreDeletedAnalysisScope'
+  | 'trashAnalysisScope'
+  | 'updateAnnotation'
+  | 'updateAnnotationAnchor'
+>;
+export interface ContentAnnotationRouteContext {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  knowledge: ContentAnnotationRouteKnowledge;
+}
+
 import { parseBody, toQueryObject } from '../../../http/request.ts';
 import { sendJson } from '../../../http/response.ts';
 
-export async function handleContentAnnotationRoute({ request, response, url, knowledge }) {
+export async function handleContentAnnotationRoute({
+  request,
+  response,
+  url,
+  knowledge
+}: ContentAnnotationRouteContext): Promise<boolean> {
   const root = '/api/knowledge/annotations';
   if (request.method === 'POST' && url.pathname === '/api/knowledge/analysis-scopes/preview') {
     sendJson(response, 200, { data: await knowledge.previewAnalysisScope(await parseBody(request)) });
@@ -94,7 +132,9 @@ export async function handleContentAnnotationRoute({ request, response, url, kno
   return false;
 }
 
-async function parseOptionalBody(request) {
+async function parseOptionalBody(
+  request: IncomingMessage & { headers: IncomingMessage['headers'] & { get?: (name: string) => string | null } }
+) {
   const length = Number(request.headers['content-length'] ?? request.headers.get?.('content-length') ?? 0);
   return length > 0 ? parseBody(request) : {};
 }

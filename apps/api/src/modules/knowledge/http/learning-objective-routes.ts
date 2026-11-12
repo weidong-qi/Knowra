@@ -1,11 +1,44 @@
+import type { IncomingMessage } from 'node:http';
+import type { ResponseWriter } from '../../../http/response.ts';
+import type { createKnowledgeHttpHandlers } from './knowledge-handlers.js';
+import type { createPostgresKnowledgeHttpHandlers } from './postgres-async-handlers.js';
+
+type LearningObjectiveRouteKnowledge = Pick<
+  ReturnType<typeof createKnowledgeHttpHandlers> | ReturnType<typeof createPostgresKnowledgeHttpHandlers>,
+  | 'archiveLearningObjective'
+  | 'confirmLearningObjective'
+  | 'createLearningObjective'
+  | 'getLearningObjective'
+  | 'inspectTrainingAssetPurge'
+  | 'listLearningObjectives'
+  | 'listWorkspaceLearningObjectives'
+  | 'permanentlyDeleteTrainingAsset'
+  | 'requestLearningObjectiveRevision'
+  | 'restoreDeletedTrainingAsset'
+  | 'restoreLearningObjective'
+  | 'trashTrainingAsset'
+  | 'updateLearningObjective'
+>;
+export interface LearningObjectiveRouteContext {
+  request: IncomingMessage;
+  response: ResponseWriter;
+  url: URL;
+  knowledge: LearningObjectiveRouteKnowledge;
+}
+
 import { parseBody, toQueryObject } from '../../../http/request.ts';
 import { sendJson } from '../../../http/response.ts';
 
-function decode(value) {
+function decode(value: string) {
   return decodeURIComponent(value);
 }
 
-export async function handleLearningObjectiveRoute({ request, response, url, knowledge }) {
+export async function handleLearningObjectiveRoute({
+  request,
+  response,
+  url,
+  knowledge
+}: LearningObjectiveRouteContext): Promise<boolean> {
   const nested = url.pathname.match(/^\/api\/knowledge\/items\/([^/]+)\/learning-objectives$/);
   if (nested) {
     const knowledgeItemId = decode(nested[1]);
@@ -18,7 +51,7 @@ export async function handleLearningObjectiveRoute({ request, response, url, kno
     if (request.method === 'POST') {
       sendJson(response, 201, {
         data: await knowledge.createLearningObjective({
-          .../** @type {Record<string, unknown>} */ (await parseBody(request)),
+          ...((await parseBody(request)) as Record<string, unknown>),
           knowledgeItemId
         })
       });
@@ -68,7 +101,12 @@ export async function handleLearningObjectiveRoute({ request, response, url, kno
     if (request.method === 'POST' && action[2] === 'confirm')
       sendJson(response, 200, { data: await knowledge.confirmLearningObjective(params, body) });
     else if (request.method === 'POST' && action[2] === 'request-revision')
-      sendJson(response, 200, { data: await knowledge.requestLearningObjectiveRevision(params, body) });
+      sendJson(response, 200, {
+        data: await knowledge.requestLearningObjectiveRevision(
+          params,
+          body as Parameters<LearningObjectiveRouteKnowledge['requestLearningObjectiveRevision']>[1]
+        )
+      });
     else if (request.method === 'POST' && action[2] === 'archive')
       sendJson(response, 200, { data: await knowledge.archiveLearningObjective(params) });
     else if (request.method === 'POST' && action[2] === 'restore')
