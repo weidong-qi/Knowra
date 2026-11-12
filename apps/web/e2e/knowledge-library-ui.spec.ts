@@ -85,6 +85,15 @@ for (const width of [1440, 390])
         await page.getByRole('button', { name: '卡片', exact: true }).click();
         await page.keyboard.press('Escape');
         await expect(page.getByRole('list', { name: '知识卡片视图' }).first()).toBeVisible();
+        const createControl = page
+          .getByRole('toolbar', { name: '知识库工具栏' })
+          .getByRole('button', { name: '新建知识候选' });
+        await expect(createControl).toBeVisible();
+        const createBox = await createControl.boundingBox();
+        expect(createBox).not.toBeNull();
+        expect(createBox!.x + createBox!.width).toBeLessThanOrEqual(width);
+        expect(createBox!.x).toBeGreaterThanOrEqual(0);
+
         await page.screenshot({
           path: info.outputPath(`knowledge-cards-${width}-${mode}.png`),
           animations: 'disabled'

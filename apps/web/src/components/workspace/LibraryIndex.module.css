@@ -158,3 +158,19 @@
   width: auto;
   min-width: 0;
 }
+
+/* 有搜索词时给工具栏让出标题空间；失焦后仍保留筛选、更多和新建入口。 */
+.header[data-compact]:has(input[type='search']:not(:placeholder-shown)) .heading,
+.header[data-compact]:has(input[type='search']:not(:placeholder-shown)) .breadcrumb {
+  display: none;
+}
+.header[data-compact]:has(input[type='search']:not(:placeholder-shown)) .tools,
+.header[data-compact]:has(input[type='search']:not(:placeholder-shown)) .tools [role='toolbar'] {
+  flex: 1;
+}
+.header[data-compact] .tools [role='toolbar'] > div:has(input[type='search']:not(:placeholder-shown)) {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 120px;
+  max-width: none;
+}

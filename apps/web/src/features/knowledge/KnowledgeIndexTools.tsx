@@ -197,7 +197,7 @@ export function KnowledgeIndexTools(props: KnowledgeIndexToolsProps) {
 
   if (compact) {
     return (
-      <div className={styles.compactTools} role="toolbar" aria-label="知识库工具栏">
+      <div className={styles.desktopTools} role="toolbar" aria-label="知识库工具栏">
         {search}
         {filter}
         {displayMenu}
