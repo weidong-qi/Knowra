@@ -65,13 +65,14 @@ const canonical = (value: unknown): string => {
       .join(',')}}`;
   return JSON.stringify(value) ?? 'null';
 };
+export interface KnowledgeConceptServiceDependencies {
+  store: KnowledgeConceptStore | null;
+  now?: () => string;
+}
 export function createKnowledgeConceptService({
   store,
   now = () => new Date().toISOString()
-}: {
-  store: KnowledgeConceptStore | null;
-  now?: () => string;
-}) {
+}: KnowledgeConceptServiceDependencies) {
   const requireStore = () => {
     if (!store) throw createAppError('KNOWLEDGE_CONCEPTS_UNAVAILABLE', '当前存储暂不支持概念，请升级应用', 503);
     return store;

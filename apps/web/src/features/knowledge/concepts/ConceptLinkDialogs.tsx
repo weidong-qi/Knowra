@@ -4,6 +4,15 @@ import { Button, Checkbox, Dialog, DialogBody, DialogFooter, SearchBox, Select }
 import { randomId } from '../../../browser/randomId';
 import { useConceptState, type ConceptStore } from './conceptStore';
 import styles from './Concepts.module.css';
+const relationLabels = {
+  partOf: '组成部分',
+  prerequisiteOf: '前置知识',
+  contrastsWith: '对比',
+  causes: '导致',
+  appliesTo: '适用于',
+  relatedTo: '相关',
+  isA: '是一种'
+};
 export function LinkItemsDialog({
   concept,
   items,
@@ -172,7 +181,7 @@ export function RemoveLinksDialog({
                 {affected.map(row => (
                   <li key={row.id}>
                     {state.concepts.find(concept => concept.id === row.fromConceptId)?.name} →{' '}
-                    {state.concepts.find(concept => concept.id === row.toConceptId)?.name}（{row.type}）
+                    {state.concepts.find(concept => concept.id === row.toConceptId)?.name}（{relationLabels[row.type]}）
                   </li>
                 ))}
               </ul>
