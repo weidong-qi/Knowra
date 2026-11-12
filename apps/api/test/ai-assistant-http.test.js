@@ -226,7 +226,7 @@ export const aiAssistantHttpTests = [
           const resumed = await call(origin, '/alerts/resume', { rule: 'daily' });
           assert.deepEqual(resumed.payload.data.pauses, []);
           // 状态文件损坏：AI 被阻止并如实告知，关闭横幅不能覆盖文件，显式重置后恢复
-          fs.writeFileSync(path.join(directory, 'ai-budget-alerts.tson'), '{"pauses":null}');
+          fs.writeFileSync(path.join(directory, 'ai-budget-alerts.json'), '{"pauses":null}');
           const broken = await get('/alerts');
           assert.equal(broken.stateInvalid, true);
           const brokenStatus = await get('/status');
