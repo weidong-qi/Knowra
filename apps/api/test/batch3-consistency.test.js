@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createAsyncNoteService } from '../src/modules/knowledge/application/postgres-async/note-service.ts';
 import { createAsyncSearchService } from '../src/modules/knowledge/application/postgres-async/search-service.ts';
 import { createAsyncKnowledgeSpaceService } from '../src/modules/knowledge/application/postgres-async/space-service.ts';

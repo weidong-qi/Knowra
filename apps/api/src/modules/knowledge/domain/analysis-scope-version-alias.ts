@@ -7,7 +7,7 @@ export interface AnalysisScopeVersionBinding {
   contentHash?: string;
 }
 export interface AnalysisScopeAliasVersion {
-  id: string;
+  id?: unknown;
   noteId?: unknown;
   contentHash?: unknown;
   content?: unknown;

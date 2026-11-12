@@ -26,10 +26,10 @@ export interface NoteDeletionOptions<
 > {
   noteService: {
     permanentlyDeleteNote: (noteId: unknown) => NoteResult;
-    emptyRecycleBin: (spaceId: unknown) => RecycleResult;
+    emptyRecycleBin: (spaceId: string | null | undefined) => RecycleResult;
   };
   noteRepository: {
-    list: (options: { includeDeleted: true; spaceId: unknown }) => FilterableView<NoteView>;
+    list: (options: { includeDeleted: true; spaceId: string | null | undefined }) => FilterableView<NoteView>;
   };
   noteVersionRepository?: { deleteByNoteIds?: ((noteIds: unknown[]) => unknown) | null | undefined } | null | undefined;
   contentAnnotationRepository?:
@@ -58,7 +58,7 @@ export interface NoteDeletionCoordinator<
   RecycleResult extends DeletionValue = DeletionValue
 > {
   permanentlyDeleteNote: (noteId: unknown) => NoteResult | CleanupResult;
-  emptyRecycleBin: (spaceId?: unknown) => RecycleResult | CleanupResult;
+  emptyRecycleBin: (spaceId?: string | null) => RecycleResult | CleanupResult;
 }
 
 export function createNoteDeletionCoordinator<
@@ -107,7 +107,7 @@ export function createNoteDeletionCoordinator<
     return attachmentCleanup.length ? { ...deletedNote, attachmentCleanup } : deletedNote;
   }
 
-  function emptyRecycleBin(spaceId: unknown = null): RecycleResult | CleanupResult {
+  function emptyRecycleBin(spaceId: string | null | undefined = null): RecycleResult | CleanupResult {
     const noteIds = noteRepository
       .list({ includeDeleted: true, spaceId })
       .filter(note => note.deleted)

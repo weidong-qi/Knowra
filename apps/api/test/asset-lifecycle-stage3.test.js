@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import fs from 'node:fs';

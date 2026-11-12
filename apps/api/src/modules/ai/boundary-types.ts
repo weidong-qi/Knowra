@@ -7,7 +7,7 @@ import type { createModelSettingsService } from './model-settings.ts';
 import type { createAiConversationStore } from './conversation-store.ts';
 import type { createNoteActionService } from './action-service.ts';
 import type { createAgentKnowledgeCommitService } from './agent-knowledge-commit.ts';
-import type { createKnowledgeModule } from '../knowledge/index.js';
+import type { createKnowledgeModule } from '../knowledge/index.ts';
 import type { createAiAccessStore } from './access-records.ts';
 
 export type AccessService = ReturnType<typeof createAiAccessService>;

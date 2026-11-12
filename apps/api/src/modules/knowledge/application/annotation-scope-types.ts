@@ -2,8 +2,11 @@ import type { ContentAnchor } from '@study-accelerator/content-anchor';
 import type { ContentAnnotationRecord } from '../infrastructure/content-annotation-repository.ts';
 import type { NoteRecord, NoteRepository } from '../infrastructure/note-repository.ts';
 import type { NoteVersionRecord, NoteVersionRepository } from '../infrastructure/note-version-repository.ts';
-import type { KnowledgeEvidenceRepository } from '../infrastructure/knowledge-evidence-repository.ts';
-import type { KnowledgeItemRepository } from '../infrastructure/knowledge-item-repository.ts';
+import type {
+  KnowledgeEvidenceRepository,
+  KnowledgeEvidenceRecord
+} from '../infrastructure/knowledge-evidence-repository.ts';
+import type { KnowledgeItemRepository, KnowledgeItemRecord } from '../infrastructure/knowledge-item-repository.ts';
 import type {
   AnalysisScopeRecord,
   AnalysisScopeRepository,
@@ -84,8 +87,8 @@ export interface AnnotationScopeDependencies {
   };
   noteRepository: Pick<NoteRepository, 'findById'>;
   noteVersionRepository: Pick<NoteVersionRepository, 'findById' | 'findByNoteIdAndContentHash'>;
-  evidenceRepository: Pick<KnowledgeEvidenceRepository, 'list'>;
-  knowledgeItemRepository: Pick<KnowledgeItemRepository, 'findById'>;
+  evidenceRepository: Pick<KnowledgeEvidenceRepository<KnowledgeEvidenceRecord<unknown, unknown>>, 'list'>;
+  knowledgeItemRepository: Pick<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>, 'findById'>;
 }
 export interface AsyncAnnotationScopeDependencies {
   annotationRepository: Pick<PostgresRepositories['contentAnnotationRepository'], 'findById'>;

@@ -336,7 +336,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: '笔记永久删除继续阻止被分析快照引用的历史版本',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const snapshots = [];
       const knowledge = createKnowledgeModule({ analysisScopeSnapshots: snapshots });
       const note = knowledge.noteService.createNote({

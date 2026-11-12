@@ -11,6 +11,7 @@ export interface AnnotationRevisionRecord extends AnnotationSupportRecord {
   revision?: unknown;
 }
 export interface AnalysisScopeRecord extends AnnotationSupportRecord {
+  noteVersions?: unknown;
   spaceId?: unknown;
   idempotencyKey?: unknown;
   deletedAt?: unknown;

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../src/app.factory.js';
 import { createAttachmentCleanupQueue } from '../src/infrastructure/attachment-cleanup-queue.ts';

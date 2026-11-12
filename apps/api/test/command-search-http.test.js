@@ -5,7 +5,7 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { createAppContext } from '../src/app.factory.js';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 import { createPostgresKnowledgeHttpHandlers } from '../src/modules/knowledge/http/postgres-async-handlers.ts';
 import { createAsyncSearchService } from '../src/modules/knowledge/application/postgres-async/search-service.ts';

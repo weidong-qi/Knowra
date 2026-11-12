@@ -37,9 +37,9 @@ export type CommitValue =
 export type CommitSteps<Result> = Generator<Awaitable<CommitValue>, Result, CommitValue>;
 export interface CommitItem {
   id: string;
-  title: string;
-  canonicalStatement: string;
-  knowledgeType: string;
+  title?: string;
+  canonicalStatement?: string;
+  knowledgeType?: unknown;
 }
 export type CommitNote = Pick<
   NoteRecord,

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { selectCoalescibleVersion } from '../src/modules/knowledge/application/note-version-coalescing.ts';
 
 const minute = 60 * 1000;

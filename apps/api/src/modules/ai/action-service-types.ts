@@ -5,7 +5,7 @@ import type { AiConversationTurn, AiAccessPolicy } from './private-record-types.
 import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
 import type { NoteVersionRecord } from '../knowledge/infrastructure/note-version-repository.ts';
 import type { KnowledgeSpaceRecord } from '../knowledge/infrastructure/knowledge-space-repository.ts';
-import type { Tag } from '../knowledge/domain/tag.ts';
+import type { TagRecord } from '../knowledge/infrastructure/tag-repository.ts';
 import type { createNoteService } from '../knowledge/application/note-service.ts';
 import type { createAiAccessService } from './access-service.ts';
 import type {
@@ -74,7 +74,7 @@ export interface ActionServiceOptions extends Pick<MessageSourceGuardOptions, 'o
   knowledge: {
     repositories: MessageSourceGuardOptions['repositories'] & {
       knowledgeSpaceRepository: { findById(id: string | null | undefined): Awaitable<KnowledgeSpaceRecord | null> };
-      tagRepository: { findById(id: string): Awaitable<Tag | null> };
+      tagRepository: { findById(id: string): Awaitable<TagRecord | null> };
       noteVersionRepository: {
         findByNoteIdAndContentHash(id: string, hash: string): Awaitable<NoteVersionRecord | null>;
       };

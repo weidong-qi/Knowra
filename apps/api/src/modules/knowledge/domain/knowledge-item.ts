@@ -8,7 +8,8 @@ export interface KnowledgeItemConstructorInput<
   KnowledgeType = string,
   SourceMode = string,
   CreatedAt = string,
-  UpdatedAt = CreatedAt
+  UpdatedAt = CreatedAt,
+  DeletedAt = string | null
 > {
   id: string;
   title?: Title | '';
@@ -16,11 +17,11 @@ export interface KnowledgeItemConstructorInput<
   userExplanation?: UserExplanation | '';
   knowledgeType?: KnowledgeType | 'concept';
   importance?: unknown;
-  reviewStatus?: string;
+  reviewStatus?: string | null;
   sourceMode?: SourceMode | 'manual';
   createdAt?: CreatedAt | string;
   updatedAt?: UpdatedAt | CreatedAt | string;
-  deletedAt?: string | null;
+  deletedAt?: DeletedAt | null;
 }
 
 const REVIEW_STATUSES = new Set(['candidate', 'confirmed', 'needsRevision', 'archived']);
@@ -34,7 +35,8 @@ export class KnowledgeItem<
   KnowledgeType = string | undefined,
   SourceMode = string | undefined,
   CreatedAt = string | undefined,
-  UpdatedAt = CreatedAt
+  UpdatedAt = CreatedAt,
+  DeletedAt = string | null
 > {
   declare id: string;
   declare title: string;
@@ -46,7 +48,7 @@ export class KnowledgeItem<
   declare sourceMode: Exclude<SourceMode, string | undefined> | KnowledgeItemSourceMode;
   declare createdAt: Exclude<CreatedAt, undefined> | string;
   declare updatedAt: Exclude<UpdatedAt | CreatedAt, undefined> | string;
-  declare deletedAt: string | null;
+  declare deletedAt: Exclude<DeletedAt, undefined> | null;
 
   constructor({
     id,
@@ -67,13 +69,17 @@ export class KnowledgeItem<
     KnowledgeType,
     SourceMode,
     CreatedAt,
-    UpdatedAt
+    UpdatedAt,
+    DeletedAt
   >) {
     if (!id?.trim()) throw new Error('KnowledgeItem id is required');
     if (typeof title !== 'string' || typeof canonicalStatement !== 'string') {
       throw new Error('KnowledgeItem text fields are invalid');
     }
-    if (!REVIEW_STATUSES.has(reviewStatus) || !(SOURCE_MODES as ReadonlySet<unknown>).has(sourceMode)) {
+    if (
+      !(REVIEW_STATUSES as ReadonlySet<unknown>).has(reviewStatus) ||
+      !(SOURCE_MODES as ReadonlySet<unknown>).has(sourceMode)
+    ) {
       throw new Error('KnowledgeItem status or sourceMode is invalid');
     }
     if (importance !== null && importance !== undefined && !Number.isFinite(Number(importance))) {

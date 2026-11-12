@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.ts';
 import { createInMemoryAnalysisScopeRepository } from '../src/modules/knowledge/infrastructure/annotation-support-repositories.ts';
 import { createAnnotationScopeService } from '../src/modules/knowledge/application/annotation-scope-service.ts';

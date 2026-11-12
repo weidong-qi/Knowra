@@ -7,7 +7,7 @@ import {
   calculateContentHash,
   projectMarkdown
 } from '@study-accelerator/content-anchor';
-import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
+import { createKnowledgeModule } from '../src/modules/knowledge/index.ts';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 import { legacyAnnotationSourceChange } from '../src/modules/knowledge/application/content-annotation-service.ts';
 import {

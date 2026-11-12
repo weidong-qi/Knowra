@@ -1,37 +1,33 @@
 import { calculateContentHash } from '../domain/note-version.ts';
 import { resolveAnalysisScopeNoteVersion } from '../domain/analysis-scope-version-alias.ts';
 
-import type { SyncMappedEntityMap } from '../../sync/postgres-state-types.ts';
-import type { NoteVersion } from '../domain/note-version.ts';
+import type { NoteVersionRecord } from '../infrastructure/note-version-repository.ts';
 import type {
   AnalysisScopeAliasSnapshot,
-  AnalysisScopeAliasVersion,
   AnalysisScopeVersionBinding
 } from '../domain/analysis-scope-version-alias.ts';
 
+/** 原始历史字段只用于比较、索引或透传；不保证是构造后的实体。 */
 export interface VersionReferenceRecord {
-  id: string;
-  noteVersionId?: string | null;
+  id?: unknown;
+  noteVersionId?: unknown;
 }
 export interface PruneProvenanceSource {
-  noteId?: string;
-  originNoteVersionId?: string;
-  evidenceId?: string;
+  noteId?: unknown;
+  originNoteVersionId?: unknown;
+  evidenceId?: unknown;
 }
-export interface PruneAnalysisScope extends AnalysisScopeAliasSnapshot {
-  id: string;
-  noteVersions?: AnalysisScopeVersionBinding[] | null;
+export interface PruneAnalysisScope {
+  id?: unknown;
+  noteVersions?: unknown;
 }
-type PruneScopeInput =
-  | PruneAnalysisScope
-  | Pick<SyncMappedEntityMap['analysisScopeSnapshots'], 'id' | 'noteVersions' | 'segments' | 'contextSegments'>;
-
+type PruneScopeInput = PruneAnalysisScope;
 export interface NoteVersionPruneInput {
   note: { id: string; rawMarkdown: string };
-  versions: (AnalysisScopeAliasVersion & Partial<Pick<NoteVersion, 'createdAt' | 'createdBy'>>)[];
+  versions: NoteVersionRecord[];
   evidence: VersionReferenceRecord[];
-  provenance?: { id: string; sources?: PruneProvenanceSource[] | null }[];
-  questionSources: { id: string; sourceType?: string; sourceId?: string | null }[];
+  provenance?: { id?: unknown; sources?: PruneProvenanceSource[] | null }[];
+  questionSources: { id?: unknown; sourceType?: unknown; sourceId?: unknown }[];
   annotations: VersionReferenceRecord[];
   exclusions: VersionReferenceRecord[];
   analysisScopes: PruneScopeInput[];
@@ -45,7 +41,7 @@ interface PruneReference {
     | 'contentAnnotation'
     | 'annotationExclusion'
     | 'analysisScopeSnapshot';
-  id: string;
+  id: unknown;
 }
 
 export function buildNoteVersionPrunePreview({
@@ -59,12 +55,12 @@ export function buildNoteVersionPrunePreview({
   analysisScopes
 }: NoteVersionPruneInput) {
   const currentHash = calculateContentHash(note.rawMarkdown);
-  const evidenceByVersion = new Map<string, string[]>();
-  const versionsByEvidence = new Map<string | null | undefined, Set<string>>();
+  const evidenceByVersion = new Map<unknown, unknown[]>();
+  const versionsByEvidence = new Map<unknown, Set<unknown>>();
   for (const record of evidence) {
     if (!record.noteVersionId) continue;
     append(evidenceByVersion, record.noteVersionId, record.id);
-    const ids = versionsByEvidence.get(record.id) ?? new Set<string>();
+    const ids = versionsByEvidence.get(record.id) ?? new Set<unknown>();
     ids.add(record.noteVersionId);
     versionsByEvidence.set(record.id, ids);
   }
@@ -76,8 +72,8 @@ export function buildNoteVersionPrunePreview({
   const annotationReferences = lazyReferenceIndex(annotations, record => [record.noteVersionId]);
   const exclusionReferences = lazyReferenceIndex(exclusions, record => [record.noteVersionId]);
   // 缓存只属于本次预览；scope 和 binding 均按对象身份隔离，不能只按版本 ID 复用验证。
-  const resolvedScopes = new Map<PruneScopeInput, Map<AnalysisScopeVersionBinding, string>>();
-  const provenanceMatches = new Map<PruneProvenanceSource, Set<string | undefined>>();
+  const resolvedScopes = new Map<PruneScopeInput, Map<AnalysisScopeVersionBinding, unknown>>();
+  const provenanceMatches = new Map<PruneProvenanceSource, Set<unknown>>();
   return {
     noteId: note.id,
     mode: 'preview-only',
@@ -95,7 +91,7 @@ export function buildNoteVersionPrunePreview({
                 source,
                 source.noteId === note.id
                   ? new Set([source.originNoteVersionId, ...(versionsByEvidence.get(source.evidenceId) ?? [])])
-                  : new Set<string | undefined>()
+                  : new Set<unknown>()
               );
             }
             return provenanceMatches.get(source)!.has(version.id);
@@ -110,7 +106,7 @@ export function buildNoteVersionPrunePreview({
         if (
           (scope.noteVersions as AnalysisScopeVersionBinding[] | null | undefined)?.some(binding => {
             if (binding.noteId !== note.id) return false;
-            const resolved = resolvedScopes.get(scope) ?? new Map<AnalysisScopeVersionBinding, string>();
+            const resolved = resolvedScopes.get(scope) ?? new Map<AnalysisScopeVersionBinding, unknown>();
             resolvedScopes.set(scope, resolved);
             if (!resolved.has(binding))
               resolved.set(
@@ -135,12 +131,12 @@ export function buildNoteVersionPrunePreview({
 }
 
 // 首次实际访问才建索引：空版本不读取引用，且保留各引用类别的错误优先级。
-function lazyReferenceIndex<Record extends { id: string }>(
+function lazyReferenceIndex<Record extends { id?: unknown }>(
   records: Record[],
-  targetIds: (record: Record) => Iterable<string | null | undefined>
+  targetIds: (record: Record) => Iterable<unknown>
 ) {
-  let index: Map<string | null | undefined, string[]> | undefined;
-  return (id: string) => {
+  let index: Map<unknown, unknown[]> | undefined;
+  return (id: unknown) => {
     if (!index) {
       index = new Map();
       for (const record of records) for (const targetId of targetIds(record)) append(index, targetId, record.id);
@@ -149,7 +145,7 @@ function lazyReferenceIndex<Record extends { id: string }>(
   };
 }
 
-function append<Key>(index: Map<Key, string[]>, key: Key, value: string) {
+function append<Key>(index: Map<Key, unknown[]>, key: Key, value: unknown) {
   const values = index.get(key) ?? [];
   values.push(value);
   index.set(key, values);

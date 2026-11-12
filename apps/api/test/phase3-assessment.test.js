@@ -39,7 +39,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 LearningObjective confirmation requires a confirmed KnowledgeItem',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const item = knowledge.knowledgeItemService.createCandidate({
         id: 'phase3-item-objective',
@@ -71,7 +71,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 Question binds objectives and passes structure/source review gates',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const item = knowledge.knowledgeItemService.createCandidate({
         id: 'phase3-item-question',
@@ -116,7 +116,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 ExamProfile and ExamFocus keep optional exam context independent',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const item = knowledge.knowledgeItemService.createCandidate({
         id: 'phase3-item-focus',
@@ -164,7 +164,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 note version changes mark dependent QuestionSource stale without deleting the Question',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'phase3-source-note',
@@ -204,7 +204,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 direct NoteVersion QuestionSource blocks permanent note deletion',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const note = knowledge.noteService.createNote({
         id: 'phase32-question-source-note',
@@ -383,7 +383,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 create 拒绝重复 LearningObjective、Question 与考试资产 ID',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const { item, objective } = createConfirmedObjective(knowledge, 'phase32-duplicate');
 
@@ -439,7 +439,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 LearningObjective 确认拒绝模糊动词和认知层级冲突',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const item = knowledge.knowledgeItemService.createCandidate({
         id: 'phase32-objective-gate-item',
@@ -477,7 +477,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 QuestionSource 状态由真实引用推导且全部目标必须 confirmed',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const { item, objective } = createConfirmedObjective(knowledge, 'phase32-source-health');
       const candidateObjective = knowledge.learningObjectiveService.createCandidate({
@@ -518,7 +518,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 choice Question 确认门禁拒绝重复 optionId',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const { objective } = createConfirmedObjective(knowledge, 'phase32-choice-option');
       const question = knowledge.questionService.createQuestion({
@@ -548,7 +548,7 @@ export const phase3AssessmentTests = [
   {
     name: 'Phase3 上游正式资产失效会把 confirmed Question 退回 candidate',
     async run() {
-      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.js');
+      const { createKnowledgeModule } = await import('../src/modules/knowledge/index.ts');
       const knowledge = createKnowledgeModule();
       const { item, objective } = createConfirmedObjective(knowledge, 'phase32-dependency');
       const question = knowledge.questionService.createQuestion({
