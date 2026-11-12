@@ -23,6 +23,12 @@ export interface SyncReferenceEntity {
   noteVersionId?: string | null;
   annotationId?: string | null;
   parentAnnotationId?: string | null;
+  conceptId?: string;
+  fromConceptId?: string;
+  toConceptId?: string;
+  basisItemId?: string | null;
+  mergedInto?: string | null;
+  deletedAt?: string | null;
   knowledgeItemId?: string;
   learningObjectiveId?: string;
   examProfileId?: string;
@@ -72,6 +78,12 @@ export const TRAINING_COLLECTIONS = Object.freeze([
 // 个人待办：整条记录同步；树结构与归档封存由云端批次校验。
 export const PERSONAL_TODOS_SYNC_CAPABILITY = 'personal-todos-v1';
 export const PERSONAL_TODO_COLLECTIONS = Object.freeze(['personalTodos']);
+export const KNOWLEDGE_CONCEPTS_SYNC_CAPABILITY = 'knowledge-concepts-v1';
+export const KNOWLEDGE_CONCEPT_COLLECTIONS = Object.freeze([
+  'knowledgeConcepts',
+  'knowledgeConceptLinks',
+  'knowledgeConceptRelations'
+]);
 export const WRITABLE_COLLECTIONS = Object.freeze([
   'spaces',
   'folders',
@@ -87,7 +99,8 @@ export const WRITABLE_COLLECTIONS = Object.freeze([
   'analysisScopeSnapshots',
   ...KNOWLEDGE_COLLECTIONS,
   ...TRAINING_COLLECTIONS,
-  ...PERSONAL_TODO_COLLECTIONS
+  ...PERSONAL_TODO_COLLECTIONS,
+  ...KNOWLEDGE_CONCEPT_COLLECTIONS
 ]);
 export const IMMUTABLE_COLLECTIONS = new Set([
   'noteVersions',
@@ -111,7 +124,12 @@ export const sameEntity = (collection: string, left: object | null | undefined, 
 
 export function referencesFor(collection: string, value: SyncReferenceEntity | null | undefined): SyncReference[] {
   if (!value) return [];
+  if (KNOWLEDGE_CONCEPT_COLLECTIONS.includes(collection) && value.deletedAt) return [];
   const fields = {
+    conceptId: 'knowledgeConcepts',
+    fromConceptId: 'knowledgeConcepts',
+    toConceptId: 'knowledgeConcepts',
+    basisItemId: 'knowledgeItems',
     spaceId: 'spaces',
     folderId: 'folders',
     groupId: 'tagGroups',
@@ -231,7 +249,7 @@ export function changeReferencesFor(
   after: SyncReferenceState
 ): SyncReference[] {
   const refs = syncReferencesFor(change.collection, change.value, after);
-  if (TRAINING_COLLECTIONS.includes(change.collection)) {
+  if (TRAINING_COLLECTIONS.includes(change.collection) || KNOWLEDGE_CONCEPT_COLLECTIONS.includes(change.collection)) {
     const previous = before[change.collection].find(item => item.id === change.id);
     refs.push(...syncReferencesFor(change.collection, previous, before));
   }

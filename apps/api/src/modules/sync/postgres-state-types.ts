@@ -39,5 +39,8 @@ export interface SyncMappedEntityMap {
   questions: IsoRow<Models.Question>;
   questionObjectives: IsoRow<Models.QuestionObjective>;
   questionSources: IsoRow<Models.QuestionSource>;
+  knowledgeConcepts: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConcept;
+  knowledgeConceptLinks: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConceptLink;
+  knowledgeConceptRelations: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConceptRelation;
   personalTodos: import('../../../../../packages/web-core/src/personal-todos/types.ts').Todo;
 }

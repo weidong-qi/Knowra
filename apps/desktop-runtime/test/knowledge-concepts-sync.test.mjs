@@ -1,0 +1,100 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import { once } from 'node:events';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
+import { createAppContext } from '../../api/src/app.factory.ts';
+import { createServer } from '../../api/src/server.ts';
+import { createAttachmentTransfer } from '../../api/src/modules/sync/attachment-transfer.ts';
+import {
+  createKnowledgeConceptService,
+  createStateBackedConceptStore
+} from '../../api/src/modules/knowledge-concepts/service.ts';
+import { createSyncEngine } from '../src/sync-engine.mjs';
+import { temporaryDirectory, openWorkspace } from './helpers.mjs';
+
+test('概念在两台 SQLite 设备间同步：直接合并、三集合原子迁移、重启和幂等', async t => {
+  const root = temporaryDirectory(t);
+  const cloudStore = createFileDataStore(path.join(root, 'cloud.json'));
+  const context = createAppContext({
+    dataStore: cloudStore,
+    storageRootDir: root,
+    uploadsDir: path.join(root, 'uploads')
+  });
+  context.modules.knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
+  const server = createServer({ appContext: context, logger: { error() {} } });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const devices = [];
+  const device = name => {
+    const directory = path.join(root, name);
+    const workspace = openWorkspace(directory);
+    const concepts = createKnowledgeConceptService({ store: createStateBackedConceptStore(workspace.store) });
+    const engine = createSyncEngine(workspace.store, {
+      autoSync: false,
+      fetcher: fetch,
+      noteService: workspace.knowledge.noteService,
+      entityTransfer: createAttachmentTransfer({
+        uploadsDir: path.join(directory, 'uploads'),
+        storageRootDir: directory
+      })
+    });
+    const value = { ...workspace, concepts, engine };
+    devices.push(value);
+    return value;
+  };
+  t.after(async () => {
+    for (const device of devices) {
+      await device.engine.close();
+      device.store.close();
+    }
+  });
+  const a = device('a');
+  const b = device('b');
+  await a.engine.configure({ serverUrl: origin });
+  await b.engine.configure({ serverUrl: origin });
+  await a.concepts.execute({
+    type: 'createConcept',
+    id: 'a',
+    name: 'CNN',
+    expectedRevision: 0,
+    operationId: 'create-a'
+  });
+  await a.concepts.execute({
+    type: 'createConcept',
+    id: 'b',
+    name: '卷积神经网络',
+    expectedRevision: 0,
+    operationId: 'create-b'
+  });
+  await a.concepts.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    operationId: 'create-r',
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'relatedTo',
+    basisItemId: null
+  });
+  await a.engine.sync();
+  await b.engine.sync();
+  assert.equal((await b.concepts.list()).concepts.length, 2);
+  await a.concepts.execute({
+    type: 'mergeConcept',
+    id: 'a',
+    expectedRevision: 2,
+    operationId: 'merge',
+    targetId: 'b',
+    expectedTargetRevision: 1
+  });
+  await a.engine.sync();
+  await b.engine.sync();
+  assert.equal(b.engine.status().entityConflict, null);
+  assert.equal((await b.concepts.list()).concepts.length, 1);
+  assert.equal((await b.concepts.list()).relations.length, 0);
+  assert.deepEqual((await b.concepts.list()).concepts[0].aliases, ['CNN']);
+  assert.equal(cloudStore.state.knowledgeConcepts.find(row => row.id === 'a').mergedInto, 'b');
+});
