@@ -48,6 +48,7 @@ const props = {
   anchor: { x: 100, top: 150, bottom: 170 },
   canSave: true,
   onSave: vi.fn(),
+  onAnnotate: vi.fn(),
   onClose: vi.fn()
 };
 beforeEach(() => {
@@ -59,8 +60,8 @@ afterEach(cleanup);
 it('展示原形和全部释义，保存用户选中的释义且保留来源', async () => {
   render(<PdfDictionaryPopover {...props} />);
   await screen.findByText('原文 Gradients → 原形 gradient');
-  fireEvent.change(screen.getByRole('combobox', { name: '保存的释义' }), { target: { value: '0' } });
-  fireEvent.click(screen.getByRole('button', { name: '保存为标注' }));
+  fireEvent.change(screen.getByRole('combobox', { name: '附带的释义' }), { target: { value: '0' } });
+  fireEvent.click(screen.getByRole('button', { name: '标注并保存释义' }));
   expect(props.onSave).toHaveBeenCalledWith('词典 · ECDICT\ngradient /ɡreɪdiənt/\nn. 梯度');
   fireEvent.click(screen.getByRole('button', { name: '关闭' }));
   expect(props.onClose).toHaveBeenCalledOnce();
@@ -69,7 +70,8 @@ it('展示原形和全部释义，保存用户选中的释义且保留来源', a
 it('只读资料可以查词但不能保存', async () => {
   render(<PdfDictionaryPopover {...props} canSave={false} />);
   await screen.findByText('原文 Gradients → 原形 gradient');
-  expect(screen.getByRole('button', { name: '保存为标注' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '标注并保存释义' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '仅标注原文' })).toBeDisabled();
 });
 
 it('区分未收录和读取失败，并允许重试', async () => {
@@ -78,7 +80,8 @@ it('区分未收录和读取失败，并允许重试', async () => {
   await screen.findByRole('alert');
   fireEvent.click(screen.getByRole('button', { name: '重新查询' }));
   await screen.findByText(/本地词典未收录/);
-  expect(screen.queryByRole('button', { name: '保存为标注' })).toBeNull();
+  expect(screen.getByRole('button', { name: '标注并保存释义' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '仅标注原文' })).toBeEnabled();
 });
 
 it('切换查询后旧请求晚到也不会覆盖新词结果', async () => {
@@ -97,22 +100,34 @@ it('切换查询后旧请求晚到也不会覆盖新词结果', async () => {
   expect(screen.getByText('n. 最小值')).toBeVisible();
 });
 
-it('翻译加载或失败时仍同时提供普通标注操作', async () => {
-  const annotate = vi.fn();
+it('查词失败时可调整设置，明确提交后才标注原文', async () => {
+  const pick = vi.fn();
   lookup.mockRejectedValue(new Error('词库读取失败'));
   render(
     <PdfDictionaryPopover
       {...props}
       annotationControls={
         <div role="toolbar" aria-label="选择标注分类">
-          <button onClick={annotate}>标注为重点</button>
+          <button onClick={pick}>选择分类：重点</button>
         </div>
       }
     />
   );
   expect(screen.getByRole('toolbar', { name: '选择标注分类' })).toBeVisible();
   await screen.findByRole('alert');
-  fireEvent.click(screen.getByRole('button', { name: '标注为重点' }));
-  expect(annotate).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: '选择分类：重点' }));
+  expect(pick).toHaveBeenCalledOnce();
+  expect(props.onAnnotate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: '仅标注原文' }));
+  expect(props.onAnnotate).toHaveBeenCalledOnce();
+  expect(props.onSave).not.toHaveBeenCalled();
+});
+
+it('查询尚未完成时也可仅标注原文，释义保存需等待结果', () => {
+  lookup.mockReturnValue(new Promise(() => undefined));
+  render(<PdfDictionaryPopover {...props} />);
+  expect(screen.getByRole('button', { name: '标注并保存释义' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: '仅标注原文' }));
+  expect(props.onAnnotate).toHaveBeenCalledOnce();
   expect(props.onSave).not.toHaveBeenCalled();
 });
