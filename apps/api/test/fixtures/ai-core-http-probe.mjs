@@ -21,7 +21,10 @@ export async function measureCoreHttp(mode) {
     const space = context.http.knowledge.createDefaultKnowledgeSpace({});
     if (mode === 'off') context.ai = createUnavailableAiRuntime('AI 功能已关闭。');
     server = createServer({ appContext: context, logger: { warn() {}, error() {} } });
-    await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
     const base = `http://127.0.0.1:${server.address().port}`;
     async function request(route, status, options) {
       const response = await fetch(`${base}${route}`, options);
@@ -30,9 +33,11 @@ export async function measureCoreHttp(mode) {
       return body;
     }
     async function exercise(id) {
-      await request('/api/knowledge/notes', 201, { method: 'POST',
+      await request('/api/knowledge/notes', 201, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, title: `核心笔记 ${id}`, rawMarkdown: '核心保存', spaceId: space.id }) });
+        body: JSON.stringify({ id, title: `核心笔记 ${id}`, rawMarkdown: '核心保存', spaceId: space.id })
+      });
       const note = await request(`/api/knowledge/notes/${id}`, 200);
       assert.equal(note.data.id, id);
       await request('/api/sync/status', 200);
@@ -50,7 +55,9 @@ export async function measureCoreHttp(mode) {
     assert.equal(context.dataStore.state.notes.length, WARMUP_COUNT + CORE_HTTP_SAMPLE_COUNT);
     return samples;
   } finally {
-    console.log(`R01 核心 HTTP ${mode} 有效样本 ${samples.length}/${CORE_HTTP_SAMPLE_COUNT}(ms): ${JSON.stringify(samples)}`);
+    console.log(
+      `R01 核心 HTTP ${mode} 有效样本 ${samples.length}/${CORE_HTTP_SAMPLE_COUNT}(ms): ${JSON.stringify(samples)}`
+    );
     try {
       if (hang) {
         const result = await hang.close();
@@ -59,7 +66,9 @@ export async function measureCoreHttp(mode) {
     } finally {
       try {
         if (server?.listening) await new Promise(resolve => server.close(resolve));
-      } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+      } finally {
+        fs.rmSync(directory, { recursive: true, force: true });
+      }
     }
   }
 }
