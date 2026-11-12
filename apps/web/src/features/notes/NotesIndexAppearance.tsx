@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { IconButton } from '../../components/ui';
 import {
   useNotesIndexAppearance,
@@ -10,6 +11,18 @@ import styles from './NotesIndexTheme.module.css';
 export function notesIndexAppearanceProps(appearance: NotesIndexAppearance) {
   return {
     className: styles.theme,
+    style: {
+      '--shell-topbar-color':
+        (appearance.mode === 'dark' ? appearance.topbarColorDark : appearance.topbarColorLight) ?? undefined,
+      '--shell-rail-color':
+        (appearance.mode === 'dark' ? appearance.railColorDark : appearance.railColorLight) ?? undefined,
+      '--ni-chrome': (appearance.mode === 'dark' ? appearance.shellColorDark : appearance.shellColorLight) ?? undefined,
+      '--ni-shell-panel':
+        (appearance.mode === 'dark' ? appearance.sidebarColorDark : appearance.sidebarColorLight) ?? undefined
+    } as CSSProperties,
+    'data-sidebar-card': String(appearance.sidebarCard),
+    'data-sidebar-rounded': String(appearance.sidebarRounded),
+    'data-sidebar-border': String(appearance.sidebarBorder),
     'data-ni-mode': appearance.mode,
     'data-ni-theme': appearance.theme,
     'data-ni-shape': appearance.shape,
