@@ -516,6 +516,7 @@ function assertSchemaVersion(schemaVersion: unknown) {
     schemaVersion === 5 ||
     schemaVersion === 6 ||
     schemaVersion === 7 ||
+    schemaVersion === 8 ||
     schemaVersion === LOCAL_DATA_SCHEMA_VERSION
   ) {
     return;

@@ -93,7 +93,9 @@ test(
     const database = await createPostgresTestDatabase();
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-concepts-pg-'));
     const app = await createPostgresAppContext({ databaseUrl: database.databaseUrl, storageRootDir: root });
+    let peer;
     t.after(async () => {
+      await peer?.close();
       await app.close();
       await database.close();
       fs.rmSync(root, { recursive: true, force: true });
@@ -105,6 +107,10 @@ test(
       canonicalStatement: '关系说明',
       knowledgeType: 'concept',
       sourceMode: 'manual'
+    });
+    peer = await createPostgresAppContext({
+      databaseUrl: database.databaseUrl,
+      storageRootDir: path.join(root, 'peer')
     });
     const create = id =>
       app.knowledgeConcepts.execute({
@@ -128,8 +134,8 @@ test(
       basisItemId: 'k'
     });
     const conflicts = await Promise.allSettled(
-      ['first', 'second'].map(name =>
-        app.knowledgeConcepts.execute({
+      ['first', 'second'].map((name, index) =>
+        (index ? peer : app).knowledgeConcepts.execute({
           type: 'updateConcept',
           id: 'a',
           operationId: name,

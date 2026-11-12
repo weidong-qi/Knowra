@@ -348,12 +348,10 @@ describe('KnowledgeWorkspaceView', () => {
       onPermanentDelete: vi
         .fn()
         .mockRejectedValue(Object.assign(new Error('响应丢失'), { code: 'SYNC_NETWORK_UNAVAILABLE' })),
-      onPurgeStatus: vi
-        .fn()
-        .mockResolvedValue({
-          pending: null,
-          result: { status: 'subject-purged', asset: purgePreview.asset, localState: 'synchronized' }
-        })
+      onPurgeStatus: vi.fn().mockResolvedValue({
+        pending: null,
+        result: { status: 'subject-purged', asset: purgePreview.asset, localState: 'synchronized' }
+      })
     });
     render(<KnowledgeWorkspaceView {...input} />);
     await userEvent.click(await screen.findByRole('button', { name: '永久删除…' }));
@@ -555,6 +553,7 @@ describe('KnowledgeWorkspaceView', () => {
         .mockResolvedValue(archived)
     });
     const { rerender } = render(<KnowledgeWorkspaceView {...input} />);
+    await waitFor(() => expect(input.onGet).toHaveBeenCalledWith('k1'));
     rerender(<KnowledgeWorkspaceView {...input} selectedItemId="k2" />);
     expect(await screen.findByRole('alert')).toHaveTextContent('加载暂时失败');
     await userEvent.click(screen.getByRole('button', { name: '重新加载知识' }));
