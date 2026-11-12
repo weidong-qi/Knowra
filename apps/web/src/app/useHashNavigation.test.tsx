@@ -41,7 +41,7 @@ describe('workspace browser history', () => {
     act(() => result.current.navigate('/knowledge?scope=candidate&q=卷积', { replace: true }));
     act(() => result.current.navigate('/knowledge/concepts?concept=cnn'));
     act(() => result.current.back());
-    await waitFor(() => expect(result.current.pathname).toBe('/knowledge?scope=candidate&q=卷积'));
+    await waitFor(() => expect(decodeURI(result.current.pathname)).toBe('/knowledge?scope=candidate&q=卷积'));
     act(() => result.current.back());
     await waitFor(() => expect(result.current.pathname).toBe('/knowledge'));
   });

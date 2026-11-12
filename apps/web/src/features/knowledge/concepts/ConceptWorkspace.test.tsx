@@ -166,3 +166,25 @@ it('GET 旧快照不能覆盖已成功的命令', async () => {
   });
   expect(store.getState().concepts[0]?.name).toBe('A');
 });
+
+it('版本冲突自动刷新后保留失败原因和表单输入', async () => {
+  const server = fixture([
+    { type: 'createConcept', id: 'a', operationId: 'create-a', expectedRevision: 0, name: '原概念' }
+  ]);
+  const request = vi.fn(async (url: string) => {
+    if (url.endsWith('/commands'))
+      throw new ApiRequestError('概念已被其他设备更新，请重新核对版本', {
+        status: 409,
+        code: 'CONCEPT_REVISION_CONFLICT'
+      });
+    return { data: server.state() };
+  });
+  const store = createConceptStore(request as never);
+  await store.load();
+  render(<ConceptEditor concept={server.state().concepts[0]} canWrite store={store} onClose={vi.fn()} />);
+  await userEvent.type(screen.getByRole('textbox', { name: '概念名称' }), '修改');
+  await userEvent.click(screen.getByRole('button', { name: '保存概念' }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(3));
+  expect(screen.getByRole('alert')).toHaveTextContent('其他设备更新');
+  expect(screen.getByRole('textbox', { name: '概念名称' })).toHaveValue('原概念修改');
+});

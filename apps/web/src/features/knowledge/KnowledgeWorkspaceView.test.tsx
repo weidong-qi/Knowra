@@ -303,6 +303,8 @@ describe('KnowledgeWorkspaceView', () => {
     await user.tab();
     expect(selected).toHaveFocus();
     await user.tab();
+    expect(screen.getByRole('button', { name: '关闭详情' })).toHaveFocus();
+    await user.tab();
     expect(detail).toHaveFocus();
     expect(input.onSelectItem).not.toHaveBeenCalled();
   });

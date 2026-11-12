@@ -1,3 +1,4 @@
+import { knowledgeLibraryNavigationKey } from '../features/knowledge/library/knowledgeLibraryRoute';
 import { KnowledgeLibraryProvider } from '../features/knowledge/library/KnowledgeLibraryProvider';
 import { KnowledgeContextSidebar } from '../features/knowledge/library/KnowledgeContextSidebar';
 import { ScopedAppearanceProvider } from '../components/ui/overlay';
@@ -132,8 +133,9 @@ function AppContent() {
   }, [storeActiveDomain, location.pathname, setActiveWorkDomain]);
 
   useEffect(() => {
-    if (previousPathRef.current === location.pathname) return;
+    const previousKey = knowledgeLibraryNavigationKey(previousPathRef.current);
     previousPathRef.current = location.pathname;
+    if (previousKey === knowledgeLibraryNavigationKey(location.pathname)) return;
     const stage = document.getElementById('feature-stage');
     stage?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     stage?.focus({ preventScroll: true });

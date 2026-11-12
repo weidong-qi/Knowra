@@ -38,3 +38,12 @@ export function knowledgeLibraryPath(route: KnowledgeLibraryRoute): string {
   if (route.id) params.set(route.page === 'concepts' ? 'concept' : 'item', route.id);
   return `${path}${params.size ? `?${params}` : ''}`;
 }
+
+/** 搜索和列表选择不离开当前工作区，避免外壳夺走输入框或条目焦点。 */
+export function knowledgeLibraryNavigationKey(pathname: string) {
+  if (!pathname.startsWith('/knowledge')) return pathname;
+  const [path, query] = pathname.split('?');
+  const params = new URLSearchParams(query);
+  for (const key of ['q', 'item', 'concept']) params.delete(key);
+  return `${path}${params.size ? `?${params}` : ''}`;
+}

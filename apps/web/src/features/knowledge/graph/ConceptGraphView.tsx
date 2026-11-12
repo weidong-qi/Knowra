@@ -4,7 +4,7 @@ import { useNotesIndexAppearance } from '../../notes/notesIndexAppearanceModel';
 import indexStyles from '../KnowledgeIndex.module.css';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, Checkbox, PressableButton, SearchBox } from '../../../components/ui';
-import { KnowledgeIcon } from '../../../components/icons/knowra';
+import { KnowledgeIcon, SearchIcon } from '../../../components/icons/knowra';
 import { WorkspacePanel, WorkspacePanelBody, WorkspacePanelFooter } from '../../../components/workspace/WorkspacePanel';
 import { PathTrail } from '../../../shell/PathTrail';
 import { useNavigate } from '../../../app/router';
@@ -168,6 +168,7 @@ export function ConceptGraphView({ data: sample = CONCEPT_GRAPH_SAMPLE }: { data
           <div className={indexStyles.desktopTools} role="toolbar" aria-label="概念图工具栏">
             <div className={indexStyles.searchSlot}>
               <SearchBox
+                icon={<SearchIcon size={15} />}
                 label="搜索图中概念"
                 placeholder="搜索图中概念…"
                 value={query}

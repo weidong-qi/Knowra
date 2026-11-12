@@ -188,7 +188,6 @@ export function KnowledgeDetail({
               id={`${tabsId}-${key}-tab`}
               role="tab"
               aria-selected={tab === key}
-              aria-pressed={tab === key}
               aria-controls={`${tabsId}-${key}`}
               tabIndex={tab === key ? 0 : -1}
               onPress={() => setTab(key)}

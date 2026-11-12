@@ -87,7 +87,10 @@ for (const width of [1440, 390])
         await expect(list.getByRole('button', { name: /合成长标题/ })).toBeVisible();
         await expect(list.getByRole('button', { name: /合成卷积知识/ })).toHaveCount(0);
         const search = page.getByRole('searchbox', { name: '搜索知识' });
-        await search.fill('独立阅读');
+        await search.locator('..').click();
+        await search.pressSequentially('独立阅读');
+        await expect(search).toBeFocused();
+        await expect(search).toHaveValue('独立阅读');
         await expect(page).toHaveURL(/q=/);
         await list.getByRole('button', { name: /合成长标题/ }).click();
         await expect(page.getByRole('article', { name: '知识详情' })).toContainText('合成核心陈述');
@@ -130,7 +133,9 @@ for (const width of [1440, 390])
         await page.getByRole('button', { name: '关闭详情', exact: true }).click();
         await (await openSidebar()).getByRole('button', { name: '概念图（原型）', exact: true }).click();
         await expect(page.getByRole('heading', { name: '概念图（原型）', exact: true })).toBeVisible();
-        await page.getByRole('searchbox', { name: '搜索图中概念' }).fill('张量');
+        const graphSearch = page.getByRole('searchbox', { name: '搜索图中概念' });
+        await graphSearch.locator('..').click();
+        await graphSearch.fill('张量');
         await page
           .getByRole('region', { name: '图中概念搜索结果' })
           .getByRole('button', { name: '张量', exact: true })
