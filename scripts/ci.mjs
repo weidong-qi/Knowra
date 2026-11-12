@@ -11,7 +11,7 @@ export const suites = Object.freeze({
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts',
-    'test:e2e -w @study-accelerator/web -- v5-global-appearance.spec.ts'
+    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts v5-global-appearance.spec.ts'
   ]
 });
 
