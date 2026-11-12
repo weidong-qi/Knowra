@@ -67,3 +67,20 @@
   align-items: center;
   gap: 8px;
 }
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.settingsTitle {
+  font-size: var(--font-size-ui);
+  font-weight: 550;
+}
+.annotationActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}

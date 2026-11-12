@@ -26,7 +26,15 @@
 | 本地离线运行服务（先构建前端） | `npm run start:desktop` |
 | 本地存储/恢复测试、真实页面验收 | `npm run test:desktop` / `npm run test:e2e -w @study-accelerator/desktop-runtime` |
 
-按改动选择检查；前端 UI 使用 Vitest，生产服务器使用 node:test；API 使用显式注册的自定义 runner。不要把直接导入 API 测试文件当作执行其测试。交互改动还需验证受影响的页面状态；完整 E2E 入口是 `npm run test:e2e -w @study-accelerator/web`。
+### 验证与本机资源约束
+
+**耗时、占用大量 CPU 或内存的测试与验收全部交给 GitHub Actions，本地不跑。** 用户的 Mac 在运行这些测试时发热严重；上表是命令索引，不代表应在本机执行。
+
+- 全量测试、整套前端/API/桌面运行时回归、真实浏览器/E2E、PostgreSQL 集成测试，以及 Mac 构建与隔离验收，均在 GitHub 执行。包括 `npm test`、`npm run check:web`、`npm run test:web`、`npm run test:api`、`npm run test:desktop`、各 workspace 的 `test:e2e`、`npm run build:mac` 和 `npm run test:mac`；不要通过拆分命令或并行执行在本地重跑这些套件。
+- 本地仅做轻量检查：阅读代码、`git diff --check`、本次改动文件的 Prettier/ESLint；确有必要的少量定向单测须确认资源开销小，并串行执行。不要自行扩大为全套测试或同时启动多个测试进程。
+- 创建或更新 PR 后，由 GitHub Actions 验证；没有 PR 时使用已有工作流的手动触发入口。核对对应提交的检查结果，报告通过、失败或尚未完成的状态。GitHub 不可用时说明验证限制，不自动回退到本机执行重型测试。
+
+按改动选择 GitHub 上的验证范围；前端 UI 使用 Vitest，生产服务器使用 node:test；API 使用显式注册的自定义 runner。不要把直接导入 API 测试文件当作执行其测试。交互改动还需在 GitHub 验证受影响的页面状态；完整 E2E 入口是 `npm run test:e2e -w @study-accelerator/web`。
 
 改完代码后，只对本次新增或修改的文件运行 `node scripts/lint/run.mjs prettier --write <文件...>` 和 `node scripts/lint/run.mjs eslint <文件...>`，并修掉新引入的 ESLint 问题。仓库仍有存量问题，所以不要整仓库格式化，也不要顺手修与任务无关的旧问题；如果某个旧问题妨碍当前改动，请在回复中说明。
 
