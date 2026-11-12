@@ -5,7 +5,9 @@ import type { CreateContentAnnotationDto } from '../../application/dto/content-a
 import { mapAnnotation, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 
-type AnnotationWriteData<Input extends Pick<ContentAnnotation, 'identityBinding'>> = Omit<
+type AnnotationIdentity =
+  Pick<ContentAnnotation, 'identityBinding'> | Pick<NonNullable<ReturnType<typeof mapAnnotation>>, 'identityBinding'>;
+type AnnotationWriteData<Input extends AnnotationIdentity> = Omit<
   Input,
   'createdAt' | 'updatedAt' | 'deletedAt' | 'identityBinding'
 > & {
@@ -30,7 +32,7 @@ interface AnnotationWhere {
   schemaVersion?: { not: number };
 }
 interface ContentAnnotationDelegate {
-  upsert<Input extends Pick<ContentAnnotation, 'identityBinding'>>(input: {
+  upsert<Input extends AnnotationIdentity>(input: {
     where: { id: string };
     create: AnnotationWriteData<Input>;
     update: Omit<AnnotationWriteData<Input>, 'id' | 'createdAt'>;
@@ -74,8 +76,11 @@ export function createPostgresContentAnnotationRepository({ db }: ContentAnnotat
   }
 
   return {
-    async save<Kind, SourceMode, ScopeType, Importance, HeadingPath, Anchor>(
-      annotation: ContentAnnotation<Kind, SourceMode, ScopeType, Importance, HeadingPath, Anchor>
+    // 空间迁移也会原样回写数据库映射记录，不能把其 JSON/字符串字段冒充领域构造结果。
+    async save(
+      annotation:
+        | ContentAnnotation<unknown, unknown, unknown, unknown, unknown, unknown>
+        | NonNullable<ReturnType<typeof mapAnnotation>>
     ) {
       const data = {
         id: annotation.id,

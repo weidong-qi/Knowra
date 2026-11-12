@@ -1,7 +1,21 @@
+import type { PurgeTaskState } from '../../../infrastructure/purge-task-types.ts';
+interface TaskCoverageReference {
+  collection: 'persistedTasks';
+  reasonCode: 'TASK_REFERENCE_COVERAGE_UNAVAILABLE';
+  action: 'repair-or-verify-task-history';
+  message: string;
+}
+interface TaskCoverage {
+  runningTasks: 'verified' | 'unverified';
+  references: TaskCoverageReference[];
+}
+interface PurgeEpochInput {
+  expectedDatasetEpoch?: unknown;
+}
 import { createAppError } from '../../../errors/app-error.js';
 import { verifyPurgeTaskState } from '../../../infrastructure/asset-purge-task-state.ts';
 
-export function taskCoverage(read) {
+export function taskCoverage(read?: (() => PurgeTaskState) | null): TaskCoverage {
   try {
     if (read) verifyPurgeTaskState(read());
     return { runningTasks: 'verified', references: [] };
@@ -9,7 +23,9 @@ export function taskCoverage(read) {
     return unavailableTaskCoverage();
   }
 }
-export async function asyncTaskCoverage(read) {
+export async function asyncTaskCoverage(
+  read?: (() => Promise<PurgeTaskState> | PurgeTaskState) | null
+): Promise<TaskCoverage> {
   try {
     if (read) verifyPurgeTaskState(await read());
     return { runningTasks: 'verified', references: [] };
@@ -17,7 +33,7 @@ export async function asyncTaskCoverage(read) {
     return unavailableTaskCoverage();
   }
 }
-function unavailableTaskCoverage() {
+function unavailableTaskCoverage(): TaskCoverage {
   return {
     runningTasks: 'unverified',
     references: [
@@ -30,7 +46,11 @@ function unavailableTaskCoverage() {
     ]
   };
 }
-export function supplementPurgePreview(preflight, coverage, epoch) {
+export function supplementPurgePreview<Preview extends { references: object[]; decision: string; coverage: object }>(
+  preflight: Preview,
+  coverage: TaskCoverage,
+  epoch?: string | null
+) {
   const references = [...preflight.references, ...coverage.references];
   return {
     ...preflight,
@@ -43,7 +63,7 @@ export function supplementPurgePreview(preflight, coverage, epoch) {
     coverage: { ...preflight.coverage, runningTasks: coverage.runningTasks }
   };
 }
-export function assertPurgeDatasetEpoch(input, epoch) {
+export function assertPurgeDatasetEpoch(input: PurgeEpochInput, epoch?: string | null) {
   if (!Object.hasOwn(input, 'expectedDatasetEpoch')) return;
   const expected = input.expectedDatasetEpoch;
   if (typeof expected !== 'string' || !expected.trim() || expected.trim() !== expected || expected.length > 200) {
@@ -52,7 +72,12 @@ export function assertPurgeDatasetEpoch(input, epoch) {
   if (!epoch || expected !== epoch)
     throw createAppError('DATASET_CHANGED', '数据集已变化，请重新同步并预检清理。', 409);
 }
-export function assertManualPurgeScope(type, asset, input, provenance = []) {
+export function assertManualPurgeScope(
+  type: string,
+  asset: { sourceMode?: unknown; sourceType?: unknown },
+  input: PurgeEpochInput,
+  provenance: readonly object[] = []
+) {
   if (!Object.hasOwn(input, 'expectedDatasetEpoch')) return;
   const manual =
     type === 'knowledgeItem'

@@ -3,6 +3,9 @@ import { createAppError } from '../../../errors/app-error.ts';
 import { buildDefaultTagGroups } from '../domain/default-tag-groups.ts';
 
 import type { Prisma } from '@prisma/client';
+import type { AnalysisScopeRecord } from '../infrastructure/annotation-support-repositories.ts';
+import type { ContentAnnotationRecord } from '../infrastructure/content-annotation-repository.ts';
+import type { NoteVersionRecord } from '../infrastructure/note-version-repository.ts';
 
 interface MigrationAsset {
   id: string;
@@ -17,9 +20,9 @@ export interface SpaceMigrationAssets {
   notes: MigrationNote[];
   tags: (MigrationAsset & { groupId?: string | null })[];
   tagGroups: (MigrationAsset & { name: string; code?: string | null })[];
-  annotations: MigrationAsset[];
+  annotations: ContentAnnotationRecord[];
   pdfAnnotations: MigrationAsset[];
-  analysisScopes: MigrationAsset[];
+  analysisScopes: AnalysisScopeRecord[];
 }
 export interface SpaceMigrationInput {
   source: { id: string; userId: string; updatedAt?: string | null } | null;
@@ -27,7 +30,7 @@ export interface SpaceMigrationInput {
   sourceAssets: SpaceMigrationAssets;
   targetAssets: SpaceMigrationAssets;
   allNotes: MigrationNote[];
-  allNoteVersions?: { id: string; noteId: string }[];
+  allNoteVersions?: NoteVersionRecord[];
 }
 
 const kinds = ['folders', 'notes', 'tags', 'tagGroups', 'annotations', 'pdfAnnotations', 'analysisScopes'] as const;
@@ -61,9 +64,9 @@ export function inspectSpaceMigration({
   const blockers: string[] = [];
   if (source.id === target.id) blockers.push('SAME_SPACE');
   if (source.userId !== target.userId) blockers.push('OWNER_MISMATCH');
-  if (kinds.some(kind => targetAssets[kind].some(item => kind !== 'tagGroups' || !item.isSystem)))
+  if (kinds.some(kind => targetAssets[kind].some(item => kind !== 'tagGroups' || !(item as MigrationAsset).isSystem)))
     blockers.push('TARGET_NOT_EMPTY');
-  const sourceNoteIds = new Set<Prisma.JsonValue | undefined>(sourceAssets.notes.map(note => note.id));
+  const sourceNoteIds = new Set<unknown>(sourceAssets.notes.map(note => note.id));
   const versionNoteIds = new Map(allNoteVersions.map(version => [version.id, version.noteId]));
   for (const note of sourceAssets.notes) {
     if ((note.internalLinks ?? []).some(id => !sourceNoteIds.has(id))) blockers.push('CROSS_SPACE_NOTE_LINK');
@@ -90,10 +93,15 @@ export function inspectSpaceMigration({
   const sourceGroupIds = new Set(sourceAssets.tagGroups.map(group => group.id));
   if (sourceAssets.tags.some(tag => tag.groupId && !sourceGroupIds.has(tag.groupId)))
     blockers.push('TAG_GROUP_OUTSIDE_SPACE');
+  // 历史仓储字段仍保留原值；只在既有 localeCompare 操作点声明调用形态，不转换或修复损坏 ID。
   const payload = kinds.map(kind => [
     kind,
-    sourceAssets[kind].map(item => [item.id, item] as const).sort(([a], [b]) => a.localeCompare(b)),
-    targetAssets[kind].map(item => [item.id, item] as const).sort(([a], [b]) => a.localeCompare(b))
+    sourceAssets[kind]
+      .map(item => [item.id, item] as const)
+      .sort(([a], [b]) => (a as string).localeCompare(b as string)),
+    targetAssets[kind]
+      .map(item => [item.id, item] as const)
+      .sort(([a], [b]) => (a as string).localeCompare(b as string))
   ]);
   const previewHash = createHash('sha256')
     .update(JSON.stringify([source.id, target.id, source.updatedAt, target.updatedAt, payload]))

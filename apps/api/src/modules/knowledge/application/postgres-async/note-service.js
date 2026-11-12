@@ -3,7 +3,7 @@ import { Note } from '../../domain/note.ts';
 import { buildCreateNoteDto, buildUpdateNoteDto } from '../dto/note.dto.ts';
 import { createNoteSummary } from '../note-summary.ts';
 import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
-import { createAsyncNoteAssociationOperations } from './note-association-operations.js';
+import { createAsyncNoteAssociationOperations } from './note-association-operations.ts';
 import { addedNoteLinkTargets, assertNoteLinkTarget, buildNoteLinkRelations } from '../note-link-relations.js';
 
 /** @param {import('./service-dependencies.ts').NoteDependencies} dependencies */

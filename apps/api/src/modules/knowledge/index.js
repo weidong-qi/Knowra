@@ -4,7 +4,7 @@ import {
   marksOnlyDependencies,
   withInlineAnnotations
 } from './application/inline-annotations.js';
-import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.js';
+import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.ts';
 import { createInMemoryPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createNavigationReferencePolicy } from './application/navigation-reference-policy.js';
 import {
@@ -12,7 +12,7 @@ import {
   supplementPurgePreview,
   assertPurgeDatasetEpoch,
   assertManualPurgeScope
-} from './application/asset-purge-guard.js';
+} from './application/asset-purge-guard.ts';
 import { createNoteService } from './application/note-service.js';
 import { createFolderService } from './application/folder-service.ts';
 import { createTagService } from './application/tag-service.ts';
