@@ -19,7 +19,8 @@ export function PdfSelectionBar({
   onLookup,
   onTranslate,
   canAnnotate = true,
-  inline = false
+  inline = false,
+  selectedKind
 }: {
   anchor: PdfBarAnchor;
   onPick(kind: string): void;
@@ -32,6 +33,8 @@ export function PdfSelectionBar({
   canAnnotate?: boolean;
   /** 查词卡片内复用同一套标注操作，避免两个定位浮层重叠。 */
   inline?: boolean;
+  /** 提供此值时分类色点只用于设置，实际创建由卡片的明确按钮提交。 */
+  selectedKind?: string;
 }) {
   // 贴近视口顶部时翻到选区下方，避免被工具栏遮住。
   const below = anchor.top < 64;
@@ -76,7 +79,8 @@ export function PdfSelectionBar({
               key={option.id}
               className={styles.swatch}
               data-kind={option.id}
-              aria-label={`标注为${option.label}`}
+              aria-label={selectedKind === undefined ? `标注为${option.label}` : `选择分类：${option.label}`}
+              aria-pressed={selectedKind === undefined ? undefined : selectedKind === option.id}
               title={option.label}
               onPress={() => onPick(option.id)}
             >
