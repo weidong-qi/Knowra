@@ -1,15 +1,41 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createConversationAttachmentService } from './conversation-attachments.js';
+type ConversationAttachmentRoutePort = Pick<
+  ReturnType<typeof createConversationAttachmentService>,
+  'list' | 'readVerified' | 'remove' | 'upload'
+>;
+interface ConversationAttachmentRouteContext {
+  request: IncomingMessage;
+  response: Pick<ServerResponse, 'setHeader' | 'writeHead' | 'end'>;
+  url: URL;
+  attachments?: ConversationAttachmentRoutePort | null;
+}
+
+interface AttachmentPublicSource {
+  segments: readonly object[];
+  ownerId: string;
+  datasetId: string;
+  datasetEpoch: string;
+  spaceId: string;
+  uploadKey: string;
+}
 import { parseBody } from '../../http/request.ts';
 import { sendBinary, sendJson } from '../../http/response.ts';
-import { AppError, createAppError } from '../../errors/app-error.js';
+import { AppError, createAppError } from '../../errors/app-error.ts';
 
 const root = '/api/ai/conversations/';
-const publicAttachment = record => {
+const publicAttachment = <Record extends AttachmentPublicSource>(record: Record) => {
   const { segments, ownerId, datasetId, datasetEpoch, spaceId, uploadKey, ...result } = record;
   return result;
 };
 
 /** 文档只返回附件信息；图片原字节仅供显式本地预览，不解析或发送模型。 */
-export async function handleConversationAttachmentRoute({ request, response, url, attachments }) {
+export async function handleConversationAttachmentRoute({
+  request,
+  response,
+  url,
+  attachments
+}: ConversationAttachmentRouteContext): Promise<boolean> {
   if (!url.pathname.startsWith(root)) return false;
   const parts = url.pathname.slice(root.length).split('/');
   if (parts[1] !== 'attachments') return false;
@@ -50,36 +76,36 @@ export async function handleConversationAttachmentRoute({ request, response, url
       if (request.method === 'POST') {
         if (
           Object.keys(input).some(key => !['uploadKey', 'fileName', 'mimeType', 'contentBase64'].includes(key)) ||
-          typeof (/** @type {Record<string, unknown>} */ (input).contentBase64) !== 'string' ||
-          !(/** @type {{contentBase64: string}} */ (input).contentBase64.length) ||
-          /** @type {{contentBase64: string}} */ (input).contentBase64.length > Math.ceil(5242880 / 3) * 4 ||
-          /** @type {{contentBase64: string}} */ (input).contentBase64.length % 4 !== 0 ||
-          /[^A-Za-z0-9+/=]/.test(/** @type {{contentBase64: string}} */ (input).contentBase64)
+          typeof (input as Record<string, unknown>).contentBase64 !== 'string' ||
+          !(input as { contentBase64: string }).contentBase64.length ||
+          (input as { contentBase64: string }).contentBase64.length > Math.ceil(5242880 / 3) * 4 ||
+          (input as { contentBase64: string }).contentBase64.length % 4 !== 0 ||
+          /[^A-Za-z0-9+/=]/.test((input as { contentBase64: string }).contentBase64)
         ) {
           throw createAppError('AI_REQUEST_INVALID', '附件内容或字段无效。', 422);
         }
-        const bytes = Buffer.from(/** @type {{contentBase64: string}} */ (input).contentBase64, 'base64');
-        if (bytes.toString('base64') !== /** @type {{contentBase64: string}} */ (input).contentBase64)
+        const bytes = Buffer.from((input as { contentBase64: string }).contentBase64, 'base64');
+        if (bytes.toString('base64') !== (input as { contentBase64: string }).contentBase64)
           throw createAppError('AI_REQUEST_INVALID', '附件编码无效。', 422);
         record = await attachments.upload({
           conversationId,
-          uploadKey: /** @type {Record<string, unknown>} */ (input).uploadKey,
-          fileName: /** @type {Record<string, unknown>} */ (input).fileName,
-          mimeType: /** @type {Record<string, unknown>} */ (input).mimeType,
+          uploadKey: (input as Record<string, unknown>).uploadKey,
+          fileName: (input as Record<string, unknown>).fileName,
+          mimeType: (input as Record<string, unknown>).mimeType,
           bytes
         });
       } else {
         if (
           Object.keys(input).some(key => key !== 'expectedRevision') ||
-          !Number.isSafeInteger(/** @type {Record<string, unknown>} */ (input).expectedRevision) ||
-          /** @type {number} */ (/** @type {Record<string, unknown>} */ (input).expectedRevision) < 1
+          !Number.isSafeInteger((input as Record<string, unknown>).expectedRevision) ||
+          ((input as Record<string, unknown>).expectedRevision as number) < 1
         ) {
           throw createAppError('AI_REQUEST_INVALID', '附件版本无效。', 422);
         }
         record = await attachments.remove({
           conversationId,
           attachmentId,
-          expectedRevision: /** @type {Record<string, unknown>} */ (input).expectedRevision
+          expectedRevision: (input as Record<string, unknown>).expectedRevision
         });
       }
       sendJson(response, request.method === 'POST' ? 201 : 200, { data: { attachment: publicAttachment(record) } });
@@ -89,19 +115,19 @@ export async function handleConversationAttachmentRoute({ request, response, url
   } catch (error) {
     if (error instanceof AppError) throw error;
     if (error instanceof URIError) throw createAppError('AI_REQUEST_INVALID', '附件路径编码无效。', 422);
-    if (error.code?.startsWith('AI_')) {
-      const status = ['AI_ATTACHMENT_NOT_FOUND', 'AI_CONVERSATION_NOT_FOUND'].includes(error.code)
+    if ((error as AppError).code?.startsWith('AI_')) {
+      const status = ['AI_ATTACHMENT_NOT_FOUND', 'AI_CONVERSATION_NOT_FOUND'].includes((error as AppError).code)
         ? 404
         : ['AI_DATASET_STALE', 'AI_IDEMPOTENCY_CONFLICT', 'AI_ATTACHMENT_CONFLICT', 'AI_ATTACHMENT_REMOVED'].includes(
-              error.code
+              (error as AppError).code
             )
           ? 409
-          : ['AI_SCOPE_FORBIDDEN'].includes(error.code)
+          : ['AI_SCOPE_FORBIDDEN'].includes((error as AppError).code)
             ? 403
-            : ['AI_ATTACHMENT_UNAVAILABLE', 'AI_RUNTIME_CLOSED'].includes(error.code)
+            : ['AI_ATTACHMENT_UNAVAILABLE', 'AI_RUNTIME_CLOSED'].includes((error as AppError).code)
               ? 503
               : 422;
-      throw createAppError(error.code, error.message, status);
+      throw createAppError((error as AppError).code, (error as AppError).message, status);
     }
     throw error;
   }

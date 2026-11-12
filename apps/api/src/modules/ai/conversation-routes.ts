@@ -1,8 +1,36 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createAiConversationService } from './conversation-service.js';
+type ConversationRoutePort = Pick<
+  ReturnType<typeof createAiConversationService>,
+  | 'cancel'
+  | 'create'
+  | 'get'
+  | 'legacyGet'
+  | 'legacyList'
+  | 'list'
+  | 'messages'
+  | 'resume'
+  | 'retry'
+  | 'submit'
+  | 'turn'
+>;
+interface ConversationRouteContext {
+  request: IncomingMessage;
+  response: Pick<ServerResponse, 'setHeader' | 'writeHead' | 'end'>;
+  url: URL;
+  conversation?: ConversationRoutePort | null;
+}
+
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { AppError, createAppError } from '../../errors/app-error.js';
+import { AppError, createAppError } from '../../errors/app-error.ts';
 
-export async function handleConversationRoute({ request, response, url, conversation }) {
+export async function handleConversationRoute({
+  request,
+  response,
+  url,
+  conversation
+}: ConversationRouteContext): Promise<boolean> {
   const root = '/api/ai/conversations';
   if (url.pathname !== root && !url.pathname.startsWith(`${root}/`)) return false;
   if (!conversation) throw createAppError('AI_CONVERSATION_UNAVAILABLE', '会话服务不可用。', 503);
@@ -70,15 +98,19 @@ export async function handleConversationRoute({ request, response, url, conversa
     }
   } catch (error) {
     if (error instanceof AppError) throw error;
-    if (error.code?.startsWith('AI_')) {
-      const status = ['AI_CONVERSATION_NOT_FOUND', 'AI_TURN_NOT_FOUND', 'AI_JOB_NOT_FOUND'].includes(error.code)
+    if ((error as AppError).code?.startsWith('AI_')) {
+      const status = ['AI_CONVERSATION_NOT_FOUND', 'AI_TURN_NOT_FOUND', 'AI_JOB_NOT_FOUND'].includes(
+        (error as AppError).code
+      )
         ? 404
-        : ['AI_IDEMPOTENCY_CONFLICT', 'AI_TURN_ACTIVE', 'AI_TURN_CONFLICT', 'AI_DATASET_STALE'].includes(error.code)
+        : ['AI_IDEMPOTENCY_CONFLICT', 'AI_TURN_ACTIVE', 'AI_TURN_CONFLICT', 'AI_DATASET_STALE'].includes(
+              (error as AppError).code
+            )
           ? 409
-          : error.code === 'AI_SCOPE_FORBIDDEN'
+          : (error as AppError).code === 'AI_SCOPE_FORBIDDEN'
             ? 403
             : 422;
-      throw createAppError(error.code, error.message, status);
+      throw createAppError((error as AppError).code, (error as AppError).message, status);
     }
     throw error;
   }

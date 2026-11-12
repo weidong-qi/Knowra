@@ -1,9 +1,22 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createAiAccessService } from './access-service.js';
+type AiAccessRoutePort = Pick<
+  ReturnType<typeof createAiAccessService>,
+  'createPolicy' | 'listPolicies' | 'narrowPolicy'
+>;
+interface AiAccessRouteContext {
+  request: IncomingMessage;
+  response: Pick<ServerResponse, 'setHeader' | 'writeHead' | 'end'>;
+  url: URL;
+  access?: AiAccessRoutePort | null;
+}
+
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { AppError, createAppError } from '../../errors/app-error.js';
+import { AppError, createAppError } from '../../errors/app-error.ts';
 
 /** 用户设置入口；actor/owner 只由服务端注入，模型执行桥不暴露本路由。 */
-export async function handleAiAccessRoute({ request, response, url, access }) {
+export async function handleAiAccessRoute({ request, response, url, access }: AiAccessRouteContext): Promise<boolean> {
   const root = '/api/ai/access-policies';
   if (url.pathname !== root && !url.pathname.startsWith(`${root}/`)) return false;
   response.setHeader('Cache-Control', 'no-store');
@@ -29,16 +42,18 @@ export async function handleAiAccessRoute({ request, response, url, access }) {
     }
   } catch (error) {
     if (error instanceof AppError) throw error;
-    if (error.code?.startsWith('AI_')) {
+    if ((error as AppError).code?.startsWith('AI_')) {
       const status =
-        error.code === 'AI_RECORD_NOT_FOUND'
+        (error as AppError).code === 'AI_RECORD_NOT_FOUND'
           ? 404
-          : ['AI_RECORD_CONFLICT', 'AI_ACCESS_REVOKED', 'AI_DATASET_STALE', 'AI_SCOPE_EXCEEDED'].includes(error.code)
+          : ['AI_RECORD_CONFLICT', 'AI_ACCESS_REVOKED', 'AI_DATASET_STALE', 'AI_SCOPE_EXCEEDED'].includes(
+                (error as AppError).code
+              )
             ? 409
-            : error.code === 'AI_SCOPE_FORBIDDEN'
+            : (error as AppError).code === 'AI_SCOPE_FORBIDDEN'
               ? 403
               : 422;
-      throw createAppError(error.code, error.message, status);
+      throw createAppError((error as AppError).code, (error as AppError).message, status);
     }
     throw error;
   }

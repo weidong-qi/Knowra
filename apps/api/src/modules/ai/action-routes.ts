@@ -1,8 +1,32 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { createNoteActionService } from './action-service.js';
+import type { createActionInboxMethods } from './action-inbox.js';
+type ActionRoutePort = Pick<
+  ReturnType<typeof createNoteActionService> & ReturnType<typeof createActionInboxMethods>,
+  | 'apply'
+  | 'approve'
+  | 'cancel'
+  | 'draft'
+  | 'get'
+  | 'list'
+  | 'listInbox'
+  | 'plan'
+  | 'repreview'
+  | 'revise'
+  | 'undoPreview'
+>;
+interface ActionRouteContext {
+  request: IncomingMessage;
+  response: Pick<ServerResponse, 'setHeader' | 'writeHead' | 'end'>;
+  url: URL;
+  actions?: ActionRoutePort | null;
+}
+
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 
-export async function handleActionRoute({ request, response, url, actions }) {
+export async function handleActionRoute({ request, response, url, actions }: ActionRouteContext): Promise<boolean> {
   if (url.pathname === '/api/ai/inbox' && request.method === 'GET') {
     if (!actions) throw createAppError('AI_ACTION_UNAVAILABLE', '成果收件箱不可用。', 503);
     response.setHeader('Cache-Control', 'no-store');

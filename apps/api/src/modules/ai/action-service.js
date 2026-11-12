@@ -902,5 +902,5 @@ export function createNoteActionService({
       })
     )
   );
-  return service;
+  return /** @type {typeof service & ReturnType<typeof createActionInboxMethods>} */ (service);
 }
