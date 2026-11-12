@@ -1,4 +1,4 @@
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 
 export interface AnnotationDtoInput {
   spaceId?: unknown;

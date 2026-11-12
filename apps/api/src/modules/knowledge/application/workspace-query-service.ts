@@ -1,7 +1,7 @@
-import { createKnowledgeWorkspaceQuery } from './knowledge-workspace-query-service.js';
-import { createReviewQueueQuery } from './review-queue-query-service.js';
-import { createTrainingWorkspaceQuery } from './training-workspace-query-service.js';
-import { createWorkspaceSnapshotReader } from './workspace-query-snapshot.js';
+import { createKnowledgeWorkspaceQuery } from './knowledge-workspace-query-service.ts';
+import { createReviewQueueQuery } from './review-queue-query-service.ts';
+import { createTrainingWorkspaceQuery } from './training-workspace-query-service.ts';
+import { createWorkspaceSnapshotReader } from './workspace-query-snapshot.ts';
 
 import type {
   WorkspaceSnapshotRepositories,

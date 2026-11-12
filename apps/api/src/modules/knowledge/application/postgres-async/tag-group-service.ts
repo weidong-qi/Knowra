@@ -1,6 +1,6 @@
 import { TagGroup } from '../../domain/tag-group.ts';
 import { buildCreateTagGroupDto, buildUpdateTagGroupDto } from '../dto/tag-group.dto.ts';
-import { conflictError, notFoundError } from '../knowledge-errors.js';
+import { conflictError, notFoundError } from '../knowledge-errors.ts';
 
 import type { TagGroupDtoInput } from '../dto/tag-group.dto.ts';
 import type { TagGroupListOptions, TagGroupRecord } from '../../infrastructure/tag-group-repository.ts';

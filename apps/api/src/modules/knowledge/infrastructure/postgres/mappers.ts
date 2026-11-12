@@ -13,7 +13,7 @@ import type { PdfSource } from '@study-accelerator/shared/pdf';
 export type NoteRow = Models.Note & { noteTags?: Pick<Models.NoteTag, 'tagId'>[] | null };
 export type MappedUser = Omit<Models.User, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string };
 type Mapped<Row, Output> = Row extends null | undefined ? null : Output;
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 import { validateKnowledgeArtifactProvenance } from '../../domain/knowledge-artifact-provenance-contract.ts';
 
 export function toDate(value: unknown, fallback: unknown = new Date()): Date {

@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { constants } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import type { AppError } from '../../errors/app-error.ts';
 import type { FileHandle } from 'node:fs/promises';
 

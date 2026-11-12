@@ -4,7 +4,7 @@ export const markdownPreviewTests = [
   {
     name: 'renderMarkdownPreview renders headings, emphasis, lists and code blocks',
     async run() {
-      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.js');
+      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.ts');
 
       const html = renderMarkdownPreview(`# Title
 
@@ -27,7 +27,7 @@ const x = 1;
   {
     name: 'extractMarkdownHeadings returns toc entries with ids',
     async run() {
-      const { extractMarkdownHeadings } = await import('../src/presentation/markdown-preview.js');
+      const { extractMarkdownHeadings } = await import('../src/presentation/markdown-preview.ts');
 
       const headings = extractMarkdownHeadings(`# Root
 ## Child One
@@ -44,7 +44,7 @@ Text
   {
     name: 'renderMarkdownPreview escapes raw html',
     async run() {
-      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.js');
+      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.ts');
 
       const html = renderMarkdownPreview('<script>alert(1)</script>');
 
@@ -55,7 +55,7 @@ Text
   {
     name: 'renderMarkdownPreview renders markdown image references',
     async run() {
-      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.js');
+      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.ts');
 
       const html = renderMarkdownPreview('![diagram](/api/storage/attachments/a/content)');
 
@@ -65,7 +65,7 @@ Text
   {
     name: 'renderMarkdownPreview never emits an HTTP image request',
     async run() {
-      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.js');
+      const { renderMarkdownPreview } = await import('../src/presentation/markdown-preview.ts');
       const html = renderMarkdownPreview('![legacy](http://example.com/legacy.png)');
 
       assert.match(html, /preview-blocked-image/);

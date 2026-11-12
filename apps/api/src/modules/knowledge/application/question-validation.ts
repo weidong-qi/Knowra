@@ -13,7 +13,7 @@ interface QuestionOptionReadView {
   text?: unknown;
 }
 
-import { validationError } from './knowledge-errors.js';
+import { validationError } from './knowledge-errors.ts';
 
 const CHOICE_TYPES = new Set<unknown>(['singleChoice', 'multipleChoice']);
 

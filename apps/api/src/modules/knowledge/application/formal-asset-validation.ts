@@ -38,8 +38,8 @@ export interface QuestionConfirmationContext {
 
 export type DerivedQuestionSourceStatus = 'active' | 'stale';
 
-import { validateQuestionStructure } from './question-validation.js';
-import { validationError } from './knowledge-errors.js';
+import { validateQuestionStructure } from './question-validation.ts';
+import { validationError } from './knowledge-errors.ts';
 import { isEvidenceUsable } from '../domain/evidence-applicability.ts';
 
 const ACTION_VERB_LEVELS: Readonly<Record<string, unknown>> = Object.freeze({

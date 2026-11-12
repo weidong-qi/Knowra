@@ -25,7 +25,7 @@ import {
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { writeJsonFileAtomically } from './atomic-json-file.ts';
 import { withDataFileWriteLock } from './data-file-write-lock.ts';
 import { cloneJsonData } from './json-clone.ts';

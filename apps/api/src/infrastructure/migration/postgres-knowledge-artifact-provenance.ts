@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { ProvenanceMigrationClient } from './provenance-types.ts';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import { backfillKnowledgeArtifactProvenance } from './knowledge-artifact-provenance-backfill.ts';
 import { dbKnowledgeArtifactProvenance } from './db-mappers.ts';
 import {

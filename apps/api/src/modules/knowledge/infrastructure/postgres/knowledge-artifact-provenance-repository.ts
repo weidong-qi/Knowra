@@ -2,7 +2,7 @@ import { assertProvenanceWrite } from '../knowledge-artifact-provenance-reposito
 import { mapKnowledgeArtifactProvenance } from './mappers.ts';
 import { dbKnowledgeArtifactProvenance } from '../../../../infrastructure/migration/db-mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 import type { KnowledgeArtifactProvenance } from '../../domain/knowledge-artifact-provenance-contract.ts';
 import type { ProvenanceRepositoryOptions } from './knowledge-graph-repository-types.ts';
 

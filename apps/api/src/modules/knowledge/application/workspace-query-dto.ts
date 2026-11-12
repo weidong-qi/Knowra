@@ -1,4 +1,4 @@
-import { summarizeEvidenceStatus, summarizeSourceStatus } from './workspace-query-utils.js';
+import { summarizeEvidenceStatus, summarizeSourceStatus } from './workspace-query-utils.ts';
 
 import type { WorkspaceStatusRecords } from './workspace-query-utils.ts';
 

@@ -1,5 +1,5 @@
 import { createPrefixedId, normalizeOptionalId, requireText } from './_shared.ts';
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 
 export interface TagGroupDtoInput {
   id?: unknown;

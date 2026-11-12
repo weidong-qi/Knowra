@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { AppError } from '../src/errors/app-error.js';
+import { AppError } from '../src/errors/app-error.ts';
 import {
   createContentAnnotationService,
   legacyAnnotationSourceChange

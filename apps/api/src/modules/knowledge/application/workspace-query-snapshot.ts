@@ -1,4 +1,4 @@
-import { groupBy } from './workspace-query-utils.js';
+import { groupBy } from './workspace-query-utils.ts';
 
 import type { WorkspaceReduce } from './workspace-query-utils.ts';
 

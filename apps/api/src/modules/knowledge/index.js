@@ -34,7 +34,7 @@ import {
 import { createAnnotationScopeService } from './application/annotation-scope-service.js';
 import { createInMemoryNoteVersionRepository } from './infrastructure/note-version-repository.ts';
 import { createInMemoryKnowledgeItemRepository } from './infrastructure/knowledge-item-repository.ts';
-import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
+import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.ts';
 import { createInMemoryKnowledgeArtifactProvenanceRepository } from './infrastructure/knowledge-artifact-provenance-repository.ts';
 import { createInMemoryKnowledgeEvidenceRepository } from './infrastructure/knowledge-evidence-repository.ts';
 import { createInMemoryLearningObjectiveRepository } from './infrastructure/assessment-repository.ts';
@@ -47,14 +47,14 @@ import { createNoteVersionService } from './application/note-version-service.ts'
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { NOTE_VERSION_COALESCE_WINDOW_MS, selectCoalescibleVersion } from './application/note-version-coalescing.ts';
 import { createKnowledgeItemService } from './application/knowledge-item-service.ts';
-import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
+import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.ts';
 import { createLearningObjectiveService } from './application/learning-objective-service.ts';
 import { createAssessmentContextService } from './application/assessment-context-service.ts';
 import { createQuestionService } from './application/question-service.ts';
 import { createLocalTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
-import { createWorkspaceQueryService } from './application/workspace-query-service.js';
+import { createWorkspaceQueryService } from './application/workspace-query-service.ts';
 import { bindLocalServiceTransactions } from './application/local-service-transactions.ts';
-import { conflictError, validationError } from './application/knowledge-errors.js';
+import { conflictError, validationError } from './application/knowledge-errors.ts';
 
 export function createKnowledgeModule(options = {}) {
   const noteRepository = options.noteRepository ?? createInMemoryNoteRepository();

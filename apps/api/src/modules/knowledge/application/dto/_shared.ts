@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 
 // 字符串会被修剪，不能保留字符串字面量；其他值保持原身份。
 export function trimIfString<T>(value: T): T extends string ? string : T;

@@ -5,7 +5,7 @@ import type {
   ObjectiveListOptions,
   ObjectiveWhere
 } from './assessment-repository-types.ts';
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 import { mapLearningObjective, toDate } from './mappers.ts';
 import { withRepositoryErrors } from './repository-utils.ts';
 

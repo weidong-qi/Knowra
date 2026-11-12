@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 
 export const CONVERSATION_ATTACHMENT_LIMITS = Object.freeze({
   maxFileBytes: 5 * 1024 * 1024,

@@ -8,7 +8,7 @@ export const phase1PostgresTests = [
   {
     name: 'storage config exposes local-json as the safe default and postgres as an opt-in driver',
     async run() {
-      const { createStorageConfig } = await import('../src/config/storage.config.js');
+      const { createStorageConfig } = await import('../src/config/storage.config.ts');
       assert.equal(createStorageConfig({}).persistenceDriver, 'local-json');
       assert.equal(
         createStorageConfig({ PERSISTENCE_DRIVER: 'postgres', DATABASE_URL: 'postgresql://db' }).persistenceDriver,

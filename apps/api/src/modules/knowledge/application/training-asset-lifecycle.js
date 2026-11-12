@@ -5,7 +5,7 @@ import {
   assertPurgeDatasetEpoch,
   assertManualPurgeScope
 } from './asset-purge-guard.ts';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
 const TYPES = Object.freeze({
   learningObjective: { collection: 'learningObjectives', repository: 'learningObjectiveRepository' },

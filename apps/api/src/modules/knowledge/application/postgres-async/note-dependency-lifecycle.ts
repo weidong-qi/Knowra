@@ -1,4 +1,4 @@
-import { conflictError } from '../knowledge-errors.js';
+import { conflictError } from '../knowledge-errors.ts';
 
 export type MaybePromise<Value> = Value | PromiseLike<Value>;
 export interface DependencyIdRecord {

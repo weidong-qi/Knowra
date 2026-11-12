@@ -26,8 +26,8 @@ interface ReviewErrorView {
 type NativeDateConstructor = new (value: unknown) => Date;
 type NativeDateParse = (value: unknown) => number;
 
-import { createAppError } from '../../../errors/app-error.js';
-import { conflictError } from './knowledge-errors.js';
+import { createAppError } from '../../../errors/app-error.ts';
+import { conflictError } from './knowledge-errors.ts';
 
 const invalidBaseline = (message: string) => createAppError('LEARNING_OBJECTIVE_BASELINE_INVALID', message, 400);
 const conflictMessage = '目标或父知识已被其他操作修改，请重新加载并核对后再保存或确认。';

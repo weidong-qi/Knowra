@@ -25,7 +25,7 @@ interface SpaceAssetDependencies {
 import { inspectSpaceDeletion, assertSpaceDeletionAllowed } from './space-deletion-preflight.ts';
 import { inspectSpaceMigration, assertSpaceMigrationAllowed } from './space-migration.ts';
 import { buildDefaultTagGroups } from '../domain/default-tag-groups.ts';
-import { validationError } from './knowledge-errors.js';
+import { validationError } from './knowledge-errors.ts';
 
 export function createSpaceAssetLifecycle({
   knowledgeSpaceRepository,

@@ -11,7 +11,7 @@ import {
   inspectAttachmentDeletion,
   loadPostgresAttachmentReferenceState
 } from '../src/infrastructure/attachment-deletion-preflight.ts';
-import { createKnowledgeArtifactProvenanceReader } from '../src/modules/knowledge/application/knowledge-artifact-provenance-read.js';
+import { createKnowledgeArtifactProvenanceReader } from '../src/modules/knowledge/application/knowledge-artifact-provenance-read.ts';
 import { hashKnowledgeArtifactProvenance } from '../src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { buildNoteVersionPrunePreview } from '../src/modules/knowledge/application/note-version-prune-preview.ts';
 import { createKnowledgeExtractionJobFixture } from './fixtures/knowledge-extraction-job.fixture.js';

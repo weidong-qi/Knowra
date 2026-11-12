@@ -1,4 +1,4 @@
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import type { AppError } from '../../errors/app-error.ts';
 import type { ExtractionSafeError, RawExtractionHttpError } from './knowledge-extraction-query-types.ts';
 

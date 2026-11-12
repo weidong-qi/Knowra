@@ -1,5 +1,5 @@
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { createAppError } from '../../errors/app-error.js';
+import { createAppError } from '../../errors/app-error.ts';
 import { hashRecord } from './record-contract.ts';
 import { runAsync, runSync } from './action-plan.ts';
 import { verifyExtractionSourcePrivacy } from './knowledge-extraction-task-context.ts';

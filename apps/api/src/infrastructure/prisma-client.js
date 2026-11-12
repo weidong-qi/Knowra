@@ -1,4 +1,4 @@
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 
 export function createPrismaRuntime(options = {}) {
   if (options.client) {

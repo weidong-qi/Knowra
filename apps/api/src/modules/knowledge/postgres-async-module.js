@@ -23,14 +23,14 @@ import { createAsyncContentAnnotationService } from './application/postgres-asyn
 import { createAsyncNoteVersionService } from './application/note-version-service.ts';
 import { buildNoteVersionPrunePreview } from './application/note-version-prune-preview.ts';
 import { createAsyncKnowledgeItemService } from './application/postgres-async/knowledge-domain-service.ts';
-import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.js';
+import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './application/knowledge-item-purge.ts';
 import { createAsyncSearchService } from './application/postgres-async/search-service.ts';
 import { createPostgresNoteRepository } from './infrastructure/postgres/note-repository.ts';
 import { createPostgresFolderRepository } from './infrastructure/postgres/folder-repository.ts';
 import { createPostgresContentAnnotationRepository } from './infrastructure/postgres/content-annotation-repository.ts';
 import { createPostgresNoteVersionRepository } from './infrastructure/postgres/note-version-repository.ts';
 import { createPostgresKnowledgeItemRepository } from './infrastructure/postgres/knowledge-item-repository.ts';
-import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.js';
+import { createKnowledgeArtifactProvenanceReader } from './application/knowledge-artifact-provenance-read.ts';
 import { createPostgresKnowledgeArtifactProvenanceRepository } from './infrastructure/postgres/knowledge-artifact-provenance-repository.ts';
 import { createPostgresKnowledgeEvidenceRepository } from './infrastructure/postgres/knowledge-evidence-repository.ts';
 import { createPostgresLearningObjectiveRepository } from './infrastructure/postgres/learning-objective-repository.ts';
@@ -52,8 +52,8 @@ import { createAsyncLearningObjectiveService } from './application/postgres-asyn
 import { createAsyncAssessmentContextService } from './application/postgres-async/assessment-context-service.ts';
 import { createAsyncQuestionService } from './application/postgres-async/question-service.ts';
 import { createTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
-import { createWorkspaceQueryService } from './application/workspace-query-service.js';
-import { conflictError, validationError } from './application/knowledge-errors.js';
+import { createWorkspaceQueryService } from './application/workspace-query-service.ts';
+import { conflictError, validationError } from './application/knowledge-errors.ts';
 import { withPostgresErrors } from '../../infrastructure/postgres-errors.ts';
 import { withLearningObjectiveReviewErrors } from './application/learning-objective-concurrency.ts';
 

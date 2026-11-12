@@ -2,7 +2,7 @@ import { legacyAnnotationRemoved } from '../content-annotation-service.ts';
 import { resolveLegacyAnnotationAnchor } from '../legacy-annotation-anchor.ts';
 import crypto from 'node:crypto';
 import { calculateContentHash, projectMarkdown, resolveAnchor } from '@study-accelerator/content-anchor';
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 import {
   buildResolvedSegments,
   inlineContributions,

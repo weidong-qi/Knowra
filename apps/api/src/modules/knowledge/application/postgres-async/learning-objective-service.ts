@@ -1,7 +1,7 @@
 import { LearningObjective } from '../../domain/learning-objective.ts';
 import { buildCreateLearningObjectiveDto, buildUpdateLearningObjectiveDto } from '../dto/learning-objective.dto.ts';
 import { assertLearningObjectiveConfirmable } from '../formal-asset-validation.ts';
-import { conflictError, notFoundError, validationError } from '../knowledge-errors.js';
+import { conflictError, notFoundError, validationError } from '../knowledge-errors.ts';
 
 import {
   assertLearningObjectiveBaseline,

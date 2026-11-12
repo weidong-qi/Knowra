@@ -1,7 +1,7 @@
 import { Tag } from '../domain/tag.ts';
 import { buildCreateTagDto, buildUpdateTagDto } from './dto/tag.dto.ts';
 import { createInMemoryTagRepository } from '../infrastructure/tag-repository.ts';
-import { conflictError, notFoundError } from './knowledge-errors.js';
+import { conflictError, notFoundError } from './knowledge-errors.ts';
 
 import type { TagDtoInput } from './dto/tag.dto.ts';
 import type { TagListOptions, TagRecord } from '../infrastructure/tag-repository.ts';

@@ -3,7 +3,7 @@ import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres
 import { createAsyncLearningObjectiveService } from '../src/modules/knowledge/application/postgres-async/learning-objective-service.ts';
 import { createPostgresKnowledgeItemRepository } from '../src/modules/knowledge/infrastructure/postgres/knowledge-item-repository.ts';
 import { createPostgresLearningObjectiveRepository } from '../src/modules/knowledge/infrastructure/postgres/learning-objective-repository.ts';
-import { createAppError } from '../src/errors/app-error.js';
+import { createAppError } from '../src/errors/app-error.ts';
 import { withLearningObjectiveReviewErrors } from '../src/modules/knowledge/application/learning-objective-concurrency.ts';
 
 const timestamp = new Date('2026-10-03T00:00:00.000Z');

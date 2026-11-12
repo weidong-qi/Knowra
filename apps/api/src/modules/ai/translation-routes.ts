@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { parseBody } from '../../http/request.ts';
 import { sendJson } from '../../http/response.ts';
-import { AppError, createAppError } from '../../errors/app-error.js';
+import { AppError, createAppError } from '../../errors/app-error.ts';
 import type { createAiTranslationService } from './translation-service.ts';
 
 interface TranslationRouteContext {

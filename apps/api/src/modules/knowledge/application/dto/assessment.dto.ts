@@ -1,5 +1,5 @@
 import { createPrefixedId, requireText } from './_shared.ts';
-import { validationError } from '../knowledge-errors.js';
+import { validationError } from '../knowledge-errors.ts';
 import { QUESTION_SOURCE_TYPES } from '../../domain/question-source.ts';
 import { QUESTION_TYPES, QUESTION_SOURCE_MODES, QUESTION_DIFFICULTIES } from '../../domain/question.ts';
 import { EXAM_FOCUS_DIFFICULTY_HINTS } from '../../domain/exam-focus.ts';

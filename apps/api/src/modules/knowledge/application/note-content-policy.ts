@@ -1,4 +1,4 @@
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
 const INLINE_MARKDOWN_IMAGE_PATTERN =
   /!\[[^\]]*]\(\s*<?(http:\/\/[^\s)>]+)>?(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/gi;

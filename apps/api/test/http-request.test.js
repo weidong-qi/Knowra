@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { AppError } from '../src/errors/app-error.js';
+import { AppError } from '../src/errors/app-error.ts';
 import { parseBody } from '../src/http/request.ts';
 
 function createRequest({ contentType = 'application/json', chunks = [] } = {}) {

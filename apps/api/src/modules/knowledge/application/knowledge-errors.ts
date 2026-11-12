@@ -1,5 +1,5 @@
 import type { AppError } from '../../../errors/app-error.ts';
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 
 export function validationError(code: string, message: string): AppError {
   return createAppError(code, message, 422);

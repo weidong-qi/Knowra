@@ -66,7 +66,7 @@ export interface AsyncNoteDeletionCoordinator {
   emptyRecycleBin: (spaceId?: unknown) => Promise<unknown>;
 }
 
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 
 export function createAsyncNoteDeletionCoordinator({
   noteService,

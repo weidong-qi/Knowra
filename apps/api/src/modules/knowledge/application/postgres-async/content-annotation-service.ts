@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { createAppError } from '../../../../errors/app-error.js';
+import { createAppError } from '../../../../errors/app-error.ts';
 import { ContentAnnotation, INLINE_ANNOTATION_SCHEMA } from '../../domain/content-annotation.ts';
 import { buildUpdateContentAnnotationDto } from '../dto/content-annotation-dto.ts';
 import { legacyAnnotationRemoved, legacyAnnotationSourceChange } from '../content-annotation-service.ts';

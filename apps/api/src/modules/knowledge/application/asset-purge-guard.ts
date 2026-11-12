@@ -12,7 +12,7 @@ interface TaskCoverage {
 interface PurgeEpochInput {
   expectedDatasetEpoch?: unknown;
 }
-import { createAppError } from '../../../errors/app-error.js';
+import { createAppError } from '../../../errors/app-error.ts';
 import { verifyPurgeTaskState } from '../../../infrastructure/asset-purge-task-state.ts';
 
 export function taskCoverage(read?: (() => PurgeTaskState) | null): TaskCoverage {

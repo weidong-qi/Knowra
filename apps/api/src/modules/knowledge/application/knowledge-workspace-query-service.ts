@@ -1,11 +1,11 @@
-import { toKnowledgeItemWorkspaceDto, toLearningObjectiveWorkspaceDto } from './workspace-query-dto.js';
+import { toKnowledgeItemWorkspaceDto, toLearningObjectiveWorkspaceDto } from './workspace-query-dto.ts';
 import {
   countBy,
   matchesText,
   paginateWorkspaceItems,
   parseWorkspaceQuery,
   summarizeEvidenceStatus
-} from './workspace-query-utils.js';
+} from './workspace-query-utils.ts';
 
 import type {
   KnowledgeItemWorkspaceDto,

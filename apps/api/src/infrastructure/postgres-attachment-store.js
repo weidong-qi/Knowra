@@ -10,7 +10,7 @@ import { decodeAttachmentBytes } from './attachment-recovery.ts';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { createAppError } from '../errors/app-error.js';
+import { createAppError } from '../errors/app-error.ts';
 import { createLocalAttachmentFileManager } from './local-attachment-file-manager.ts';
 import { ATTACHMENT_STATUS } from './attachment-status.ts';
 import { createAttachmentCleanupQueue } from './attachment-cleanup-queue.ts';
