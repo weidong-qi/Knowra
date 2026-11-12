@@ -234,6 +234,38 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   );
 });
 
+test('文档与 PDF 图标风格切换后在刷新及深色模式中保留', async ({ page }, info) => {
+  await mockEditorWorkspace(page, []);
+  const notes = [
+    createNote('', false, 'icon-note', '图标笔记', null),
+    { ...createNote('', false, 'icon-pdf', '图标 PDF', null), contentKind: 'pdf' }
+  ];
+  await page.route(
+    url => url.pathname === '/api/knowledge/notes',
+    route => route.fulfill({ json: { data: notes } })
+  );
+  await page.goto('/#/settings');
+  await expect(page.getByRole('button', { name: '胶囊徽标' })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/#/materials');
+  const document = page.locator('[data-art-kind="document"] svg[data-document-style]');
+  const pdf = page.locator('[data-art-kind="pdf"] svg[data-document-style]');
+  await expect(document).toHaveAttribute('data-document-style', 'capsule');
+  await expect(pdf).toHaveAttribute('data-document-style', 'capsule');
+  await page.screenshot({ path: info.outputPath('icons-capsule-light.png'), animations: 'disabled' });
+  await page.goto('/#/settings');
+  await page.getByRole('button', { name: '学术版式' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: '学术版式' })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/#/materials');
+  await expect(document).toHaveAttribute('data-document-style', 'layout');
+  await expect(pdf).toHaveAttribute('data-document-style', 'layout');
+  await page.screenshot({ path: info.outputPath('icons-layout-light.png'), animations: 'disabled' });
+  await page.getByRole('button', { name: '切换深色模式' }).click();
+  await expect(document).toHaveAttribute('data-document-style', 'layout');
+  await expect(pdf).toHaveAttribute('data-document-style', 'layout');
+  await page.screenshot({ path: info.outputPath('icons-layout-dark.png'), animations: 'disabled' });
+});
+
 test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
   await page.route(
