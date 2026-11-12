@@ -164,7 +164,8 @@ export function createAiAccessService({
       fail('AI_SOURCE_STALE', '来源当前版本不可用。');
     }
     await assertAiNoteUnchanged(noteRepository!, note);
-    return { version, contentHash };
+    // content 已校验为字符串；id 沿用原读取流程对历史版本标识的字符串假设。
+    return { version: version as typeof version & { id: string; content: string }, contentHash };
   }
   /** @returns {Promise<import('./private-record-types.ts').AiAccessPolicy['scope']>} */
   async function validateScope(scope: AccessScopeInput, spaceId: string): Promise<AiAccessPolicy['scope']> {

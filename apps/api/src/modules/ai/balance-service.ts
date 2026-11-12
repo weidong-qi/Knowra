@@ -11,7 +11,7 @@ interface Balance {
 }
 interface BalanceSnapshot extends Balance {
   at: string;
-  credentialRef: string;
+  credentialRef?: string;
 }
 interface BalanceConsumption {
   currency: string;
@@ -26,8 +26,8 @@ interface BalanceFetchOptions {
   fetchImpl?: typeof fetch;
 }
 interface BalanceServiceOptions {
-  credentialReference(): { credentialRef: string } | null | Promise<{ credentialRef: string } | null>;
-  resolveCredential(ref: string): { apiKey: string } | Promise<{ apiKey: string }>;
+  credentialReference(): { credentialRef?: string } | null | Promise<{ credentialRef?: string } | null>;
+  resolveCredential(ref: string | undefined): { apiKey: string } | Promise<{ apiKey: string }>;
   filePath: string;
   fetchImpl?: typeof fetch;
   now?: () => Date;
@@ -214,7 +214,7 @@ export function createBalanceService({
     return run;
   };
 
-  const view = (all: BalanceSnapshot[], ref: string | null, live: BalanceSnapshot | null = null) => {
+  const view = (all: BalanceSnapshot[], ref: string | null | undefined, live: BalanceSnapshot | null = null) => {
     const snapshots = all.filter(item => item.credentialRef === ref);
     const latest = snapshots.at(-1) ?? null;
     return { latest: live ?? latest, checkedAt: latest?.at ?? null, inferred: inferConsumption(snapshots) };

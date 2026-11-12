@@ -8,7 +8,7 @@ import { createRuntimeBackup, inspectRuntimeBackup } from '../src/backup.mjs';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { factHash } from '../src/sqlite-deletion-facts-contract.mjs';
 import { readActiveDirectory } from '../src/restore-directory.mjs';
-import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.js';
+import { createUnavailableAiRuntime } from '../../api/src/modules/ai/runtime.ts';
 import { syntheticProvenanceFixture } from '../../api/test/fixtures/knowledge-artifact-provenance.fixture.js';
 import { createLegacyKnowledgeArtifactProvenance } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';

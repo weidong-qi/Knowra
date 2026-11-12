@@ -13,7 +13,7 @@ import {
 import { createAiWorker, quoteWorstCase } from '../src/modules/ai/worker.ts';
 import { createServer } from '../src/server.js';
 import { createRemoteBudgetAuthority } from '../src/modules/ai/remote-budget-authority.ts';
-import { createAiRuntime } from '../src/modules/ai/runtime.js';
+import { createAiRuntime } from '../src/modules/ai/runtime.ts';
 import { aiRecords } from './ai-record-fixtures.js';
 import { reviewedPriceProfileTests } from './reviewed-price-profile.test.js';
 

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { markParagraphs } from './fixtures/inline-annotation-seed.js';
 import { createPersistentAppContext } from '../src/app.factory.js';
-import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../src/modules/ai/runtime.ts';
 import { createAssistantWebSearch } from '../src/modules/ai/assistant-tools.ts';
 
 const priceProfile = {

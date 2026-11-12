@@ -1,13 +1,9 @@
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
-import type { NoteRecord, NoteRepository } from '../knowledge/infrastructure/note-repository.ts';
-import type { FolderRepository } from '../knowledge/infrastructure/folder-repository.ts';
+import type { ReadNote, ReadNoteRepository, ReadFolderRepository } from './access-service-types.ts';
 import type { KnowledgeSpaceRepository } from '../knowledge/infrastructure/knowledge-space-repository.ts';
+import type { KnowledgeItemRecord } from '../knowledge/infrastructure/knowledge-item-repository.ts';
 import type {
-  KnowledgeItemRepository,
-  KnowledgeItemRecord
-} from '../knowledge/infrastructure/knowledge-item-repository.ts';
-import type {
-  KnowledgeEvidenceRepository,
+  KnowledgeEvidenceListOptions,
   KnowledgeEvidenceRecord
 } from '../knowledge/infrastructure/knowledge-evidence-repository.ts';
 import type { KnowledgeArtifactProvenanceRepository } from '../knowledge/infrastructure/knowledge-artifact-provenance-repository.ts';
@@ -18,14 +14,23 @@ type Awaitable<T> = T | Promise<T>;
 type AsyncMethods<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => Awaitable<R> : T[K];
 };
+/** PostgreSQL 历史审核状态仍是字符串，消费端沿用既有允许值校验。 */
+export type ReadKnowledgeItem = Omit<KnowledgeItemRecord<unknown>, 'reviewStatus'> & {
+  reviewStatus?: string | null;
+};
+export type ReadKnowledgeEvidence = Omit<
+  KnowledgeEvidenceRecord<unknown, unknown>,
+  'status' | 'applicabilityStatus'
+> & {
+  status?: string | null;
+  applicabilityStatus?: string | null;
+};
 export interface SnapshotRepositories {
-  noteRepository: AsyncMethods<Pick<NoteRepository, 'findById' | 'list'>>;
-  folderRepository: AsyncMethods<Pick<FolderRepository, 'findById' | 'list'>>;
+  noteRepository: Pick<ReadNoteRepository, 'findById' | 'list'>;
+  folderRepository: ReadFolderRepository;
   knowledgeSpaceRepository: AsyncMethods<Pick<KnowledgeSpaceRepository, 'findById'>>;
-  knowledgeItemRepository: AsyncMethods<Pick<KnowledgeItemRepository<KnowledgeItemRecord<unknown>>, 'findById'>>;
-  knowledgeEvidenceRepository: AsyncMethods<
-    Pick<KnowledgeEvidenceRepository<KnowledgeEvidenceRecord<unknown, unknown>>, 'list'>
-  >;
+  knowledgeItemRepository: { findById(id: string): Awaitable<ReadKnowledgeItem | null> };
+  knowledgeEvidenceRepository: { list(options?: KnowledgeEvidenceListOptions): Awaitable<ReadKnowledgeEvidence[]> };
   knowledgeArtifactProvenanceRepository: AsyncMethods<Pick<KnowledgeArtifactProvenanceRepository, 'findByArtifactId'>>;
   noteVersionRepository: AsyncMethods<Pick<NoteVersionRepository, 'findById' | 'findByNoteIdAndContentHash'>>;
   contentAnnotationRepository?: AsyncMethods<Pick<ContentAnnotationRepository, 'findById'>>;
@@ -67,7 +72,7 @@ export interface CheckedSnapshot {
     evidence: object[];
     provenance: object | null;
   };
-  reads: Map<string, { note: NoteRecord; version: NoteVersionRecord }>;
+  reads: Map<string, { note: ReadNote; version: NoteVersionRecord }>;
   versions?: Map<string, NoteVersionRecord | null>;
   annotations?: Map<unknown, object | null>;
 }

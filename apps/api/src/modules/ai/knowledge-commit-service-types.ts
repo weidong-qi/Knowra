@@ -6,7 +6,7 @@ import type { KnowledgeItemServiceRecord } from '../knowledge/application/servic
 import type { createAsyncKnowledgeItemService } from '../knowledge/application/postgres-async/knowledge-domain-service.ts';
 import type { createKnowledgeItemService } from '../knowledge/application/knowledge-item-service.ts';
 import type { KnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
-import type { FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
+import type { ReadFolder as FolderRecord } from './access-service-types.ts';
 import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
 import type { NoteVersionRecord } from '../knowledge/infrastructure/note-version-repository.ts';
 import type { AiAccessPolicy, AiRunGrant, AiConversationTurn } from './private-record-types.ts';

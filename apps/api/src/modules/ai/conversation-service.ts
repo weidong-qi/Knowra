@@ -10,7 +10,9 @@ interface ConversationAgent {
 interface ConversationServiceOptions {
   store: ReturnType<typeof createAiConversationStore>;
   legacyRepository: Pick<AiRecordRepositoryPort, 'get' | 'list' | 'listEvents'>;
-  accessStore?: { get(kind: 'aiAccessPolicy', id: string): AiAccessPolicy | null | Promise<AiAccessPolicy | null> };
+  accessStore?: {
+    get(kind: 'aiAccessPolicy', id: string): AiAccessPolicy | null | Promise<AiAccessPolicy | null>;
+  } | null;
   spaceRepository: { findById(id: string): { userId?: string } | null | Promise<{ userId?: string } | null> };
   ownerId: string;
   agent?: ConversationAgent | null;

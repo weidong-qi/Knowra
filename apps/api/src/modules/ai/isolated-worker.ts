@@ -15,7 +15,7 @@ interface IsolatedWorkerOptions {
   readContext?: Pick<
     ReturnType<typeof import('./read-context-service.ts').createAiReadContextService>,
     'verifyJobSources' | 'validateAnswer'
-  >;
+  > | null;
   priceProfile?: WorkerOptions['priceProfile'];
   allowExternal?: boolean;
   policy?: Policy | null;

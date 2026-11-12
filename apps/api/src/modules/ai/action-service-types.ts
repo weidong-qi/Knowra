@@ -2,7 +2,7 @@ import type { ActionRecord, ActionStore, ActionState, ActionPlan, DraftLease } f
 import type { MessageSourceGuardOptions, RevisionArguments, Awaitable, InboxStep } from './action-inbox-types.ts';
 import type { SourceReference, CatalogDependencies } from './access-service-types.ts';
 import type { AiConversationTurn, AiAccessPolicy } from './private-record-types.ts';
-import type { NoteRecord } from '../knowledge/infrastructure/note-repository.ts';
+import type { ReadNote as NoteRecord } from './access-service-types.ts';
 import type { NoteVersionRecord } from '../knowledge/infrastructure/note-version-repository.ts';
 import type { KnowledgeSpaceRecord } from '../knowledge/infrastructure/knowledge-space-repository.ts';
 import type { TagRecord } from '../knowledge/infrastructure/tag-repository.ts';
@@ -60,7 +60,7 @@ export type ActionFlow<Result> = Generator<Awaitable<ActionValue>, Result, Actio
 type NoteService = ReturnType<typeof createNoteService>;
 type NoteMethod<Name extends 'createNote' | 'updateNote' | 'deleteNote'> = (
   ...args: Parameters<NoteService[Name]>
-) => Awaitable<ReturnType<NoteService[Name]>>;
+) => Awaitable<Omit<ReturnType<NoteService[Name]>, 'internalLinks'>>;
 export interface ActionServiceOptions extends Pick<MessageSourceGuardOptions, 'ownerId'> {
   store: ActionStore;
   core: {

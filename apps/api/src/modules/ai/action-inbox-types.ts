@@ -2,8 +2,8 @@ import type { ActionRecord, ActionState, ActionPlan, ActionStore } from './actio
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import type { ActionReference, NoteEdit } from './note-plan-types.ts';
 import type { SourceReference, CatalogDependencies } from './access-service-types.ts';
-import type { NoteRepository } from '../knowledge/infrastructure/note-repository.ts';
-import type { FolderRepository, FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
+import type { ReadNote, ReadNoteRepository, ReadFolder, ReadFolderRepository } from './access-service-types.ts';
+import type { FolderRecord } from '../knowledge/infrastructure/folder-repository.ts';
 import type { Tag } from '../knowledge/domain/tag.ts';
 import type { AiConversationTurn, AiAccessPolicy, AiRequestManifest, AiRunGrant } from './private-record-types.ts';
 export type Awaitable<T> = T | Promise<T>;
@@ -50,16 +50,16 @@ export interface ActionInboxOptions {
   verifyDraft(row: ActionRecord, state: ActionState, identity: DatasetIdentity): Awaitable<void>;
   verifyRevisionTurn(origin: InboxOrigin, row: ActionRecord): Awaitable<void>;
 }
-type AsyncFind<Repository extends { findById: (...args: never[]) => object | null }> = {
-  findById(...args: Parameters<Repository['findById']>): Awaitable<ReturnType<Repository['findById']>>;
-};
 export interface MessageSourceGuardOptions {
   conversationStore: Pick<
     ReturnType<typeof import('./conversation-store.ts').createAiConversationStore>,
     'peekTurn' | 'getConversation' | 'listMessages'
   > | null;
   accessStore: Pick<ReturnType<typeof import('./access-records.ts').createAiAccessStore>, 'peek' | 'get'> | null;
-  repositories: { noteRepository: AsyncFind<NoteRepository>; folderRepository: AsyncFind<FolderRepository> };
+  repositories: {
+    noteRepository: Pick<ReadNoteRepository, 'findById'>;
+    folderRepository: Pick<ReadFolderRepository, 'findById'>;
+  };
   ownerId: string;
   now(): Date;
 }
@@ -67,11 +67,5 @@ export interface MessageSourceScope extends DatasetIdentity {
   spaceId: string;
 }
 export type GuardStep =
-  | AiConversationTurn
-  | AiAccessPolicy
-  | AiRequestManifest
-  | AiRunGrant
-  | ReturnType<NoteRepository['findById']>
-  | ReturnType<FolderRepository['findById']>
-  | undefined;
+  AiConversationTurn | AiAccessPolicy | AiRequestManifest | AiRunGrant | ReadNote | ReadFolder | null | undefined;
 export type GuardFlow = Generator<Awaitable<GuardStep>, void, GuardStep>;

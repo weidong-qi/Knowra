@@ -1,5 +1,5 @@
 import { createPersistentAppContext } from '../../src/app.factory.js';
-import { createOptionalAiRuntime } from '../../src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../../src/modules/ai/runtime.ts';
 
 const [root, phase, driver = 'json'] = process.argv.slice(2);
 function crashingRuntime(options: Parameters<typeof createOptionalAiRuntime>[0]) {

@@ -8,7 +8,7 @@ import { mock } from 'node:test';
 import { aiRuntimeLifecycle } from '../src/modules/ai/runtime-lifecycle.ts';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createServer } from '../src/server.js';
-import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
+import { createOptionalAiRuntime } from '../src/modules/ai/runtime.ts';
 import {
   createAiTranslationService,
   normalizeTranslationText,
