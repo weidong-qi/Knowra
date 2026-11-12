@@ -6,7 +6,7 @@ import { createPersistentAppContext } from '../../../api/src/app.factory.js';
 import { createPostgresAppContext } from '../../../api/src/postgres-app.factory.js';
 import { createServer } from '../../../api/src/server.js';
 import { createV4WebServer } from '../../../web/server/app.mjs';
-import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createOptionalAiRuntime } from '../../../api/src/modules/ai/runtime.js';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { createR07PostgresDatabase } from './ai-r07-postgres.mjs';

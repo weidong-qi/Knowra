@@ -7,7 +7,7 @@ import { once } from 'node:events';
 import http from 'node:http';
 import { zipSync, strToU8 } from 'fflate';
 import { createAppContext } from '../src/app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createServer } from '../src/server.js';
 import { MAX_PDF_BYTES, validatePdfRelations } from '@study-accelerator/shared/pdf';
 import { syntheticPdf } from '../../../scripts/test-support/pdf-fixtures.mjs';

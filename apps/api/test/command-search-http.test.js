@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
 import { createAppContext } from '../src/app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 import { createPostgresKnowledgeHttpHandlers } from '../src/modules/knowledge/http/postgres-async-handlers.ts';

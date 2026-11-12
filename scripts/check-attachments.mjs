@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.js';
+import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.ts';
 import {
   buildAttachmentRepairRecord,
   inspectAttachmentIntegrity
 } from '../apps/api/src/infrastructure/attachment-integrity.ts';
 import { createLocalAttachmentFileManager } from '../apps/api/src/infrastructure/local-attachment-file-manager.ts';
-import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.ts';
 import { validatePersistedLocalState } from '../apps/api/src/infrastructure/local-data-schema.ts';
 import { readJsonFileSync } from '../apps/api/src/infrastructure/json-file-reader.ts';
 import { readAttachmentInspectionSource } from '../apps/api/src/infrastructure/attachment-inspection-source.ts';

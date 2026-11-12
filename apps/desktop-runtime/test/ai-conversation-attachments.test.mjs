@@ -4,7 +4,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createConversationAttachmentService } from '../../api/src/modules/ai/conversation-attachments.ts';
 import { createRuntimeBackup, inspectRuntimeBackup, restoreRuntimeBackup, listRuntimeBackups } from '../src/backup.mjs';
 import { prepareRestoredDirectory } from '../src/restore-directory.mjs';

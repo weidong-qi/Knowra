@@ -340,7 +340,7 @@ export const phase3AssessmentTests = [
     name: 'Phase3 local JSON repositories flush all assessment relations to schema v5',
     async run() {
       const { createAppContext } = await import('../src/app.factory.js');
-      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.js');
+      const { createFileDataStore } = await import('../src/infrastructure/file-data-store.ts');
       const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-phase3-local-'));
       const filePath = path.join(tempRoot, 'data', 'knowledge-base.json');
       try {

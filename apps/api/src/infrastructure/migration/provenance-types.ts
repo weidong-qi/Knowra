@@ -19,7 +19,7 @@ export interface ProvenanceBackfillState {
     sourceType?: string | null;
     noteVersionId?: string | null;
     quoteText?: Prisma.JsonValue;
-    status?: string;
+    status?: string | null;
     applicabilityStatus?: string | null;
   }[];
   notes: {

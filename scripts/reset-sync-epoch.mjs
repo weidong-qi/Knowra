@@ -10,7 +10,7 @@ import {
 import { writeJsonFileAtomically } from '../apps/api/src/infrastructure/atomic-json-file.ts';
 import { resetJournalKeepingTombstones } from '../apps/api/src/modules/sync/journal.ts';
 import { loadPostgresSyncIdentityState } from '../apps/api/src/modules/sync/postgres-provider.ts';
-import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.js';
+import { createPrismaRuntime } from '../apps/api/src/infrastructure/prisma-client.ts';
 
 const { values } = parseArgs({ options: { driver: { type: 'string' }, 'data-file': { type: 'string' } } });
 if (values.driver === 'local-json') {

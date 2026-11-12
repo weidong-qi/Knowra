@@ -7,7 +7,7 @@ import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 import { createServer } from '../src/server.js';
 import { createAppContext } from '../src/app.factory.js';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import { createSqliteDataStore } from '../../desktop-runtime/src/sqlite-data-store.mjs';
 import { createAsyncLearningObjectiveService } from '../src/modules/knowledge/application/postgres-async/learning-objective-service.ts';

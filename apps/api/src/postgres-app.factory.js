@@ -10,7 +10,7 @@ import path from 'node:path';
 import { createPostgresSyncRuntime, readPostgresPdfSnapshot } from './modules/sync/postgres-provider.ts';
 import { createPersonalTodoService } from './modules/personal-todos/service.ts';
 import { createPostgresTodoStore } from './modules/personal-todos/postgres-store.ts';
-import { createPrismaRuntime } from './infrastructure/prisma-client.js';
+import { createPrismaRuntime } from './infrastructure/prisma-client.ts';
 import { createPostgresAttachmentStore } from './infrastructure/postgres-attachment-store.ts';
 import { loadPostgresAttachmentReferenceState } from './infrastructure/attachment-deletion-preflight.ts';
 import { createPostgresSnapshotService } from './infrastructure/postgres-snapshot-service.ts';

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { spawn, spawnSync } from 'node:child_process';
 import { compactHistory, fileDigest } from '../compact-history.mjs';
-import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../apps/api/src/infrastructure/file-data-store.ts';
 import { acquireDataFileWriteLock } from '../../apps/api/src/infrastructure/data-file-write-lock.ts';
 import { createAppContext } from '../../apps/api/src/app.factory.js';
 import { NoteVersion } from '../../apps/api/src/modules/knowledge/domain/note-version.ts';

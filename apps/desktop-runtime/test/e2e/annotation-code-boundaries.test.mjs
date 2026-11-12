@@ -6,7 +6,7 @@ import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { chromium, expect } from '@playwright/test';
-import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
 import { createV4WebServer } from '../../../web/server/app.mjs';

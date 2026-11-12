@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { validateLocalSnapshot } from '../../api/src/infrastructure/local-data-schema.ts';

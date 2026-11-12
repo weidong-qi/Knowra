@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { readJsonFileSync } from '../src/infrastructure/json-file-reader.ts';
 import { readAttachmentInspectionSource } from '../src/infrastructure/attachment-inspection-source.ts';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import {
   assertPersistedLocalState,
   createEmptyLocalState,

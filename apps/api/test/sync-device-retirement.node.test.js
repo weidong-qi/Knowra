@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { createFileDataStore } from '../src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { writeJsonFileAtomically } from '../src/infrastructure/atomic-json-file.ts';
 import { createAppContext } from '../src/app.factory.js';
 import { createServer } from '../src/server.js';

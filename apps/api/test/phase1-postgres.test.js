@@ -24,7 +24,7 @@ export const phase1PostgresTests = [
   {
     name: 'Prisma runtime can be tested with an injected client without opening a database connection',
     async run() {
-      const { createPrismaRuntime } = await import('../src/infrastructure/prisma-client.js');
+      const { createPrismaRuntime } = await import('../src/infrastructure/prisma-client.ts');
       let connected = 0;
       let disconnected = 0;
       const client = {

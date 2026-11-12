@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { anchorForBlock, projectMarkdown } from '@study-accelerator/content-anchor';
 import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/content-annotation.ts';
 import { NoteVersion } from '../../api/src/modules/knowledge/domain/note-version.ts';
-import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.js';
+import { createFileDataStore } from '../../api/src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../../api/src/app.factory.js';
 import { createSqliteDataStore } from '../src/sqlite-data-store.mjs';
 import { temporaryDirectory, markText, inlineId } from './helpers.mjs';

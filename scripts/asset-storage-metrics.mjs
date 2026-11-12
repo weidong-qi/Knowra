@@ -279,7 +279,7 @@ export function measureSqliteStorage({ sourcePath, files, now } = {}) {
 }
 
 export async function measurePostgresStorage({ databaseUrl, files } = {}) {
-  const { createPrismaRuntime } = await import('../apps/api/src/infrastructure/prisma-client.js');
+  const { createPrismaRuntime } = await import('../apps/api/src/infrastructure/prisma-client.ts');
   const runtime = await createPrismaRuntime({ databaseUrl });
   await runtime.connect();
   try {
