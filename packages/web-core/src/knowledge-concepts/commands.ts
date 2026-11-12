@@ -9,7 +9,14 @@ import {
   relationKey,
   requireLiveConcept
 } from './validation.ts';
-import type { ConceptCommand, ConceptItem, ConceptRecord, ConceptState, KnowledgeConceptLink } from './types.ts';
+import type {
+  ConceptCommand,
+  ConceptItem,
+  ConceptRecord,
+  ConceptState,
+  KnowledgeConcept,
+  KnowledgeConceptLink
+} from './types.ts';
 
 export function mergeConceptChanges(state: ConceptState, changed: ConceptState): ConceptState {
   const merge = <T extends ConceptRecord>(before: T[], after: T[]) => [
@@ -50,11 +57,11 @@ export function applyConceptCommand(
   if (receipt) {
     if (receipt.hash !== context.requestHash) conceptFail('CONCEPT_REVISION_CONFLICT', '操作 ID 已用于不同的命令');
     // 返回当前完整值，避免重试时向客户端回灌过时的后像。
-    return structuredClone(before);
+    return JSON.parse(JSON.stringify(before)) as ConceptState;
   }
   if ('sourceMode' in command && command.sourceMode !== 'manual')
     conceptFail('CONCEPT_AI_SOURCE_RESERVED', 'AI 来源仅供服务端内部入口使用');
-  const state = structuredClone(before);
+  const state = JSON.parse(JSON.stringify(before)) as ConceptState;
   const touched = { concepts: new Set<string>(), links: new Set<string>(), relations: new Set<string>() };
   const touch = (kind: keyof ConceptState, row: ConceptRecord) => {
     touched[kind].add(row.id);
@@ -117,9 +124,10 @@ export function applyConceptCommand(
       conceptFail('CONCEPT_RELATION_BASIS_INVALID', '受影响的关系已变化，请重新确认删除范围');
     for (const row of affected) remove('relations', row);
   };
-  let owner = state.concepts.find(row => row.id === command.id);
+  const existingOwner = state.concepts.find(row => row.id === command.id);
+  let owner: KnowledgeConcept;
   if (command.type === 'createConcept') {
-    if (owner || command.expectedRevision !== 0) conceptFail('CONCEPT_REVISION_CONFLICT', '概念 ID 已存在');
+    if (existingOwner || command.expectedRevision !== 0) conceptFail('CONCEPT_REVISION_CONFLICT', '概念 ID 已存在');
     const name = conceptText(command.name, '名称', true);
     owner = {
       ...fresh(command.id),
@@ -135,7 +143,8 @@ export function applyConceptCommand(
     state.concepts.push(owner);
     if (command.itemIds?.length) addLinks(owner.id, command.itemIds, command.role ?? 'subject');
   } else {
-    if (!owner) return conceptFail('CONCEPT_NOT_FOUND', '概念不存在');
+    if (!existingOwner) return conceptFail('CONCEPT_NOT_FOUND', '概念不存在');
+    owner = existingOwner;
     if (owner.mergedInto) conceptFail('CONCEPT_MERGED', '概念已合并');
     assertConceptRevision(owner, command.expectedRevision);
     if (command.type !== 'undeleteConcept') live(owner.id);

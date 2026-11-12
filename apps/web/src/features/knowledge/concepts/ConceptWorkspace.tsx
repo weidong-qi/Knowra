@@ -84,11 +84,12 @@ export function ConceptWorkspace({
   const concept = state.concepts.find(row => row.id === selectedId && !row.deletedAt);
   const links = concept ? conceptItemLinks(state, items).filter(row => row.conceptId === concept.id) : [];
   const run = async (command: ConceptCommand) => {
-    if (!write) return;
+    if (!write) return false;
     try {
       await store.execute(command);
+      return true;
     } catch {
-      /* 页面展示错误。 */
+      return false;
     }
   };
   const base = (row: KnowledgeConcept) => ({ id: row.id, expectedRevision: row.revision, operationId: randomId() });
@@ -146,7 +147,9 @@ export function ConceptWorkspace({
                   operationId: randomId(),
                   id: undo.id,
                   expectedRevision: undo.revision
-                }).then(() => store.dismissUndo());
+                }).then(saved => {
+                  if (saved) store.dismissUndo();
+                });
               }}
             >
               撤销删除

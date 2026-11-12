@@ -42,7 +42,7 @@ function fixture(seed: ConceptCommand[] = []) {
   return { store, request, state: () => state };
 }
 describe('概念首版界面', () => {
-  it('新建弹窗保存名称、区分标签和别名，失败时保留输入', async () => {
+  it('新建弹窗保存名称、区分标签和别名', async () => {
     const user = userEvent.setup();
     const server = fixture();
     await server.store.load();
@@ -92,36 +92,35 @@ it('GET 旧快照不能覆盖已成功的命令', async () => {
   let finish: (value: { data: ConceptState }) => void = () => {};
   const stale = emptyConceptState();
   let gets = 0;
-  const initial = fixture();
-  await initial.store.load();
+  let serverState = emptyConceptState();
   const request = vi.fn(async (url: string, options?: { body?: string }) => {
     if (url.endsWith('/commands')) {
       const command = JSON.parse(options!.body!).command as ConceptCommand;
-      return {
-        data: {
-          changed: applyConceptCommand(stale, [], command, { now: '2026-11-12T00:00:00Z', requestHash: 'a'.repeat(64) })
-        }
-      };
+      const changed = applyConceptCommand(serverState, [], command, {
+        now: '2026-11-12T00:00:00Z',
+        requestHash: 'a'.repeat(64)
+      });
+      serverState = mergeConceptChanges(serverState, changed);
+      return { data: { changed } };
     }
     gets += 1;
     if (gets === 2)
       return new Promise<{ data: ConceptState }>(resolve => {
         finish = resolve;
       });
-    return { data: gets > 2 ? initial.store.getState() : emptyConceptState() };
+    return { data: gets > 2 ? serverState : emptyConceptState() };
   });
   const store = createConceptStore(request as never);
   await store.load();
   const loading = store.load();
   await act(async () => {
-    const changed = await store.execute({
+    await store.execute({
       type: 'createConcept',
       id: 'a',
       operationId: 'create',
       expectedRevision: 0,
       name: 'A'
     });
-    Object.assign(initial.store.getState(), changed);
     finish({ data: stale });
     await loading;
   });
