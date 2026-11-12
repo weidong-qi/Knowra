@@ -7,13 +7,13 @@ import { useLayoutEffect, type ReactNode } from 'react';
 describe('workspace browser history', () => {
   it('reads a location change between the first render and event subscription', () => {
     window.history.replaceState(null, '', '#/');
-    const wrapper = ({ children }: { children: ReactNode }) => {
+    const Wrapper = ({ children }: { children: ReactNode }) => {
       useLayoutEffect(() => {
         window.history.replaceState(null, '', '#/materials?scope=trash');
       }, []);
       return children;
     };
-    const { result } = renderHook(() => useHashNavigation(), { wrapper });
+    const { result } = renderHook(() => useHashNavigation(), { wrapper: Wrapper });
     expect(result.current.pathname).toBe('/materials?scope=trash');
   });
   it('keeps an unsaved explicit form mounted until its navigation guard is released', async () => {
