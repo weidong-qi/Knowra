@@ -424,3 +424,29 @@
     scrollbar-width: none;
   }
 }
+
+/* 外观作用域也用于 portal，确保色彩及其派生变量在同一层计算。 */
+.theme[data-ni-mode='light'] {
+  --surface-action-satin: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--brand-base) 82%, #fff),
+    var(--brand-base) 48%,
+    color-mix(in srgb, var(--brand-base) 80%, #000)
+  );
+  --border-action-satin: color-mix(in srgb, var(--brand-base) 80%, #000);
+}
+
+.theme[data-accent-color='ink'] {
+  --brand-base: #17181b;
+  --brand-base-dark: #ececee;
+}
+
+.theme[data-accent-color='orange'] {
+  --brand-base: #e56b25;
+  --brand-base-dark: #f08346;
+}
+
+.theme[data-ni-mode='dark'][data-accent-color='orange'] {
+  --text-on-action-satin: #fff9f4;
+  --ni-btn-on-accent: #fff;
+}

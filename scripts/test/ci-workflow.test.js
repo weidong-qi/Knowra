@@ -27,7 +27,8 @@ test('CI partitions every npm test entry exactly once and keeps Chromium in addi
     'test:e2e -w @study-accelerator/desktop-runtime',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts'
+    'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts',
+    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts v5-global-appearance.spec.ts'
   ]);
   const matrix = workflow
     .match(/suite: \[([^\]]+)\]/)[1]
@@ -113,7 +114,7 @@ test('Chromium gate collects explicit sync recovery and propagates its failure',
   );
   assert.deepEqual(
     calls,
-    suites.chromium.map(command => ['run', ...command.split(' ')])
+    suites.chromium.slice(0, 4).map(command => ['run', ...command.split(' ')])
   );
   const result = spawnSync(
     process.platform === 'win32' ? 'npm.cmd' : 'npm',

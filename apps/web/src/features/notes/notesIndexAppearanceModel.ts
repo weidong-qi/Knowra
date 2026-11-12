@@ -7,7 +7,11 @@ export interface NotesIndexAppearance {
   overlayMaterial: 'glass' | 'acrylic';
   buttonStyle: ButtonStyle;
   dialogStyle: DialogStyle;
+  accentColor: AccentColor;
 }
+
+export const ACCENT_COLORS = ['ink', 'orange'] as const;
+export type AccentColor = (typeof ACCENT_COLORS)[number];
 
 /** 主按钮（Button primary）外观：纸感、白玻璃。 */
 export const BUTTON_STYLES = ['paper', 'frost'] as const;
@@ -24,7 +28,8 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   shape: 'pill',
   overlayMaterial: 'glass',
   buttonStyle: 'paper',
-  dialogStyle: 'float'
+  dialogStyle: 'float',
+  accentColor: 'ink'
 };
 const listeners = new Set<() => void>();
 let snapshot = readAppearance();
@@ -43,7 +48,10 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
       : 'paper',
     dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle)
       ? (candidate.dialogStyle as DialogStyle)
-      : 'float'
+      : 'float',
+    accentColor: ACCENT_COLORS.includes(candidate.accentColor as AccentColor)
+      ? (candidate.accentColor as AccentColor)
+      : 'ink'
   };
 }
 

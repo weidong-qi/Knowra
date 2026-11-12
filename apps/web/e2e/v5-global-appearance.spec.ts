@@ -107,10 +107,20 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
     );
     expect(radius).toBe('6px');
   }
+  await page.getByRole('button', { name: '暖橙', exact: true }).click();
+  await expect(shell).toHaveAttribute('data-accent-color', 'orange');
+  expect(await shell.evaluate(element => getComputedStyle(element).getPropertyValue('--brand-base-dark').trim())).toBe(
+    '#f08346'
+  );
   await page.reload();
   await expect(shell).toHaveAttribute('data-ni-mode', 'dark');
+  await expect(page.getByRole('button', { name: '暖橙', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: '预览对话框', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '新建文件夹', exact: true });
+  await expect(dialog.locator('xpath=ancestor::*[@data-accent-color][1]')).toHaveAttribute(
+    'data-accent-color',
+    'orange'
+  );
   const folderName = dialog.getByRole('textbox', { name: '文件夹名称' });
   const inputShell = dialog.locator('[class*="inputShell"]');
   await folderName.focus();

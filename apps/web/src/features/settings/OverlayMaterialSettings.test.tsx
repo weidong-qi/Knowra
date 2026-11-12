@@ -3,15 +3,27 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ScopedAppearanceProvider } from '../../components/ui/overlay/ScopedAppearance';
 import { notesIndexAppearanceProps } from '../notes/NotesIndexAppearance';
-import { DEFAULT_NOTES_INDEX_APPEARANCE, NOTES_INDEX_APPEARANCE_KEY, setNotesIndexAppearance, useNotesIndexAppearance } from '../notes/notesIndexAppearanceModel';
+import {
+  DEFAULT_NOTES_INDEX_APPEARANCE,
+  NOTES_INDEX_APPEARANCE_KEY,
+  setNotesIndexAppearance,
+  useNotesIndexAppearance
+} from '../notes/notesIndexAppearanceModel';
 import { OverlayMaterialSettings } from './OverlayMaterialSettings';
 
 function SettingsSurface() {
   const appearance = useNotesIndexAppearance();
-  return <ScopedAppearanceProvider value={notesIndexAppearanceProps(appearance)}><OverlayMaterialSettings /></ScopedAppearanceProvider>;
+  return (
+    <ScopedAppearanceProvider value={notesIndexAppearanceProps(appearance)}>
+      <OverlayMaterialSettings />
+    </ScopedAppearanceProvider>
+  );
 }
 
-beforeEach(() => { localStorage.clear(); act(() => setNotesIndexAppearance(DEFAULT_NOTES_INDEX_APPEARANCE)); });
+beforeEach(() => {
+  localStorage.clear();
+  act(() => setNotesIndexAppearance(DEFAULT_NOTES_INDEX_APPEARANCE));
+});
 afterEach(cleanup);
 
 describe('浮层材质设置', () => {
@@ -53,24 +65,30 @@ describe('浮层材质设置', () => {
     await waitFor(() => expect(trigger).toHaveFocus());
     await user.click(screen.getByRole('button', { name: '通透玻璃' }));
     await user.click(screen.getByRole('button', { name: '预览菜单' }));
-    expect(screen.getByRole('menu').closest('[data-overlay-material]')).toHaveAttribute('data-overlay-material', 'glass');
+    expect(screen.getByRole('menu').closest('[data-overlay-material]')).toHaveAttribute(
+      'data-overlay-material',
+      'glass'
+    );
   });
 });
 
 it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后恢复焦点', async () => {
   const user = userEvent.setup();
   render(<SettingsSurface />);
-  for (const name of ['白玻璃', '内嵌托盘']) {
+  for (const name of ['暖橙', '白玻璃', '内嵌托盘']) {
     await user.click(screen.getByRole('button', { name }));
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
   expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
-    buttonStyle: 'frost', dialogStyle: 'tray'
+    accentColor: 'orange',
+    buttonStyle: 'frost',
+    dialogStyle: 'tray'
   });
   act(() => setNotesIndexAppearance({ mode: 'dark' }));
   const trigger = screen.getByRole('button', { name: '预览对话框' });
   await user.click(trigger);
   const scope = screen.getByRole('dialog', { name: '新建文件夹' }).closest('[data-dialog-style]');
+  expect(scope).toHaveAttribute('data-accent-color', 'orange');
   expect(scope).toHaveAttribute('data-dialog-style', 'tray');
   expect(scope).toHaveAttribute('data-button-style', 'frost');
   expect(scope).not.toHaveAttribute('data-default-button-style');
@@ -79,7 +97,7 @@ it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后�
   await waitFor(() => expect(trigger).toHaveFocus());
   cleanup();
   render(<SettingsSurface />);
-  for (const name of ['白玻璃', '内嵌托盘']) {
+  for (const name of ['暖橙', '白玻璃', '内嵌托盘']) {
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
 });
