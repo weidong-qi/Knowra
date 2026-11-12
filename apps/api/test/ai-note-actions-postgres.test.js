@@ -8,7 +8,7 @@ import { createPostgresTestDatabase } from '../../../scripts/test-support/postgr
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
 import { createPostgresAiAccessStore } from '../src/modules/ai/postgres-access-store.ts';
 import { createPostgresActionStore } from '../src/modules/ai/postgres-action-store.ts';
-import { createNoteActionService } from '../src/modules/ai/action-service.js';
+import { createNoteActionService } from '../src/modules/ai/action-service.ts';
 import { noteActionScenarios } from './fixtures/note-action-scenarios.js';
 async function withFixture(run) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-p2-pg-')),

@@ -1,6 +1,6 @@
 import { createMcpKnowledgeReadService } from './mcp-knowledge-read.ts';
 import { wrapHandlersWithMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
-import { createNoteActionService } from './action-service.js';
+import { createNoteActionService } from './action-service.ts';
 import { createAiGateway } from './gateway.ts';
 import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapter.ts';
 import { createIsolatedDeepSeekAdapter } from './isolated-provider.js';
