@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
 import { createAppContext } from '../src/app.factory.js';
-import { createAiAccessService } from '../src/modules/ai/access-service.js';
+import { createAiAccessService } from '../src/modules/ai/access-service.ts';
 import { createNoteActionService } from '../src/modules/ai/action-service.js';
 import { noteActionScenarios } from './fixtures/note-action-scenarios.js';
 export async function withJsonActionFixture(run) {

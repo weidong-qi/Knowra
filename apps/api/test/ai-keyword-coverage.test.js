@@ -8,7 +8,7 @@ import { createInMemoryNoteVersionRepository } from '../src/modules/knowledge/in
 import { createInMemoryFolderRepository } from '../src/modules/knowledge/infrastructure/folder-repository.ts';
 import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge/infrastructure/knowledge-space-repository.ts';
 import { NoteVersion, calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
-import { createAiAccessService } from '../src/modules/ai/access-service.js';
+import { createAiAccessService } from '../src/modules/ai/access-service.ts';
 import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
 
 const instant = new Date('2026-10-02T00:00:00.000Z');
