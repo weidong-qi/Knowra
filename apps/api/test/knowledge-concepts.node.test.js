@@ -98,13 +98,22 @@ test(
       await database.close();
       fs.rmSync(root, { recursive: true, force: true });
     });
+    await app.modules.knowledge.knowledgeSpaceService.createDefaultKnowledgeSpace({ userId: 'demo' });
+    await app.modules.knowledge.knowledgeItemService.createCandidate({
+      id: 'k',
+      title: '手工知识',
+      canonicalStatement: '关系说明',
+      knowledgeType: 'concept',
+      sourceMode: 'manual'
+    });
     const create = id =>
       app.knowledgeConcepts.execute({
         type: 'createConcept',
         id,
         operationId: `create-${id}`,
         expectedRevision: 0,
-        name: id
+        name: id,
+        itemIds: ['k']
       });
     await create('a');
     await create('b');
@@ -116,7 +125,7 @@ test(
       relationId: 'r',
       toConceptId: 'b',
       relationType: 'relatedTo',
-      basisItemId: null
+      basisItemId: 'k'
     });
     const conflicts = await Promise.allSettled(
       ['first', 'second'].map(name =>
@@ -135,6 +144,15 @@ test(
     assert.equal(snapshot.data.knowledgeConceptRelations.length, 1);
     await app.http.storage.importKnowledgeBase(snapshot);
     assert.equal((await app.knowledgeConcepts.list()).relations[0].id, 'r');
+    assert.equal((await app.knowledgeConcepts.list()).links.length, 2);
+    const item = await app.modules.knowledge.knowledgeItemService.getItem('k');
+    const trashed = await app.modules.knowledge.knowledgeItemService.trash('k', { expectedUpdatedAt: item.updatedAt });
+    const preview = await app.modules.knowledge.inspectKnowledgePurge('k');
+    assert.deepEqual(preview.conceptCleanup, { links: 2, relations: 1 });
+    await app.modules.knowledge.permanentlyDeleteKnowledgeItem('k', { expectedUpdatedAt: trashed.updatedAt });
+    const after = await app.knowledgeConcepts.list();
+    assert.equal(after.links.length, 0);
+    assert.equal(after.relations.length, 0);
   }
 );
 

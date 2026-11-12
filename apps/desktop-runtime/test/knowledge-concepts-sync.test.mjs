@@ -55,10 +55,18 @@ test('概念在两台 SQLite 设备间同步：直接合并、三集合原子迁
   const b = device('b');
   await a.engine.configure({ serverUrl: origin });
   await b.engine.configure({ serverUrl: origin });
+  a.knowledge.knowledgeItemService.createCandidate({
+    id: 'k',
+    title: '手工知识',
+    canonicalStatement: '关系说明',
+    knowledgeType: 'concept',
+    sourceMode: 'manual'
+  });
   await a.concepts.execute({
     type: 'createConcept',
     id: 'a',
     name: 'CNN',
+    itemIds: ['k'],
     expectedRevision: 0,
     operationId: 'create-a'
   });
@@ -66,6 +74,7 @@ test('概念在两台 SQLite 设备间同步：直接合并、三集合原子迁
     type: 'createConcept',
     id: 'b',
     name: '卷积神经网络',
+    itemIds: ['k'],
     expectedRevision: 0,
     operationId: 'create-b'
   });
@@ -95,8 +104,24 @@ test('概念在两台 SQLite 设备间同步：直接合并、三集合原子迁
   assert.equal(b.engine.status().entityConflict, null);
   assert.equal((await b.concepts.list()).concepts.length, 1);
   assert.equal((await b.concepts.list()).relations.length, 0);
+  assert.equal((await b.concepts.list()).links.length, 1);
   assert.deepEqual((await b.concepts.list()).concepts[0].aliases, ['CNN']);
   assert.equal(cloudStore.state.knowledgeConcepts.find(row => row.id === 'a').mergedInto, 'b');
+  await b.engine.close();
+  b.store.close();
+  devices.splice(devices.indexOf(b), 1);
+  const reopened = device('b');
+  assert.equal((await reopened.concepts.list()).links.length, 1);
+  const revision = (await reopened.concepts.list()).concepts[0].revision;
+  await reopened.concepts.execute({
+    type: 'mergeConcept',
+    id: 'a',
+    expectedRevision: 2,
+    operationId: 'merge',
+    targetId: 'b',
+    expectedTargetRevision: 1
+  });
+  assert.equal((await reopened.concepts.list()).concepts[0].revision, revision);
 });
 
 test('SQLite 概念三集合及命令回执随备份保留，复制恢复后可正常读取', async t => {
@@ -144,7 +169,7 @@ test('SQLite 概念三集合及命令回执随备份保留，复制恢复后可�
     assert.equal(restored.state.knowledgeConcepts.length, 2);
     assert.equal(restored.state.knowledgeConceptLinks.length, 2);
     assert.equal(restored.state.knowledgeConceptRelations.length, 1);
-    assert.equal(restored.state.knowledgeConcepts[0].operations.length, 2);
+    assert.equal(restored.state.knowledgeConcepts.find(row => row.id === 'a').operations.length, 2);
   } finally {
     restored.close();
   }

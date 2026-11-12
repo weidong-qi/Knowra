@@ -198,6 +198,11 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
       setDetailLoading(false);
       return;
     }
+    // 等列表确定回收站身份后再加载详情，避免已出现的操作按钮在按压期间因重复请求卸载。
+    if (listLoading) {
+      setDetailLoading(true);
+      return;
+    }
     if (selectedItemId === purgedItemId) {
       setDetailLoading(false);
       return;
@@ -232,7 +237,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
     return () => {
       active = false;
     };
-  }, [selectedItemId, onGet, onListEvidence, refresh, refreshKey, selectedTrashed?.id, purgedItemId]);
+  }, [selectedItemId, onGet, onListEvidence, refresh, refreshKey, listLoading, selectedTrashed, purgedItemId]);
 
   useEffect(() => {
     setNotice('');

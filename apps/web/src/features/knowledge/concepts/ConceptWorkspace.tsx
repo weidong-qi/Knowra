@@ -1,3 +1,4 @@
+import { ConceptActionDialog } from './ConceptActionDialog';
 import { useEffect, useState } from 'react';
 import {
   conceptCounts,
@@ -7,17 +8,7 @@ import {
   type KnowledgeConcept,
   type KnowledgeItem
 } from '@study-accelerator/web-core';
-import {
-  Button,
-  Checkbox,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  LoadingState,
-  PressableButton,
-  SearchBox,
-  Select
-} from '../../../components/ui';
+import { Button, Checkbox, LoadingState, PressableButton, SearchBox, Select } from '../../../components/ui';
 import { randomId } from '../../../browser/randomId';
 import { knowledgeTypeLabel } from '../knowledgeViewModel';
 import { sharedConceptStore, useConceptState } from './conceptStore';
@@ -52,7 +43,6 @@ export function ConceptWorkspace({
   const [selection, setSelection] = useState<string[]>([]);
   const [removal, setRemoval] = useState<{ ids: string[]; move: boolean } | null>(null);
   const [action, setAction] = useState<'merge' | 'delete' | null>(null);
-  const [targetId, setTargetId] = useState('');
   useEffect(() => {
     void store.load();
   }, [store, refreshKey]);
@@ -93,27 +83,6 @@ export function ConceptWorkspace({
     }
   };
   const base = (row: KnowledgeConcept) => ({ id: row.id, expectedRevision: row.revision, operationId: randomId() });
-  const confirmAction = async () => {
-    if (!write || !concept) return;
-    const target = state.concepts.find(row => row.id === targetId && !row.deletedAt);
-    try {
-      if (action === 'merge' && target) {
-        await store.execute({
-          ...base(concept),
-          type: 'mergeConcept',
-          targetId: target.id,
-          expectedTargetRevision: target.revision
-        });
-        onSelect(target.id);
-      } else if (action === 'delete') {
-        await store.execute({ ...base(concept), type: 'deleteConcept' });
-        onSelect(null);
-      }
-      setAction(null);
-    } catch {
-      /* 保留弹窗。 */
-    }
-  };
   const candidates = searchConcepts(state, query).filter(row =>
     filter === 'archived' ? row.reviewStatus === 'archived' : row.reviewStatus !== 'archived' && row.focus === filter
   );
@@ -202,7 +171,6 @@ export function ConceptWorkspace({
               </Button>
               <Button
                 onPress={() => {
-                  setTargetId('');
                   setAction('merge');
                 }}
                 isDisabled={state.pending}
@@ -371,60 +339,14 @@ export function ConceptWorkspace({
         />
       ) : null}
       {concept && action ? (
-        <Dialog
-          isOpen
-          title={action === 'merge' ? '合并概念？' : '删除概念？'}
-          isPending={state.pending}
-          onOpenChange={open => {
-            if (!open && !state.pending) setAction(null);
-          }}
-        >
-          <DialogBody>
-            <div className={styles.form}>
-              {action === 'merge' ? (
-                <>
-                  <p>
-                    将“{concept.name}
-                    ”的知识点关联和关系迁到目标概念，并把原名称保留为别名。重复关联按主体优先去重，重复关系合为一条，概念内部的关系会删除。合并不可撤销。
-                  </p>
-                  <Select
-                    label="合并目标"
-                    value={targetId || null}
-                    onChange={key => setTargetId(String(key ?? ''))}
-                    options={state.concepts
-                      .filter(row => !row.deletedAt && row.id !== concept.id && row.reviewStatus !== 'archived')
-                      .map(row => ({ id: row.id, label: `${row.name}${row.sense ? ` · ${row.sense}` : ''}` }))}
-                  />
-                </>
-              ) : (
-                <p>
-                  将删除“{concept.name}”、它的{' '}
-                  {state.links.filter(row => !row.deletedAt && row.conceptId === concept.id).length} 条挂靠，以及{' '}
-                  {
-                    state.relations.filter(
-                      row => !row.deletedAt && [row.fromConceptId, row.toConceptId].includes(concept.id)
-                    ).length
-                  }{' '}
-                  条关系（边）。知识点正文保留。
-                </p>
-              )}
-              {state.error ? <p role="alert">{state.error}</p> : null}
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="ghost" isDisabled={state.pending} onPress={() => setAction(null)}>
-              取消
-            </Button>
-            <Button
-              variant="danger"
-              isPending={state.pending}
-              isDisabled={!write || (action === 'merge' && !targetId)}
-              onPress={() => void confirmAction()}
-            >
-              {action === 'merge' ? '确认合并' : '删除概念及关系'}
-            </Button>
-          </DialogFooter>
-        </Dialog>
+        <ConceptActionDialog
+          concept={concept}
+          action={action}
+          canWrite={write}
+          store={store}
+          onSelect={onSelect}
+          onClose={() => setAction(null)}
+        />
       ) : null}
     </section>
   );

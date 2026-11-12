@@ -270,6 +270,7 @@ export function applyConceptCommand(
       case 'createRelation':
       case 'updateRelation': {
         live(command.toConceptId);
+        if (command.basisItemId !== null) requireItems([command.basisItemId]);
         let relation = state.relations.find(row => row.id === command.relationId);
         if (command.type === 'createRelation') {
           if (relation) conceptFail('CONCEPT_RELATION_EXISTS', '关系 ID 已存在');

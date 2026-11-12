@@ -48,7 +48,7 @@ test('05B SQLite旧receipt回填仅摘要，保留用户编辑和alias，升级�
   assertMinimalProvenanceTransport(store.exportSnapshot(), f.provenance);
   const db = new DatabaseSync(f.file, { readOnly: true });
   try {
-    assert.equal(db.prepare("SELECT value FROM metadata WHERE key = 'localDataSchemaVersion'").get().value, '8');
+    assert.equal(db.prepare("SELECT value FROM metadata WHERE key = 'localDataSchemaVersion'").get().value, '9');
     assert.equal(db.prepare('PRAGMA user_version').get().user_version, 8);
     assert.deepEqual(
       JSON.parse(db.prepare('SELECT receipt_json FROM knowledge_extraction_commits').get().receipt_json),

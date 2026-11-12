@@ -113,7 +113,9 @@ export function assertConceptState(state: ConceptState, items: readonly ConceptI
       const namesB = [b.name, ...b.aliases].map(normalizeConceptName);
       if (
         namesA.some(name => namesB.includes(name)) &&
-        (normalizeConceptName(a.sense) === normalizeConceptName(b.sense) || !a.sense || !b.sense)
+        (normalizeConceptName(a.sense) === normalizeConceptName(b.sense) ||
+          !normalizeConceptName(a.sense) ||
+          !normalizeConceptName(b.sense))
       )
         conceptFail('CONCEPT_NAME_AMBIGUOUS', '名称或别名已存在，请为两个概念填写不同的区分标签');
     }

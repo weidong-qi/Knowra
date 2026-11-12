@@ -128,3 +128,80 @@ describe('概念规则与直接合并', () => {
     ).toThrow('别处修改');
   });
 });
+
+it('无向关系去重、关系依据和别名约束在同一校验器执行', () => {
+  const f = fixture();
+  for (const id of ['a', 'b']) f.execute({ type: 'createConcept', id, expectedRevision: 0, name: id, itemIds: ['k1'] });
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'relatedTo',
+    basisItemId: 'k1'
+  });
+  expect(() =>
+    f.execute({
+      type: 'createRelation',
+      id: 'b',
+      expectedRevision: 1,
+      relationId: 'reverse',
+      toConceptId: 'a',
+      relationType: 'relatedTo',
+      basisItemId: null
+    })
+  ).toThrow('同类型关系');
+  expect(() =>
+    f.execute({
+      type: 'createRelation',
+      id: 'b',
+      expectedRevision: 1,
+      relationId: 'missing',
+      toConceptId: 'a',
+      relationType: 'partOf',
+      basisItemId: 'k2'
+    })
+  ).toThrow('同时挂靠');
+  expect(() => f.execute({ type: 'updateConcept', id: 'a', expectedRevision: 2, patch: { aliases: ['a'] } })).toThrow(
+    '与名称相同'
+  );
+  f.execute({ type: 'archiveConcept', id: 'a', expectedRevision: 2 });
+  f.execute({ type: 'restoreConcept', id: 'a', expectedRevision: 3 });
+  expect(f.state.concepts.find(row => row.id === 'a')?.reviewStatus).toBe('confirmed');
+});
+
+it('整批移动实际迁移关联，目标已有挂靠时去重并一次删除失效依据边', () => {
+  const f = fixture();
+  f.execute({ type: 'createConcept', id: 'a', expectedRevision: 0, name: 'A', itemIds: ['k1', 'k2'] });
+  f.execute({ type: 'createConcept', id: 'b', expectedRevision: 0, name: 'B', itemIds: ['k1'], role: 'mentions' });
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'relatedTo',
+    basisItemId: 'k1'
+  });
+  const link = f.state.links.find(row => row.conceptId === 'a' && row.knowledgeItemId === 'k1')!;
+  f.execute({
+    type: 'moveLinks',
+    id: 'a',
+    expectedRevision: 2,
+    targetId: 'b',
+    expectedTargetRevision: 1,
+    linkIds: [link.id],
+    deleteRelationIds: ['r']
+  });
+  expect(f.state.links.filter(row => !row.deletedAt && row.conceptId === 'a').map(row => row.knowledgeItemId)).toEqual([
+    'k2'
+  ]);
+  expect(f.state.links.filter(row => !row.deletedAt && row.conceptId === 'b')).toEqual([
+    expect.objectContaining({ knowledgeItemId: 'k1', role: 'subject' })
+  ]);
+  expect(f.state.relations[0]?.deletedAt).toBe(now);
+  expect(() =>
+    f.execute({ type: 'linkItems', id: 'b', expectedRevision: 2, itemIds: ['k1'], role: 'subject' })
+  ).toThrow('已挂入');
+});
