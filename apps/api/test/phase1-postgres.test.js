@@ -495,7 +495,7 @@ export const phase1PostgresTests = [
     name: 'PostgreSQL recycle-bin cleanup preflights every formal evidence reference before deleting',
     async run() {
       const { createAsyncNoteService } =
-        await import('../src/modules/knowledge/application/postgres-async/note-service.js');
+        await import('../src/modules/knowledge/application/postgres-async/note-service.ts');
       const notes = [
         {
           id: 'note-unreferenced',

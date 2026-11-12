@@ -4,7 +4,7 @@ export const noteServiceTests = [
   {
     name: 'createNote returns a note with derived plainText',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       const note = noteService.createNote({
@@ -22,7 +22,7 @@ export const noteServiceTests = [
   {
     name: 'createNote can auto-generate id from title',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       const note = noteService.createNote({
@@ -38,7 +38,7 @@ export const noteServiceTests = [
   {
     name: 'createNote generates unique ids for same-title notes created in one batch',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       const notes = noteService.importMarkdownBatch([
@@ -61,7 +61,7 @@ export const noteServiceTests = [
   {
     name: 'createNote rejects a duplicate client-provided id without overwriting',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -87,7 +87,7 @@ export const noteServiceTests = [
   {
     name: 'createNote accepts an empty body for a newly created manual note',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       const note = noteService.createNote({
@@ -106,7 +106,7 @@ export const noteServiceTests = [
   {
     name: 'importMarkdown creates markdown-import notes with derived title',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       const note = noteService.importMarkdown({
@@ -124,7 +124,7 @@ export const noteServiceTests = [
   {
     name: 'importMarkdownBatch imports multiple notes at once',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       const notes = noteService.importMarkdownBatch([
@@ -148,7 +148,7 @@ export const noteServiceTests = [
   {
     name: 'updateNote refreshes title, rawMarkdown and derived plainText',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -172,7 +172,7 @@ export const noteServiceTests = [
   {
     name: 'updateNote can move a note back to the root level',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -194,7 +194,7 @@ export const noteServiceTests = [
   {
     name: 'getNote returns a note by id',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -214,7 +214,7 @@ export const noteServiceTests = [
   {
     name: 'getLinkedNotes returns linked notes that exist',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -241,7 +241,7 @@ export const noteServiceTests = [
   {
     name: 'getLinkedNotes tolerates missing internalLinks on stored notes',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService({
         repository: {
           findById: noteId =>
@@ -259,7 +259,7 @@ export const noteServiceTests = [
   {
     name: 'listNotes filters notes by spaceId',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -286,7 +286,7 @@ export const noteServiceTests = [
   {
     name: 'listNotes summaryOnly omits note bodies and keeps index metadata',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -314,7 +314,7 @@ export const noteServiceTests = [
   {
     name: 'setFavorite marks a note and favorite notes sort first',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -347,7 +347,7 @@ export const noteServiceTests = [
   {
     name: 'assignTagToNote records tagIds without duplication',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -370,7 +370,7 @@ export const noteServiceTests = [
   {
     name: 'deleteNotes soft deletes multiple notes in one operation',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -398,7 +398,7 @@ export const noteServiceTests = [
   {
     name: 'removeTagFromNote removes a tag id from the note',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -418,7 +418,7 @@ export const noteServiceTests = [
   {
     name: 'assignTagToNotes appends a tag across multiple notes without duplication',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -447,7 +447,7 @@ export const noteServiceTests = [
   {
     name: 'clearFolderFromNotes removes folder references from matching notes',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -475,7 +475,7 @@ export const noteServiceTests = [
   {
     name: 'removeTagFromAllNotes removes tag id across matching notes',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -505,7 +505,7 @@ export const noteServiceTests = [
   {
     name: 'setNoteTags replaces the full tag collection for a note',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -526,7 +526,7 @@ export const noteServiceTests = [
   {
     name: 'listNotes sorts by updatedAt descending by default',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -557,7 +557,7 @@ export const noteServiceTests = [
   {
     name: 'listNotes can sort by title ascending',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -588,7 +588,7 @@ export const noteServiceTests = [
   {
     name: 'listNotes supports offset and limit together',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -629,7 +629,7 @@ export const noteServiceTests = [
   {
     name: 'listNotes can return only deleted notes for recycle bin views',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -661,7 +661,7 @@ export const noteServiceTests = [
   {
     name: 'deleteNote marks note as deleted without removing it from storage',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -682,7 +682,7 @@ export const noteServiceTests = [
   {
     name: 'restoreNote returns deleted notes to active lists',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -704,7 +704,7 @@ export const noteServiceTests = [
   {
     name: 'setFavorite can also clear a favorite mark',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       noteService.createNote({
@@ -725,7 +725,7 @@ export const noteServiceTests = [
   {
     name: 'createNote derives title when it is missing but markdown exists',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       const note = noteService.createNote({
@@ -742,7 +742,7 @@ export const noteServiceTests = [
   {
     name: 'updateNote throws when note does not exist',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       assert.throws(() => {
@@ -756,7 +756,7 @@ export const noteServiceTests = [
   {
     name: 'assignTagToNote throws when note does not exist',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
 
       assert.throws(() => {
@@ -767,7 +767,7 @@ export const noteServiceTests = [
   {
     name: 'createNote rejects sibling names that conflict with folder names',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService({
         validateSiblingNameConflict({ spaceId, folderId, title }) {
           assert.equal(spaceId, 'space-1');
@@ -791,7 +791,7 @@ export const noteServiceTests = [
   {
     name: 'updateNote rejects a stale expectedUpdatedAt concurrency token',
     async run() {
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const noteService = createNoteService();
       const note = noteService.createNote({
         id: 'note-stale-update',
@@ -821,9 +821,9 @@ export const noteServiceTests = [
     name: '旧保存映射在没有时间戳时仍保护正文并发，同步与异步服务一致',
     async run() {
       const { calculateContentHash } = await import('@study-accelerator/content-anchor');
-      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.js');
+      const { createNoteService } = await import('../src/modules/knowledge/application/note-service.ts');
       const { createAsyncNoteService } =
-        await import('../src/modules/knowledge/application/postgres-async/note-service.js');
+        await import('../src/modules/knowledge/application/postgres-async/note-service.ts');
       const { createInMemoryNoteRepository } =
         await import('../src/modules/knowledge/infrastructure/note-repository.ts');
       const repository = createInMemoryNoteRepository();

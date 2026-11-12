@@ -13,7 +13,7 @@ import {
   assertPurgeDatasetEpoch,
   assertManualPurgeScope
 } from './application/asset-purge-guard.ts';
-import { createNoteService } from './application/note-service.js';
+import { createNoteService } from './application/note-service.ts';
 import { createFolderService } from './application/folder-service.ts';
 import { createTagService } from './application/tag-service.ts';
 import { createTagGroupService } from './application/tag-group-service.ts';

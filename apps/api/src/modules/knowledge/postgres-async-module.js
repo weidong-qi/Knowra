@@ -14,7 +14,7 @@ import {
   assertPurgeDatasetEpoch,
   assertManualPurgeScope
 } from './application/asset-purge-guard.ts';
-import { createAsyncNoteService } from './application/postgres-async/note-service.js';
+import { createAsyncNoteService } from './application/postgres-async/note-service.ts';
 import { createAsyncFolderService } from './application/postgres-async/folder-service.ts';
 import { createAsyncTagService } from './application/postgres-async/tag-service.ts';
 import { createAsyncTagGroupService } from './application/postgres-async/tag-group-service.ts';
