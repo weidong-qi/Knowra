@@ -5,26 +5,48 @@ import { Dialog, DialogBody, DialogClose, DialogFooter, DialogTrigger } from '..
 import { TextField } from '../../components/ui/input';
 import { Menu, MenuItem, MenuPopover, MenuTrigger, SubmenuTrigger } from '../../components/ui/overlay/Menu';
 import {
+  ACCENT_COLORS,
   BUTTON_STYLES,
   DIALOG_STYLES,
   setNotesIndexAppearance,
   useNotesIndexAppearance,
+  type AccentColor,
   type ButtonStyle,
   type DialogStyle
 } from '../notes/notesIndexAppearanceModel';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
 
+const ACCENT_COLOR_LABELS: Record<AccentColor, string> = { ink: '墨黑', orange: '暖橙' };
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
 
 export function OverlayMaterialSettings() {
-  const { overlayMaterial, buttonStyle, dialogStyle } = useNotesIndexAppearance();
+  const { overlayMaterial, buttonStyle, dialogStyle, accentColor } = useNotesIndexAppearance();
   const compact = useCompactLayout();
   return (
     <section className={styles.group} aria-labelledby="settings-appearance-heading">
       <h3 id="settings-appearance-heading">外观</h3>
       <div className={styles.settingList}>
+        <div className={`${styles.settingRow} ${styles.materialRow}`}>
+          <div className={styles.settingCopy}>
+            <h4>强调色</h4>
+            <p>切换全局强调色，浅色与深色模式自动适配，切换后即时保存。</p>
+          </div>
+          <div className={`${styles.settingControl} ${styles.materialControl}`}>
+            <SegmentedControl aria-label="强调色">
+              {ACCENT_COLORS.map(color => (
+                <SegmentedButton
+                  key={color}
+                  aria-pressed={accentColor === color}
+                  onPress={() => setNotesIndexAppearance({ accentColor: color })}
+                >
+                  {ACCENT_COLOR_LABELS[color]}
+                </SegmentedButton>
+              ))}
+            </SegmentedControl>
+          </div>
+        </div>
         <div className={`${styles.settingRow} ${styles.materialRow}`}>
           <div className={styles.settingCopy}>
             <h4>浮层材质</h4>

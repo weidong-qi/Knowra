@@ -31,7 +31,8 @@ describe('全局定稿外观', () => {
       shape: 'pill',
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
-      dialogStyle: 'float'
+      dialogStyle: 'float',
+      accentColor: 'ink'
     });
   });
   it('旧数据默认通透玻璃，只接受已支持的浮层材质', () => {
@@ -44,6 +45,8 @@ describe('全局定稿外观', () => {
     expect(parseNotesIndexAppearance({ buttonStyle: 'frost' }).buttonStyle).toBe('frost');
     // 默认按钮只有细线一种样式；旧版保存的“无边软影”“乳白玻璃”会被忽略，不出现在解析结果里。
     expect(parseNotesIndexAppearance({ defaultButtonStyle: 'glass' })).not.toHaveProperty('defaultButtonStyle');
+    expect(parseNotesIndexAppearance({ accentColor: 'orange' }).accentColor).toBe('orange');
+    expect(parseNotesIndexAppearance({ accentColor: 'unknown' }).accentColor).toBe('ink');
     expect(parseNotesIndexAppearance(null).dialogStyle).toBe('float');
     expect(parseNotesIndexAppearance({ dialogStyle: 'unknown' }).dialogStyle).toBe('float');
     expect(parseNotesIndexAppearance({ dialogStyle: 'glass' }).dialogStyle).toBe('float');
@@ -89,7 +92,8 @@ describe('全局定稿外观', () => {
       shape: 'pill',
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
-      dialogStyle: 'float'
+      dialogStyle: 'float',
+      accentColor: 'ink'
     });
     await userEvent.click(screen.getByRole('button', { name: '切换浅色模式' }));
     expect(surface).toHaveAttribute('data-ni-mode', 'light');
@@ -101,7 +105,8 @@ describe('全局定稿外观', () => {
       shape: 'pill',
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
-      dialogStyle: 'float'
+      dialogStyle: 'float',
+      accentColor: 'ink'
     });
   });
   it('存储不可用时依然允许切换并在重新挂载后保留会话设置', async () => {
