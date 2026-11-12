@@ -23,6 +23,9 @@ import {
   dbQuestion,
   dbQuestionObjective,
   dbQuestionSource,
+  dbKnowledgeConcept,
+  dbKnowledgeConceptLink,
+  dbKnowledgeConceptRelation,
   dbPersonalTodo,
   dbNote,
   dbNoteVersion,
@@ -84,6 +87,9 @@ const syncPlanCollections = Object.freeze({
   annotationExclusions: 'annotationExclusions',
   annotationRevisions: 'annotationRevisions',
   analysisScopeSnapshots: 'analysisScopeSnapshots',
+  knowledgeConcepts: 'knowledgeConcepts',
+  knowledgeConceptLinks: 'knowledgeConceptLinks',
+  knowledgeConceptRelations: 'knowledgeConceptRelations',
   personalTodos: 'personalTodos'
 } as const);
 const syncDbModels = Object.freeze({
@@ -108,6 +114,9 @@ const syncDbModels = Object.freeze({
   annotationExclusions: 'annotationExclusion',
   annotationRevisions: 'annotationRevision',
   analysisScopeSnapshots: 'analysisScopeSnapshot',
+  knowledgeConcepts: 'knowledgeConcept',
+  knowledgeConceptLinks: 'knowledgeConceptLink',
+  knowledgeConceptRelations: 'knowledgeConceptRelation',
   personalTodos: 'personalTodo'
 } as const);
 
@@ -186,6 +195,9 @@ export function buildJsonMigrationPlan({
       transformQuestionObjective(relation, fallbackTimestamp)
     ),
     questionSources: state.questionSources.map(source => transformQuestionSource(source, fallbackTimestamp)),
+    knowledgeConcepts: structuredClone(state.knowledgeConcepts),
+    knowledgeConceptLinks: structuredClone(state.knowledgeConceptLinks),
+    knowledgeConceptRelations: structuredClone(state.knowledgeConceptRelations),
     personalTodos: (state.personalTodos ?? []).map(todo => JSON.parse(JSON.stringify(todo))),
     noteTags: [],
     annotations: state.contentAnnotations.map(annotation =>
@@ -358,6 +370,9 @@ export function buildJsonMigrationPlan({
     'analysisScopeSnapshots',
     'pdfAnnotations',
     'attachments',
+    'knowledgeConcepts',
+    'knowledgeConceptLinks',
+    'knowledgeConceptRelations',
     'personalTodos'
   ] as const) {
     reportTools.count(collection, plan[collection].length);
@@ -419,6 +434,9 @@ export async function applyJsonMigration({
     if (tx.syncJournal) await tx.syncJournal.deleteMany();
     if (requireEmptyTarget) await assertEmptyTarget(tx);
     if (replaceExisting) {
+      await tx.knowledgeConcept.deleteMany();
+      await tx.knowledgeConceptLink.deleteMany();
+      await tx.knowledgeConceptRelation.deleteMany();
       await tx.personalTodo.deleteMany();
       await tx.analysisScopeSnapshot.deleteMany();
       await tx.annotationRevision.deleteMany();
@@ -550,6 +568,14 @@ export async function applyJsonMigration({
         >
       )({ data: plan.attachments.map(dbAttachment) });
     }
+    if (plan.knowledgeConcepts.length)
+      await tx.knowledgeConcept.createMany({ data: plan.knowledgeConcepts.map(dbKnowledgeConcept) });
+    if (plan.knowledgeConceptLinks.length)
+      await tx.knowledgeConceptLink.createMany({ data: plan.knowledgeConceptLinks.map(dbKnowledgeConceptLink) });
+    if (plan.knowledgeConceptRelations.length)
+      await tx.knowledgeConceptRelation.createMany({
+        data: plan.knowledgeConceptRelations.map(dbKnowledgeConceptRelation)
+      });
     if (plan.personalTodos.length) await tx.personalTodo.createMany({ data: plan.personalTodos.map(dbPersonalTodo) });
     if (tx.syncJournal) {
       const state = Object.fromEntries(
@@ -584,6 +610,9 @@ export async function applyJsonMigration({
 export async function assertEmptyTarget(client: MigrationTransaction) {
   const models = [
     'user',
+    'knowledgeConcept',
+    'knowledgeConceptLink',
+    'knowledgeConceptRelation',
     'personalTodo',
     'knowledgeSpace',
     'folder',

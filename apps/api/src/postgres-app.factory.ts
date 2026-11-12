@@ -1,3 +1,5 @@
+import { createKnowledgeConceptService } from './modules/knowledge-concepts/service.ts';
+import { createPostgresConceptStore } from './modules/knowledge-concepts/postgres-store.ts';
 import { buildNoteData, mapNote } from './modules/knowledge/infrastructure/postgres/mappers.ts';
 import { buildJsonMigrationPlan, applyJsonMigration } from './infrastructure/migration/json-to-postgres.ts';
 import { createPdfService } from './modules/pdf/service.ts';
@@ -246,6 +248,7 @@ export async function createPostgresAppContext({
     // V1 不把本地域隐式回退到 JSON，也不扩充 PostgreSQL 的普通笔记协议。
     taskWorkspaces: createTaskWorkspaceService({ store: null }),
     taskWorkspaceContext: () => ({ actor: { kind: 'user' as const, id: normalizedOwnerId } }),
+    knowledgeConcepts: createKnowledgeConceptService({ store: createPostgresConceptStore(db) }),
     personalTodos: createPersonalTodoService({ store: createPostgresTodoStore(db) }),
     knowledgeExtractionCommit,
     knowledgeExtractionTasks,

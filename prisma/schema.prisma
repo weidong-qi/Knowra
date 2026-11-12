@@ -1,4 +1,22 @@
 // 个人待办：整条记录存 JSONB，规则由应用层校验；参与原子实体同步。
+model KnowledgeConcept {
+  id String @id
+  data Json
+  updatedAt DateTime
+}
+
+model KnowledgeConceptLink {
+  id String @id
+  data Json
+  updatedAt DateTime
+}
+
+model KnowledgeConceptRelation {
+  id String @id
+  data Json
+  updatedAt DateTime
+}
+
 model PersonalTodo {
   id        String   @id
   data      Json

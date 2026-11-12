@@ -131,7 +131,12 @@ export function createPostgresSnapshotService({
         pdfAnnotations: (await client!.$transaction(async tx => tx.pdfAnnotation.findMany())).map(row => row.payload),
         annotationExclusions,
         annotationRevisions,
-        analysisScopeSnapshots
+        analysisScopeSnapshots,
+        ...(await client!.$transaction(async tx => ({
+          knowledgeConcepts: (await tx.knowledgeConcept.findMany()).map(row => row.data),
+          knowledgeConceptLinks: (await tx.knowledgeConceptLink.findMany()).map(row => row.data),
+          knowledgeConceptRelations: (await tx.knowledgeConceptRelation.findMany()).map(row => row.data)
+        })))
       },
       attachmentFiles
     };

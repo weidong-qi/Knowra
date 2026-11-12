@@ -47,6 +47,9 @@ export interface MigrationSourceMap {
   questionSources: LegacyCollection<'questionSources'> & { questionId: string };
   pdfAnnotations: SyncMappedEntityMap['pdfAnnotations'];
   knowledgeArtifactProvenance: KnowledgeArtifactProvenance;
+  knowledgeConcepts: SyncMappedEntityMap['knowledgeConcepts'];
+  knowledgeConceptLinks: SyncMappedEntityMap['knowledgeConceptLinks'];
+  knowledgeConceptRelations: SyncMappedEntityMap['knowledgeConceptRelations'];
   personalTodos: SyncMappedEntityMap['personalTodos'];
 }
 export type MigrationSourceState = { [Key in keyof MigrationSourceMap]: MigrationSourceMap[Key][] };
@@ -78,6 +81,9 @@ export interface MigrationPlan {
   noteTags: { noteId: string; tagId: string }[];
   pdfAnnotations: MigrationSourceMap['pdfAnnotations'][];
   knowledgeArtifactProvenance: KnowledgeArtifactProvenance[];
+  knowledgeConcepts: MigrationSourceMap['knowledgeConcepts'][];
+  knowledgeConceptLinks: MigrationSourceMap['knowledgeConceptLinks'][];
+  knowledgeConceptRelations: MigrationSourceMap['knowledgeConceptRelations'][];
   personalTodos: MigrationSourceMap['personalTodos'][];
 }
 export interface MigrationAttachmentOptions {
