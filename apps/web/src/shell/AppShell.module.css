@@ -249,8 +249,7 @@
     border-radius: var(--shell-panel-radius);
   }
   .shellWithSidebar[data-sidebar-border='true'] .contextSidebar {
-    box-shadow:
-      var(--shadow-page),
-      inset 0 0 0 1px var(--border-strong);
+    outline: 1px solid var(--border-strong);
+    outline-offset: -1px;
   }
 }
