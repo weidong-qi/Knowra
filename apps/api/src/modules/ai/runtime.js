@@ -1,4 +1,4 @@
-import { createMcpKnowledgeReadService } from './mcp-knowledge-read.js';
+import { createMcpKnowledgeReadService } from './mcp-knowledge-read.ts';
 import { wrapHandlersWithMaintenanceGate } from '../../infrastructure/maintenance-gate.ts';
 import { createNoteActionService } from './action-service.js';
 import { createAiGateway } from './gateway.ts';
@@ -6,7 +6,7 @@ import { createDeepSeekAdapter } from './infrastructure/providers/deepseek-adapt
 import { createIsolatedDeepSeekAdapter } from './isolated-provider.js';
 import { createAiWorker } from './worker.js';
 import { createIsolatedAiWorker } from './isolated-worker.js';
-import { createAiReadContextService } from './read-context-service.js';
+import { createAiReadContextService } from './read-context-service.ts';
 import { createAiAccessService } from './access-service.js';
 import { createAiConversationService } from './conversation-service.ts';
 import { createAiAgentWorker } from './agent-worker.js';

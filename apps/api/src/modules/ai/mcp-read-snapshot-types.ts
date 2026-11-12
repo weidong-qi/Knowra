@@ -61,7 +61,7 @@ export interface CheckedSnapshot {
   };
   reads: Map<string, { note: NoteRecord; version: NoteVersionRecord }>;
   versions?: Map<string, NoteVersionRecord | null>;
-  annotations?: Map<string, object | null>;
+  annotations?: Map<unknown, object | null>;
 }
 export interface OutputGuard {
   grantId: string;

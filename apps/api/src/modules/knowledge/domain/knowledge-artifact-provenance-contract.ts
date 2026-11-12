@@ -71,7 +71,7 @@ export interface ProvenanceEvidence {
   applicabilityStatus?: string | null;
 }
 export interface ProvenanceNoteVersion {
-  id?: string;
+  id?: unknown;
   noteId?: unknown;
   contentHash?: unknown;
   content?: unknown;

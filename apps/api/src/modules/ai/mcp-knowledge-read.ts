@@ -1,3 +1,17 @@
+import type {
+  McpKnowledgeReadDependencies,
+  McpKnowledgeRepositories,
+  McpReadAccess,
+  McpVerifiedRead,
+  McpKnowledgeReadInput,
+  McpReceiptInput,
+  McpProposalInput
+} from './mcp-knowledge-read-types.ts';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
+import type { NoteVersionRecord } from '../knowledge/infrastructure/note-version-repository.ts';
+import type { NormalizedContentAnnotationRecord } from '../knowledge/infrastructure/content-annotation-repository.ts';
+import type { KnowledgeEvidenceRecord } from '../knowledge/infrastructure/knowledge-evidence-repository.ts';
+import type { RecordedKnowledgeArtifactProvenance } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { createAppError } from '../../errors/app-error.ts';
 import { hashRecord } from './record-contract.ts';
@@ -8,12 +22,21 @@ import {
   resolveKnowledgeArtifactProvenanceSource
 } from '../knowledge/domain/knowledge-artifact-provenance-contract.ts';
 
-const STATUSES = new Set(['candidate', 'confirmed', 'needsRevision', 'archived']);
-const TYPES = new Set(['concept', 'fact', 'principle', 'process', 'algorithm', 'formula', 'comparison', 'application']);
-const MODES = new Set(['manual', 'annotation', 'selection', 'ai']);
+const STATUSES = new Set<unknown>(['candidate', 'confirmed', 'needsRevision', 'archived']);
+const TYPES = new Set<unknown>([
+  'concept',
+  'fact',
+  'principle',
+  'process',
+  'algorithm',
+  'formula',
+  'comparison',
+  'application'
+]);
+const MODES = new Set<unknown>(['manual', 'annotation', 'selection', 'ai']);
 const MAX_CANDIDATES = 20;
 const MAX_EVIDENCE = 160;
-const id = value =>
+const id = (value: unknown): value is string =>
   typeof value === 'string' &&
   value.length > 0 &&
   value.length <= 200 &&
@@ -22,8 +45,8 @@ const id = value =>
   value.isWellFormed();
 const unavailable = () =>
   Object.assign(createAppError('MCP_ENTITY_UNAVAILABLE', '对象不存在或不在当前授权范围。', 404), { status: 404 });
-const copy = value => structuredClone(value);
-const hash = value => calculateContentHash(JSON.stringify(value));
+const copy = <T>(value: T): T => structuredClone(value);
+const hash = <T>(value: T) => calculateContentHash(JSON.stringify(value));
 
 /**
  * 受信 MCP 投影。正文读取仅供已单独开启“全部知识正文”授权的配对，调用方必须在外发出口
@@ -31,17 +54,21 @@ const hash = value => calculateContentHash(JSON.stringify(value));
  * 生成依赖。无来源/旧来源记录按当前 owner 与 dataset 总授权处理，不虚构笔记或空间归属。
  * 提议回执始终只输出核心账本确认的 ID 与审核状态，不受知识正文授权影响。
  */
-/** @param {import('./boundary-types.ts').McpKnowledgeReadOptions} [options] */
-export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore, knowledgeCommit } = {}) {
-  const repos = knowledge?.repositories;
+export function createMcpKnowledgeReadService({
+  knowledge,
+  ownerId,
+  accessStore,
+  knowledgeCommit
+}: McpKnowledgeReadDependencies = {}) {
+  const repos = knowledge?.repositories as McpKnowledgeRepositories;
   const {
     remember,
     inherit,
     assertCurrent: assertOutputCurrent,
     captureNavigationGuard
-  } = createMcpReadSnapshotGuard({ repos, ownerId, accessStore, unavailable });
+  } = createMcpReadSnapshotGuard({ repos, ownerId: ownerId!, accessStore: accessStore!, unavailable });
 
-  async function checked(operation) {
+  async function checked<T>(operation: () => T | Promise<T>) {
     try {
       return await operation();
     } catch {
@@ -49,7 +76,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
     }
   }
 
-  function requireReadContext(access) {
+  function requireReadContext(access: McpReadAccess) {
     if (
       !repos?.knowledgeItemRepository ||
       !repos.knowledgeEvidenceRepository ||
@@ -64,12 +91,12 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
     )
       throw unavailable();
   }
-  function requireContext(access, pairing) {
+  function requireContext(access: McpReadAccess, pairing: { pairingId: string }) {
     requireReadContext(access);
     if (!id(pairing?.pairingId) || typeof knowledgeCommit?.findCommitted !== 'function') throw unavailable();
   }
 
-  async function snapshot(candidateId) {
+  async function snapshot(candidateId: string) {
     const [item, evidence, provenance] = await Promise.all([
       repos.knowledgeItemRepository.findById(candidateId),
       repos.knowledgeEvidenceRepository.list({ knowledgeItemId: candidateId }),
@@ -79,7 +106,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
     return copy({ item, evidence: [...evidence].sort((a, b) => a.id.localeCompare(b.id)), provenance });
   }
 
-  async function readKnowledgeCandidate({ knowledgeId, grantId, access }) {
+  async function readKnowledgeCandidate({ knowledgeId, grantId, access }: McpKnowledgeReadInput) {
     const state = await snapshot(knowledgeId),
       item = state.item;
     if (
@@ -90,7 +117,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
       !STATUSES.has(item.reviewStatus) ||
       !TYPES.has(item.knowledgeType) ||
       !MODES.has(item.sourceMode) ||
-      ['title', 'canonicalStatement', 'userExplanation'].some(
+      (['title', 'canonicalStatement', 'userExplanation'] as const).some(
         key => typeof item[key] !== 'string' || !item[key].isWellFormed()
       ) ||
       typeof item.updatedAt !== 'string' ||
@@ -99,11 +126,11 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
       throw unavailable();
     const record = state.provenance ? validateKnowledgeArtifactProvenance(state.provenance) : null;
     if (record && record.artifactId !== knowledgeId) throw unavailable();
-    const reads = new Map(),
-      versions = new Map(),
-      annotations = new Map();
-    let spaceId = null;
-    async function readNote(noteId) {
+    const reads = new Map<string, McpVerifiedRead>(),
+      versions = new Map<string, NoteVersionRecord | null>(),
+      annotations = new Map<unknown, NormalizedContentAnnotationRecord>();
+    let spaceId: string | null = null;
+    async function readNote(noteId: unknown) {
       if (!id(noteId)) throw unavailable();
       if (!reads.has(noteId)) {
         const current = copy(await access.verifyRead({ grantId, noteId, tool: 'notes_read' }));
@@ -125,9 +152,9 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
         spaceId = current.note.spaceId;
         reads.set(noteId, current);
       }
-      return reads.get(noteId);
+      return reads.get(noteId)!;
     }
-    async function readVersion(versionId, expectedNoteId = null) {
+    async function readVersion(versionId: unknown, expectedNoteId: unknown = null) {
       if (!id(versionId)) throw unavailable();
       if (!versions.has(versionId))
         versions.set(versionId, copy(await repos.noteVersionRepository.findById(versionId)));
@@ -138,14 +165,14 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
         throw unavailable();
       return version;
     }
-    const evidenceById = new Map();
+    const evidenceById = new Map<string, KnowledgeEvidenceRecord>();
     for (const evidence of state.evidence) {
       if (
         !id(evidence.id) ||
         evidenceById.has(evidence.id) ||
         evidence.knowledgeItemId !== knowledgeId ||
         evidence.status !== 'valid' ||
-        !['manual', 'noteVersion', 'annotation'].includes(evidence.sourceType)
+        !['manual', 'noteVersion', 'annotation'].includes(evidence.sourceType as string)
       )
         throw unavailable();
       evidenceById.set(evidence.id, evidence);
@@ -187,7 +214,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
         knowledgeItem: { id: knowledgeId, reviewStatus: 'candidate', deletedAt: null }
       });
       if (resolved.sourceState !== 'available' || source.contentHash !== current.contentHash) throw unavailable();
-      if (source.originNoteVersionId !== evidence.noteVersionId) {
+      if (source.originNoteVersionId !== evidence!.noteVersionId) {
         const original = await repos.noteVersionRepository.findById(source.originNoteVersionId);
         if (original && (original.noteId !== source.noteId || original.contentHash !== source.contentHash))
           throw unavailable();
@@ -216,9 +243,19 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
     };
   }
 
-  async function verifyKnowledgeSnapshot({ checkedItems, grantId, access, identity }) {
+  async function verifyKnowledgeSnapshot({
+    checkedItems,
+    grantId,
+    access,
+    identity
+  }: {
+    checkedItems: Awaited<ReturnType<typeof readKnowledgeCandidate>>[];
+    grantId: string;
+    access: McpReadAccess;
+    identity: DatasetIdentity;
+  }) {
     const refs = [],
-      checkedNotes = new Map();
+      checkedNotes = new Map<string, McpVerifiedRead>();
     for (const value of checkedItems) {
       for (const [noteId, before] of value.reads) {
         if (checkedNotes.has(noteId) && hashRecord(checkedNotes.get(noteId)) !== hashRecord(before))
@@ -238,17 +275,25 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
           throw unavailable();
       }
       for (const [annotationId, before] of value.annotations) {
-        if (hashRecord(await repos.contentAnnotationRepository.findById(annotationId)) !== hashRecord(before))
+        if (hashRecord(await repos.contentAnnotationRepository!.findById(annotationId)) !== hashRecord(before))
           throw unavailable();
       }
       if (hashRecord(await snapshot(value.projection.knowledgeId)) !== hashRecord(value.state)) throw unavailable();
     }
-    if (hashRecord(await accessStore.identity()) !== hashRecord(identity)) throw unavailable();
+    if (hashRecord(await accessStore!.identity()) !== hashRecord(identity)) throw unavailable();
     await access.assertSearchSources({ grantId, sourceRefs: refs });
     await access.assertSearchGrant({ grantId });
   }
 
-  function checkProvenance(input, { pairingId, callId, requestId, candidateId }) {
+  function checkProvenance(
+    input: unknown,
+    {
+      pairingId,
+      callId,
+      requestId,
+      candidateId
+    }: { pairingId: string; callId: string; requestId: string; candidateId: string }
+  ) {
     const record = validateKnowledgeArtifactProvenance(input);
     if (
       record.state !== 'recorded' ||
@@ -262,13 +307,20 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
     return record;
   }
 
-  async function authorizedReceipt({ grantId, access, pairing, callId, requestId = null, discovery = null }) {
+  async function authorizedReceipt({
+    grantId,
+    access,
+    pairing,
+    callId,
+    requestId = null,
+    discovery = null
+  }: McpReceiptInput) {
     requireContext(access, pairing);
     if (!id(callId) || !id(grantId)) throw unavailable();
     await access.assertSearchGrant({ grantId });
-    const identity = copy(await accessStore.identity());
+    const identity = copy(await accessStore!.identity());
     const origin = { pairingId: pairing.pairingId, callId };
-    const receipt = await knowledgeCommit.findCommitted({ origin, identity, mode: 'mcp' });
+    const receipt = await knowledgeCommit!.findCommitted({ origin, identity, mode: 'mcp' });
     if (
       !receipt ||
       !id(receipt.requestId) ||
@@ -292,18 +344,18 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
     )
       throw unavailable();
 
-    const snapshots = new Map(),
-      reads = new Map(),
-      spaces = new Map(),
-      sourceRefs = [];
-    const versions = new Map(),
-      annotations = new Map();
+    const snapshots = new Map<string, Awaited<ReturnType<typeof snapshot>>>(),
+      reads = new Map<string, McpVerifiedRead>(),
+      spaces = new Map<string, Awaited<ReturnType<McpKnowledgeRepositories['knowledgeSpaceRepository']['findById']>>>(),
+      sourceRefs: { noteId: string; noteVersionId: string; contentHash: string }[] = [];
+    const versions = new Map<string, NoteVersionRecord | null>(),
+      annotations = new Map<unknown, NormalizedContentAnnotationRecord>();
     let evidenceCount = 0,
-      batch = null;
-    async function readNote(noteId, spaceId) {
+      batch: { inputHash: string; outputHash: string; spaceId: string } | null = null;
+    async function readNote(noteId: unknown, spaceId: string) {
       if (!id(noteId)) throw unavailable();
       if (!reads.has(noteId)) reads.set(noteId, copy(await access.verifyRead({ grantId, noteId, tool: 'notes_read' })));
-      const current = reads.get(noteId);
+      const current = reads.get(noteId)!;
       if (
         !current.note ||
         current.note.id !== noteId ||
@@ -358,7 +410,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
         if (
           evidence.knowledgeItemId !== candidateId ||
           !isEvidenceUsable(evidence) ||
-          !['noteVersion', 'annotation'].includes(evidence.sourceType) ||
+          !['noteVersion', 'annotation'].includes(evidence.sourceType as string) ||
           !id(evidence.noteVersionId)
         )
           throw unavailable();
@@ -384,7 +436,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
           annotations.set(evidence.annotationId, copy(annotation));
         }
         sourceRefs.push({
-          noteId: evidence.noteId,
+          noteId: evidence.noteId as string,
           noteVersionId: current.version.id,
           contentHash: current.contentHash
         });
@@ -403,7 +455,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
           knowledgeItem: { id: candidateId, reviewStatus: 'candidate', deletedAt: null }
         });
         if (resolved.sourceState !== 'available' || source.contentHash !== current.contentHash) throw unavailable();
-        if (source.originNoteVersionId !== evidence.noteVersionId) {
+        if (source.originNoteVersionId !== evidence!.noteVersionId) {
           const original = await repos.noteVersionRepository.findById(source.originNoteVersionId);
           if (original && (original.noteId !== source.noteId || original.contentHash !== source.contentHash))
             throw unavailable();
@@ -419,14 +471,14 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
     for (const [candidateId, before] of snapshots) {
       if (hashRecord(await snapshot(candidateId)) !== hashRecord(before)) throw unavailable();
     }
-    if (hashRecord(await accessStore.identity()) !== hashRecord(identity)) throw unavailable();
+    if (hashRecord(await accessStore!.identity()) !== hashRecord(identity)) throw unavailable();
     await access.assertSearchSources({ grantId, sourceRefs });
     await access.assertSearchGrant({ grantId });
     const result = {
       requestId: receipt.requestId,
       candidateIds,
       candidates: candidateIds.map(candidateId => {
-        const item = snapshots.get(candidateId).item;
+        const item = snapshots.get(candidateId)!.item;
         return {
           candidateId,
           reviewStatus: !item || item.deletedAt || !STATUSES.has(item.reviewStatus) ? 'unavailable' : item.reviewStatus
@@ -438,7 +490,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
       identity,
       checkedItems: candidateIds.map((knowledgeId, index) => ({
         knowledgeId,
-        state: snapshots.get(knowledgeId),
+        state: snapshots.get(knowledgeId)!,
         reads: index === 0 ? reads : new Map(),
         versions: index === 0 ? versions : new Map(),
         annotations: index === 0 ? annotations : new Map()
@@ -448,7 +500,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
 
   return {
     /** 必须在外发路径最后一个 await 之后同步调用；不支持同步证明的仓库直接拒绝。 */
-    assertCurrent(value) {
+    assertCurrent(value: object) {
       try {
         assertOutputCurrent(value);
       } catch {
@@ -456,29 +508,29 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
       }
     },
     /** 目录统计/分页也使用相同无异步间隙的最终检查，快照永远只保留在服务内部。 */
-    captureNavigationGuard(input) {
+    captureNavigationGuard(input: { grantId: string }) {
       try {
         return captureNavigationGuard(input);
       } catch {
         throw unavailable();
       }
     },
-    knowledgeRead({ grantId, access, knowledgeId }) {
+    knowledgeRead({ grantId, access, knowledgeId }: McpKnowledgeReadInput) {
       return checked(async () => {
         requireReadContext(access);
         if (!id(knowledgeId)) throw unavailable();
         await access.assertSearchGrant({ grantId });
-        const identity = copy(await accessStore.identity());
+        const identity = copy(await accessStore!.identity());
         const value = await readKnowledgeCandidate({ knowledgeId, grantId, access });
         await verifyKnowledgeSnapshot({ checkedItems: [value], grantId, access, identity });
         return remember(value.projection, { grantId, identity, checkedItems: [value] });
       });
     },
-    knowledgeList({ grantId, access }) {
+    knowledgeList({ grantId, access }: Pick<McpKnowledgeReadInput, 'grantId' | 'access'>) {
       return checked(async () => {
         requireReadContext(access);
         await access.assertSearchGrant({ grantId });
-        const identity = copy(await accessStore.identity());
+        const identity = copy(await accessStore!.identity());
         const before = copy(
             await repos.knowledgeItemRepository.list({ includeArchived: true, includeDeleted: true })
           ).sort((a, b) => a.id.localeCompare(b.id)),
@@ -500,7 +552,7 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
         );
       });
     },
-    proposalReceipt({ grantId, access, pairing, input, reused = false }) {
+    proposalReceipt({ grantId, access, pairing, input, reused = false }: McpProposalInput) {
       return checked(async () => {
         if (!input || !Array.isArray(input.candidates) || typeof reused !== 'boolean') throw unavailable();
         const callId = input.idempotencyKey ?? `auto-${hash(input.candidates).slice(0, 32)}`;
@@ -508,13 +560,13 @@ export function createMcpKnowledgeReadService({ knowledge, ownerId, accessStore,
         return inherit({ requestId: result.requestId, candidateIds: result.candidateIds, saved: true, reused }, result);
       });
     },
-    proposalGet({ grantId, access, pairing, requestId }) {
+    proposalGet({ grantId, access, pairing, requestId }: Omit<McpReceiptInput, 'callId'> & { requestId: string }) {
       return checked(async () => {
         requireContext(access, pairing);
         if (!id(requestId)) throw unavailable();
         await access.assertSearchGrant({ grantId });
         const records = (await repos.knowledgeArtifactProvenanceRepository.list()).filter(
-          record =>
+          (record): record is Extract<RecordedKnowledgeArtifactProvenance, { executionMode: 'mcp' }> =>
             record?.state === 'recorded' &&
             record.executionMode === 'mcp' &&
             record.origin?.pairingId === pairing.pairingId &&

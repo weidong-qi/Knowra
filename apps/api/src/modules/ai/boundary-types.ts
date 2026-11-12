@@ -40,7 +40,7 @@ export interface WorkerOptions {
   allowExternal?: boolean;
   authorizeAttempt?: (attemptId: string) => void;
   revokeAttempt?: (attemptId: string) => void;
-  verifySources?: ReturnType<typeof import('./read-context-service.js').createAiReadContextService>['verifyJobSources'];
+  verifySources?: ReturnType<typeof import('./read-context-service.ts').createAiReadContextService>['verifyJobSources'];
   validateResult?: (job: Pick<AiJob, 'jobId'>, result: GatewayResult) => Promise<AiAnswerResult>;
   logger?: Pick<Console, 'warn' | 'error'>;
   policy?: ReturnType<typeof createBudgetPolicy>;
