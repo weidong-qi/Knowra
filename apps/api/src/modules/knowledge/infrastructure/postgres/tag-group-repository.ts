@@ -13,12 +13,13 @@ export function createPostgresTagGroupRepository({ db }: TagGroupRepositoryOptio
     spaceId: group.spaceId,
     code: group.code ?? null,
     name: group.name,
-    selectionMode: group.selectionMode,
+    selectionMode: group.selectionMode as string | undefined,
     isSystem: Boolean(group.isSystem),
     sortOrder: Number(group.sortOrder ?? 0),
     createdAt: toDate(group.createdAt),
     updatedAt: toDate(group.updatedAt)
   });
+  // 原始字段仍由 Prisma 校验；以下断言只描述 SQL 输入，不增加转换或提前拒绝。
   return {
     async create(group: TagGroupWriteInput) {
       const data = toData(group);
@@ -45,21 +46,23 @@ export function createPostgresTagGroupRepository({ db }: TagGroupRepositoryOptio
       );
     },
     async findById(id: unknown) {
-      return withRepositoryErrors(async () => mapTagGroup(await db.tagGroup.findUnique({ where: { id } })));
+      return withRepositoryErrors(async () =>
+        mapTagGroup(await db.tagGroup.findUnique({ where: { id: id as string } }))
+      );
     },
     async delete(id: unknown) {
-      return withRepositoryErrors(async () => mapTagGroup(await db.tagGroup.delete({ where: { id } })));
+      return withRepositoryErrors(async () => mapTagGroup(await db.tagGroup.delete({ where: { id: id as string } })));
     },
     async moveToSpace(id: unknown, spaceId: unknown) {
       return withRepositoryErrors(async () =>
-        mapTagGroup(await db.tagGroup.update({ where: { id }, data: { spaceId } }))
+        mapTagGroup(await db.tagGroup.update({ where: { id: id as string }, data: { spaceId: spaceId as string } }))
       );
     },
     async list(options: NavigationListOptions = {}) {
       return withRepositoryErrors(async () =>
         (
           await db.tagGroup.findMany({
-            where: options.spaceId ? { spaceId: options.spaceId } : {},
+            where: options.spaceId ? { spaceId: options.spaceId as string } : {},
             orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
           })
         ).map(mapTagGroup)

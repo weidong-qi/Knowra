@@ -6,6 +6,7 @@ import { withRepositoryErrors } from './repository-utils.ts';
 export function createPostgresFolderRepository({ db }: FolderRepositoryOptions) {
   if (!db?.folder) throw new TypeError('PostgreSQL folder repository requires db.folder');
 
+  // 原始字段仍由 Prisma 校验；以下断言只描述 SQL 输入，不增加转换或提前拒绝。
   return {
     async save(folder: FolderWriteInput) {
       const data = {
@@ -18,7 +19,8 @@ export function createPostgresFolderRepository({ db }: FolderRepositoryOptions) 
         createdAt: toDate(folder.createdAt),
         updatedAt: toDate(folder.updatedAt),
         deletedAt: folder.deletedAt ? toDate(folder.deletedAt) : null,
-        deletionPackage: folder.deletionPackage ?? Prisma.DbNull
+        deletionPackage: (folder.deletionPackage ?? Prisma.DbNull) as
+          Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput
       };
       return withRepositoryErrors(async () =>
         mapFolder(
@@ -43,7 +45,7 @@ export function createPostgresFolderRepository({ db }: FolderRepositoryOptions) 
       return withRepositoryErrors(async () =>
         mapFolder(
           await db.folder.findUnique({
-            where: { id: folderId }
+            where: { id: folderId as string }
           })
         )
       );
@@ -52,14 +54,14 @@ export function createPostgresFolderRepository({ db }: FolderRepositoryOptions) 
       return withRepositoryErrors(async () =>
         mapFolder(
           await db.folder.delete({
-            where: { id: folderId }
+            where: { id: folderId as string }
           })
         )
       );
     },
     async list(options: FolderListOptions = {}) {
       const where = {
-        ...(options.spaceId ? { spaceId: options.spaceId } : {}),
+        ...(options.spaceId ? { spaceId: options.spaceId as string } : {}),
         ...(options.includeDeleted === true || options.includeDeleted === 'true' ? {} : { deletedAt: null })
       };
       return withRepositoryErrors(async () =>

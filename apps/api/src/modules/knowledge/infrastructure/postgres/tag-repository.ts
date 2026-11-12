@@ -5,13 +5,14 @@ import { withRepositoryErrors } from './repository-utils.ts';
 export function createPostgresTagRepository({ db }: TagRepositoryOptions) {
   if (!db?.tag) throw new TypeError('PostgreSQL tag repository requires db.tag');
 
+  // 原始字段仍由 Prisma 校验；以下断言只描述 SQL 输入，不增加转换或提前拒绝。
   return {
     async save(tag: TagWriteInput) {
       const data = {
         id: tag.id,
         spaceId: tag.spaceId,
         name: tag.name,
-        color: tag.color ?? 'slate',
+        color: (tag.color ?? 'slate') as string,
         groupId: tag.groupId ?? null,
         code: tag.code ?? null,
         isSystem: Boolean(tag.isSystem),
@@ -42,7 +43,7 @@ export function createPostgresTagRepository({ db }: TagRepositoryOptions) {
       return withRepositoryErrors(async () =>
         mapTag(
           await db.tag.findUnique({
-            where: { id: tagId }
+            where: { id: tagId as string }
           })
         )
       );
@@ -52,7 +53,7 @@ export function createPostgresTagRepository({ db }: TagRepositoryOptions) {
       return withRepositoryErrors(async () =>
         (
           await db.tag.findMany({
-            where: { id: { in: [...new Set<unknown>(tagIds)] } }
+            where: { id: { in: [...new Set<unknown>(tagIds)] as string[] } }
           })
         ).map(mapTag)
       );
@@ -61,13 +62,13 @@ export function createPostgresTagRepository({ db }: TagRepositoryOptions) {
       return withRepositoryErrors(async () =>
         mapTag(
           await db.tag.delete({
-            where: { id: tagId }
+            where: { id: tagId as string }
           })
         )
       );
     },
     async list(options: NavigationListOptions = {}) {
-      const where = options.spaceId ? { spaceId: options.spaceId } : {};
+      const where = options.spaceId ? { spaceId: options.spaceId as string } : {};
       return withRepositoryErrors(async () =>
         (
           await db.tag.findMany({
