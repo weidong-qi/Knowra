@@ -18,7 +18,7 @@ import { createInMemoryFolderRepository } from './modules/knowledge/infrastructu
 import { createInMemoryTagRepository } from './modules/knowledge/infrastructure/tag-repository.ts';
 import { createInMemoryTagGroupRepository } from './modules/knowledge/infrastructure/tag-group-repository.ts';
 import { createInMemoryKnowledgeSpaceRepository } from './modules/knowledge/infrastructure/knowledge-space-repository.ts';
-import { createInMemoryContentAnnotationRepository } from './modules/knowledge/infrastructure/content-annotation-repository.js';
+import { createInMemoryContentAnnotationRepository } from './modules/knowledge/infrastructure/content-annotation-repository.ts';
 import { createInMemoryNoteVersionRepository } from './modules/knowledge/infrastructure/note-version-repository.ts';
 import { createInMemoryKnowledgeItemRepository } from './modules/knowledge/infrastructure/knowledge-item-repository.js';
 import { createInMemoryKnowledgeEvidenceRepository } from './modules/knowledge/infrastructure/knowledge-evidence-repository.js';
@@ -34,7 +34,7 @@ import {
   createInMemoryAnnotationExclusionRepository,
   createInMemoryAnnotationRevisionRepository
 } from './modules/knowledge/infrastructure/annotation-support-repositories.js';
-import { createKnowledgeBaseSnapshotService } from './modules/knowledge/application/knowledge-base-snapshot-service.js';
+import { createKnowledgeBaseSnapshotService } from './modules/knowledge/application/knowledge-base-snapshot-service.ts';
 import { createNoteDeletionCoordinator } from './modules/knowledge/application/note-deletion-coordinator.js';
 import { createStorageConfig } from './config/storage.config.js';
 import { createLocalSyncService } from './modules/sync/local-provider.ts';

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
-import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
+import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.ts';
 import { createInMemoryAnalysisScopeRepository } from '../src/modules/knowledge/infrastructure/annotation-support-repositories.js';
 import { createAnnotationScopeService } from '../src/modules/knowledge/application/annotation-scope-service.js';
 import { annotationOf, markText } from './fixtures/inline-annotation-seed.js';

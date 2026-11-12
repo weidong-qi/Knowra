@@ -40,17 +40,17 @@ import { Folder } from '../knowledge/domain/folder.ts';
 import { Tag } from '../knowledge/domain/tag.ts';
 import { TagGroup } from '../knowledge/domain/tag-group.ts';
 import { ContentAnnotation } from '../knowledge/domain/content-annotation.ts';
-import { createInMemoryContentAnnotationRepository } from '../knowledge/infrastructure/content-annotation-repository.js';
+import { createInMemoryContentAnnotationRepository } from '../knowledge/infrastructure/content-annotation-repository.ts';
 import { createInMemoryAnnotationRevisionRepository } from '../knowledge/infrastructure/annotation-support-repositories.js';
 import { validateSyncBatchState, LOCAL_DATA_SCHEMA_VERSION } from '../../infrastructure/local-data-schema.js';
 import { cloneJsonData } from '../../infrastructure/json-clone.ts';
-import { assertNoInsecureImageUrls } from '../knowledge/application/note-content-policy.js';
+import { assertNoInsecureImageUrls } from '../knowledge/application/note-content-policy.ts';
 import { inspectAttachmentDeletion } from '../../infrastructure/attachment-deletion-preflight.ts';
 import { resolveAnchor } from '@study-accelerator/content-anchor';
 import {
   legacyAnnotationHealth,
   legacyAnnotationSourceChange
-} from '../knowledge/application/content-annotation-service.js';
+} from '../knowledge/application/content-annotation-service.ts';
 import { sameEntity, IMMUTABLE_COLLECTIONS, referencesFor } from './entity-contract.ts';
 import { assertTodoSyncChange } from './todo-batch-domain.ts';
 import { syncError } from './journal.ts';

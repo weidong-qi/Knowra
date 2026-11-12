@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
-import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.js';
-import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.js';
+import { createInMemoryContentAnnotationRepository } from '../src/modules/knowledge/infrastructure/content-annotation-repository.ts';
+import { createContentAnnotationService } from '../src/modules/knowledge/application/content-annotation-service.ts';
 import { ContentAnnotation } from '../src/modules/knowledge/domain/content-annotation.ts';
 import { annotationOf } from './fixtures/inline-annotation-seed.js';
 
