@@ -59,6 +59,36 @@ for (const mode of ['light', 'dark'] as const) {
   });
 }
 
+for (const mode of ['light', 'dark'] as const) {
+  test(`笔记侧栏快速入口和文件夹在${mode === 'light' ? '浅色' : '深色'}模式显示主题选中卡片`, async ({
+    page
+  }, testInfo) => {
+    await mockEditorWorkspace(page, []);
+    await page.addInitScript(
+      mode => localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify({ mode })),
+      mode
+    );
+    await page.goto('/#/materials');
+    const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+    const allNotes = sidebar.getByRole('button', { name: /全部笔记/ });
+    await allNotes.click();
+    await expect(allNotes).toHaveAttribute('aria-current', 'page');
+    const folder = sidebar.locator('[data-folder-id="folder-1"]');
+    for (const entry of [allNotes, folder]) {
+      if (entry === folder) await folder.click();
+      await expect(entry).toHaveAttribute('aria-current', 'page');
+      if (mode === 'light') {
+        await expect(entry).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+        await expect(entry).toHaveCSS('background-image', 'none');
+      } else {
+        await expect(entry).toHaveCSS('background-image', /linear-gradient/);
+      }
+      await expect(entry).not.toHaveCSS('box-shadow', 'none');
+    }
+    await page.screenshot({ path: testInfo.outputPath(`侧栏选中态-${mode}.png`), animations: 'disabled' });
+  });
+}
+
 test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保留', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
   await page.route('**/api/ai/model-settings', route =>
