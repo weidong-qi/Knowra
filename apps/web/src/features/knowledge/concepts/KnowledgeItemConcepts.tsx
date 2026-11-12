@@ -1,3 +1,4 @@
+import { useKnowledgeLibraryCache } from '../library/KnowledgeLibraryProvider';
 import { useEffect, useState } from 'react';
 import type { KnowledgeConcept, KnowledgeItem } from '@study-accelerator/web-core';
 import { Button, Dialog, DialogBody, DialogFooter, Select } from '../../../components/ui';
@@ -9,6 +10,7 @@ import { RemoveLinksDialog } from './ConceptLinkDialogs';
 import styles from './Concepts.module.css';
 export function KnowledgeItemConcepts({ item, canWrite }: { item: KnowledgeItem; canWrite: boolean }) {
   const navigate = useNavigate();
+  const cache = useKnowledgeLibraryCache();
   const store = sharedConceptStore();
   const state = useConceptState(store);
   const [creating, setCreating] = useState(false);
@@ -17,8 +19,8 @@ export function KnowledgeItemConcepts({ item, canWrite }: { item: KnowledgeItem;
   const [role, setRole] = useState<'subject' | 'mentions'>('subject');
   const [removal, setRemoval] = useState<{ concept: KnowledgeConcept; id: string } | null>(null);
   useEffect(() => {
-    void store.load();
-  }, [store, item.id]);
+    if (!cache) void store.load();
+  }, [cache, store, item.id]);
   const links = state.links.filter(row => !row.deletedAt && row.knowledgeItemId === item.id);
   const write = canWrite && !item.deletedAt && state.status === 'ready' && !state.unavailable;
   const add = async () => {
@@ -110,6 +112,7 @@ export function KnowledgeItemConcepts({ item, canWrite }: { item: KnowledgeItem;
           <DialogBody>
             <div className={styles.form}>
               <Select
+                isDisabled={!write || state.pending}
                 label="选择概念"
                 value={targetId || null}
                 onChange={key => setTargetId(String(key ?? ''))}
@@ -123,6 +126,7 @@ export function KnowledgeItemConcepts({ item, canWrite }: { item: KnowledgeItem;
                   .map(row => ({ id: row.id, label: `${row.name}${row.sense ? ` · ${row.sense}` : ''}` }))}
               />
               <Select
+                isDisabled={!write || state.pending}
                 label="关联角色"
                 value={role}
                 onChange={key => setRole(key as typeof role)}

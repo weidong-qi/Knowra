@@ -20,6 +20,7 @@ export interface AppShellProps {
   /** 当前工作域的上下文导航；与主工作区并列，拥有独立滚动边界。 */
   contextSidebar?: ReactNode;
   contextSidebarOpen?: boolean;
+  contextSidebarLabel?: string;
   navigationKey?: string;
   /** 当前激活的工作域（用于 Rail / MobileTabs 的 aria-current）；组件展台没有业务工作域时传 null。 */
   activeDomain: WorkDomain | null;
@@ -65,6 +66,7 @@ export function AppShell({
   toolbarAccessories,
   contextSidebar,
   contextSidebarOpen = true,
+  contextSidebarLabel = '笔记导航',
   navigationKey,
   activeDomain,
   onSelectDomain,
@@ -174,12 +176,12 @@ export function AppShell({
           <aside
             className={styles.contextSidebar}
             hidden={!sidebarVisible}
-            aria-label="笔记上下文导航"
+            aria-label={contextSidebarLabel === '笔记导航' ? '笔记上下文导航' : contextSidebarLabel}
             data-compact={compact || undefined}
             data-open={sidebarVisible || undefined}
           >
             <ResponsivePanel
-              title="笔记导航"
+              title={contextSidebarLabel}
               modal={compact}
               isOpen={sidebarVisible}
               onClose={() => setSidebarOverlayOpen(false)}
@@ -187,7 +189,7 @@ export function AppShell({
             >
               {compact && sidebarVisible ? (
                 <div className={styles.sidebarClose}>
-                  <IconButton aria-label="关闭笔记导航" onPress={() => setSidebarOverlayOpen(false)}>
+                  <IconButton aria-label={`关闭${contextSidebarLabel}`} onPress={() => setSidebarOverlayOpen(false)}>
                     <CloseIcon size={18} />
                   </IconButton>
                 </div>

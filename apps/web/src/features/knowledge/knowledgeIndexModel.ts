@@ -170,6 +170,7 @@ export function groupKnowledge(
 
 export const KNOWLEDGE_FILTER_OPTIONS: readonly [string, string][] = [
   ['all', '全部未归档'],
+  ['ungrouped', '未归入概念'],
   ...Object.entries(KNOWLEDGE_STATUS_LABELS),
   ['trash', '回收站']
 ];

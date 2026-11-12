@@ -1,3 +1,6 @@
+import { useLibraryInspector } from '../../components/workspace/useLibraryInspector';
+import { LibraryIndexHeader, LibraryInspector } from '../../components/workspace/LibraryIndex';
+import { useKnowledgeLibraryData } from './library/KnowledgeLibraryProvider';
 import { sharedConceptStore, useConceptState } from './concepts/conceptStore';
 import { MathText } from '../../components/math/MathText';
 import { ExtractionDemoNotice } from '../editor/ExtractionEnvironment';
@@ -25,17 +28,7 @@ import {
   purgeResultMessage
 } from '../../store/assetPurge';
 import { LOCAL_ASSET_PURGE_REASON } from '../../store/workspaceCapabilities';
-import {
-  Button,
-  Dialog,
-  DialogBody,
-  DialogFooter,
-  EmptyArt,
-  IconButton,
-  Menu,
-  MenuItem,
-  PointMenu
-} from '../../components/ui';
+import { Button, Dialog, DialogBody, DialogFooter, EmptyArt, Menu, MenuItem, PointMenu } from '../../components/ui';
 import { ScopedAppearanceProvider } from '../../components/ui/overlay';
 import { CreateKnowledgeCandidateDialog } from './CreateKnowledgeCandidateDialog';
 import { KnowledgeDetail } from './KnowledgeDetail';
@@ -52,19 +45,20 @@ import { useNotesIndexAppearance } from '../notes/notesIndexAppearanceModel';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import { useNavigate } from '../../app/router';
 import { PathTrail } from '../../shell/PathTrail';
-import { CloseIcon, KnowledgeIcon, PlusIcon } from '../../components/icons/knowra';
-import {
-  WorkspacePanel,
-  WorkspacePanelBody,
-  WorkspacePanelFooter,
-  WorkspacePanelHeader
-} from '../../components/workspace/WorkspacePanel';
+import { KnowledgeIcon, PlusIcon } from '../../components/icons/knowra';
+import { WorkspacePanel, WorkspacePanelBody, WorkspacePanelFooter } from '../../components/workspace/WorkspacePanel';
 import styles from './KnowledgeWorkspaceView.module.css';
 import indexStyles from './KnowledgeIndex.module.css';
 
 type VersionInput = { expectedUpdatedAt?: string };
 export interface KnowledgeWorkspaceViewProps {
   selectedItemId?: string | null;
+  scope?: string;
+  query?: string;
+  onScopeChange?(value: string): void;
+  onQueryChange?(value: string): void;
+  onResetFilters?(): void;
+  onCreatedItem?(id: string): void;
   refreshKey?: number;
   canWrite: boolean;
   readOnlyReason?: string;
@@ -110,14 +104,28 @@ export interface KnowledgeWorkspaceViewProps {
 export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
   const navigate = useNavigate();
   const { selectedItemId, refreshKey, canWrite, readOnlyReason, onList, onGet, onListEvidence } = props;
-  const [items, setItems] = useState<KnowledgeItem[]>([]);
-  const [status, setStatus] = useState('all');
-  const [query, setQuery] = useState('');
-  const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState('');
+  const [localItems, setItems] = useState<KnowledgeItem[]>([]);
+  const data = useKnowledgeLibraryData();
+  const cache = data.cache;
+  const items = cache ? data.items : localItems;
+  const [localStatus, setLocalStatus] = useState('all');
+  const [localQuery, setLocalQuery] = useState('');
+  const status = props.scope ?? localStatus;
+  const query = props.query ?? localQuery;
+  const setStatus = props.onScopeChange ?? setLocalStatus;
+  const setQuery = props.onQueryChange ?? setLocalQuery;
+  const [inspectorOpen, setInspectorOpen] = useLibraryInspector('knowra:knowledge-inspector-open', selectedItemId);
+  const [localListLoading, setListLoading] = useState(true);
+  const [localListError, setListError] = useState('');
+  const listLoading = localListLoading || Boolean(cache && data.status === 'loading');
+  const listError = localListError || (cache ? data.error : '');
   const [detail, setDetail] = useState<{ item: KnowledgeItem; evidence: KnowledgeEvidence[] } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
+  const [detailTab, setDetailTab] = useState('content');
+  useEffect(() => {
+    setDetailTab('content');
+  }, [selectedItemId]);
   const [refresh, setRefresh] = useState(0);
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState('');
@@ -143,8 +151,8 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
   const conceptStore = sharedConceptStore();
   const conceptState = useConceptState(conceptStore);
   useEffect(() => {
-    if (display.group === 'concept') void conceptStore.load();
-  }, [conceptStore, display.group, refreshKey]);
+    if (!cache && (display.group === 'concept' || status === 'ungrouped')) void conceptStore.load();
+  }, [cache, conceptStore, display.group, refreshKey, status]);
   const theme = notesIndexAppearanceProps(useNotesIndexAppearance());
   const [sourceDialog, setSourceDialog] = useState<{ replacing?: KnowledgeEvidence } | null>(null);
   const [retireEvidence, setRetireEvidence] = useState<KnowledgeEvidence | null>(null);
@@ -271,20 +279,26 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
   const activeItems = useMemo(() => items.filter(item => !item.deletedAt), [items]);
   const visible = useMemo(
     () =>
-      sortKnowledge(
-        status === 'trash'
-          ? items.filter(
-              item =>
-                item.deletedAt &&
-                (!query ||
-                  [item.title, item.canonicalStatement].some(value =>
-                    value.toLocaleLowerCase().includes(query.toLocaleLowerCase())
-                  ))
-            )
-          : filterKnowledgeItems(activeItems, status, query),
-        display.sort
-      ),
-    [activeItems, items, status, query, display.sort]
+      status === 'ungrouped' && conceptState.status !== 'ready'
+        ? []
+        : sortKnowledge(
+            status === 'trash'
+              ? items.filter(
+                  item =>
+                    item.deletedAt &&
+                    (!query ||
+                      [item.title, item.canonicalStatement].some(value =>
+                        value.toLocaleLowerCase().includes(query.toLocaleLowerCase())
+                      ))
+                )
+              : filterKnowledgeItems(activeItems, status === 'ungrouped' ? 'all' : status, query).filter(
+                  item =>
+                    status !== 'ungrouped' ||
+                    !conceptState.links.some(link => !link.deletedAt && link.knowledgeItemId === item.id)
+                ),
+            display.sort
+          ),
+    [activeItems, items, status, query, display.sort, conceptState.links, conceptState.status]
   );
   const sections = useMemo(
     () => groupKnowledge(visible, display.group, Date.now(), conceptState),
@@ -303,11 +317,21 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
     [activeItems]
   );
   const filterCounts = useMemo(
-    () => ({ ...counts, all: activeItems.length - (counts.archived ?? 0), trash: items.length - activeItems.length }),
-    [counts, activeItems, items]
+    () => ({
+      ...counts,
+      all: activeItems.length - (counts.archived ?? 0),
+      trash: items.length - activeItems.length,
+      ungrouped: activeItems.filter(
+        item =>
+          item.reviewStatus !== 'archived' &&
+          !conceptState.links.some(link => !link.deletedAt && link.knowledgeItemId === item.id)
+      ).length
+    }),
+    [counts, activeItems, items, conceptState.links]
   );
 
   function acceptItem(item: KnowledgeItem) {
+    cache?.accept(item);
     setItems(current =>
       current.some(row => row.id === item.id)
         ? current.map(row => (row.id === item.id ? item : row))
@@ -436,6 +460,8 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
       return;
     }
     setItems(current => current.filter(item => item.id !== result.asset.id));
+    cache?.remove(result.asset.id);
+    void conceptStore.load();
     setPurgedItemId(result.asset.id);
     setDetail(null);
     if (!props.authoritativePurge) navigate('/knowledge');
@@ -523,6 +549,8 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
   ) : detail ? (
     <KnowledgeDetail
       {...detail}
+      selectedTab={detailTab}
+      onTabChange={setDetailTab}
       canWrite={canWrite}
       pending={pending}
       onEdit={() => openEdit(detail.item)}
@@ -566,12 +594,11 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
         className={`${theme.className} ${indexStyles.panel}`}
         onKeyDown={focusSearchKey}
       >
-        <WorkspacePanelHeader
+        <LibraryIndexHeader
           title="知识库"
-          code="KNOW"
           titleId="knowledge-title"
-          icon={<KnowledgeIcon size={13} />}
-          className={compact ? indexStyles.compactHeader : undefined}
+          count={visible.length}
+          icon={<KnowledgeIcon size={17} />}
           breadcrumb={
             <PathTrail
               path={[
@@ -581,28 +608,31 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
               variant="top"
             />
           }
-          breadcrumbTitle="主页 / 知识库"
-          actionsLabel="知识操作"
-          actions={
-            <KnowledgeIndexTools
-              compact={compact}
-              query={query}
-              onQueryChange={setQuery}
-              searchRef={searchRef}
-              status={status}
-              onStatusChange={setStatus}
-              counts={filterCounts}
-              display={display}
-              canWrite={canWrite}
-              busy={listLoading || pending}
-              onRefresh={() => setRefresh(value => value + 1)}
-              onCreate={() => {
-                setRecoveryDraft(undefined);
-                setCreateOpen(true);
-              }}
-            />
-          }
-        />
+        >
+          <KnowledgeIndexTools
+            compact={compact}
+            query={query}
+            onQueryChange={setQuery}
+            searchRef={searchRef}
+            status={status}
+            onStatusChange={setStatus}
+            counts={filterCounts}
+            display={display}
+            canWrite={canWrite}
+            busy={listLoading || pending}
+            inspectorOpen={inspectorOpen}
+            onToggleInspector={() => setInspectorOpen(value => !value)}
+            onRefresh={() => {
+              cache?.invalidate();
+              void conceptStore.load();
+              setRefresh(value => value + 1);
+            }}
+            onCreate={() => {
+              setRecoveryDraft(undefined);
+              setCreateOpen(true);
+            }}
+          />
+        </LibraryIndexHeader>
         <WorkspacePanelBody grid className={indexStyles.content}>
           <ExtractionDemoNotice />
           {!canWrite || draftError || drafts.length || mutationFeedback ? (
@@ -677,7 +707,10 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                     正在加载知识…
                   </p>
                 ) : null}
-                {!listLoading && !listError && visible.length === 0 ? (
+                {!listLoading &&
+                !listError &&
+                visible.length === 0 &&
+                (status !== 'ungrouped' || conceptState.status === 'ready') ? (
                   <div className={indexStyles.empty}>
                     <EmptyArt variant={items.length === 0 ? 'knowledge' : 'search'} />
                     <strong>{items.length === 0 ? '还没有知识' : '没有符合条件的知识。'}</strong>
@@ -702,13 +735,22 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                       <Button
                         variant="ghost"
                         onPress={() => {
-                          setQuery('');
-                          setStatus('all');
+                          if (props.onResetFilters) props.onResetFilters();
+                          else {
+                            setQuery('');
+                            setStatus('all');
+                          }
                         }}
                       >
                         清除搜索与筛选
                       </Button>
                     )}
+                  </div>
+                ) : null}
+                {status === 'ungrouped' && conceptState.status !== 'ready' ? (
+                  <div className={indexStyles.empty} role="status">
+                    <p>{conceptState.error || '正在加载概念归属…'}</p>
+                    {conceptState.error ? <Button onPress={() => void conceptStore.load()}>重试加载概念</Button> : null}
                   </div>
                 ) : null}
                 <KnowledgeIndexSections
@@ -732,46 +774,51 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                 />
               </div>
             </section>
-            {selectedItemId ? (
-              <aside className={indexStyles.inspector} aria-label="知识检查器">
-                <header className={indexStyles.inspectorHeader}>
-                  <h2>详情</h2>
-                  {props.onCloseItem ? (
-                    <IconButton aria-label="关闭详情" onPress={props.onCloseItem}>
-                      <CloseIcon size={18} />
-                    </IconButton>
-                  ) : null}
-                </header>
-                <section
-                  className={`${indexStyles.inspectorBody} ${styles.detailPanel}`}
-                  tabIndex={0}
-                  aria-label="知识详情面板"
-                  aria-busy={detailLoading || pending}
-                >
-                  {notice ? (
-                    <p role="status" className={styles.notice}>
-                      {notice}
-                    </p>
-                  ) : null}
-                  {purgeAwaitingId && !purgePreview ? (
-                    <Button isDisabled={pending} onPress={() => void checkPurgeResult()}>
-                      核对清理结果
-                    </Button>
-                  ) : null}
-                  {detailError ? (
-                    <p role="alert" className={styles.error}>
-                      {detailError}{' '}
-                      {!archiveItem ? (
-                        <Button variant="ghost" onPress={() => setRefresh(value => value + 1)}>
-                          重新加载知识
-                        </Button>
-                      ) : null}
-                    </p>
-                  ) : null}
-                  {detailContent}
-                </section>
-              </aside>
-            ) : null}
+            <LibraryInspector
+              isOpen={inspectorOpen}
+              label="知识检查器"
+              onClose={() => {
+                setInspectorOpen(false);
+                props.onCloseItem?.();
+              }}
+            >
+              <section
+                className={`${indexStyles.inspectorBody} ${styles.detailPanel}`}
+                tabIndex={0}
+                aria-label="知识详情面板"
+                aria-busy={detailLoading || pending}
+              >
+                {notice ? (
+                  <p role="status" className={styles.notice}>
+                    {notice}
+                  </p>
+                ) : null}
+                {purgeAwaitingId && !purgePreview ? (
+                  <Button isDisabled={pending} onPress={() => void checkPurgeResult()}>
+                    核对清理结果
+                  </Button>
+                ) : null}
+                {detailError ? (
+                  <p role="alert" className={styles.error}>
+                    {detailError}{' '}
+                    {!archiveItem ? (
+                      <Button variant="ghost" onPress={() => setRefresh(value => value + 1)}>
+                        重新加载知识
+                      </Button>
+                    ) : null}
+                  </p>
+                ) : null}
+                {selectedItemId ? (
+                  detailContent
+                ) : (
+                  <div className={`${styles.empty} ${styles.emptyDetail}`}>
+                    <KnowledgeIcon size={26} />
+                    <h2>选择一项以查看详情</h2>
+                    <p>单击知识点查看内容、来源和学习目标。</p>
+                  </div>
+                )}
+              </section>
+            </LibraryInspector>
           </div>
         </WorkspacePanelBody>
         <WorkspacePanelFooter className={indexStyles.footer}>
@@ -837,9 +884,12 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
             onCreate={props.onCreate}
             onCreated={item => {
               acceptItem(item);
-              setStatus('candidate');
-              setQuery('');
-              props.onSelectItem(item.id);
+              if (props.onCreatedItem) props.onCreatedItem(item.id);
+              else {
+                setStatus('candidate');
+                setQuery('');
+                props.onSelectItem(item.id);
+              }
             }}
           />
         ) : null}

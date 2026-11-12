@@ -30,9 +30,9 @@ export function createConceptStore(requestJson = createApiClient().requestJson) 
     state = { ...state, ...patch };
     listeners.forEach(listener => listener());
   };
-  const load = (): Promise<void> => {
+  const load = (options: { preserveError?: boolean } = {}): Promise<void> => {
     if (loading) return loading;
-    set({ status: state.status === 'ready' ? 'ready' : 'loading', error: null });
+    set({ status: state.status === 'ready' ? 'ready' : 'loading', error: options.preserveError ? state.error : null });
     loading = (async () => {
       try {
         for (;;) {
@@ -95,7 +95,7 @@ export function createConceptStore(requestJson = createApiClient().requestJson) 
             'CONCEPT_RELATION_BASIS_INVALID'
           ].includes(error.code ?? '')
         )
-          void load();
+          void load({ preserveError: true });
         throw error;
       }
     },

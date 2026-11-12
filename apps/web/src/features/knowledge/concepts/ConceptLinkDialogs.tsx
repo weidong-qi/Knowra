@@ -64,12 +64,14 @@ export function LinkItemsDialog({
       <DialogBody>
         <div className={styles.form}>
           <SearchBox
+            disabled={!canWrite || state.pending}
             label="搜索已有知识点"
             size="field"
             value={query}
             onChange={event => setQuery(event.target.value)}
           />
           <Select
+            isDisabled={!canWrite || state.pending}
             label="挂靠角色"
             value={role}
             onChange={key => setRole(key as typeof role)}
@@ -78,10 +80,14 @@ export function LinkItemsDialog({
               { id: 'mentions', label: '提及：这条知识用到了它' }
             ]}
           />
+          <p className={styles.selectionCount} role="status">
+            已选 {selected.length} 条知识点，搜索不会清空已有选择。
+          </p>
           <div className={styles.choices}>
             {candidates.map(item => (
               <Checkbox
                 key={item.id}
+                isDisabled={!canWrite || state.pending}
                 isSelected={selected.includes(item.id)}
                 onChange={checked =>
                   setSelected(ids => (checked ? [...ids, item.id] : ids.filter(id => id !== item.id)))
@@ -166,6 +172,7 @@ export function RemoveLinksDialog({
           </p>
           {move ? (
             <Select
+              isDisabled={!canWrite || state.pending}
               label="目标概念"
               value={targetId || null}
               onChange={key => setTargetId(String(key ?? ''))}

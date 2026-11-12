@@ -1,4 +1,9 @@
-import { knowledgeCreateButton, selectKnowledgeStatus } from './helpers/knowledge-index.mjs';
+import {
+  clickKnowledgeAction,
+  openKnowledgeSources,
+  knowledgeCreateButton,
+  selectKnowledgeStatus
+} from './helpers/knowledge-index.mjs';
 import { openLocalSync, closeLocalSync } from './helpers/workspace-status.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -111,13 +116,14 @@ async function fixture(t, title, withSource = false) {
 test('生产页面：知识撤回、回收站、SQLite重启、显式恢复与重新采用来源同步收敛', { timeout: 90000 }, async t => {
   const f = await fixture(t, '回收站生命周期验收', true);
   const { page, item } = f;
+  await openKnowledgeSources(page);
   await page.getByRole('button', { name: '撤回适用性', exact: true }).click();
   await page
     .getByRole('dialog', { name: '撤回这条来源的适用性？' })
     .getByRole('button', { name: '确认移除', exact: true })
     .click();
   await expect.poll(() => f.runtime.store.state.knowledgeEvidence[0]?.applicabilityStatus).toBe('withdrawn');
-  await page.getByRole('button', { name: '移入回收站', exact: true }).click();
+  await clickKnowledgeAction(page, '移入回收站');
   await page
     .getByRole('dialog', { name: '移入知识回收站？' })
     .getByRole('button', { name: '确认移入回收站', exact: true })
@@ -133,6 +139,7 @@ test('生产页面：知识撤回、回收站、SQLite重启、显式恢复与�
   await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: /知识/ }).click();
   await selectKnowledgeStatus(page, /^回收站/);
   await page.getByRole('button', { name: /回收站生命周期验收/ }).click();
+  await openKnowledgeSources(page);
   await expect(page.getByRole('article', { name: '知识详情' })).toContainText('保留的合成来源摘录');
   await expect(page.getByRole('button', { name: '从回收站恢复', exact: true })).toBeVisible();
   await f.screenshot('knowledge-trash-after-restart.png');
@@ -144,6 +151,7 @@ test('生产页面：知识撤回、回收站、SQLite重启、显式恢复与�
   await page.getByRole('button', { name: /回收站生命周期验收/ }).click();
   await expect(page.getByRole('button', { name: '确认知识', exact: true })).toBeDisabled();
   await f.screenshot('knowledge-restored-withdrawn.png');
+  await openKnowledgeSources(page);
   await page.getByRole('button', { name: '重新采用', exact: true }).click();
   await expect.poll(() => f.runtime.store.state.knowledgeEvidence[0].applicabilityStatus).toBe('active');
   await page.getByRole('button', { name: '确认知识', exact: true }).click();

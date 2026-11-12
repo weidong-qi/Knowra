@@ -7,18 +7,11 @@ import { useHashNavigation } from './useHashNavigation';
 //
 // 用 hash 路由（URL 锚点）以兼容 Vite dev server 的 history fallback。
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactElement,
-  type ReactNode
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, type ReactElement, type ReactNode } from 'react';
 
 interface RouterContextValue {
   pathname: string;
-  navigate(to: string): void;
+  navigate(to: string, options?: { replace?: boolean }): void;
   back?(): void;
   forward?(): void;
   canGoBack?: boolean;
@@ -38,7 +31,7 @@ export function useLocation(): RouterContextValue {
 
 export { RouterContext };
 
-export function useNavigate(): (to: string) => void {
+export function useNavigate(): RouterContextValue['navigate'] {
   return useLocation().navigate;
 }
 
@@ -63,7 +56,7 @@ export function Link({
     <a
       href={`#${to}`}
       aria-current={isActive ? 'page' : undefined}
-      onClick={(event) => {
+      onClick={event => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         navigate(to);
@@ -87,7 +80,7 @@ export interface RouterOutletProps {
 
 export function RouterOutlet({ routes, fallback }: RouterOutletProps) {
   const { pathname } = useLocation();
-  const matched = routes.find((route) => matchPath(pathname, route.path));
+  const matched = routes.find(route => matchPath(pathname, route.path));
   return matched ? matched.element : (fallback ?? <></>);
 }
 

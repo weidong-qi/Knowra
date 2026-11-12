@@ -35,7 +35,10 @@ test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系�
     expect(created.ok(), await created.text()).toBeTruthy();
     await page.goto(`${runtime.origin}/#/knowledge/concepts`);
     const createConcept = async (name: string) => {
-      await page.getByRole('button', { name: '新建概念', exact: true }).click();
+      await page
+        .getByRole('toolbar', { name: '概念工具栏', exact: true })
+        .getByRole('button', { name: '新建概念', exact: true })
+        .click();
       const dialog = page.getByRole('dialog', { name: '新建概念', exact: true });
       await dialog.getByRole('textbox', { name: '概念名称' }).fill(name);
       const responsePending = page.waitForResponse(
@@ -69,8 +72,9 @@ test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系�
     };
     await open(a.id);
     await link();
-    await page.getByRole('button', { name: '改为提及', exact: true }).click();
-    await expect(page.getByRole('button', { name: '改为主体', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '挂靠操作：合成卷积知识', exact: true }).click();
+    await page.getByRole('menuitem', { name: '改为提及', exact: true }).click();
+    await expect(page.getByRole('article', { name: '概念详情' })).toContainText('提及 1');
     await open(b.id);
     await link();
     state = await snapshot();
@@ -91,14 +95,16 @@ test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系�
     expect(relation.ok(), await relation.text()).toBeTruthy();
     await open(a.id);
     await page.reload();
-    await page.getByRole('button', { name: '移出', exact: true }).click();
+    await page.getByRole('button', { name: '挂靠操作：合成卷积知识', exact: true }).click();
+    await page.getByRole('menuitem', { name: '移出', exact: true }).click();
     const remove = page.getByRole('dialog', { name: '移出知识点？', exact: true });
     await expect(remove).toContainText('同时删除以下 1 条关系');
     await remove.getByRole('button', { name: '删除关联并删除关系', exact: true }).click();
     await expect(remove).toHaveCount(0);
     expect((await snapshot()).relations).toHaveLength(0);
     await link();
-    await page.getByRole('button', { name: '合并到…', exact: true }).click();
+    await page.getByRole('button', { name: '概念更多操作', exact: true }).click();
+    await page.getByRole('menuitem', { name: '合并到…', exact: true }).click();
     const merge = page.getByRole('dialog', { name: '合并概念？', exact: true });
     await expect(merge).toContainText('合并不可撤销');
     await merge.getByRole('button', { name: '合并目标' }).click();
@@ -109,7 +115,8 @@ test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系�
     expect(state.concepts).toHaveLength(1);
     expect(state.links).toHaveLength(1);
     expect(state.concepts[0].aliases).toContain('CNN');
-    await page.getByRole('button', { name: '删除概念', exact: true }).click();
+    await page.getByRole('button', { name: '概念更多操作', exact: true }).click();
+    await page.getByRole('menuitem', { name: '删除概念', exact: true }).click();
     await page
       .getByRole('dialog', { name: '删除概念？', exact: true })
       .getByRole('button', { name: '删除概念及关系' })
