@@ -8,6 +8,7 @@ import type { ConceptState } from '@study-accelerator/web-core';
 
 test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系、直接合并和撤销删除', async ({ page }) => {
   test.setTimeout(90000);
+  page.setDefaultTimeout(10000);
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-concepts-browser-'));
   const runtime = await startLocalRuntime({
     dataDirectory: root,
@@ -60,7 +61,9 @@ test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系�
     const link = async () => {
       await page.getByRole('button', { name: '挂入知识点', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: /^挂入/ });
-      await dialog.getByRole('checkbox', { name: '合成卷积知识', exact: true }).check();
+      const checkbox = dialog.getByRole('checkbox', { name: '合成卷积知识', exact: true });
+      await checkbox.locator('xpath=ancestor::label').click();
+      await expect(checkbox).toBeChecked();
       await dialog.getByRole('button', { name: '挂入 1 条知识点' }).click();
       await expect(dialog).toHaveCount(0);
     };
