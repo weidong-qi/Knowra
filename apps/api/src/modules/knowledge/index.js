@@ -3,7 +3,7 @@ import {
   degradeInlineSourceEvidence,
   marksOnlyDependencies,
   withInlineAnnotations
-} from './application/inline-annotations.js';
+} from './application/inline-annotations.ts';
 import { createSpaceAssetLifecycle } from './application/space-asset-lifecycle.ts';
 import { createInMemoryPdfAnnotationRepository } from '../pdf/repository.ts';
 import { createNavigationReferencePolicy } from './application/navigation-reference-policy.ts';
@@ -51,7 +51,7 @@ import { inspectKnowledgeItemPurge, assertKnowledgeItemPurgeAllowed } from './ap
 import { createLearningObjectiveService } from './application/learning-objective-service.ts';
 import { createAssessmentContextService } from './application/assessment-context-service.ts';
 import { createQuestionService } from './application/question-service.ts';
-import { createLocalTrainingAssetLifecycle } from './application/training-asset-lifecycle.js';
+import { createLocalTrainingAssetLifecycle } from './application/training-asset-lifecycle.ts';
 import { createWorkspaceQueryService } from './application/workspace-query-service.ts';
 import { bindLocalServiceTransactions } from './application/local-service-transactions.ts';
 import { conflictError, validationError } from './application/knowledge-errors.ts';

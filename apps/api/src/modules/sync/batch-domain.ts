@@ -62,7 +62,7 @@ import {
   inlineAnnotationId,
   inlineMarksOf,
   planInlineAnnotations
-} from '../knowledge/application/inline-annotations.js';
+} from '../knowledge/application/inline-annotations.ts';
 
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
 const legacySourceFields = [

@@ -1,4 +1,4 @@
-import { inlineAnnotationId } from '../../src/modules/knowledge/application/inline-annotations.js';
+import { inlineAnnotationId } from '../../src/modules/knowledge/application/inline-annotations.ts';
 
 /**
  * 重点内联化后，重点只能写在正文标记里：测试用带标记的正文建笔记或保存正文，由服务端派生重点行。

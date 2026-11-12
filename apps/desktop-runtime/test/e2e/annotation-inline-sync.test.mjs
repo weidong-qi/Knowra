@@ -10,7 +10,7 @@ import { createFileDataStore } from '../../../api/src/infrastructure/file-data-s
 import { createAppContext } from '../../../api/src/app.factory.js';
 import { createServer } from '../../../api/src/server.js';
 import { createAttachmentTransfer } from '../../../api/src/modules/sync/attachment-transfer.ts';
-import { inlineAnnotationId } from '../../../api/src/modules/knowledge/application/inline-annotations.js';
+import { inlineAnnotationId } from '../../../api/src/modules/knowledge/application/inline-annotations.ts';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { createSyncEngine } from '../../src/sync-engine.mjs';
 import { openWorkspace } from '../helpers.mjs';

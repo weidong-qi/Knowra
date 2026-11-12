@@ -4,7 +4,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { mockEditorWorkspace, createNote } from './fixtures/editorWorkspace';
 import { mockInlineAnnotations } from './fixtures/inlineAnnotations';
 import { parseKnowraMarks } from '@study-accelerator/shared/knowra-marks';
-import { inlineAnnotationId } from '../../api/src/modules/knowledge/application/inline-annotations.js';
+import { inlineAnnotationId } from '../../api/src/modules/knowledge/application/inline-annotations.ts';
 
 for (const key of ['Backspace', 'Delete']) {
   test(`V4-07 ${key} 删除文首空行时保留后续标题`, async ({ page }) => {
