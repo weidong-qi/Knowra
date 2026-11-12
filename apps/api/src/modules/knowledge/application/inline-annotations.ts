@@ -77,15 +77,18 @@ interface InlineDependencies {
   now?: () => string;
   before?: string | null;
 }
-interface InlineLifecycle<Result> {
+interface InlineLifecycle<Result, Version extends NoteVersionRecord = NoteVersionRecord> {
   onNoteContentChanged(
     note: InlineNoteRecord,
-    version: NoteVersionRecord,
+    version: Version,
     change: { before?: string | null } | null | undefined
   ): Result;
 }
-interface InlineLifecycleDependencies<Result> extends Omit<InlineDependencies, 'before'> {
-  marksOnlyLifecycle?: InlineLifecycle<Result> | null;
+interface InlineLifecycleDependencies<Result, Version extends NoteVersionRecord> extends Omit<
+  InlineDependencies,
+  'before'
+> {
+  marksOnlyLifecycle?: InlineLifecycle<Result, Version> | null;
   onSourceChanged?: ((sources: SourceChanges) => MaybePromise<void>) | null;
 }
 interface InlineEvidence extends EvidenceApplicabilityInput {
@@ -524,12 +527,12 @@ export function marksOnlyDependencies<
     ...dependencies,
     knowledgeItemService: {
       ...knowledgeItemService,
-      markEvidenceByNoteVersionIds: (ids: unknown[], status: 'stale', sourceType: 'noteVersion') =>
+      markEvidenceByNoteVersionIds: (ids: string[], status: 'stale', sourceType: 'noteVersion') =>
         sourceType === 'noteVersion' ? [] : knowledgeItemService.markEvidenceByNoteVersionIds(ids, status, sourceType)
     },
     questionService: {
       ...questionService,
-      markSourcesStale: (sourceType: 'knowledgeEvidence' | 'noteVersion', ids: unknown[]) =>
+      markSourcesStale: (sourceType: 'knowledgeEvidence' | 'noteVersion', ids: string[]) =>
         sourceType === 'noteVersion' ? undefined : questionService.markSourcesStale(sourceType, ids)
     }
   };
@@ -539,21 +542,25 @@ export function marksOnlyDependencies<
  * 装配层包装：只改标记时走 marksOnlyLifecycle；级联完成后派生内联重点行。
  * 原文变化时先找出原文被改或被删的重点，派生完成后交给 onSourceChanged 把以它们为来源的证据降级。
  */
-export function withInlineAnnotations<Result, Lifecycle extends InlineLifecycle<Result>>(
-  lifecycle: Lifecycle & InlineLifecycle<Result>,
+export function withInlineAnnotations<
+  Result,
+  Version extends NoteVersionRecord,
+  Lifecycle extends InlineLifecycle<Result, Version>
+>(
+  lifecycle: Lifecycle & InlineLifecycle<Result, Version>,
   {
     repository,
     revisionRepository,
     marksOnlyLifecycle = null,
     onSourceChanged = null,
     now = undefined
-  }: InlineLifecycleDependencies<Result>
+  }: InlineLifecycleDependencies<Result, Version>
 ) {
   return {
     ...lifecycle,
     onNoteContentChanged: (
       note: InlineNoteRecord,
-      version: NoteVersionRecord,
+      version: Parameters<Lifecycle['onNoteContentChanged']>[1],
       annotationChange: { before?: string | null } | null | undefined
     ) => {
       const marksOnly = isMarksOnlyChange(annotationChange?.before, note.rawMarkdown);
