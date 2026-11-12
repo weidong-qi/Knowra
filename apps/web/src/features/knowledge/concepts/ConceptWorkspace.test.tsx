@@ -1,3 +1,4 @@
+import { canNavigate } from '../../../app/navigationGuard';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -59,6 +60,23 @@ describe('概念首版界面', () => {
       aliases: ['CNN'],
       reviewStatus: 'confirmed'
     });
+  });
+  it('未保存概念退出前确认，继续编辑保留输入，保存后选中新身份', async () => {
+    const user = userEvent.setup();
+    const server = fixture();
+    await server.store.load();
+    const close = vi.fn();
+    const saved = vi.fn();
+    render(<ConceptEditor canWrite store={server.store} onClose={close} onSaved={saved} />);
+    await user.type(screen.getByRole('textbox', { name: '概念名称' }), '合成概念');
+    expect(canNavigate()).toBe(false);
+    await user.click(screen.getByRole('button', { name: '取消' }));
+    await user.click(screen.getByRole('button', { name: '继续编辑' }));
+    expect(screen.getByRole('textbox', { name: '概念名称' })).toHaveValue('合成概念');
+    await user.click(screen.getByRole('button', { name: '保存概念' }));
+    await waitFor(() => expect(saved).toHaveBeenCalledWith(server.state().concepts[0].id));
+    expect(canNavigate()).toBe(true);
+    expect(close).toHaveBeenCalledOnce();
   });
   it('只读概念页隐藏写操作，已确认数据仍可查看', async () => {
     const server = fixture([

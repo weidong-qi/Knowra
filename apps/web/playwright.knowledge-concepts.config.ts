@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   outputDir: './test-results/mobile-evidence/concepts',
-  testMatch: 'knowledge-concepts.spec.ts',
+  testMatch: ['knowledge-concepts.spec.ts', 'knowledge-library-ui.spec.ts'],
   workers: 1,
   retries: 0,
   use: {

@@ -19,7 +19,7 @@ export function KnowledgeLibraryProvider({ children }: { children: ReactNode }) 
   useEffect(() => {
     if (
       previous.current.cache === cache &&
-      (previous.current.generation !== generation || previous.current.mode !== mode)
+      (previous.current.generation !== generation || (previous.current.mode === 'api' && mode !== 'api'))
     )
       cache.invalidate();
     previous.current = { cache, generation, mode };
