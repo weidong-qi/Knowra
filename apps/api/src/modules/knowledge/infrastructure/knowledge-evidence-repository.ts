@@ -48,8 +48,19 @@ export type StoredKnowledgeEvidenceRecord<Record extends KnowledgeEvidenceRecord
 export interface KnowledgeEvidenceRepository<
   Record extends KnowledgeEvidenceRecord<unknown, unknown> = KnowledgeEvidenceRecord
 > {
-  create: (evidence: StoredKnowledgeEvidenceRecord<Record>) => StoredKnowledgeEvidenceRecord<Record>;
-  save: (evidence: StoredKnowledgeEvidenceRecord<Record>) => StoredKnowledgeEvidenceRecord<Record>;
+  // 泛型保留输入额外字段；基础重载维持严格写入参数方差。
+  create: {
+    <Value extends StoredKnowledgeEvidenceRecord<Record>>(
+      evidence: Value
+    ): StoredKnowledgeEvidenceRecord<Value> & StoredKnowledgeEvidenceRecord<Record>;
+    (evidence: StoredKnowledgeEvidenceRecord<Record>): StoredKnowledgeEvidenceRecord<Record>;
+  };
+  save: {
+    <Value extends StoredKnowledgeEvidenceRecord<Record>>(
+      evidence: Value
+    ): StoredKnowledgeEvidenceRecord<Value> & StoredKnowledgeEvidenceRecord<Record>;
+    (evidence: StoredKnowledgeEvidenceRecord<Record>): StoredKnowledgeEvidenceRecord<Record>;
+  };
   findById(id: string | null | undefined): StoredKnowledgeEvidenceRecord<Record> | null;
   deleteByKnowledgeItemId(knowledgeItemId: string | null | undefined): StoredKnowledgeEvidenceRecord<Record>[];
   list(options?: KnowledgeEvidenceListOptions): StoredKnowledgeEvidenceRecord<Record>[];
@@ -109,7 +120,7 @@ export function createInMemoryKnowledgeEvidenceRepository<
     return changed;
   }
   return {
-    create(evidence) {
+    create<Value extends StoredKnowledgeEvidenceRecord<InitialKnowledgeEvidenceRecord<Record>>>(evidence: Value) {
       if (records.some(record => record.id === evidence.id)) {
         throw createAppError(
           'KNOWLEDGE_EVIDENCE_ID_CONFLICT',
@@ -119,14 +130,18 @@ export function createInMemoryKnowledgeEvidenceRepository<
       }
       records.push(evidence);
       persist();
-      return evidence;
+      // 返回同一对象，只拓宽仓库允许原地改写的字段，不把历史记录补成领域实体。
+      return evidence as StoredKnowledgeEvidenceRecord<Value> &
+        StoredKnowledgeEvidenceRecord<InitialKnowledgeEvidenceRecord<Record>>;
     },
-    save(evidence) {
+    save<Value extends StoredKnowledgeEvidenceRecord<InitialKnowledgeEvidenceRecord<Record>>>(evidence: Value) {
       const index = records.findIndex(record => record.id === evidence.id);
       if (index < 0) records.push(evidence);
       else records[index] = evidence;
       persist();
-      return evidence;
+      // 返回同一对象，只拓宽仓库允许原地改写的字段，不把历史记录补成领域实体。
+      return evidence as StoredKnowledgeEvidenceRecord<Value> &
+        StoredKnowledgeEvidenceRecord<InitialKnowledgeEvidenceRecord<Record>>;
     },
     findById(id) {
       return records.find(item => item.id === id) ?? null;
