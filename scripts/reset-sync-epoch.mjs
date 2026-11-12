@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util';
 import {
   createPersistedLocalDocument,
   validatePersistedLocalState
-} from '../apps/api/src/infrastructure/local-data-schema.js';
+} from '../apps/api/src/infrastructure/local-data-schema.ts';
 import { writeJsonFileAtomically } from '../apps/api/src/infrastructure/atomic-json-file.ts';
 import { resetJournalKeepingTombstones } from '../apps/api/src/modules/sync/journal.ts';
 import { loadPostgresSyncIdentityState } from '../apps/api/src/modules/sync/postgres-provider.ts';

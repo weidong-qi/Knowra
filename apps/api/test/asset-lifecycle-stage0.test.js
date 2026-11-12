@@ -310,7 +310,7 @@ export const assetLifecycleStage0Tests = [
   {
     name: '同步批次不能删除仍被历史版本引用的附件',
     async run() {
-      const { createEmptyLocalState } = await import('../src/infrastructure/local-data-schema.js');
+      const { createEmptyLocalState } = await import('../src/infrastructure/local-data-schema.ts');
       const { prepareBatchState } = await import('../src/modules/sync/batch-domain.ts');
       const before = createEmptyLocalState();
       before.attachments.push({ id: 'attachment-sync' });

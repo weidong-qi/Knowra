@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { validateLocalDataRelations } from '../src/infrastructure/local-data-relations.js';
-import { createEmptyLocalState, validatePersistedLocalState } from '../src/infrastructure/local-data-schema.js';
+import { validateLocalDataRelations } from '../src/infrastructure/local-data-relations.ts';
+import { createEmptyLocalState, validatePersistedLocalState } from '../src/infrastructure/local-data-schema.ts';
 import { buildDefaultTagGroups } from '../src/modules/knowledge/domain/default-tag-groups.ts';
 
 const space = id => ({ id, userId: 'demo', name: id });

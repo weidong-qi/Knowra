@@ -11,7 +11,7 @@ import {
   createJournal,
   createSyncBaseline
 } from '../src/modules/sync/journal.ts';
-import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.ts';
 
 export const syncMemoryTests = [
   {

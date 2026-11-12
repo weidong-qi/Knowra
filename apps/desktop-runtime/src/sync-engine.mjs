@@ -1,6 +1,6 @@
 import { readSyncHistory, assertNotHistoryOperation } from './sync-history.mjs';
 import { assertLegacyAnnotationChanges } from '../../api/src/modules/sync/batch-domain.ts';
-import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../../api/src/infrastructure/local-data-schema.ts';
 import fs from 'node:fs';
 import { Readable } from 'node:stream';
 import {

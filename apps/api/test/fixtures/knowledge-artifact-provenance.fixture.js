@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { calculateContentHash } from '@study-accelerator/content-anchor';
-import { createEmptyLocalState } from '../../src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../../src/infrastructure/local-data-schema.ts';
 import { hashRecord } from '../../src/modules/ai/record-contract.ts';
 import { validateKnowledgeExtractionResult } from '../../src/modules/knowledge/application/knowledge-extraction-contract.ts';
 import { validateKnowledgeExtractionCommit } from '../../src/modules/ai/knowledge-extraction-commit-contract.ts';

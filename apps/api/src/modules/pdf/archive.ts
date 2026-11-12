@@ -34,7 +34,7 @@ import {
   validateLocalSnapshot,
   LOCAL_SNAPSHOT_VERSION,
   LOCAL_DATA_SCHEMA_VERSION
-} from '../../infrastructure/local-data-schema.js';
+} from '../../infrastructure/local-data-schema.ts';
 import { createAttachmentDirectorySwap } from '../../infrastructure/attachment-directory-swap.ts';
 import { assertSpacesOwnedBy } from '../../infrastructure/owner-boundary.ts';
 import { assertNoInsecureImageUrls } from '../knowledge/application/note-content-policy.ts';

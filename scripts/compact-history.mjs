@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.js';
 import { acquireDataFileWriteLock } from '../apps/api/src/infrastructure/data-file-write-lock.ts';
 import { writeJsonFileAtomically } from '../apps/api/src/infrastructure/atomic-json-file.ts';
-import { LOCAL_DATA_COLLECTIONS } from '../apps/api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../apps/api/src/infrastructure/local-data-schema.ts';
 import {
   planHistoryRetention,
   applyHistoryRetentionPlan,

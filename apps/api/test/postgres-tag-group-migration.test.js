@@ -9,7 +9,7 @@ import {
 } from '../src/infrastructure/migration/json-to-postgres.ts';
 import { createPostgresSnapshotService } from '../src/infrastructure/postgres-snapshot-service.ts';
 import { createLocalAttachmentFileManager } from '../src/infrastructure/local-attachment-file-manager.ts';
-import { validateLocalSnapshot } from '../src/infrastructure/local-data-schema.js';
+import { validateLocalSnapshot } from '../src/infrastructure/local-data-schema.ts';
 
 const source = () => ({
   folders: [],

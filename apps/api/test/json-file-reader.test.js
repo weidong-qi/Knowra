@@ -11,7 +11,7 @@ import {
   assertPersistedLocalState,
   createEmptyLocalState,
   validatePersistedLocalState
-} from '../src/infrastructure/local-data-schema.js';
+} from '../src/infrastructure/local-data-schema.ts';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const fixture = run => {

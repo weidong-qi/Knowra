@@ -56,7 +56,7 @@ C2 尚未实现：本批 `prepareRestoredDirectory` 仅沿用格式检查与候�
 
 ## 固定候选独立审查修复
 
-`900dae259dc81bbd713e52e7f224425368afedea` 审查发现 P2：账本误将内部元数据的 trim 相等、2048 字长度限制用于实体 ID，导致既有业务能够创建的 2049 字标签 ID，以及业务快照能够导入的首尾带空白 ID，在真实删除入口被拒绝。实体 ID 现与 `local-data-schema.js` 的共同合法域一致：必须是字符串且 trim 后非空；保存、哈希、SQL 键和重建门禁仍使用完整原串，不做 trim 或重新分配身份。scope、owner、dataset、operation 和远端 source 字段保持原有校验。
+`900dae259dc81bbd713e52e7f224425368afedea` 审查发现 P2：账本误将内部元数据的 trim 相等、2048 字长度限制用于实体 ID，导致既有业务能够创建的 2049 字标签 ID，以及业务快照能够导入的首尾带空白 ID，在真实删除入口被拒绝。实体 ID 现与 `local-data-schema.ts` 的共同合法域一致：必须是字符串且 trim 后非空；保存、哈希、SQL 键和重建门禁仍使用完整原串，不做 trim 或重新分配身份。scope、owner、dataset、operation 和远端 source 字段保持原有校验。
 
 新增两例通过实际业务创建/导入、真实 deleteTag、同 ID 普通重建与业务 import 拒绝、重开后的事实回读验证。相同测试在修改生产代码前为 2 项失败（`identity-red.log`），修复后四个 C1 文件共 46 项通过、0 失败、0 跳过（`identity-fix-c1-green.log`）。先前构建与完整桌面回归属于 `900dae2` 作者候选证据；此窄修复仅重跑受影响的 C1 定向测试，未冒称重跑全套或真实 PG。
 

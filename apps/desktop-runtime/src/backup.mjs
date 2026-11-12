@@ -13,7 +13,7 @@ import {
   createEmptyLocalState,
   createPersistedLocalDocument,
   validatePersistedLocalState
-} from '../../api/src/infrastructure/local-data-schema.js';
+} from '../../api/src/infrastructure/local-data-schema.ts';
 import { LOCAL_DATABASE_VERSION, readAiSchemaVersion } from './sqlite-schema.mjs';
 import { validateSqliteCoreOperationRows } from './core-operation-store.mjs';
 import { createSqliteAiRepository } from './ai-sqlite-repository.mjs';

@@ -3,7 +3,7 @@ import {
   LOCAL_DATA_COLLECTIONS,
   LOCAL_DATA_SCHEMA_VERSION,
   LOCAL_SNAPSHOT_VERSION
-} from '../apps/api/src/infrastructure/local-data-schema.js';
+} from '../apps/api/src/infrastructure/local-data-schema.ts';
 import { LOCAL_DATABASE_VERSION } from '../apps/desktop-runtime/src/sqlite-schema.mjs';
 import { inspectJsonPrivateSource, inspectSqlitePrivateSource } from './inline-annotation-retirement-private.mjs';
 

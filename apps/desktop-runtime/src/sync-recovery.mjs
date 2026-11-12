@@ -14,7 +14,7 @@ import {
   createPersistedLocalDocument,
   validatePersistedLocalState,
   LOCAL_DATA_COLLECTIONS
-} from '../../api/src/infrastructure/local-data-schema.js';
+} from '../../api/src/infrastructure/local-data-schema.ts';
 import { assertNotHistoryOperation } from './sync-history.mjs';
 import { readMeta } from './sync-state.mjs';
 import { syncSenderDeviceId } from './sync-safety.mjs';

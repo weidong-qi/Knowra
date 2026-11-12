@@ -4,7 +4,7 @@ import { calculateContentHash } from '../src/modules/knowledge/domain/note-versi
 import { knowraCheck, parseKnowraMarks } from '@study-accelerator/shared/knowra-marks';
 import { inlineAnnotationSourceRanges } from '../src/modules/knowledge/application/inline-annotation-ranges.ts';
 import { planHistoryRetention } from '../src/modules/knowledge/domain/history-retention.ts';
-import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.ts';
 import { pruneTouchedNoteVersions } from '../src/modules/sync/version-retention.ts';
 
 const NOW = Date.parse('2026-10-22T12:00:00.000Z');

@@ -8,7 +8,7 @@ import {
   createEmptyLocalState,
   createPersistedLocalDocument,
   validatePersistedLocalState
-} from '../../api/src/infrastructure/local-data-schema.js';
+} from '../../api/src/infrastructure/local-data-schema.ts';
 import { readMeta, writeMeta } from './sync-state.mjs';
 
 const QUEUE = 'examFocusReviewQueue';

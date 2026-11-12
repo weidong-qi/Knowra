@@ -2,7 +2,7 @@ import { todoCollectionErrors } from '../packages/web-core/src/personal-todos/va
 import { validatePersonalTodoHistory } from '../apps/api/src/modules/personal-todos/history-contract.ts';
 import { createNoteVersionReferenceIndex } from '../apps/api/src/modules/knowledge/domain/note-version-references.ts';
 import { referencedAnnotationRevisions } from '../apps/api/src/modules/knowledge/domain/history-retention.ts';
-import { LOCAL_DATA_COLLECTIONS } from '../apps/api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../apps/api/src/infrastructure/local-data-schema.ts';
 import { validateAiState } from '../apps/api/src/modules/ai/record-state.ts';
 import { validateTaskWorkspaceSnapshot } from '../apps/api/src/modules/task-workspaces/storage-validation.ts';
 import { validateCoreOperationState } from '../apps/api/src/infrastructure/core-operation-contract.ts';

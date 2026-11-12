@@ -5,7 +5,7 @@ import {
   selectAnnotationRevisionsToPrune,
   ANNOTATION_REVISION_RETENTION
 } from '../src/modules/knowledge/domain/history-retention.ts';
-import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.js';
+import { createEmptyLocalState } from '../src/infrastructure/local-data-schema.ts';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 import {
   selectVersionsToPrune,

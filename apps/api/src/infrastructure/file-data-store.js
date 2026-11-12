@@ -63,7 +63,7 @@ import {
   validateLocalSnapshot,
   assertPersistedLocalState,
   validatePersistedLocalState
-} from './local-data-schema.js';
+} from './local-data-schema.ts';
 
 /** @typedef {ReturnType<typeof validateCoreOperationState>} CoreOperationState */
 /** @typedef {ReturnType<typeof validateKnowledgeExtractionCommitState>} ExtractionCommitState */

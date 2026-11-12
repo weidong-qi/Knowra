@@ -1,21 +1,34 @@
-import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.ts';
 
 const REFERENCE_FIELDS = {
-  spaceId: 'spaces', folderId: 'folders', groupId: 'tagGroups', noteId: 'notes',
-  noteVersionId: 'noteVersions', annotationId: 'contentAnnotations', parentAnnotationId: 'contentAnnotations',
-  knowledgeItemId: 'knowledgeItems', learningObjectiveId: 'learningObjectives', examProfileId: 'examProfiles', questionId: 'questions'
+  spaceId: 'spaces',
+  folderId: 'folders',
+  groupId: 'tagGroups',
+  noteId: 'notes',
+  noteVersionId: 'noteVersions',
+  annotationId: 'contentAnnotations',
+  parentAnnotationId: 'contentAnnotations',
+  knowledgeItemId: 'knowledgeItems',
+  learningObjectiveId: 'learningObjectives',
+  examProfileId: 'examProfiles',
+  questionId: 'questions'
 };
 
 export function entityReferences(change) {
   const value = change.value;
   if (!value) return [];
-  const refs = Object.entries(REFERENCE_FIELDS).filter(([field]) => typeof value[field] === 'string')
+  const refs = Object.entries(REFERENCE_FIELDS)
+    .filter(([field]) => typeof value[field] === 'string')
     .map(([field, collection]) => ({ collection, id: value[field] }));
   if (change.collection === 'folders' && value.parentId) refs.push({ collection: 'folders', id: value.parentId });
   for (const id of value.tagIds ?? []) refs.push({ collection: 'tags', id });
   if (typeof value.rawMarkdown === 'string') {
     for (const match of value.rawMarkdown.matchAll(/\/api\/storage\/attachments\/([^/\s)]+)\/content/g)) {
-      try { refs.push({ collection: 'attachments', id: decodeURIComponent(match[1]) }); } catch { /* 正文校验负责无效引用。 */ }
+      try {
+        refs.push({ collection: 'attachments', id: decodeURIComponent(match[1]) });
+      } catch {
+        /* 正文校验负责无效引用。 */
+      }
     }
   }
   return refs;

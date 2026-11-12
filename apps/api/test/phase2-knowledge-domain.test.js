@@ -526,7 +526,7 @@ export const phase2KnowledgeDomainTests = [
     name: 'Phase2 local snapshot 拒绝伪造的 NoteVersion contentHash',
     async run() {
       const { LOCAL_DATA_SCHEMA_VERSION, LOCAL_SNAPSHOT_VERSION, createEmptyLocalState, validateLocalSnapshot } =
-        await import('../src/infrastructure/local-data-schema.js');
+        await import('../src/infrastructure/local-data-schema.ts');
       const state = createEmptyLocalState();
       state.spaces.push({
         id: 'phase32-hash-space',

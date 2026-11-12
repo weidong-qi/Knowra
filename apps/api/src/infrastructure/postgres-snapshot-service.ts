@@ -15,7 +15,7 @@ interface PreparedSnapshotData {
   attachments: AttachmentFileMetadata[];
 }
 import { createAppError } from '../errors/app-error.ts';
-import { validateLocalSnapshot, LOCAL_DATA_SCHEMA_VERSION, LOCAL_SNAPSHOT_VERSION } from './local-data-schema.js';
+import { validateLocalSnapshot, LOCAL_DATA_SCHEMA_VERSION, LOCAL_SNAPSHOT_VERSION } from './local-data-schema.ts';
 import { validateAttachmentSnapshotItems } from './local-attachment-snapshot-validator.ts';
 import { stageAttachmentFiles, createAttachmentDirectorySwap } from './attachment-directory-swap.ts';
 import { assertNoInsecureImageUrls } from '../modules/knowledge/application/note-content-policy.ts';

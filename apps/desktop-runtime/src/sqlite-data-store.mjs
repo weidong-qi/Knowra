@@ -31,7 +31,7 @@ import {
   createEmptyLocalState,
   validateLocalSnapshot,
   validatePersistedLocalState
-} from '../../api/src/infrastructure/local-data-schema.js';
+} from '../../api/src/infrastructure/local-data-schema.ts';
 import { initializeDatabase, SYNC_PROTOCOL_VERSION } from './sqlite-schema.mjs';
 import { createSqliteCoreOperationStore } from './core-operation-store.mjs';
 import { createSqliteKnowledgeExtractionCommitStore } from './knowledge-extraction-commit-store.mjs';

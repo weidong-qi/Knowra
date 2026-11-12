@@ -4,7 +4,7 @@ import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
 import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { randomUUID } from 'node:crypto';
 import { noteContent, syncKey } from '../../api/src/modules/sync/journal.ts';
-import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.js';
+import { LOCAL_DATA_COLLECTIONS } from '../../api/src/infrastructure/local-data-schema.ts';
 
 export const equivalent = (a, b) => JSON.stringify(noteContent(a)) === JSON.stringify(noteContent(b));
 export const readMeta = (db, key) =>

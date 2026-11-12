@@ -7,7 +7,7 @@ import {
 } from '../apps/api/src/infrastructure/attachment-integrity.ts';
 import { createLocalAttachmentFileManager } from '../apps/api/src/infrastructure/local-attachment-file-manager.ts';
 import { createFileDataStore } from '../apps/api/src/infrastructure/file-data-store.js';
-import { validatePersistedLocalState } from '../apps/api/src/infrastructure/local-data-schema.js';
+import { validatePersistedLocalState } from '../apps/api/src/infrastructure/local-data-schema.ts';
 import { readJsonFileSync } from '../apps/api/src/infrastructure/json-file-reader.ts';
 import { readAttachmentInspectionSource } from '../apps/api/src/infrastructure/attachment-inspection-source.ts';
 
