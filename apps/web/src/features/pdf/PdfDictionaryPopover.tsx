@@ -9,6 +9,7 @@ export function PdfDictionaryPopover({
   anchor,
   canSave,
   annotationControls,
+  onAnnotate,
   onSave,
   onClose
 }: {
@@ -16,6 +17,7 @@ export function PdfDictionaryPopover({
   anchor: PdfBarAnchor;
   canSave: boolean;
   annotationControls?: ReactNode;
+  onAnnotate(): void;
   onSave(comment: string): void;
   onClose(): void;
 }) {
@@ -82,7 +84,6 @@ export function PdfDictionaryPopover({
               关闭
             </Button>
           </div>
-          {annotationControls}
           <div className={styles.meanings} aria-live="polite" aria-busy={busy}>
             {busy ? (
               <p role="status">正在查词…</p>
@@ -104,17 +105,21 @@ export function PdfDictionaryPopover({
               <p>本地词典未收录“{text}”。可以尝试选中单词原形或更短的词组。</p>
             )}
           </div>
-          {result && result.meanings.length > 1 ? (
-            <Select
-              label="保存的释义"
-              selectedKey={meaning}
-              onSelectionChange={key => setMeaning(String(key))}
-              options={[
-                { id: 'all', label: '全部释义' },
-                ...result.meanings.map((value, index) => ({ id: String(index), label: value }))
-              ]}
-            />
-          ) : null}
+          <section className={styles.settings} aria-label="标注设置">
+            <strong className={styles.settingsTitle}>标注设置</strong>
+            {annotationControls}
+            {result && result.meanings.length > 1 ? (
+              <Select
+                label="附带的释义"
+                selectedKey={meaning}
+                onSelectionChange={key => setMeaning(String(key))}
+                options={[
+                  { id: 'all', label: '全部释义' },
+                  ...result.meanings.map((value, index) => ({ id: String(index), label: value }))
+                ]}
+              />
+            ) : null}
+          </section>
           {tooLong ? <p className={styles.muted}>释义较长，请选择其中一条保存。</p> : null}
           <div className={styles.footer}>
             <a href="https://github.com/skywind3000/ECDICT" target="_blank" rel="noreferrer">
@@ -124,16 +129,20 @@ export function PdfDictionaryPopover({
               <Button size="compact" onPress={() => setAttempt(value => value + 1)}>
                 重新查询
               </Button>
-            ) : result ? (
-              <Button
-                variant="primary"
-                size="compact"
-                isDisabled={!canSave || busy || tooLong || !selectedMeaning}
-                onPress={() => onSave(comment)}
-              >
-                保存为标注
-              </Button>
             ) : null}
+          </div>
+          <div className={styles.annotationActions}>
+            <Button size="compact" isDisabled={!canSave} onPress={onAnnotate}>
+              仅标注原文
+            </Button>
+            <Button
+              variant="primary"
+              size="compact"
+              isDisabled={!canSave || !result || busy || tooLong || !selectedMeaning}
+              onPress={() => onSave(comment)}
+            >
+              标注并保存释义
+            </Button>
           </div>
           {!canSave && result ? <p className={styles.muted}>当前资料只读，仍可查词。</p> : null}
         </PopoverDialog>
