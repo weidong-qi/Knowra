@@ -47,6 +47,7 @@ export type MigrationTransaction = {
   knowledgeConcept: { findMany(): Awaitable<import('@prisma/client').KnowledgeConcept[]> };
   knowledgeConceptLink: { findMany(): Awaitable<import('@prisma/client').KnowledgeConceptLink[]> };
   knowledgeConceptRelation: { findMany(): Awaitable<import('@prisma/client').KnowledgeConceptRelation[]> };
+  personalTodo: { findMany(): Awaitable<import('@prisma/client').PersonalTodo[]> };
   // 写端口使用 SDK 输入，读取保留原生 JSON 列。
   knowledgeArtifactProvenance: { findMany(): Awaitable<KnowledgeArtifactProvenance[]> };
   pdfAnnotation: { findMany(): Awaitable<PdfAnnotation[]> };

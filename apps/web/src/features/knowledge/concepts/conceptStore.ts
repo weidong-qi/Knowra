@@ -84,6 +84,8 @@ export function createConceptStore(requestJson = createApiClient().requestJson) 
         return data.changed;
       } catch (error) {
         set({ pending: false, error: error instanceof Error ? error.message : '概念操作失败' });
+        if (error instanceof ApiRequestError && error.code === 'KNOWLEDGE_CONCEPTS_UNAVAILABLE')
+          set({ unavailable: true, status: 'error' });
         if (
           error instanceof ApiRequestError &&
           [

@@ -248,7 +248,11 @@ export async function createPostgresAppContext({
     // V1 不把本地域隐式回退到 JSON，也不扩充 PostgreSQL 的普通笔记协议。
     taskWorkspaces: createTaskWorkspaceService({ store: null }),
     taskWorkspaceContext: () => ({ actor: { kind: 'user' as const, id: normalizedOwnerId } }),
-    knowledgeConcepts: createKnowledgeConceptService({ store: createPostgresConceptStore(db) }),
+    knowledgeConcepts: wrapHandlersWithMaintenanceGate(
+      createKnowledgeConceptService({ store: createPostgresConceptStore(db) }),
+      maintenanceGate,
+      { getAccess: name => (name === 'execute' ? 'mutation' : 'read') }
+    ),
     personalTodos: createPersonalTodoService({ store: createPostgresTodoStore(db) }),
     knowledgeExtractionCommit,
     knowledgeExtractionTasks,
