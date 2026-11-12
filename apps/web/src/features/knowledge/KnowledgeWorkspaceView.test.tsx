@@ -518,9 +518,9 @@ describe('KnowledgeWorkspaceView', () => {
     render(<KnowledgeWorkspaceView {...input} />);
     await screen.findByText('样本变换');
 
-    await user.click(screen.getByRole('button', { name: '添加来源' }));
+    await user.click(await screen.findByRole('button', { name: '添加来源' }));
     await user.click(await screen.findByRole('radio', { name: /新章节/ }));
-    await user.click(screen.getByRole('button', { name: '添加来源' }));
+    await user.click(await screen.findByRole('button', { name: '添加来源' }));
     await waitFor(() =>
       expect(input.onCreateEvidence).toHaveBeenCalledWith(
         'k1',
@@ -528,15 +528,15 @@ describe('KnowledgeWorkspaceView', () => {
       )
     );
 
-    await user.click(screen.getByRole('button', { name: '更换来源' }));
+    await user.click(await screen.findByRole('button', { name: '更换来源' }));
     await user.click(await screen.findByRole('radio', { name: /新章节/ }));
-    await user.click(screen.getByRole('button', { name: '确认更换' }));
+    await user.click(await screen.findByRole('button', { name: '确认更换' }));
     await waitFor(() =>
       expect(input.onRetireEvidence).toHaveBeenCalledWith('k1', 'e1', { expectedUpdatedAt: evidence.updatedAt })
     );
 
-    await user.click(screen.getByRole('button', { name: '撤回适用性' }));
-    await user.click(screen.getByRole('button', { name: '确认移除' }));
+    await user.click(await screen.findByRole('button', { name: '撤回适用性' }));
+    await user.click(await screen.findByRole('button', { name: '确认移除' }));
     await waitFor(() => expect(input.onRetireEvidence).toHaveBeenCalledTimes(2));
   });
 
