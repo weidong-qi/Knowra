@@ -114,21 +114,21 @@ export function KnowledgeDetail({
                 }}
               >
                 {item.deletedAt ? (
-                  <MenuItem id="purge" isDanger isDisabled={!canWrite || pending || !onPurgePreview}>
+                  <MenuItem key="purge" id="purge" isDanger isDisabled={!canWrite || pending || !onPurgePreview}>
                     永久删除…
                   </MenuItem>
                 ) : (
                   <>
                     {archived ? (
-                      <MenuItem id="restore" isDisabled={!canWrite || pending}>
+                      <MenuItem key="restore" id="restore" isDisabled={!canWrite || pending}>
                         恢复为候选
                       </MenuItem>
                     ) : (
-                      <MenuItem id="archive" isDisabled={!canWrite || pending}>
+                      <MenuItem key="archive" id="archive" isDisabled={!canWrite || pending}>
                         归档
                       </MenuItem>
                     )}
-                    <MenuItem id="trash" isDanger isDisabled={!canWrite || pending}>
+                    <MenuItem key="trash" id="trash" isDanger isDisabled={!canWrite || pending}>
                       移入回收站
                     </MenuItem>
                   </>

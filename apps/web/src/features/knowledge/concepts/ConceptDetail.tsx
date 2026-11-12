@@ -204,7 +204,6 @@ export function ConceptDetail({
         <div className={indexStyles.empty}>
           <strong>这个概念下还没有知识点</strong>
           <p>挂入已有知识点，并标明它讲述或提及这个概念。</p>
-          {write ? <Button onPress={onAttach}>挂入知识点</Button> : null}
         </div>
       )}
     </article>

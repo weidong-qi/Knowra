@@ -28,7 +28,8 @@ function KnowledgeStageContent({ pathname, onOpenNote }: { pathname: string; onO
     [cache, listKnowledgeItems]
   );
   // 概念图原型只读取本地示例数据，不依赖资料库连接。
-  if (pathname.split('?')[0] === '/knowledge/graph') return <ConceptGraphView />;
+  if (pathname.split('?')[0] === '/knowledge/graph')
+    return <ConceptGraphView query={route.query} onQueryChange={query => changeRoute({ query }, true)} />;
   if (state.dataMode !== 'api')
     return (
       <WorkspacePanel as="main" className={indexStyles.panel} aria-label="知识库连接状态">

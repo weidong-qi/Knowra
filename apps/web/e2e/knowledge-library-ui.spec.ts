@@ -80,6 +80,18 @@ for (const width of [1440, 390])
         await expect(
           page.getByRole('region', { name: '知识列表内容' }).getByRole('button', { name: /合成卷积知识/ })
         ).toBeVisible();
+        const displayOptions = page.getByRole('button', { name: '显示选项（布局、分组、排序、属性）', exact: true });
+        await displayOptions.click();
+        await page.getByRole('button', { name: '卡片', exact: true }).click();
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('list', { name: '知识卡片视图' }).first()).toBeVisible();
+        await page.screenshot({
+          path: info.outputPath(`knowledge-cards-${width}-${mode}.png`),
+          animations: 'disabled'
+        });
+        await displayOptions.click();
+        await page.getByRole('button', { name: '列表', exact: true }).click();
+        await page.keyboard.press('Escape');
         const navigation = await openSidebar();
         await navigation.getByRole('button', { name: /^未归入概念/ }).click();
         await expect(page).toHaveURL(/scope=ungrouped/);
@@ -136,6 +148,7 @@ for (const width of [1440, 390])
         const graphSearch = page.getByRole('searchbox', { name: '搜索图中概念' });
         await graphSearch.locator('..').click();
         await graphSearch.fill('张量');
+        await expect(page).toHaveURL(/knowledge\/graph\?q=/);
         await page
           .getByRole('region', { name: '图中概念搜索结果' })
           .getByRole('button', { name: '张量', exact: true })

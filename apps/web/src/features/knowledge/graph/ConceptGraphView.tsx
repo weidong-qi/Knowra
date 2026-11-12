@@ -69,10 +69,20 @@ const PROTOTYPE_NOTICE =
 const shortTitle = (title: string) =>
   Array.from(title).length > 9 ? `${Array.from(title).slice(0, 8).join('')}…` : title;
 
-export function ConceptGraphView({ data: sample = CONCEPT_GRAPH_SAMPLE }: { data?: ConceptGraphData }) {
+export function ConceptGraphView({
+  data: sample = CONCEPT_GRAPH_SAMPLE,
+  query: routeQuery,
+  onQueryChange
+}: {
+  data?: ConceptGraphData;
+  query?: string;
+  onQueryChange?(value: string): void;
+}) {
   const navigate = useNavigate();
   const theme = notesIndexAppearanceProps(useNotesIndexAppearance());
-  const [query, setQuery] = useState('');
+  const [localQuery, setLocalQuery] = useState('');
+  const query = routeQuery ?? localQuery;
+  const setQuery = onQueryChange ?? setLocalQuery;
   const fileInput = useRef<HTMLInputElement>(null);
   const [loaded, setLoaded] = useState<ConceptGraphData | null>(null);
   const [loadError, setLoadError] = useState('');
