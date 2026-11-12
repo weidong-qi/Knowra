@@ -186,6 +186,15 @@ async function fixture(page: Page, delayed = false) {
     edit,
     closeDialog,
     openDialog,
+    async expectSyncCompleted() {
+      // 恢复面板先隐藏，工作区刷新稍后完成；必须等提交遮罩退出再截取完成状态。
+      await expect(dialog.getByRole('status', { name: '提交中', exact: true })).toBeHidden();
+      await expect(dialog.getByRole('button', { name: '立即同步', exact: true })).toBeEnabled();
+      const summary = dialog.getByRole('status').filter({ hasText: '云端已同步' });
+      await expect(summary).toHaveCount(1);
+      await expect(summary).toBeVisible();
+      await summary.scrollIntoViewIfNeeded();
+    },
     retirementEntered: () => retirementEntered,
     releaseRetirement,
     async pause() {
@@ -354,8 +363,7 @@ for (const delayed of [false, true]) {
       // 响应丢失分支必须以新发送身份补发撤回，不能靠空数组断言冒充成功。
       if (!delayed) expect(f.writes.length).toBeGreaterThan(writesBefore);
       expect((await f.api<{ items: unknown[] }>('/api/local-runtime/backups')).items).toHaveLength(2);
-      await expect(f.dialog.getByRole('button', { name: '立即同步', exact: true })).toBeEnabled();
-      await f.dialog.getByRole('status').scrollIntoViewIfNeeded();
+      await f.expectSyncCompleted();
       await f.screenshot(`${delayed ? 'delayed' : 'lost'}-completed.png`);
       f.assertCleanBrowser();
     } finally {
@@ -404,7 +412,7 @@ test('旧预览不能覆盖后继编辑，刷新后明确采用云端并保留�
           record.local.notes.some(value => value.id === note.id && value.rawMarkdown === successor)
       )
     ).toBe(true);
-    await f.dialog.getByRole('status').scrollIntoViewIfNeeded();
+    await f.expectSyncCompleted();
     await f.screenshot('remote-completed.png');
     f.assertCleanBrowser();
   } finally {

@@ -68,3 +68,14 @@ it('查词卡片内复用操作时不使用浮层坐标，样式与分类仍可�
   fireEvent.click(screen.getByRole('button', { name: '标注为重点' }));
   expect(pick).toHaveBeenCalledWith('important');
 });
+
+it('设置模式的颜色表示当前分类，并仅回传选择', () => {
+  const pick = vi.fn();
+  const props = { anchor: { x: 100, top: 20, bottom: 40 }, onPick: pick, inline: true };
+  const view = render(<PdfSelectionBar {...props} selectedKind="supplement" />);
+  expect(screen.getByRole('button', { name: '选择分类：补充' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: '选择分类：疑问' }));
+  expect(pick).toHaveBeenCalledWith('question');
+  view.rerender(<PdfSelectionBar {...props} selectedKind="question" />);
+  expect(screen.getByRole('button', { name: '选择分类：疑问' })).toHaveAttribute('aria-pressed', 'true');
+});
