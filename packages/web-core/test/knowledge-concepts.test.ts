@@ -205,3 +205,14 @@ it('整批移动实际迁移关联，目标已有挂靠时去重并一次删除�
     f.execute({ type: 'linkItems', id: 'b', expectedRevision: 2, itemIds: ['k1'], role: 'subject' })
   ).toThrow('已挂入');
 });
+
+it('已有知识点的历史 Unicode ID 可直接挂靠，不改变旧资产身份', () => {
+  const id = 'knowledge-中文';
+  const changed = applyConceptCommand(
+    emptyConceptState(),
+    [{ id }],
+    { type: 'createConcept', id: 'a', operationId: 'create', expectedRevision: 0, name: 'A', itemIds: [id] },
+    { now, requestHash: 'a'.repeat(64) }
+  );
+  expect(changed.links[0]?.knowledgeItemId).toBe(id);
+});

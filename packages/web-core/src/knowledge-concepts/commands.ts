@@ -85,7 +85,8 @@ export function applyConceptCommand(
     if (!Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length)
       conceptFail('CONCEPT_INVALID_INPUT', '请选择不重复的知识点');
     for (const id of ids)
-      if (!items.some(row => row.id === conceptId(id) && !row.deletedAt))
+      if (typeof id !== 'string' || !id) conceptFail('CONCEPT_INVALID_INPUT', '知识点引用无效');
+      else if (!items.some(row => row.id === id && !row.deletedAt))
         conceptFail('CONCEPT_ITEM_NOT_FOUND', '知识点不存在或已在回收站');
   };
   const role = (value: string) => {

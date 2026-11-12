@@ -78,7 +78,7 @@ export function conceptRecordError(value: unknown, kind: 'concepts' | 'links' | 
       )
         return '操作回执无效';
     } else if (kind === 'links') {
-      conceptId(row.knowledgeItemId);
+      if (typeof row.knowledgeItemId !== 'string' || !row.knowledgeItemId) return '知识点引用无效';
       conceptId(row.conceptId);
       if (!['subject', 'mentions'].includes(String(row.role))) return '关联角色无效';
     } else {
