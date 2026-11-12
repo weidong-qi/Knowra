@@ -8,7 +8,7 @@ import { syntheticPdf } from '../../../scripts/test-support/pdf-fixtures.mjs';
 import { validatePdfRelations } from '@study-accelerator/shared/pdf';
 import { createAppError } from '../src/errors/app-error.ts';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
-import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.js';
+import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 
 export const spaceAssetLifecyclePostgresTests =
@@ -162,6 +162,75 @@ export const spaceAssetLifecyclePostgresTests =
                 'empty-container-deleted'
               );
               assert.equal(await app.repositories.knowledgeSpaceRepository.findById(source.id), null);
+            } finally {
+              try {
+                await app?.close();
+              } finally {
+                try {
+                  await database?.close();
+                } finally {
+                  fs.rmSync(root, { recursive: true, force: true });
+                }
+              }
+            }
+          }
+        },
+        {
+          name: '真实 PostgreSQL 文件夹生命周期：子树回收恢复、保留移动及非法目标零写入',
+          async run() {
+            const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-folder-lifecycle-pg-'));
+            let database, app;
+            try {
+              database = await createPostgresTestDatabase();
+              app = await createPostgresAppContext({
+                databaseUrl: database.databaseUrl,
+                ownerId: `folder-lifecycle-${randomUUID()}`,
+                storageRootDir: root
+              });
+              const k = app.modules.knowledge;
+              const space = await app.http.knowledge.createKnowledgeSpace({ name: '合成文件夹空间' });
+              const folder = await k.folderService.createFolder({ spaceId: space.id, name: '根文件夹' });
+              const child = await k.folderService.createFolder({
+                spaceId: space.id,
+                parentId: folder.id,
+                name: '子文件夹'
+              });
+              const target = await k.folderService.createFolder({ spaceId: space.id, name: '目标文件夹' });
+              const note = await k.noteService.createNote({
+                spaceId: space.id,
+                folderId: child.id,
+                title: '子树笔记',
+                rawMarkdown: '合成正文'
+              });
+              const outside = await k.noteService.createNote({
+                spaceId: space.id,
+                title: '根笔记',
+                rawMarkdown: '不属于子树'
+              });
+              await assert.rejects(k.deleteFolderAndCleanup(folder.id, { mode: 'keep', destinationId: child.id }), {
+                code: 'FOLDER_DESTINATION_INVALID'
+              });
+              assert.equal((await app.repositories.folderRepository.findById(folder.id)).deletedAt, null);
+              assert.equal((await app.repositories.noteRepository.findById(note.id)).folderId, child.id);
+              const trashed = await k.deleteFolderAndCleanup(folder.id, { mode: 'with-content' });
+              assert.deepEqual(new Set(trashed.deletionPackage.folderIds), new Set([folder.id, child.id]));
+              assert.deepEqual(trashed.deletionPackage.noteIds, [note.id]);
+              assert.equal((await app.repositories.noteRepository.findById(note.id)).deleted, true);
+              assert.equal(
+                (await app.repositories.noteRepository.findById(note.id)).folderDeletionPackageId,
+                trashed.deletionPackage.id
+              );
+              assert.equal((await app.repositories.noteRepository.findById(outside.id)).deleted, false);
+              const restored = await k.restoreDeletedFolder(folder.id);
+              assert.equal(restored.folders.length, 2);
+              assert.equal((await app.repositories.noteRepository.findById(note.id)).deleted, false);
+              assert.equal((await app.repositories.folderRepository.findById(child.id)).deletedAt, null);
+              const moved = await k.deleteFolderAndCleanup(folder.id, { mode: 'keep', destinationId: target.id });
+              assert.equal(moved.deletionPackage.destinationId, target.id);
+              assert.equal((await app.repositories.noteRepository.findById(note.id)).folderId, target.id);
+              assert.equal((await app.repositories.noteRepository.findById(note.id)).deleted, false);
+              await k.restoreDeletedFolder(folder.id);
+              assert.equal((await app.repositories.noteRepository.findById(note.id)).folderId, target.id);
             } finally {
               try {
                 await app?.close();

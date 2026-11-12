@@ -57,34 +57,73 @@ import { conflictError, validationError } from './application/knowledge-errors.t
 import { withPostgresErrors } from '../../infrastructure/postgres-errors.ts';
 import { withLearningObjectiveReviewErrors } from './application/learning-objective-concurrency.ts';
 
-/** @param {import('./application/postgres-async/service-dependencies.ts').PostgresModuleDependencies} dependencies */
+import type {
+  PostgresModuleDependencies,
+  KnowledgeModuleRepositories,
+  KnowledgeModuleTransaction,
+  SiblingNameInput
+} from './application/postgres-async/service-dependencies.ts';
+
+// 同一方法名的参数元组与返回类型保持关联，转发时不改变调用目标或参数。
+type ForwardMethod<Method extends (...args: never[]) => unknown> = (
+  ...args: Parameters<Method>
+) => Promise<Awaited<ReturnType<Method>>>;
+
 export function createPostgresKnowledgeModule({
-  noteRepository,
-  folderRepository,
-  tagRepository,
-  tagGroupRepository,
-  knowledgeSpaceRepository,
-  contentAnnotationRepository,
-  pdfAnnotationRepository,
-  annotationExclusionRepository,
-  annotationRevisionRepository,
-  analysisScopeRepository,
-  noteVersionRepository,
-  knowledgeItemRepository,
-  knowledgeEvidenceRepository,
-  knowledgeArtifactProvenanceRepository,
-  learningObjectiveRepository,
-  examProfileRepository,
-  examFocusRepository,
-  questionRepository,
-  questionObjectiveRepository,
-  questionSourceRepository,
+  noteRepository: suppliedNoteRepository,
+  folderRepository: suppliedFolderRepository,
+  tagRepository: suppliedTagRepository,
+  tagGroupRepository: suppliedTagGroupRepository,
+  knowledgeSpaceRepository: suppliedKnowledgeSpaceRepository,
+  contentAnnotationRepository: suppliedContentAnnotationRepository,
+  pdfAnnotationRepository: suppliedPdfAnnotationRepository,
+  annotationExclusionRepository: suppliedAnnotationExclusionRepository,
+  annotationRevisionRepository: suppliedAnnotationRevisionRepository,
+  analysisScopeRepository: suppliedAnalysisScopeRepository,
+  noteVersionRepository: suppliedNoteVersionRepository,
+  knowledgeItemRepository: suppliedKnowledgeItemRepository,
+  knowledgeEvidenceRepository: suppliedKnowledgeEvidenceRepository,
+  knowledgeArtifactProvenanceRepository: suppliedKnowledgeArtifactProvenanceRepository,
+  learningObjectiveRepository: suppliedLearningObjectiveRepository,
+  examProfileRepository: suppliedExamProfileRepository,
+  examFocusRepository: suppliedExamFocusRepository,
+  questionRepository: suppliedQuestionRepository,
+  questionObjectiveRepository: suppliedQuestionObjectiveRepository,
+  questionSourceRepository: suppliedQuestionSourceRepository,
   client = null,
   getPurgeTombstone = null,
   readPurgeTaskState = null,
   getPurgeDatasetEpoch = null
-} = {}) {
-  const repositories = {
+}: PostgresModuleDependencies = {}) {
+  const suppliedRepositories = {
+    noteRepository: suppliedNoteRepository,
+    folderRepository: suppliedFolderRepository,
+    tagRepository: suppliedTagRepository,
+    tagGroupRepository: suppliedTagGroupRepository,
+    knowledgeSpaceRepository: suppliedKnowledgeSpaceRepository,
+    contentAnnotationRepository: suppliedContentAnnotationRepository,
+    pdfAnnotationRepository: suppliedPdfAnnotationRepository,
+    annotationExclusionRepository: suppliedAnnotationExclusionRepository,
+    annotationRevisionRepository: suppliedAnnotationRevisionRepository,
+    analysisScopeRepository: suppliedAnalysisScopeRepository,
+    noteVersionRepository: suppliedNoteVersionRepository,
+    knowledgeItemRepository: suppliedKnowledgeItemRepository,
+    knowledgeEvidenceRepository: suppliedKnowledgeEvidenceRepository,
+    knowledgeArtifactProvenanceRepository: suppliedKnowledgeArtifactProvenanceRepository,
+    learningObjectiveRepository: suppliedLearningObjectiveRepository,
+    examProfileRepository: suppliedExamProfileRepository,
+    examFocusRepository: suppliedExamFocusRepository,
+    questionRepository: suppliedQuestionRepository,
+    questionObjectiveRepository: suppliedQuestionObjectiveRepository,
+    questionSourceRepository: suppliedQuestionSourceRepository
+  };
+  Object.entries(suppliedRepositories).forEach(([name, repository]) => {
+    if (!repository?.supportsAsync) throw new TypeError(`Missing PostgreSQL repository: ${name}`);
+  });
+
+  // 上面的原有循环已排除全部缺失仓储；Object.entries 不保留键与可选值的缩窄关系。
+  const repositories = suppliedRepositories as KnowledgeModuleRepositories;
+  const {
     noteRepository,
     folderRepository,
     tagRepository,
@@ -105,10 +144,7 @@ export function createPostgresKnowledgeModule({
     questionRepository,
     questionObjectiveRepository,
     questionSourceRepository
-  };
-  Object.entries(repositories).forEach(([name, repository]) => {
-    if (!repository?.supportsAsync) throw new TypeError(`Missing PostgreSQL repository: ${name}`);
-  });
+  } = repositories;
 
   const transactionRepositories = {
     folderRepository,
@@ -132,7 +168,7 @@ export function createPostgresKnowledgeModule({
     questionObjectiveRepository,
     questionSourceRepository
   };
-  function createTransactionFormalServices(transaction) {
+  function createTransactionFormalServices(transaction: KnowledgeModuleRepositories) {
     const transactionQuestionService = createAsyncQuestionService({
       repository: transaction.questionRepository,
       questionObjectiveRepository: transaction.questionObjectiveRepository,
@@ -173,7 +209,7 @@ export function createPostgresKnowledgeModule({
       questionService: transactionQuestionService
     };
   }
-  function buildNoteTransactionContext(transaction) {
+  function buildNoteTransactionContext(transaction: KnowledgeModuleRepositories) {
     const formalServices = createTransactionFormalServices(transaction);
     const dependencies = {
       createAnnotationService: () => buildTransactionAnnotationServices(transaction).annotationService,
@@ -185,7 +221,8 @@ export function createPostgresKnowledgeModule({
       knowledgeItemService: formalServices.knowledgeItemService,
       questionService: formalServices.questionService
     };
-    const lifecycle = deps => createAsyncNoteDependencyLifecycle(deps);
+    const lifecycle = (deps: Parameters<typeof createAsyncNoteDependencyLifecycle>[0]) =>
+      createAsyncNoteDependencyLifecycle(deps);
     return {
       noteRepository: transaction.noteRepository,
       annotationRepository: transaction.contentAnnotationRepository,
@@ -199,42 +236,41 @@ export function createPostgresKnowledgeModule({
       })
     };
   }
-  const runTransaction =
-    /** @type {import('./application/postgres-async/service-dependencies.ts').KnowledgeModuleTransaction} */ (
-      client?.$transaction
-        ? operation =>
-            withPostgresErrors(() =>
-              client.$transaction(
-                async tx =>
-                  operation({
-                    folderRepository: createPostgresFolderRepository({ db: tx }),
-                    knowledgeSpaceRepository: createPostgresKnowledgeSpaceRepository({ db: tx }),
-                    tagRepository: createPostgresTagRepository({ db: tx }),
-                    tagGroupRepository: createPostgresTagGroupRepository({ db: tx }),
-                    noteRepository: createPostgresNoteRepository({ db: tx }),
-                    noteVersionRepository: createPostgresNoteVersionRepository({ db: tx }),
-                    knowledgeItemRepository: createPostgresKnowledgeItemRepository({ db: tx }),
-                    knowledgeEvidenceRepository: createPostgresKnowledgeEvidenceRepository({ db: tx }),
-                    knowledgeArtifactProvenanceRepository: createPostgresKnowledgeArtifactProvenanceRepository({
-                      db: tx
-                    }),
-                    contentAnnotationRepository: createPostgresContentAnnotationRepository({ db: tx }),
-                    pdfAnnotationRepository: createPostgresPdfAnnotationRepository({ db: tx }),
-                    annotationExclusionRepository: createPostgresAnnotationExclusionRepository({ db: tx }),
-                    annotationRevisionRepository: createPostgresAnnotationRevisionRepository({ db: tx }),
-                    analysisScopeRepository: createPostgresAnalysisScopeRepository({ db: tx }),
-                    learningObjectiveRepository: createPostgresLearningObjectiveRepository({ db: tx }),
-                    examProfileRepository: createPostgresExamProfileRepository({ db: tx }),
-                    examFocusRepository: createPostgresExamFocusRepository({ db: tx }),
-                    questionRepository: createPostgresQuestionRepository({ db: tx }),
-                    questionObjectiveRepository: createPostgresQuestionObjectiveRepository({ db: tx }),
-                    questionSourceRepository: createPostgresQuestionSourceRepository({ db: tx })
+  const runTransaction = (
+    client?.$transaction
+      ? operation =>
+          withPostgresErrors(() =>
+            client.$transaction(
+              async tx =>
+                operation({
+                  folderRepository: createPostgresFolderRepository({ db: tx }),
+                  knowledgeSpaceRepository: createPostgresKnowledgeSpaceRepository({ db: tx }),
+                  tagRepository: createPostgresTagRepository({ db: tx }),
+                  tagGroupRepository: createPostgresTagGroupRepository({ db: tx }),
+                  noteRepository: createPostgresNoteRepository({ db: tx }),
+                  noteVersionRepository: createPostgresNoteVersionRepository({ db: tx }),
+                  knowledgeItemRepository: createPostgresKnowledgeItemRepository({ db: tx }),
+                  knowledgeEvidenceRepository: createPostgresKnowledgeEvidenceRepository({ db: tx }),
+                  knowledgeArtifactProvenanceRepository: createPostgresKnowledgeArtifactProvenanceRepository({
+                    db: tx
                   }),
-                { isolationLevel: 'Serializable' }
-              )
+                  contentAnnotationRepository: createPostgresContentAnnotationRepository({ db: tx }),
+                  pdfAnnotationRepository: createPostgresPdfAnnotationRepository({ db: tx }),
+                  annotationExclusionRepository: createPostgresAnnotationExclusionRepository({ db: tx }),
+                  annotationRevisionRepository: createPostgresAnnotationRevisionRepository({ db: tx }),
+                  analysisScopeRepository: createPostgresAnalysisScopeRepository({ db: tx }),
+                  learningObjectiveRepository: createPostgresLearningObjectiveRepository({ db: tx }),
+                  examProfileRepository: createPostgresExamProfileRepository({ db: tx }),
+                  examFocusRepository: createPostgresExamFocusRepository({ db: tx }),
+                  questionRepository: createPostgresQuestionRepository({ db: tx }),
+                  questionObjectiveRepository: createPostgresQuestionObjectiveRepository({ db: tx }),
+                  questionSourceRepository: createPostgresQuestionSourceRepository({ db: tx })
+                }),
+              { isolationLevel: 'Serializable' }
             )
-        : operation => operation(transactionRepositories)
-    );
+          )
+      : operation => operation(transactionRepositories)
+  ) as KnowledgeModuleTransaction;
   const trainingAssetLifecycle = createTrainingAssetLifecycle({
     repositories,
     runTransaction,
@@ -243,11 +279,10 @@ export function createPostgresKnowledgeModule({
     getPurgeDatasetEpoch
   });
 
-  function normalizeComparableName(value) {
+  function normalizeComparableName(value: string | null | undefined) {
     return String(value ?? '').trim();
   }
 
-  /** @param {import('./application/postgres-async/service-dependencies.ts').SiblingNameInput} input */
   async function assertSiblingNameAvailable({
     spaceId,
     parentId = null,
@@ -256,7 +291,7 @@ export function createPostgresKnowledgeModule({
     name,
     currentFolderId = null,
     currentNoteId = null
-  }) {
+  }: Omit<SiblingNameInput, 'spaceId'> & { spaceId?: string | null }) {
     const candidate = normalizeComparableName(name ?? title);
     if (!candidate) return;
     const folders = await folderRepository.list({ spaceId });
@@ -319,8 +354,8 @@ export function createPostgresKnowledgeModule({
       )
   });
   const noteVersionService = createAsyncNoteVersionService({ repository: noteVersionRepository });
-  let learningObjectiveService = null;
-  let questionService = null;
+  let learningObjectiveService: ReturnType<typeof createAsyncLearningObjectiveService> | null = null;
+  let questionService: ReturnType<typeof createAsyncQuestionService> | null = null;
   const knowledgeItemService = createAsyncKnowledgeItemService({
     repository: knowledgeItemRepository,
     evidenceRepository: knowledgeEvidenceRepository,
@@ -356,9 +391,12 @@ export function createPostgresKnowledgeModule({
     'markEvidenceByAnnotationId',
     'reconcileEvidenceByAnnotationIds',
     'markEvidenceByNoteVersionId'
-  ]) {
-    knowledgeItemService[method] = (...args) =>
-      runTransaction(transaction => createTransactionFormalServices(transaction).knowledgeItemService[method](...args));
+  ] as const) {
+    type Method = (typeof knowledgeItemService)[typeof method];
+    (knowledgeItemService as Record<typeof method, ForwardMethod<Method>>)[method] = (...args: Parameters<Method>) =>
+      runTransaction(transaction =>
+        (createTransactionFormalServices(transaction).knowledgeItemService[method] as ForwardMethod<Method>)(...args)
+      );
   }
   learningObjectiveService = createAsyncLearningObjectiveService({
     repository: learningObjectiveRepository,
@@ -380,11 +418,16 @@ export function createPostgresKnowledgeModule({
     'archive',
     'restore',
     'invalidateByKnowledgeItemId'
-  ]) {
-    learningObjectiveService[method] = (...args) => {
+  ] as const) {
+    type Method = (typeof learningObjectiveService)[typeof method];
+    (learningObjectiveService as Record<typeof method, ForwardMethod<Method>>)[method] = (
+      ...args: Parameters<Method>
+    ) => {
       const operation = () =>
         runTransaction(transaction =>
-          createTransactionFormalServices(transaction).learningObjectiveService[method](...args)
+          (createTransactionFormalServices(transaction).learningObjectiveService[method] as ForwardMethod<Method>)(
+            ...args
+          )
         );
       return ['createCandidate', 'updateObjective', 'confirmObjective'].includes(method)
         ? withLearningObjectiveReviewErrors(method === 'createCandidate' ? args[0] : args[1], operation, {
@@ -433,7 +476,7 @@ export function createPostgresKnowledgeModule({
     noteVersionRepository,
     revisionRepository: annotationRevisionRepository
   });
-  const buildTransactionAnnotationServices = transaction => {
+  const buildTransactionAnnotationServices = (transaction: KnowledgeModuleRepositories) => {
     const annotationService = createAsyncContentAnnotationService({
       repository: transaction.contentAnnotationRepository,
       noteRepository: transaction.noteRepository,
@@ -463,29 +506,37 @@ export function createPostgresKnowledgeModule({
     });
     return { annotationService, scopeService };
   };
+  type AnnotationService = ReturnType<typeof buildTransactionAnnotationServices>['annotationService'];
   const annotationMutation =
-    method =>
-    (...args) =>
-      runTransaction(transaction => buildTransactionAnnotationServices(transaction).annotationService[method](...args));
-  const contentAnnotationService = /** @type {ReturnType<typeof createAsyncContentAnnotationService>} */ ({
-    listAnnotationsByNote: /** @param {Parameters<typeof directAnnotationService.listAnnotationsByNote>} args */ (
-      ...args
-    ) => directAnnotationService.listAnnotationsByNote(...args),
-    getAnnotation: /** @param {Parameters<typeof directAnnotationService.getAnnotation>} args */ (...args) =>
+    <Method extends keyof AnnotationService>(method: Method) =>
+    (...args: Parameters<AnnotationService[Method]>) =>
+      runTransaction(transaction =>
+        (
+          buildTransactionAnnotationServices(transaction).annotationService[method] as ForwardMethod<
+            AnnotationService[Method]
+          >
+        )(...args)
+      );
+  const contentAnnotationService = {
+    listAnnotationsByNote: (...args: Parameters<typeof directAnnotationService.listAnnotationsByNote>) =>
+      directAnnotationService.listAnnotationsByNote(...args),
+    getAnnotation: (...args: Parameters<typeof directAnnotationService.getAnnotation>) =>
       directAnnotationService.getAnnotation(...args),
     ...Object.fromEntries(
-      [
-        'createAnnotation',
-        'updateAnnotation',
-        'archiveAnnotation',
-        'deleteAnnotation',
-        'restoreAnnotation',
-        'updateAnnotationAnchor',
-        'confirmAnnotationRange',
-        'reconcileForNote'
-      ].map(method => [method, annotationMutation(method)])
+      (
+        [
+          'createAnnotation',
+          'updateAnnotation',
+          'archiveAnnotation',
+          'deleteAnnotation',
+          'restoreAnnotation',
+          'updateAnnotationAnchor',
+          'confirmAnnotationRange',
+          'reconcileForNote'
+        ] as const
+      ).map(method => [method, annotationMutation(method)])
     )
-  });
+  } as ReturnType<typeof createAsyncContentAnnotationService>;
   const directScopeService = createAsyncAnnotationScopeService({
     annotationRepository: contentAnnotationRepository,
     exclusionRepository: annotationExclusionRepository,
@@ -495,23 +546,33 @@ export function createPostgresKnowledgeModule({
     evidenceRepository: knowledgeEvidenceRepository,
     knowledgeItemRepository
   });
+  type ScopeService = ReturnType<typeof buildTransactionAnnotationServices>['scopeService'];
   const scopeMutation =
-    method =>
-    (...args) =>
-      runTransaction(transaction => buildTransactionAnnotationServices(transaction).scopeService[method](...args));
+    <Method extends keyof ScopeService>(method: Method) =>
+    (...args: Parameters<ScopeService[Method]>) =>
+      runTransaction(transaction =>
+        (buildTransactionAnnotationServices(transaction).scopeService[method] as ForwardMethod<ScopeService[Method]>)(
+          ...args
+        )
+      );
   const annotationScopeService = {
     /** @param {Parameters<typeof directScopeService.previewAnnotation>} args */
-    previewAnnotation: (...args) => directScopeService.previewAnnotation(...args),
+    previewAnnotation: (...args: Parameters<typeof directScopeService.previewAnnotation>) =>
+      directScopeService.previewAnnotation(...args),
     /** @param {Parameters<typeof directScopeService.getKnowledgeLinks>} args */
-    getKnowledgeLinks: (...args) => directScopeService.getKnowledgeLinks(...args),
-    previewAnalysisScope: (...args) => directScopeService.previewAnalysisScope(...args),
+    getKnowledgeLinks: (...args: Parameters<typeof directScopeService.getKnowledgeLinks>) =>
+      directScopeService.getKnowledgeLinks(...args),
+    previewAnalysisScope: (...args: Parameters<typeof directScopeService.previewAnalysisScope>) =>
+      directScopeService.previewAnalysisScope(...args),
     /** @param {Parameters<typeof directScopeService.getAnalysisScope>} args */
-    getAnalysisScope: (...args) => directScopeService.getAnalysisScope(...args),
+    getAnalysisScope: (...args: Parameters<typeof directScopeService.getAnalysisScope>) =>
+      directScopeService.getAnalysisScope(...args),
     createExclusion: scopeMutation('createExclusion'),
     deleteExclusion: scopeMutation('deleteExclusion'),
     createAnalysisScope: scopeMutation('createAnalysisScope'),
     /** @param {Parameters<typeof directScopeService.listAnalysisScopes>} args */
-    listAnalysisScopes: (...args) => directScopeService.listAnalysisScopes(...args),
+    listAnalysisScopes: (...args: Parameters<typeof directScopeService.listAnalysisScopes>) =>
+      directScopeService.listAnalysisScopes(...args),
     trashAnalysisScope: scopeMutation('trashAnalysisScope'),
     restoreAnalysisScope: scopeMutation('restoreAnalysisScope')
   };
@@ -538,7 +599,7 @@ export function createPostgresKnowledgeModule({
         );
       }
       const versions = await noteVersionRepository.list({ noteId });
-      const versionIds = new Set(versions.map(version => version.id));
+      const versionIds = new Set<unknown>(versions.map(version => version.id));
       const sources = await questionSourceRepository.list();
       if (sources.some(source => source.sourceType === 'noteVersion' && versionIds.has(source.sourceId))) {
         throw conflictError(
@@ -549,11 +610,9 @@ export function createPostgresKnowledgeModule({
       const snapshots = await analysisScopeRepository.list();
       if (
         snapshots.some(snapshot =>
-          /** @type {import('./application/postgres-async/note-dependency-lifecycle.ts').DependencyScopeSnapshot['noteVersions']} */ (
-            snapshot.noteVersions
-          )?.some(
-            version => version.noteId === noteId || /** @type {Set<unknown>} */ (versionIds).has(version.noteVersionId)
-          )
+          (
+            snapshot.noteVersions as import('./application/postgres-async/note-dependency-lifecycle.ts').DependencyScopeSnapshot['noteVersions']
+          )?.some(version => version.noteId === noteId || (versionIds as Set<unknown>).has(version.noteVersionId))
         )
       ) {
         throw conflictError(
@@ -574,7 +633,10 @@ export function createPostgresKnowledgeModule({
 
   const getKnowledgeProvenance = createKnowledgeArtifactProvenanceReader(repositories);
 
-  async function inspectKnowledgePurge(id, source = null) {
+  async function inspectKnowledgePurge(
+    id: string,
+    source: KnowledgeModuleRepositories | null = null
+  ): Promise<ReturnType<typeof supplementPurgePreview<ReturnType<typeof inspectKnowledgeItemPurge>>>> {
     if (!source) return runTransaction(transaction => inspectKnowledgePurge(id, transaction));
     const [item, evidence, provenance, learningObjectives, questionSources, analysisScopes] = await Promise.all([
       source.knowledgeItemRepository.findById(id),
@@ -592,7 +654,10 @@ export function createPostgresKnowledgeModule({
     );
   }
 
-  async function permanentlyDeleteKnowledgeItem(id, input = {}) {
+  async function permanentlyDeleteKnowledgeItem(
+    id: string,
+    input: Parameters<typeof assertManualPurgeScope>[2] & { expectedUpdatedAt?: unknown } = {}
+  ) {
     const { expectedUpdatedAt } = input;
     return runTransaction(async transaction => {
       assertPurgeDatasetEpoch(input, await getPurgeDatasetEpoch?.());
@@ -617,7 +682,8 @@ export function createPostgresKnowledgeModule({
       assertKnowledgeItemPurgeAllowed(preflight, expectedUpdatedAt);
       assertManualPurgeScope(
         'knowledgeItem',
-        await transaction.knowledgeItemRepository.findById(id),
+        // 真实 PG 路径使用同一 Serializable 快照，已确认存在且尚未删除；注入回退须保持相同一致性契约。
+        (await transaction.knowledgeItemRepository.findById(id))!,
         input,
         await transaction.knowledgeArtifactProvenanceRepository.list({ artifactId: id })
       );
@@ -637,7 +703,7 @@ export function createPostgresKnowledgeModule({
     });
   }
 
-  async function previewNoteVersionPrune(noteId) {
+  async function previewNoteVersionPrune(noteId: string) {
     const [note, versions, evidence, questionSources, annotations, exclusions, analysisScopes, provenance] =
       await Promise.all([
         noteRepository.findById(noteId),
@@ -702,7 +768,7 @@ export function createPostgresKnowledgeModule({
     deleteEmptySpace,
     previewSpaceMigration,
     migrateSpaceAssets,
-    async deleteFolderAndCleanup(folderId, input = {}) {
+    async deleteFolderAndCleanup(folderId: string, input: { mode?: string; destinationId?: string | null } = {}) {
       return runTransaction(async transaction => {
         const txFolderService = createAsyncFolderService({
           repository: transaction.folderRepository,
@@ -716,7 +782,7 @@ export function createPostgresKnowledgeModule({
         });
         const root = await transaction.folderRepository.findById(folderId);
         if (!root || root.deletedAt) throw conflictError('FOLDER_NOT_FOUND', '文件夹不存在');
-        if (!['keep', 'with-content'].includes(input.mode))
+        if (!(['keep', 'with-content'] as readonly (string | undefined)[]).includes(input.mode))
           throw validationError('FOLDER_DELETE_MODE_REQUIRED', '请选择保留并移动内容，或将内容一起移入回收站');
         const subtreeIds = await txFolderService.getFolderSubtreeIds(folderId);
         const destinationId = Object.hasOwn(input, 'destinationId') ? input.destinationId : (root.parentId ?? null);
@@ -731,7 +797,7 @@ export function createPostgresKnowledgeModule({
             throw conflictError('FOLDER_DESTINATION_INVALID', '目标文件夹不可用');
         }
         const notes = (await transaction.noteRepository.list({ spaceId: root.spaceId, includeDeleted: true })).filter(
-          note => subtreeIds.includes(note.folderId)
+          note => (subtreeIds as readonly (string | null)[]).includes(note.folderId)
         );
         const packageId = `folder-${folderId}-${Date.now()}`;
         const noteIds = [];
@@ -741,15 +807,22 @@ export function createPostgresKnowledgeModule({
             noteIds.push(note.id);
           } else {
             const deleted = await txNoteService.deleteNote(note.id);
-            await transaction.noteRepository.save({ ...deleted, folderDeletionPackageId: packageId });
+            // PG 删除服务经 CAS 写后读返回记录；事务持有行锁，注入仓储须遵守写后可读契约。
+            await transaction.noteRepository.save({ ...deleted!, folderDeletionPackageId: packageId });
             noteIds.push(note.id);
           }
         }
-        const deletionPackage = { id: packageId, mode: input.mode, folderIds: subtreeIds, noteIds, destinationId };
+        const deletionPackage = {
+          id: packageId,
+          mode: input.mode as 'keep' | 'with-content',
+          folderIds: subtreeIds,
+          noteIds,
+          destinationId
+        };
         return { folders: await txFolderService.trashFolder(folderId, deletionPackage), deletionPackage };
       });
     },
-    async restoreDeletedFolder(folderId) {
+    async restoreDeletedFolder(folderId: string) {
       return runTransaction(async transaction => {
         const txFolderService = createAsyncFolderService({
           repository: transaction.folderRepository,
@@ -762,10 +835,10 @@ export function createPostgresKnowledgeModule({
           validateSiblingNameConflict: assertSiblingNameAvailable
         });
         const root = await transaction.folderRepository.findById(folderId);
-        const deletionPackage =
-          /** @type {Pick<import('./domain/folder.ts').FolderDeletionPackage, 'id' | 'mode' | 'noteIds'> | null} */ (
-            root?.deletionPackage
-          );
+        const deletionPackage = root?.deletionPackage as Pick<
+          import('./domain/folder.ts').FolderDeletionPackage,
+          'id' | 'mode' | 'noteIds'
+        > | null;
         if (!deletionPackage) throw conflictError('FOLDER_NOT_IN_TRASH', '文件夹不在回收站中');
         const folders = await txFolderService.restoreDeletedFolder(folderId);
         for (const noteId of deletionPackage.mode === 'with-content' ? deletionPackage.noteIds : []) {
@@ -776,13 +849,13 @@ export function createPostgresKnowledgeModule({
         return { folders, deletionPackage };
       });
     },
-    async deleteTagAndCleanup(tagId) {
+    async deleteTagAndCleanup(tagId: string) {
       const tag = await tagRepository.findById(tagId);
       if (tag?.isSystem) throw conflictError('SYSTEM_TAG_PROTECTED', 'System tags cannot be deleted');
       await noteService.removeTagFromAllNotes(tagId);
       return tagService.deleteTag(tagId);
     },
-    async mergeTags(sourceTagId, targetTagId) {
+    async mergeTags(sourceTagId: string, targetTagId: string) {
       const source = await tagRepository.findById(sourceTagId);
       const target = await tagRepository.findById(targetTagId);
       if (!source || !target) throw validationError('TAG_MERGE_TARGET_INVALID', 'Both tags must exist');

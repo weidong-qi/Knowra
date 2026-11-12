@@ -219,6 +219,7 @@ export interface NoteDependencies extends TransactionDependencies {
   onNoteDeleted?: NoteTransactionContext['onNoteDeleted'];
   onBeforePermanentDelete?: NoteTransactionContext['onBeforePermanentDelete'];
 }
+/** 不提供 client 时，注入仓储须遵守一致读取与写后可读契约；supportsAsync 只检查异步标记，不建立事务。 */
 export interface PostgresModuleDependencies extends Partial<PostgresRepositories> {
   client?:
     | import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost<

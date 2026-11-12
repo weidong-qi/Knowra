@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createNavigationReferencePolicy } from '../src/modules/knowledge/application/navigation-reference-policy.ts';
 import { createAsyncNavigationReferencePolicy } from '../src/modules/knowledge/application/postgres-async/navigation-reference-policy.ts';
 import { createKnowledgeModule } from '../src/modules/knowledge/index.js';
-import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.js';
+import { createPostgresKnowledgeModule } from '../src/modules/knowledge/postgres-async-module.ts';
 
 function fixture(asyncMode = false, enforceReferences = true) {
   const records = {
