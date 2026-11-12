@@ -1,9 +1,11 @@
+import type { PrivateStoreOptions, ActionState } from './private-store-types.ts';
+import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
 import { createActionStore, emptyActionState, validateActionState } from './action-state.js';
 import { hashRecord } from './record-contract.ts';
 
-export function createPostgresActionStore({ client, repository, ownerId }) {
-  async function load() {
-    const [row] = await client.$queryRawUnsafe(
+export function createPostgresActionStore({ client, repository, ownerId }: PrivateStoreOptions) {
+  async function load(): Promise<ActionState> {
+    const [row] = await client.$queryRawUnsafe<{ state_json: string; state_hash: string }[]>(
       'SELECT state_json, state_hash FROM ai_note_action_states WHERE owner_id = $1',
       ownerId
     );
@@ -13,14 +15,16 @@ export function createPostgresActionStore({ client, repository, ownerId }) {
     return validateActionState(raw);
   }
   return createActionStore({
-    transaction: operation =>
+    transaction: <Result>(operation: () => Result | Promise<Result>) =>
       client.$transaction(async () => {
         await client.$queryRawUnsafe('SELECT pg_advisory_xact_lock(1266775634, 32)::text');
         return operation();
       }),
     identity: () => repository.identity(),
     read: load,
-    write: operation =>
+    write: <Result>(
+      operation: (state: ActionState, identity: DatasetIdentity) => { state: ActionState; result: Result }
+    ) =>
       client.$transaction(async () => {
         await client.$queryRawUnsafe('SELECT pg_advisory_xact_lock(1266775634, 32)::text');
         const output = operation(await load(), await repository.identity());

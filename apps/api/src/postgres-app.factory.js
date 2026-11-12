@@ -3,7 +3,7 @@ import { buildJsonMigrationPlan, applyJsonMigration } from './infrastructure/mig
 import { createPdfService } from './modules/pdf/service.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createPostgresPurgeTaskReader } from './infrastructure/asset-purge-task-state.ts';
-import { createPostgresActionStore } from './modules/ai/postgres-action-store.js';
+import { createPostgresActionStore } from './modules/ai/postgres-action-store.ts';
 import { createAttachmentTransfer } from './modules/sync/attachment-transfer.ts';
 import { createPostgresCoreOperationStore } from './infrastructure/postgres-core-operation-store.ts';
 import path from 'node:path';
@@ -62,9 +62,9 @@ import {
   createPostgresKnowledgeExtractionCommitStore,
   createPostgresKnowledgeExtractionContext
 } from './modules/ai/postgres-knowledge-extraction-commit-store.ts';
-import { createPostgresAiAccessStore } from './modules/ai/postgres-access-store.js';
-import { createPostgresAiConversationStore } from './modules/ai/postgres-conversation-store.js';
-import { createPostgresBudgetAuthority } from './modules/ai/postgres-budget-authority.js';
+import { createPostgresAiAccessStore } from './modules/ai/postgres-access-store.ts';
+import { createPostgresAiConversationStore } from './modules/ai/postgres-conversation-store.ts';
+import { createPostgresBudgetAuthority } from './modules/ai/postgres-budget-authority.ts';
 
 export async function createPostgresAppContext({
   databaseUrl = process.env.DATABASE_URL,

@@ -1,3 +1,4 @@
+import type { PrivateStoreOptions, AccessKind, AccessIndexRecord, AccessSqlRow } from './private-store-types.ts';
 import { ACCESS_KINDS, accessError, createAiAccessStore, validateAccessRecord } from './access-records.js';
 import { hashRecord } from './record-contract.ts';
 
@@ -5,17 +6,17 @@ const definitions = {
   aiAccessPolicy: { table: 'ai_access_policies', id: 'policy_id', parent: null },
   aiRunGrant: { table: 'ai_run_grants', id: 'grant_id', parent: 'policy_id' },
   aiRequestManifest: { table: 'ai_request_manifests', id: 'manifest_id', parent: 'grant_id' }
-};
+} as const;
 
 /** PostgreSQL v2 私有表；修改策略使用记录哈希 CAS，旧任务表不改写。 */
-export function createPostgresAiAccessStore({ client, repository, ownerId }) {
+export function createPostgresAiAccessStore({ client, repository, ownerId }: PrivateStoreOptions) {
   if (!client || !repository || !ownerId)
     throw new TypeError('PostgreSQL AI access store needs client, repository and owner');
-  function decode(kind, row) {
+  function decode(kind: AccessKind, row: AccessSqlRow | undefined): AccessIndexRecord | null {
     if (!row) return null;
-    const record = validateAccessRecord(kind, JSON.parse(row.record_json));
+    const record: AccessIndexRecord = validateAccessRecord(kind, JSON.parse(row.record_json));
     if (
-      record[ACCESS_KINDS[kind].id] !== row[definitions[kind].id] ||
+      record[ACCESS_KINDS[kind].id as keyof AccessIndexRecord] !== row[definitions[kind].id] ||
       record.ownerId !== row.owner_id ||
       record.datasetId !== row.dataset_id ||
       record.datasetEpoch !== row.dataset_epoch ||
@@ -28,22 +29,22 @@ export function createPostgresAiAccessStore({ client, repository, ownerId }) {
   }
   return createAiAccessStore({
     identity: () => repository.identity(),
-    async get(kind, id) {
+    async get(kind: AccessKind, id: string) {
       const { table, id: column } = definitions[kind];
-      const rows = await client.$queryRawUnsafe(
+      const rows = await client.$queryRawUnsafe<AccessSqlRow[]>(
         `SELECT * FROM ${table} WHERE ${column} = $1 AND owner_id = $2`,
         id,
         ownerId
       );
       return decode(kind, rows[0]);
     },
-    async list(kind) {
+    async list(kind: AccessKind) {
       const { table } = definitions[kind];
-      return (await client.$queryRawUnsafe(`SELECT * FROM ${table} WHERE owner_id = $1`, ownerId)).map(row =>
-        decode(kind, row)
+      return (await client.$queryRawUnsafe<AccessSqlRow[]>(`SELECT * FROM ${table} WHERE owner_id = $1`, ownerId)).map(
+        row => decode(kind, row)
       );
     },
-    async insert(kind, record) {
+    async insert(kind: AccessKind, record: AccessIndexRecord) {
       if (record.ownerId !== ownerId) accessError('AI_SCOPE_FORBIDDEN', '授权记录 owner 不匹配。');
       const { table, id, parent } = definitions[kind];
       const columns = [
@@ -58,7 +59,7 @@ export function createPostgresAiAccessStore({ client, repository, ownerId }) {
         'record_json'
       ];
       const values = [
-        record[ACCESS_KINDS[kind].id],
+        record[ACCESS_KINDS[kind].id as keyof AccessIndexRecord],
         ...(parent ? [record[parent === 'policy_id' ? 'policyId' : 'grantId']] : []),
         record.ownerId,
         record.datasetId,
@@ -73,7 +74,7 @@ export function createPostgresAiAccessStore({ client, repository, ownerId }) {
         ...values
       );
     },
-    async compareAndSwap(record, expectedHash) {
+    async compareAndSwap(record: AccessIndexRecord, expectedHash: string) {
       const changed = await client.$transaction(async tx => {
         await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(1266775634, 32)::text');
         return tx.$executeRawUnsafe(

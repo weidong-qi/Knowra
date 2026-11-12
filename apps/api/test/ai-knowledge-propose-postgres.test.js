@@ -7,7 +7,7 @@ import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
 import { createPostgresCoreOperationStore } from '../src/infrastructure/postgres-core-operation-store.ts';
-import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.js';
+import { createPostgresBudgetAuthority } from '../src/modules/ai/postgres-budget-authority.ts';
 
 const priceProfile = {
   version: 'propose-pg-v1',
