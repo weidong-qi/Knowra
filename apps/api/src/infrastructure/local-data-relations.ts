@@ -1,3 +1,4 @@
+import { assertConceptState } from '../../../../packages/web-core/src/knowledge-concepts/validation.ts';
 import type { AnnotationStructure } from '@study-accelerator/content-anchor';
 import type { AppError } from '../errors/app-error.ts';
 import type {
@@ -76,6 +77,14 @@ import { resolveAnalysisScopeNoteVersion } from '../modules/knowledge/domain/ana
 import { deriveEvidenceHealth } from '../modules/knowledge/domain/evidence-health.ts';
 
 export function validateLocalDataRelations<State extends LocalDataState>(state: State): State {
+  assertConceptState(
+    {
+      concepts: state.knowledgeConcepts,
+      links: state.knowledgeConceptLinks,
+      relations: state.knowledgeConceptRelations
+    },
+    state.knowledgeItems.map(item => ({ id: item.id }))
+  );
   normalizeTagSystem(state);
   const spaces = indexById(state.spaces);
   const folders = indexById(state.folders);

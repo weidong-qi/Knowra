@@ -1,0 +1,139 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { once } from 'node:events';
+import { createFileDataStore } from '../src/infrastructure/file-data-store.ts';
+import { createAppContext } from '../src/app.factory.ts';
+import { createServer } from '../src/server.ts';
+import { createKnowledgeConceptService } from '../src/modules/knowledge-concepts/service.ts';
+import {
+  LOCAL_DATA_SCHEMA_VERSION,
+  validatePersistedLocalState,
+  createEmptyLocalState
+} from '../src/infrastructure/local-data-schema.ts';
+import { createPostgresAppContext } from '../src/postgres-app.factory.ts';
+import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
+
+test('概念 HTTP、JSON 重启、幂等和失败事务', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-concepts-api-'));
+  const file = path.join(root, 'cloud.json');
+  const dataStore = createFileDataStore(file);
+  const app = createAppContext({ dataStore, storageRootDir: root });
+  const server = createServer({ appContext: app, logger: { error() {} } });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(async () => {
+    await new Promise(resolve => server.close(resolve));
+    await server.closeAi?.();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api/knowledge/concepts`;
+  const call = command =>
+    fetch(`${base}/commands`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command })
+    });
+  const command = { type: 'createConcept', id: 'a', operationId: 'create-a', expectedRevision: 0, name: '链式法则' };
+  assert.equal((await call(command)).status, 200);
+  assert.equal((await call(command)).status, 200);
+  assert.equal(
+    (await createAppContext({ dataStore: createFileDataStore(file), storageRootDir: root }).knowledgeConcepts.list())
+      .concepts[0].revision,
+    1
+  );
+  assert.equal((await call({ ...command, name: '另一个名称' })).status, 409);
+  const invalid = await call({
+    type: 'linkItems',
+    id: 'a',
+    operationId: 'link-missing',
+    expectedRevision: 1,
+    itemIds: ['missing'],
+    role: 'subject'
+  });
+  assert.equal(invalid.status, 404);
+  assert.equal((await app.knowledgeConcepts.list()).concepts[0].revision, 1);
+  assert.equal(
+    (
+      await call({
+        type: 'createConcept',
+        id: 'b',
+        operationId: 'ai-source',
+        expectedRevision: 0,
+        name: 'AI',
+        sourceMode: 'ai'
+      })
+    ).status,
+    422
+  );
+  const listed = await (await fetch(base)).json();
+  assert.equal(listed.data.concepts.length, 1);
+  await assert.rejects(createKnowledgeConceptService({ store: null }).list(), {
+    code: 'KNOWLEDGE_CONCEPTS_UNAVAILABLE',
+    statusCode: 503
+  });
+});
+
+test('旧 JSON 文件自动补空集合，非法引用拒绝写入', () => {
+  const old = createEmptyLocalState();
+  delete old.knowledgeConcepts;
+  delete old.knowledgeConceptLinks;
+  delete old.knowledgeConceptRelations;
+  const migrated = validatePersistedLocalState({ schemaVersion: 8, ...old });
+  assert.deepEqual(migrated.knowledgeConcepts, []);
+  assert.equal(LOCAL_DATA_SCHEMA_VERSION, 9);
+});
+
+test(
+  '真实 PostgreSQL：概念三集合、跨实例并发与快照恢复',
+  { skip: !process.env.KNOWRA_SYNC_TEST_DATABASE_URL },
+  async t => {
+    const database = await createPostgresTestDatabase();
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-concepts-pg-'));
+    const app = await createPostgresAppContext({ databaseUrl: database.databaseUrl, storageRootDir: root });
+    t.after(async () => {
+      await app.close();
+      await database.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+    const create = id =>
+      app.knowledgeConcepts.execute({
+        type: 'createConcept',
+        id,
+        operationId: `create-${id}`,
+        expectedRevision: 0,
+        name: id
+      });
+    await create('a');
+    await create('b');
+    await app.knowledgeConcepts.execute({
+      type: 'createRelation',
+      id: 'a',
+      operationId: 'relation',
+      expectedRevision: 1,
+      relationId: 'r',
+      toConceptId: 'b',
+      relationType: 'relatedTo',
+      basisItemId: null
+    });
+    const conflicts = await Promise.allSettled(
+      ['first', 'second'].map(name =>
+        app.knowledgeConcepts.execute({
+          type: 'updateConcept',
+          id: 'a',
+          operationId: name,
+          expectedRevision: 2,
+          patch: { sense: name }
+        })
+      )
+    );
+    assert.equal(conflicts.filter(result => result.status === 'fulfilled').length, 1);
+    const snapshot = await app.http.storage.exportKnowledgeBase();
+    assert.equal(snapshot.data.knowledgeConcepts.length, 2);
+    assert.equal(snapshot.data.knowledgeConceptRelations.length, 1);
+    await app.http.storage.importKnowledgeBase(snapshot);
+    assert.equal((await app.knowledgeConcepts.list()).relations[0].id, 'r');
+  }
+);

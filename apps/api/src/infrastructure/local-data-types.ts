@@ -1,3 +1,8 @@
+import type {
+  KnowledgeConcept,
+  KnowledgeConceptLink,
+  KnowledgeConceptRelation
+} from '../../../../packages/web-core/src/knowledge-concepts/types.ts';
 import type { Prisma } from '@prisma/client';
 import type { ContentAnchor } from '@study-accelerator/content-anchor';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
@@ -127,6 +132,9 @@ interface LocalDataCollections {
   annotationRevisions: LocalAnnotationRevision[];
   analysisScopeSnapshots: LocalAnalysisScope[];
   personalTodos: Todo[];
+  knowledgeConcepts: KnowledgeConcept[];
+  knowledgeConceptLinks: KnowledgeConceptLink[];
+  knowledgeConceptRelations: KnowledgeConceptRelation[];
 }
 /** 持久 JSON 保留扩展字段的原值，不把它们冒充领域构造器输出。 */
 export type StoredJsonField<Value> = unknown extends Value

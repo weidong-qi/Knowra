@@ -27,6 +27,7 @@ export interface KnowledgePurgeInputs {
   learningObjectives?: readonly KnowledgePurgeObjectiveReference[] | undefined;
   questionSources?: readonly KnowledgePurgeQuestionReference[] | undefined;
   analysisScopes?: readonly KnowledgePurgeScopeReference[] | undefined;
+  conceptCleanup?: { links: number; relations: number };
 }
 export interface KnowledgePurgeReference {
   collection: 'learningObjectives' | 'questionSources' | 'analysisScopeSnapshots';
@@ -37,6 +38,7 @@ export interface KnowledgePurgeReference {
 export interface KnowledgePurgePreview {
   asset: { type: 'knowledgeItem'; id: string };
   operation: 'permanent-delete';
+  conceptCleanup: { links: number; relations: number };
   decision: 'move-to-recycle-bin-first' | 'requires-dependency-action' | 'can-purge-no-history';
   expectedUpdatedAt: unknown;
   exclusiveRecords: { knowledgeEvidenceIds: string[]; knowledgeArtifactProvenanceIds: string[] };
@@ -67,7 +69,8 @@ export function inspectKnowledgeItemPurge({
   provenance = [],
   learningObjectives = [],
   questionSources = [],
-  analysisScopes = []
+  analysisScopes = [],
+  conceptCleanup = { links: 0, relations: 0 }
 }: KnowledgePurgeInputs): KnowledgePurgePreview {
   if (!item) throw createAppError('KNOWLEDGE_ITEM_NOT_FOUND', '知识点不存在。', 404);
   // 查询接收历史 unknown 引用；不转换证据 ID，也不改变稀疏数组的 Set 迭代行为。
@@ -105,6 +108,7 @@ export function inspectKnowledgeItemPurge({
   return {
     asset: { type: 'knowledgeItem', id: item.id },
     operation: 'permanent-delete',
+    conceptCleanup,
     decision: !item.deletedAt
       ? 'move-to-recycle-bin-first'
       : references.length

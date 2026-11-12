@@ -1,3 +1,4 @@
+import { conceptRecordError } from '../../../../packages/web-core/src/knowledge-concepts/validation.ts';
 import type { AppError } from '../errors/app-error.ts';
 import type { LocalDataState, LocalCollection } from './local-data-types.ts';
 /** 原始 JSON 的属性访问视图，不表示字段已经校验；原校验顺序及异常行为不变。 */
@@ -34,7 +35,7 @@ import { validateKnowledgeArtifactProvenance } from '../modules/knowledge/domain
 import { migrateLegacyKnowledgeArtifactProvenance } from '../modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
 import { todoCollectionErrors, todoRecordError } from '../../../../packages/web-core/src/personal-todos/validation.ts';
 
-export const LOCAL_DATA_SCHEMA_VERSION = 8;
+export const LOCAL_DATA_SCHEMA_VERSION = 9;
 export const LOCAL_SNAPSHOT_VERSION = 'v1-local-json';
 
 export const LOCAL_DATA_COLLECTIONS: readonly string[] = Object.freeze([
@@ -59,7 +60,10 @@ export const LOCAL_DATA_COLLECTIONS: readonly string[] = Object.freeze([
   'annotationExclusions',
   'annotationRevisions',
   'analysisScopeSnapshots',
-  'personalTodos'
+  'personalTodos',
+  'knowledgeConcepts',
+  'knowledgeConceptLinks',
+  'knowledgeConceptRelations'
 ]);
 
 const REQUIRED_COLLECTIONS = Object.freeze(['spaces', 'folders', 'tags', 'notes']);
@@ -440,6 +444,15 @@ function validateEntity(collectionName: LocalCollection, item: RawEntity, index:
     assertNonEmptyString(item.operation, `${location}.operation`);
     if (!Number.isInteger(item.revision) || (item.revision as number) < 1)
       invalidSnapshot(`${location}.revision is invalid`);
+  } else if (['knowledgeConcepts', 'knowledgeConceptLinks', 'knowledgeConceptRelations'].includes(collectionName)) {
+    const kind =
+      collectionName === 'knowledgeConcepts'
+        ? 'concepts'
+        : collectionName === 'knowledgeConceptLinks'
+          ? 'links'
+          : 'relations';
+    const error = conceptRecordError(item, kind);
+    if (error) invalidSnapshot(`${location} is invalid: ${error}`);
   } else if (collectionName === 'personalTodos') {
     const error = todoRecordError(item);
     if (error) invalidSnapshot(`${location} is invalid: ${error}`);
