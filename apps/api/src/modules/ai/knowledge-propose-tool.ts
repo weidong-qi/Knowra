@@ -4,13 +4,36 @@ import {
   validateKnowledgeExtractionResult
 } from '../knowledge/application/knowledge-extraction-contract.ts';
 
+import type { AppError } from '../../errors/app-error.ts';
+import type { ProposalInput, KnowledgeProposalOptions } from './boundary-types.ts';
+import type { SourceRange } from './access-service-types.ts';
+import type { ExtractionSource } from '../knowledge/application/knowledge-extraction-types.ts';
+interface ProposalCitation {
+  noteId: string;
+  quote: string;
+  start?: number;
+  end?: number;
+}
+interface LocatedCitation extends ProposalCitation {
+  start: number;
+  end: number;
+}
+interface ProposedCandidate {
+  title: string;
+  canonicalStatement: string;
+  knowledgeType: string;
+  citations: ProposalCitation[];
+}
+type VerifiedRead = Awaited<ReturnType<ProposalInput['access']['verifyRead']>>;
 const MAX_CANDIDATES = 20;
 const MAX_CITATIONS = 8;
 const TYPES = ['concept', 'fact', 'principle', 'process', 'algorithm', 'formula', 'comparison', 'application'];
-const hash = value => calculateContentHash(JSON.stringify(value));
-const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
-const exactKeys = (value, keys) =>
-  isObject(value) && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+const hash = <T>(value: T) => calculateContentHash(JSON.stringify(value));
+const isObject = (value: unknown) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const exactKeys = (value: unknown, keys: string[]) =>
+  isObject(value) &&
+  Object.keys(value as object).length === keys.length &&
+  keys.every(key => Object.hasOwn(value as object, key));
 
 export const KNOWLEDGE_PROPOSE_TOOL = Object.freeze({
   name: 'knowledge_propose',
@@ -56,15 +79,15 @@ export const KNOWLEDGE_PROPOSE_TOOL = Object.freeze({
   }
 });
 
-function toolError(code, message) {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+function toolError(code: string, message: string) {
+  const error = new Error(message) as AppError;
   error.code = code;
   return error;
 }
 const invalidArguments = () => toolError('AI_TOOL_ARGUMENTS_INVALID', '知识提议参数无效。');
 
-function parseArguments(args) {
+function parseArguments(input: unknown): ProposedCandidate[] {
+  const args = input as { candidates: ProposedCandidate[] };
   if (
     !exactKeys(args, ['candidates']) ||
     !Array.isArray(args.candidates) ||
@@ -107,8 +130,7 @@ function parseArguments(args) {
  * 再交给提炼 v1 契约校验字段白名单、逐字引文、UTF-16 边界与数量/大小限制。
  * 引文匹配只证明引用存在，不证明陈述在语义上受支持；候选仍须用户审核。
  */
-/** @param {import('./boundary-types.ts').ProposalInput} options */
-export async function buildKnowledgeProposalPlan({ access, grantId, args, sourceRefs, turnId, callId }) {
+export async function buildKnowledgeProposalPlan({ access, grantId, args, sourceRefs, turnId, callId }: ProposalInput) {
   const proposals = parseArguments(args);
   const refs = [
     ...new Map(
@@ -116,12 +138,12 @@ export async function buildKnowledgeProposalPlan({ access, grantId, args, source
     ).values()
   ];
   if (!refs.length) throw toolError('AI_PROPOSAL_NOT_READ', '请先读取笔记原文，再提交知识候选。');
-  const versions = new Map(),
-    spaces = new Set();
-  const sources = [];
+  const versions = new Map<string, VerifiedRead>(),
+    spaces = new Set<string>();
+  const sources: ExtractionSource[] = [];
   for (const ref of refs) {
     if (!versions.has(ref.noteId)) versions.set(ref.noteId, await access.verifyRead({ grantId, noteId: ref.noteId }));
-    const { note, version, contentHash } = versions.get(ref.noteId);
+    const { note, version, contentHash } = versions.get(ref.noteId)!;
     const markdown = version.content.slice(ref.start, ref.end);
     if (
       version.id !== ref.noteVersionId ||
@@ -153,9 +175,9 @@ export async function buildKnowledgeProposalPlan({ access, grantId, args, source
     sources
   };
   // 省略偏移时按 quote 在本次已读原文里定位：同一笔记内按绝对位置去重（重叠的来源片段不算多处），必须恰好一处。
-  const locate = citation => {
-    if (Number.isSafeInteger(citation.start)) return citation;
-    const positions = new Set();
+  const locate = (citation: ProposalCitation): LocatedCitation => {
+    if (Number.isSafeInteger(citation.start)) return citation as LocatedCitation;
+    const positions = new Set<number>();
     if (citation.quote) {
       for (const source of sources.filter(item => item.noteId === citation.noteId)) {
         for (
@@ -202,15 +224,15 @@ export async function buildKnowledgeProposalPlan({ access, grantId, args, source
     });
     return { ...plan, spaceId: request.spaceId };
   } catch (error) {
-    if (error?.code === 'KNOWLEDGE_EXTRACTION_CITATION_INVALID')
+    if ((error as AppError)?.code === 'KNOWLEDGE_EXTRACTION_CITATION_INVALID')
       throw toolError('AI_PROPOSAL_CITATION_INVALID', '引文必须与已读原文逐字一致，且不能重复引用同一片段。');
     throw toolError('AI_PROPOSAL_INVALID', '知识候选的标题、陈述、类型或引文不符合要求。');
   }
 }
 
 // 已保存候选实际引用的原文范围（笔记内绝对位置）。进度说明据此判断哪些重点已被覆盖，而不是把“保存成功”当作“全部已读重点已提交”。
-const rangesOf = sources => {
-  const seen = new Map();
+const rangesOf = (sources: SourceRange[]) => {
+  const seen = new Map<string, SourceRange>();
   for (const source of sources)
     seen.set(`${source.noteId}:${source.start}:${source.end}`, {
       noteId: source.noteId,
@@ -219,7 +241,7 @@ const rangesOf = sources => {
     });
   return [...seen.values()];
 };
-function savedOutcome(requestId, outputHash, candidates, citedRanges) {
+function savedOutcome(requestId: string, outputHash: string | null, candidates: object[], citedRanges: SourceRange[]) {
   return {
     resultJson: { status: 'saved', saved: true, requestId, outputHash, candidates, citedRanges },
     sourceRefs: []
@@ -230,8 +252,7 @@ function savedOutcome(requestId, outputHash, candidates, citedRanges) {
  * Agent 工具入口。传入 commit 时把候选原子保存为 candidate；未传入则只返回校验摘要（saved: false）。
  * 无论哪种，提议都不会成为正式知识，仍须用户在知识候选区审核。
  */
-/** @param {import('./boundary-types.ts').KnowledgeProposalOptions} options */
-export async function proposeKnowledge({ commit = null, ...input }) {
+export async function proposeKnowledge({ commit = null, ...input }: KnowledgeProposalOptions) {
   // 同一调用已经提交（响应丢失、租约恢复后重试）：直接按回执报告，不重新校验也不重复保存。
   const committed = commit ? await commit.find() : null;
   if (committed) return savedOutcome(committed.requestId, null, committed.candidates, committed.citedRanges ?? []);

@@ -12,8 +12,8 @@ import { createInMemoryKnowledgeSpaceRepository } from '../src/modules/knowledge
 import { NoteVersion } from '../src/modules/knowledge/domain/note-version.ts';
 import { createAiAccessService } from '../src/modules/ai/access-service.js';
 import { hashRecord } from '../src/modules/ai/record-contract.ts';
-import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.js';
-import { createAuthorizedRetrieval } from '../src/modules/ai/retrieval.js';
+import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
+import { createAuthorizedRetrieval } from '../src/modules/ai/retrieval.ts';
 import { aiRecords, insertAiRecords } from './ai-record-fixtures.js';
 
 const instant = new Date('2026-09-27T00:00:00.000Z');

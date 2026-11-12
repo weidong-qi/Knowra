@@ -390,6 +390,7 @@ export function createAiAccessService({
       expiresAt: end
     });
   }
+  /** @param {{ grantId: string, noteId: string, tool?: string, maxContentChars?: number | null }} input */
   async function verifyRead({ grantId, noteId, tool = 'notes_read', maxContentChars = null }) {
     const { policy } = await activeGrant(grantId, tool);
     const note = await noteInScope(policy, noteId);

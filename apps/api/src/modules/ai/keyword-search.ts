@@ -1,22 +1,43 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { KeywordSearchOptions, AccessService } from './boundary-types.ts';
+
+import type { SourceReference } from './access-service-types.ts';
+interface KeywordSearchDependencies extends Omit<KeywordSearchOptions, 'access'> {
+  access?: Pick<
+    AccessService,
+    'findAuthorizedSearchCandidates' | 'assertSearchGrant' | 'verifyRead' | 'assertSearchSources'
+  >;
+}
+export interface SearchInput {
+  grantId: string;
+  query: unknown;
+  limit?: number;
+}
+export interface SearchHit {
+  noteId: string;
+  title: string;
+  score: number;
+  ref: SourceReference;
+  text: string;
+}
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 
-const fail = (code, message) => {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+const fail: (code: string, message: string) => never = (code, message) => {
+  const error = new Error(message) as AppError;
   error.code = code;
   throw error;
 };
-const normalize = value => value.normalize('NFKC').toLocaleLowerCase();
-const normalizeContent = value => {
+const normalize = (value: string) => value.normalize('NFKC').toLocaleLowerCase();
+const normalizeContent = (value: string) => {
   let text = '';
   for (const character of value) text += normalize(character);
   return text;
 };
-const normalizeWithOffsets = value => {
+const normalizeWithOffsets = (value: string) => {
   let text = '';
   const offsets = [];
   for (let index = 0; index < value.length;) {
-    const character = String.fromCodePoint(value.codePointAt(index));
+    const character = String.fromCodePoint(value.codePointAt(index)!);
     const folded = normalize(character);
     for (let unit = 0; unit < folded.length; unit++) offsets.push(index);
     text += folded;
@@ -25,7 +46,7 @@ const normalizeWithOffsets = value => {
   offsets.push(value.length);
   return { text, offsets };
 };
-const tokens = query => {
+const tokens = (query: string) => {
   const text = normalize(query);
   const words = text.match(/[\p{L}\p{N}]{2,}/gu) ?? [];
   const grams = [...text.matchAll(/[\p{Script=Han}]{2,}/gu)].flatMap(([chunk]) =>
@@ -33,7 +54,7 @@ const tokens = query => {
   );
   return [...new Set([...words, ...grams])].filter(value => value.length >= 2).slice(0, 48);
 };
-const boundary = (text, index) =>
+const boundary = (text: string, index: number) =>
   index <= 0 ||
   index >= text.length ||
   !(
@@ -44,14 +65,13 @@ const boundary = (text, index) =>
   );
 
 /** 扫描预算约束查询预选，300 上限只约束匹配后当前版本评分；外发仍走 R02 逐请求复核。 */
-/** @param {import('./boundary-types.ts').KeywordSearchOptions} [options] */
 export function createAuthorizedKeywordSearch({
   access,
   maxCandidates = 300,
   maxNoteChars = 200_000,
   maxScanNotes = 5000,
   maxScanChars = 4_000_000
-} = {}) {
+}: KeywordSearchDependencies = {}) {
   if (
     !access?.findAuthorizedSearchCandidates ||
     !access?.assertSearchGrant ||
@@ -61,7 +81,7 @@ export function createAuthorizedKeywordSearch({
     throw new TypeError('Authorized search needs R02 access service and positive work limits');
   }
   return {
-    async search({ grantId, query, limit = 5 }) {
+    async search({ grantId, query, limit = 5 }: SearchInput) {
       if (
         typeof query !== 'string' ||
         !query.trim() ||
@@ -82,7 +102,7 @@ export function createAuthorizedKeywordSearch({
         maxScanNotes,
         maxScanChars,
         maxNoteChars,
-        scoreNote({ title, rawMarkdown }) {
+        scoreNote({ title, rawMarkdown }: { title: string; rawMarkdown: string }) {
           if (!rawMarkdown.length) return 0;
           const text = normalizeContent(rawMarkdown),
             foldedTitle = normalize(title);
@@ -93,7 +113,7 @@ export function createAuthorizedKeywordSearch({
         }
       });
       const { candidates } = selected;
-      const scored = [];
+      const scored: SearchHit[] = [];
       for (const candidate of candidates) {
         const { note, version, contentHash } = await access.verifyRead({
           grantId,

@@ -6,7 +6,7 @@ import { calculateContentHash } from '@study-accelerator/content-anchor';
 import { markText } from './fixtures/inline-annotation-seed.js';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
-import { listAnnotatedRanges } from '../src/modules/ai/annotation-read-tool.js';
+import { listAnnotatedRanges } from '../src/modules/ai/annotation-read-tool.ts';
 
 const priceProfile = {
   version: 'annotations-synthetic-v1',

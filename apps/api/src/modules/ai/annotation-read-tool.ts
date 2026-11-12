@@ -1,3 +1,18 @@
+import type { AppError } from '../../errors/app-error.ts';
+import type { AccessService } from './boundary-types.ts';
+import type { ContentAnnotation } from '../knowledge/domain/content-annotation.ts';
+import type { ContentAnnotationRepository } from '../knowledge/infrastructure/content-annotation-repository.ts';
+interface AnnotationReadOptions {
+  access: Pick<AccessService, 'verifyRead'>;
+  repository: {
+    list: (
+      ...args: Parameters<ContentAnnotationRepository['list']>
+    ) => ReturnType<ContentAnnotationRepository['list']> | Promise<ReturnType<ContentAnnotationRepository['list']>>;
+  };
+  grantId: string;
+  args: { noteId?: string; minImportance?: string; limit?: number; offset?: number } | null;
+}
+type AnnotationView = ContentAnnotation & { importance: 'normal' | 'important' | 'core' | null };
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
 import { createInlineAnnotationSourceResolver } from '../knowledge/application/inline-annotation-ranges.ts';
 
@@ -24,25 +39,24 @@ export const ANNOTATIONS_TOOL = Object.freeze({
 });
 
 function invalid(message = '重点参数无效。') {
-  /** @type {Error & Partial<Pick<import('../../errors/app-error.ts').AppError, 'code'>>} */
-  const error = new Error(message);
+  const error = new Error(message) as AppError;
   error.code = 'AI_TOOL_ARGUMENTS_INVALID';
   return error;
 }
-function boundary(text, offset) {
+function boundary(text: string, offset: number) {
   if (offset <= 0 || offset >= text.length) return true;
   const before = text.charCodeAt(offset - 1),
     after = text.charCodeAt(offset);
   return !(before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff);
 }
-const rankOf = annotation => IMPORTANCE_RANK[annotation.importance ?? 'normal'];
+const rankOf = (annotation: AnnotationView) => IMPORTANCE_RANK[annotation.importance ?? 'normal'];
 
 /**
  * 只读工具：仅返回当前笔记版本上仍然有效的重点。读取权限沿用 notes_read 的运行授权，
  * 实际范围由 access.verifyRead 核对；失效、已归档或锚点待核对的重点只计数不返回内容。
  * 返回片段带来源引用，供后续只允许引用“本轮已读”原文的知识提议校验。
  */
-export async function listAnnotatedRanges({ access, repository, grantId, args }) {
+export async function listAnnotatedRanges({ access, repository, grantId, args }: AnnotationReadOptions) {
   if (
     !args ||
     typeof args !== 'object' ||
@@ -60,18 +74,18 @@ export async function listAnnotatedRanges({ access, repository, grantId, args })
   }
   const { note, version, contentHash } = await access.verifyRead({ grantId, noteId: args.noteId });
   const content = version.content,
-    minRank = IMPORTANCE_RANK[args.minImportance ?? 'normal'];
-  const all = await Promise.resolve(repository.list({ noteId: note.id, spaceId: note.spaceId }));
+    minRank = IMPORTANCE_RANK[(args.minImportance ?? 'normal') as keyof typeof IMPORTANCE_RANK];
+  const all = (await Promise.resolve(repository.list({ noteId: note.id, spaceId: note.spaceId }))) as AnnotationView[];
   const current = [],
     unavailable = [];
-  let resolveInline;
+  let resolveInline: ReturnType<typeof createInlineAnnotationSourceResolver> | undefined;
   for (const annotation of all) {
     if (annotation.lifecycleStatus !== 'active') continue;
     // v3（内联重点）的位置在正文标记里：从当前版本正文现算，取第一段，其余段落以 truncated 提示。
     if (annotation.schemaVersion === 3) {
       const located =
         annotation.anchorStatus === 'resolved'
-          ? (resolveInline ??= createInlineAnnotationSourceResolver(content))(annotation.anchor?.markId)
+          ? (resolveInline ??= createInlineAnnotationSourceResolver(content))(annotation.anchor?.markId as string)
           : null;
       const ranges = located
         ? located.excluded

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.js';
+import { createAuthorizedKeywordSearch } from '../src/modules/ai/keyword-search.ts';
 import { calculateContentHash } from '../src/modules/knowledge/domain/note-version.ts';
 
 async function withDatabase(run) {

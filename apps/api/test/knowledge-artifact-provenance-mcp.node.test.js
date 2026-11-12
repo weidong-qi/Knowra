@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { buildKnowledgeProposalPlan } from '../src/modules/ai/knowledge-propose-tool.js';
+import { buildKnowledgeProposalPlan } from '../src/modules/ai/knowledge-propose-tool.ts';
 import { createKnowledgeArtifactProvenanceFromMcpProposal } from '../src/modules/ai/agent-knowledge-provenance.ts';
 import {
   hashKnowledgeArtifactProvenance,
