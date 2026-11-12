@@ -301,9 +301,9 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
   await topbarSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#ddeeff');
   await railSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#ccddee');
   await sidebarSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#f4f0e8');
-  await page.getByRole('switch', { name: '独立间距' }).check();
-  await page.getByRole('switch', { name: '四角圆角' }).check();
-  await page.getByRole('switch', { name: '细边线' }).check();
+  await page.getByRole('switch', { name: '独立间距' }).locator('xpath=ancestor::label').click();
+  await page.getByRole('switch', { name: '四角圆角' }).locator('xpath=ancestor::label').click();
+  await page.getByRole('switch', { name: '细边线' }).locator('xpath=ancestor::label').click();
   await page.reload();
   await expect(page.getByRole('switch', { name: '四角圆角' })).toBeChecked();
   await expect(outer.getByRole('textbox', { name: '十六进制颜色' })).toHaveValue('#cdd9e6');
