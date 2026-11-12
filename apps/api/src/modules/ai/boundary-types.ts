@@ -89,12 +89,12 @@ export interface AgentWorkerOptions {
   accountRef?: string;
   now?: () => Date;
   logger?: Pick<Console, 'warn' | 'error'>;
-  retrievalCandidates?: CandidateSource;
-  actions?: ReturnType<typeof createNoteActionService>;
+  retrievalCandidates?: CandidateSource | null;
+  actions?: ReturnType<typeof createNoteActionService> | null;
   webSearchAdapter?: Parameters<typeof import('./assistant-tools.ts').createAssistantWebSearch>[0];
-  annotations?: ReturnType<typeof createKnowledgeModule>['repositories']['contentAnnotationRepository'];
+  annotations?: ReturnType<typeof createKnowledgeModule>['repositories']['contentAnnotationRepository'] | null;
   knowledgeProposals?: boolean | (() => boolean);
-  knowledgeCommit?: ReturnType<typeof createAgentKnowledgeCommitService>;
+  knowledgeCommit?: ReturnType<typeof createAgentKnowledgeCommitService> | null;
 }
 export interface CapabilityProbeOptions {
   gateway?: Gateway;

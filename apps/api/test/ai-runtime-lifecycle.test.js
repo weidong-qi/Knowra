@@ -6,7 +6,7 @@ import { createServer } from '../src/server.js';
 import { createPersistentAppContext } from '../src/app.factory.js';
 import { createPostgresAppContext } from '../src/postgres-app.factory.js';
 import { createIsolatedAiWorker } from '../src/modules/ai/isolated-worker.js';
-import { createAiAgentWorker } from '../src/modules/ai/agent-worker.js';
+import { createAiAgentWorker } from '../src/modules/ai/agent-worker.ts';
 import { aiRuntimeLifecycle } from '../src/modules/ai/runtime-lifecycle.ts';
 import { createMaintenanceGate } from '../src/infrastructure/maintenance-gate.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';

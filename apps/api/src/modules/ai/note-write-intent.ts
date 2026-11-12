@@ -32,7 +32,7 @@ export function validateWriteIntent(input: unknown): WriteIntent {
   }
   return structuredClone(input) as WriteIntent;
 }
-export function toolsForWriteIntent(intent: WriteIntent) {
+export function toolsForWriteIntent(intent: unknown) {
   const valid = validateWriteIntent(intent);
   return [
     ...(NOTE_WRITE_TOOLS as readonly WriteToolDefinition[]),

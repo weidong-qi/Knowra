@@ -142,16 +142,8 @@ export interface AiConversationToolCall extends RecordBoundary {
     | 'folders_list'
     | 'notes_list';
   argumentsJson: object;
-  resultJson:
-    | (object & {
-        actionId?: string;
-        hits?: Pick<import('./keyword-search.ts').SearchHit, 'noteId' | 'title' | 'ref' | 'text'>[];
-        inspected?: number;
-        truncated?: boolean;
-        mode?: string;
-        fallbackReason?: string;
-      })
-    | null;
+  // schema 仅约束对象/null；嵌套工具结果仍须由使用方在原边界读取。
+  resultJson: object | null;
   provenanceManifestId: string | null;
   status: 'requested' | 'succeeded' | 'failed';
   sourceRefs: import('./access-service-types.ts').SourceReference[];

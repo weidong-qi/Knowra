@@ -7,7 +7,7 @@ import { createPersistentAppContext } from '../src/app.factory.js';
 import { createOptionalAiRuntime } from '../src/modules/ai/runtime.js';
 import { buildKnowledgeProposalPlan, proposeKnowledge } from '../src/modules/ai/knowledge-propose-tool.ts';
 import { requestsKnowledgeProposal } from '../src/modules/ai/assistant-tools.ts';
-import { proposalProgress } from '../src/modules/ai/agent-worker.js';
+import { proposalProgress } from '../src/modules/ai/agent-worker.ts';
 import { markParagraphs } from './fixtures/inline-annotation-seed.js';
 import { createAgentKnowledgeCommitService } from '../src/modules/ai/agent-knowledge-commit.ts';
 import {
