@@ -281,10 +281,13 @@ export interface SyncNoteMutationResult {
 export interface SyncNoteService {
   createNote(
     input: Omit<SyncNoteOperation['value'], 'deleted'> & { id: string }
-  ): SyncAwaitable<SyncNoteMutationResult>;
-  updateNote(id: string, input: Omit<SyncNoteOperation['value'], 'deleted'>): SyncAwaitable<SyncNoteMutationResult>;
-  deleteNote(id: string): SyncAwaitable<SyncNoteMutationResult>;
-  restoreNote(id: string): SyncAwaitable<SyncNoteMutationResult>;
+  ): SyncAwaitable<SyncNoteMutationResult | null>;
+  updateNote(
+    id: string,
+    input: Omit<SyncNoteOperation['value'], 'deleted'>
+  ): SyncAwaitable<SyncNoteMutationResult | null>;
+  deleteNote(id: string): SyncAwaitable<SyncNoteMutationResult | null>;
+  restoreNote(id: string): SyncAwaitable<SyncNoteMutationResult | null>;
 }
 export interface LocalSyncDataStore {
   state: LocalDataState;
@@ -304,7 +307,7 @@ export interface LocalSyncProvider extends SyncBatchProvider<'local'> {
   applyNote(
     operation: SyncNoteOperation,
     current: Pick<LocalRow<'notes'>, 'deleted'> | null
-  ): SyncAwaitable<SyncNoteMutationResult | void>;
+  ): SyncAwaitable<SyncNoteMutationResult | null | void>;
 }
 export type SyncBatchResult = SyncReceiptResult;
 

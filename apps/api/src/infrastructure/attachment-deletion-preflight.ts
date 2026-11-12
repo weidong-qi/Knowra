@@ -24,7 +24,7 @@ interface AttachmentReferenceModel {
   findMany(): Promise<AttachmentReferenceRecord[]>;
 }
 interface TodoReferenceModel {
-  findMany(): Promise<{ data: AttachmentReferenceRecord }[]>;
+  findMany(): Promise<{ data: unknown }[]>;
 }
 interface ProvenanceReferenceModel {
   findMany(): Promise<{ payload: unknown }[]>;

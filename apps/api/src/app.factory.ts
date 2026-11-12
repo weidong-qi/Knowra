@@ -93,7 +93,7 @@ export interface PersistentAppContextOptions {
   uploadsDir?: string;
   persistenceDriver?: 'postgres' | 'local-json';
   databaseUrl?: string;
-  client?: import('./infrastructure/postgres-transaction-port.ts').PostgresTransactionHost | null;
+  client?: import('@prisma/client').PrismaClient | null;
   ownerId?: string;
 }
 // 持久化入口按原顺序逐项添加这些能力；普通内存上下文仍没有这些属性。
@@ -458,7 +458,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
   };
 }
 
-/** @param {{storageRootDir?: string, dataFilePath?: string, uploadsDir?: string, persistenceDriver?: 'postgres' | 'local-json', databaseUrl?: string, client?: import('./infrastructure/postgres-transaction-port.ts').PostgresTransactionHost, ownerId?: string}} options */
+/** @param {{storageRootDir?: string, dataFilePath?: string, uploadsDir?: string, persistenceDriver?: 'postgres' | 'local-json', databaseUrl?: string, client?: import('@prisma/client').PrismaClient, ownerId?: string}} options */
 export function createPersistentAppContext({
   storageRootDir = workspaceRoot,
   dataFilePath = resolveStoragePath('storage/data/knowledge-base.json', storageRootDir),
@@ -555,9 +555,8 @@ function ensureDataCollections(dataStore: AppContextOptions['dataStore'], collec
 }
 
 async function createPostgresAppContext(options: PersistentAppContextOptions) {
-  const { createPostgresAppContext: createContext } = await import('./postgres-app.factory.js');
-  // 尚未迁移的 JS 入口只在此声明既有调用参数，不改变或伪造其返回形状。
-  return (createContext as (options: PersistentAppContextOptions) => ReturnType<typeof createContext>)(options);
+  const { createPostgresAppContext: createContext } = await import('./postgres-app.factory.ts');
+  return createContext(options);
 }
 
 export { createPostgresAppContext };

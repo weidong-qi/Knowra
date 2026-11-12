@@ -15,9 +15,11 @@ interface TodoDelegate {
     update: ReturnType<typeof dbPersonalTodo>;
   }): Promise<unknown>;
 }
-interface TodoClient {
+interface TodoTransaction {
   personalTodo: TodoDelegate;
-  $transaction<Result>(operation: (connection: TodoClient) => Promise<Result>): Promise<Result>;
+}
+interface TodoClient extends TodoTransaction {
+  $transaction<Result>(operation: (connection: TodoTransaction) => Promise<Result>): Promise<Result>;
 }
 
 /**
@@ -25,7 +27,7 @@ interface TodoClient {
  * 事务持有同步咨询锁并把本次写入追加到同步日志，与其他核心集合一次提交。
  */
 export function createPostgresTodoStore(client: TodoClient): PersonalTodoStore {
-  const read = async (connection: TodoClient) => {
+  const read = async (connection: TodoTransaction) => {
     const todos = (await connection.personalTodo.findMany({ orderBy: { id: 'asc' } })).map(
       row => mapPersonalTodo(row) as Todo
     );

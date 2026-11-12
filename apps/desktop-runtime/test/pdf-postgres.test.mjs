@@ -4,7 +4,7 @@ import path from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { test } from 'node:test';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { temporaryDirectory } from './helpers.mjs';
 import { syntheticPdf } from '../../../scripts/test-support/pdf-fixtures.mjs';
 const enabled = Boolean(process.env.KNOWRA_SYNC_TEST_DATABASE_URL && process.env.KNOWRA_SYNC_TEST_ALLOW_WRITES === '1');

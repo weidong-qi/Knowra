@@ -5,7 +5,7 @@ import path from 'node:path';
 import { createNoteLinkUrl } from '@study-accelerator/content-anchor';
 import { createPersistentAppContext } from '../src/app.factory.ts';
 import { withCommandServer } from './command-search-http.test.js';
-import { createPostgresAppContext } from '../src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../src/postgres-app.factory.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { createKnowledgeHttpHandlers } from '../src/modules/knowledge/http/knowledge-handlers.ts';
 

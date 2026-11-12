@@ -25,7 +25,7 @@ async function fixture(t, { postgres = false } = {}) {
   let store, context;
   if (postgres) {
     const database = await createPostgresTestDatabase();
-    const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.js');
+    const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.ts');
     try {
       context = await createPostgresAppContext({
         databaseUrl: database.databaseUrl,

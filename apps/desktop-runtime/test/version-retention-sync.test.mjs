@@ -17,7 +17,7 @@ import { ContentAnnotation } from '../../api/src/modules/knowledge/domain/conten
 import { selectVersionsToPrune } from '../../api/src/modules/knowledge/domain/note-version-retention.ts';
 import { nextEntityUpload } from '../src/entity-sync-state.mjs';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
-import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { createSyncEngine } from '../src/sync-engine.mjs';
 import { temporaryDirectory, openWorkspace, markText, inlineId } from './helpers.mjs';
 

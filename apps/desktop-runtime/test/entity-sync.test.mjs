@@ -347,7 +347,7 @@ test(
     const { databaseUrl } = database;
     assert(['127.0.0.1', 'localhost'].includes(new URL(databaseUrl).hostname));
     assert.equal(process.env.KNOWRA_SYNC_TEST_ALLOW_WRITES, '1');
-    const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.js');
+    const { createPostgresAppContext } = await import('../../api/src/postgres-app.factory.ts');
     const root = temporaryDirectory(t);
     cloud = await createPostgresAppContext({
       databaseUrl,

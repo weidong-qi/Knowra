@@ -60,7 +60,7 @@ export type ActionFlow<Result> = Generator<Awaitable<ActionValue>, Result, Actio
 type NoteService = ReturnType<typeof createNoteService>;
 type NoteMethod<Name extends 'createNote' | 'updateNote' | 'deleteNote'> = (
   ...args: Parameters<NoteService[Name]>
-) => Awaitable<Omit<ReturnType<NoteService[Name]>, 'internalLinks'>>;
+) => Awaitable<Omit<ReturnType<NoteService[Name]>, 'internalLinks'> | null>;
 export interface ActionServiceOptions extends Pick<MessageSourceGuardOptions, 'ownerId'> {
   store: ActionStore;
   core: {

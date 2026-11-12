@@ -8,6 +8,8 @@ import type { NoteVersionRecord } from '../knowledge/infrastructure/note-version
 import type { AnalysisScopeRecord } from '../knowledge/infrastructure/annotation-support-repositories.ts';
 import type { AiJob, AiRecord, AiRecordRepositoryPort, AiReadEvent } from './record-types.ts';
 
+type ExtractionNoteRead = Pick<NoteRecord, 'id' | 'spaceId' | 'deleted' | 'contentKind' | 'aiVisibility'>;
+
 export type Awaitable<Value> = Value | PromiseLike<Value>;
 export interface ExtractionPageRow {
   jobId: string;
@@ -69,6 +71,7 @@ type ExtractionReadValue =
   | void
   | KnowledgeSpaceRecord
   | NoteRecord
+  | ExtractionNoteRead
   | NoteVersionRecord
   | AnalysisScopeRecord
   | AiRecord
@@ -90,8 +93,8 @@ export type ExtractionQueryContext<Transaction = object | undefined> = Extractio
     knowledgeSpaceRepository: { findById(id: unknown): Awaitable<KnowledgeSpaceRecord | null> };
     analysisScopeRepository: { findById(id: string): Awaitable<AnalysisScopeRecord | null> };
     noteRepository: {
-      findById(id: string): Awaitable<NoteRecord | null>;
-      findByIds?(ids: string[]): Awaitable<NoteRecord[]>;
+      findById(id: string): Awaitable<ExtractionNoteRead | null>;
+      findByIds?(ids: string[]): Awaitable<ExtractionNoteRead[]>;
     };
     noteVersionRepository: { findById(id: string): Awaitable<NoteVersionRecord | null> };
   };

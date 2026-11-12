@@ -66,6 +66,26 @@ import { createPostgresAiAccessStore } from './modules/ai/postgres-access-store.
 import { createPostgresAiConversationStore } from './modules/ai/postgres-conversation-store.ts';
 import { createPostgresBudgetAuthority } from './modules/ai/postgres-budget-authority.ts';
 
+import type { PrismaClient } from '@prisma/client';
+// 原始 JSON 仅按原可选属性读取；不替代同步日志的运行时校验。
+interface PurgeJournalView {
+  epoch?: string;
+  tombstones?: Record<string, { previousUpdatedAt?: string }>;
+}
+type ExtractionTransaction = Parameters<typeof createPostgresKnowledgeExtractionContext>[0];
+interface PostgresAppContextOptions {
+  databaseUrl?: string;
+  client?: PrismaClient | null;
+  storageRootDir?: string;
+  uploadsDir?: string;
+  legacyUploadsDirs?: string[];
+  ownerId?: string;
+  knowledgeExtractionMock?: Omit<
+    Parameters<typeof createKnowledgeExtractionTaskService<ExtractionTransaction>>[0],
+    'ownerId' | 'store' | 'createContext' | 'commit' | 'receiptStore'
+  > | null;
+}
+
 export async function createPostgresAppContext({
   databaseUrl = process.env.DATABASE_URL,
   client = null,
@@ -74,7 +94,7 @@ export async function createPostgresAppContext({
   legacyUploadsDirs = [],
   ownerId = process.env.KNOWRA_OWNER_ID || 'demo',
   knowledgeExtractionMock = null
-} = {}) {
+}: PostgresAppContextOptions = {}) {
   const runtime = await createPrismaRuntime({ databaseUrl, client });
   await runtime.connect();
   let db = runtime.client;
@@ -126,10 +146,11 @@ export async function createPostgresAppContext({
     client: db,
     readPurgeTaskState: createPostgresPurgeTaskReader(db, normalizedOwnerId),
     getPurgeDatasetEpoch: async () =>
-      (await db.syncJournal.findUnique({ where: { ownerId: normalizedOwnerId } }))?.payload?.epoch,
+      ((await db.syncJournal.findUnique({ where: { ownerId: normalizedOwnerId } }))?.payload as PurgeJournalView | null)
+        ?.epoch,
     getPurgeTombstone: async (collection, id) => {
       const journal = await db.syncJournal.findUnique({ where: { ownerId: normalizedOwnerId } });
-      return journal?.payload?.tombstones?.[JSON.stringify([collection, id])] ?? null;
+      return (journal?.payload as PurgeJournalView | null)?.tombstones?.[JSON.stringify([collection, id])] ?? null;
     }
   });
   const attachmentStore = createPostgresAttachmentStore({
@@ -200,7 +221,8 @@ export async function createPostgresAppContext({
       ownerId: normalizedOwnerId
     }
   });
-  const extractionContext = tx => createPostgresKnowledgeExtractionContext(tx, normalizedOwnerId);
+  const extractionContext = (tx: ExtractionTransaction) =>
+    createPostgresKnowledgeExtractionContext(tx, normalizedOwnerId);
   const extractionReceipts = createPostgresKnowledgeExtractionCommitStore({ client: db, ownerId: normalizedOwnerId });
   const knowledgeExtractionCommit = createKnowledgeExtractionCommitService({
     ownerId: normalizedOwnerId,
@@ -219,7 +241,7 @@ export async function createPostgresAppContext({
         store: createPostgresKnowledgeExtractionTaskStore({ client: db, ownerId: normalizedOwnerId })
       })
     : null;
-  let closing;
+  let closing: Promise<void> | undefined;
   const context = {
     // V1 不把本地域隐式回退到 JSON，也不扩充 PostgreSQL 的普通笔记协议。
     taskWorkspaces: createTaskWorkspaceService({ store: null }),
@@ -291,7 +313,7 @@ export async function createPostgresAppContext({
   return context;
 }
 
-async function ensureOwner(db, ownerId) {
+async function ensureOwner(db: Pick<PrismaClient, 'user'>, ownerId: string) {
   await withPostgresErrors(() =>
     db.user.upsert({
       where: { id: ownerId },

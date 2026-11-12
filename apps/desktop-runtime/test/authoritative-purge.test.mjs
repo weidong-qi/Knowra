@@ -10,7 +10,7 @@ import { createSyncEngine } from '../src/sync-engine.mjs';
 import { readMeta, writeMeta } from '../src/sync-state.mjs';
 import fs from 'node:fs';
 import { startLocalRuntime } from '../src/runtime-server.mjs';
-import { createPostgresAppContext } from '../../api/src/postgres-app.factory.js';
+import { createPostgresAppContext } from '../../api/src/postgres-app.factory.ts';
 import { createPostgresTestDatabase } from '../../../scripts/test-support/postgres-test-database.mjs';
 import { WRITABLE_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.ts';
 import { trainingAssets } from '../../api/test/authoritative-asset-purge.test.js';
