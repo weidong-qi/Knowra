@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -21,6 +22,25 @@ test('默认前端使用稳定 web 工作区，V3 归档仅提供回归测试', 
   assert.equal(packageJson.scripts['start:web'], 'npm run start -w @study-accelerator/web');
   assert.match(ecosystem, /script: 'apps\/web\/server\.mjs'/);
   assert.doesNotMatch(ecosystem, /apps\/web-legacy\/src\/main\.js/);
+});
+
+test('PM2 的 TypeScript API 入口显式使用已预检的 Node，不依赖扩展名解释器推断', () => {
+  // 读取真实 CJS 配置对象，而非模拟 PM2 启动成功或只匹配源码文本。
+  const require = createRequire(import.meta.url);
+  const { apps } = require('../../deploy/ecosystem.config.cjs');
+  const api = apps.find(app => app.name === 'knowra-api');
+  assert.ok(api);
+  assert.equal(api.script, 'apps/api/src/main.ts');
+  assert.equal(api.interpreter, 'node');
+  assert.equal(api.env.NODE_ENV, 'production');
+
+  // 常规发布先核对同一 PATH 上的 Node 24，再让 PM2 使用明确的 node 解释器。
+  const activation = readWorkspaceFile('scripts/activate-ci-release.sh');
+  const nodeCheck = activation.indexOf('[[ "$(node -v)" == v24.* ]]');
+  const pm2Start = activation.indexOf('pm2 start "$target/deploy/ecosystem.config.cjs" --update-env');
+  assert.notEqual(nodeCheck, -1);
+  assert.notEqual(pm2Start, -1);
+  assert.ok(nodeCheck < pm2Start);
 });
 
 test('API and default V4 Web listeners bind to loopback only', () => {

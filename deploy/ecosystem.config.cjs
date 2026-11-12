@@ -10,6 +10,8 @@ module.exports = {
       name: 'knowra-api',
       cwd: workspaceRoot,
       script: 'apps/api/src/main.ts',
+      // 常规发布已预检 PATH 中的 Node 24；不要让 PM2 将 .ts 自动交给 Bun。
+      interpreter: 'node',
       env: {
         NODE_ENV: 'production',
         PORT: runtimeEnv.apiPort,
