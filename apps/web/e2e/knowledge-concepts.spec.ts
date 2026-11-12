@@ -37,7 +37,13 @@ test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系�
       await page.getByRole('button', { name: '新建概念', exact: true }).click();
       const dialog = page.getByRole('dialog', { name: '新建概念', exact: true });
       await dialog.getByRole('textbox', { name: '概念名称' }).fill(name);
+      const responsePending = page.waitForResponse(
+        response =>
+          response.url().endsWith('/api/knowledge/concepts/commands') && response.request().method() === 'POST'
+      );
       await dialog.getByRole('button', { name: '保存概念' }).click();
+      const response = await responsePending;
+      expect(response.ok(), await response.text()).toBeTruthy();
       await expect(dialog).toHaveCount(0);
     };
     await createConcept('CNN');
