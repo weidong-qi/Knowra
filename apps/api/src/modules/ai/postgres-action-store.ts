@@ -1,6 +1,6 @@
 import type { PrivateStoreOptions, ActionState } from './private-store-types.ts';
 import type { DatasetIdentity } from '../task-workspaces/repository-port.ts';
-import { createActionStore, emptyActionState, validateActionState } from './action-state.js';
+import { createActionStore, emptyActionState, validateActionState } from './action-state.ts';
 import { hashRecord } from './record-contract.ts';
 
 export function createPostgresActionStore({ client, repository, ownerId }: PrivateStoreOptions) {

@@ -14,7 +14,7 @@ import type {
   AiRecordStorage,
   SyncAiRecordRepository
 } from './record-types.ts';
-import { emptyActionState, validateActionState } from './action-state.js';
+import { emptyActionState, validateActionState } from './action-state.ts';
 import { randomUUID } from 'node:crypto';
 import { AI_RECORD_KINDS, validateAiEvent, validateAiRecord } from './record-contract.ts';
 import { createAiRecordRepository } from './record-repository.ts';

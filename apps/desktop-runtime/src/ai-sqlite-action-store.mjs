@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { createActionStore, emptyActionState, validateActionState } from '../../api/src/modules/ai/action-state.js';
+import { createActionStore, emptyActionState, validateActionState } from '../../api/src/modules/ai/action-state.ts';
 import { hashRecord } from '../../api/src/modules/ai/record-contract.ts';
 
 export function createSqliteActionStore(db, filePath, transaction) {

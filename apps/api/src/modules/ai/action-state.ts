@@ -1,3 +1,5 @@
+import type { ActionState, ActionPlan, ActionAdapter, ActionStore, JsonActionOptions } from './action-state-types.ts';
+import type { CoreNoteResult } from '../../infrastructure/core-operation-types.ts';
 import Ajv2020 from 'ajv/dist/2020.js';
 import schema from './contracts/note-actions-v1.schema.json' with { type: 'json' };
 import { calculateContentHash } from '../knowledge/domain/note-version.ts';
@@ -5,11 +7,11 @@ import { hashRecord } from './record-contract.ts';
 import { validateCoreOperationReceipt } from '../../infrastructure/core-operation-contract.ts';
 import { createAppError } from '../../errors/app-error.ts';
 
-export const actionError = (code, message, status = 409) => {
+export const actionError: (code: string, message: string, status?: number) => never = (code, message, status = 409) => {
   throw createAppError(code, message, status);
 };
 export const DRAFT_LEASE_MS = 120000;
-export const emptyActionState = () => ({ version: 2, actions: [], drafts: [] });
+export const emptyActionState = (): ActionState => ({ version: 2, actions: [], drafts: [] });
 export const actionIdentityKeys = [
   'ownerId',
   'actorId',
@@ -18,10 +20,10 @@ export const actionIdentityKeys = [
   'spaceId',
   'requestId',
   'operationId'
-];
-const validatePlanSchema = new /** @type {typeof import('ajv/dist/2020.js').Ajv2020} */ (
-  /** @type {unknown} */ (Ajv2020)
-)({ strict: false }).compile(schema);
+] as const;
+const validatePlanSchema = new (Ajv2020 as unknown as typeof import('ajv/dist/2020.js').Ajv2020)({
+  strict: false
+}).compile<ActionPlan>(schema);
 const statuses = [
   'awaitingApproval',
   'authorized',
@@ -33,7 +35,8 @@ const statuses = [
   'conflicted',
   'failed'
 ];
-export function validateActionState(value) {
+export function validateActionState(input: unknown): ActionState {
+  let value = input as ActionState;
   if (value?.version === 1 && Array.isArray(value.drafts)) {
     if (value.drafts.some(row => !row || 'leaseExpiresAt' in row)) invalid();
     value = {
@@ -85,7 +88,7 @@ export function validateActionState(value) {
       if (
         row.grant.originTurnId !== row.requestId ||
         !Number.isSafeInteger(row.grant.originGeneration) ||
-        row.grant.originGeneration < 1 ||
+        row.grant.originGeneration! < 1 ||
         !['notes_create', 'notes_append', 'notes_propose_patch', 'notes_propose_organize'].includes(row.plan.toolName)
       )
         invalid();
@@ -96,7 +99,7 @@ export function validateActionState(value) {
           : typeof row.grant.policyId !== 'string' ||
             !row.grant.policyId ||
             !Number.isSafeInteger(row.grant.policyRevision) ||
-            row.grant.policyRevision < 1
+            row.grant.policyRevision! < 1
       )
         invalid();
     } else if (
@@ -108,7 +111,7 @@ export function validateActionState(value) {
     // 目录依赖：成果里可能含目录与笔记标题（空正文笔记、纯目录名也要覆盖），作为独立元数据贯穿采纳、续改与恢复。
     if (row.grant.catalogDeps !== undefined) {
       const deps = row.grant.catalogDeps;
-      const ids = (list, limit) =>
+      const ids = (list: unknown, limit: number) =>
         Array.isArray(list) &&
         list.length <= limit &&
         list.every(id => typeof id === 'string' && id && id.length <= 128);
@@ -160,17 +163,12 @@ export function validateActionState(value) {
         actionIdentityKeys.some(key => row[key] !== receipt[key]) ||
         receipt.planHash !== row.plan.planHash ||
         receipt.kind !== row.plan.toolName ||
-        hashRecord(
-          /** @type {import('../../infrastructure/core-operation-types.ts').CoreNoteResult} */ (receipt.result).changes
-            .map(change => change.noteId)
-            .sort()
-        ) !== hashRecord(row.plan.items.map(item => item.after.id).sort()) ||
-        /** @type {import('../../infrastructure/core-operation-types.ts').CoreNoteResult} */ (
-          receipt.result
-        ).changes.some(
+        hashRecord((receipt.result as CoreNoteResult).changes.map(change => change.noteId).sort()) !==
+          hashRecord(row.plan.items.map(item => item.after.id).sort()) ||
+        (receipt.result as CoreNoteResult).changes.some(
           change =>
             change.contentHash !==
-            calculateContentHash(row.plan.items.find(item => item.after.id === change.noteId).after.rawMarkdown)
+            calculateContentHash(row.plan.items.find(item => item.after.id === change.noteId)!.after.rawMarkdown)
         )
       )
         invalid();
@@ -181,7 +179,7 @@ export function validateActionState(value) {
         new Set(row.inboxEvents.map(event => event?.requestId)).size !== row.inboxEvents.length
       )
         invalid();
-      let previousResult = null;
+      let previousResult: string | null = null;
       for (const event of row.inboxEvents) {
         if (
           !event ||
@@ -200,7 +198,7 @@ export function validateActionState(value) {
             !event.originTurnId ||
             event.requestId !== event.originTurnId ||
             !Number.isSafeInteger(event.originGeneration) ||
-            event.originGeneration < 1)
+            event.originGeneration! < 1)
         )
           invalid();
         validateActionPlan(event.previousPlan);
@@ -223,7 +221,7 @@ export function validateActionState(value) {
   for (const row of value.drafts) {
     if (
       !row ||
-      ['ownerId', 'datasetId', 'datasetEpoch', 'noteId', 'clientId'].some(
+      (['ownerId', 'datasetId', 'datasetEpoch', 'noteId', 'clientId'] as const).some(
         key => typeof row[key] !== 'string' || !row[key]
       ) ||
       typeof row.dirty !== 'boolean' ||
@@ -234,7 +232,7 @@ export function validateActionState(value) {
   }
   return structuredClone(value);
 }
-export function validateActionPlan(plan) {
+export function validateActionPlan(plan: unknown): ActionPlan {
   if (!validatePlanSchema(plan)) invalid();
   const { planHash, ...content } = plan;
   if (hashRecord(content) !== planHash || new Set(plan.items.map(item => item.after.id)).size !== plan.items.length)
@@ -260,7 +258,7 @@ export function validateActionPlan(plan) {
       if (
         item.before.id !== item.after.id ||
         item.before.spaceId !== plan.spaceId ||
-        !Number.isFinite(Date.parse(item.baseline.expectedUpdatedAt)) ||
+        !Number.isFinite(Date.parse(item.baseline.expectedUpdatedAt!)) ||
         calculateContentHash(item.before.rawMarkdown) !== item.baseline.contentHash ||
         hashRecord({
           title: item.before.title,
@@ -274,7 +272,7 @@ export function validateActionPlan(plan) {
       if (plan.toolName === 'notes_propose_organize' && item.before.rawMarkdown !== item.after.rawMarkdown) invalid();
     }
     if (['notes_append', 'notes_propose_patch'].includes(plan.toolName)) {
-      const { rawMarkdown: beforeBody, ...beforeMetadata } = item.before;
+      const { rawMarkdown: beforeBody, ...beforeMetadata } = item.before!;
       const { rawMarkdown: afterBody, ...afterMetadata } = item.after;
       if (
         hashRecord(beforeMetadata) !== hashRecord(afterMetadata) ||
@@ -303,10 +301,10 @@ export function validateActionPlan(plan) {
       if (body !== afterBody || body === beforeBody) invalid();
     } else if (item.edits.length) invalid();
     for (const target of [item.before, item.after].filter(Boolean)) {
-      if (target.aiVisibility !== undefined && target.aiVisibility !== 'normal') invalid();
+      if (target!.aiVisibility !== undefined && target!.aiVisibility !== 'normal') invalid();
       if (
-        (target.folderId && !plan.references.some(ref => ref.kind === 'folder' && ref.id === target.folderId)) ||
-        target.tagIds.some(id => !plan.references.some(ref => ref.kind === 'tag' && ref.id === id))
+        (target!.folderId && !plan.references.some(ref => ref.kind === 'folder' && ref.id === target!.folderId)) ||
+        target!.tagIds.some(id => !plan.references.some(ref => ref.kind === 'tag' && ref.id === id))
       )
         invalid();
     }
@@ -314,7 +312,7 @@ export function validateActionPlan(plan) {
   }
   return structuredClone(plan);
 }
-function boundary(text, offset) {
+function boundary(text: string, offset: number) {
   return (
     offset === 0 ||
     offset === text.length ||
@@ -326,35 +324,37 @@ function boundary(text, offset) {
     )
   );
 }
-function invalid() {
+function invalid(): never {
   actionError('AI_ACTION_STORAGE_INVALID', '动作记录无效，已停止写入并保留原记录。', 503);
 }
 
 /** adapter 的 write 和业务提交使用同一核心事务锁，防止批准/撤销与提交交错。 */
-export function createActionStore(adapter) {
+export function createActionStore(adapter: ActionAdapter): ActionStore {
   let initialized = false,
-    initializing = null;
-  const write = operation => {
+    initializing: Promise<null> | null = null;
+  const write = <Result>(
+    operation: (state: ActionState, identity: import('../task-workspaces/repository-port.ts').DatasetIdentity) => Result
+  ) => {
     const result = adapter.write((input, identity) => {
       const state = validateActionState(input);
       const output = operation(state, identity);
-      if (output?.then) throw new TypeError('动作状态变更必须同步。');
+      if ((output as { then?: unknown } | null)?.then) throw new TypeError('动作状态变更必须同步。');
       const validated = validateActionState(state);
       return { state: validated, result: structuredClone(output) };
     });
-    const done = value => {
+    const done = (value: Result) => {
       initialized = true;
       return value;
     };
-    return result?.then ? result.then(done) : done(result);
+    return (result as Promise<Result>)?.then ? (result as Promise<Result>).then(done) : done(result as Result);
   };
   function initialize() {
     if (initialized) return;
     if (initializing) return initializing;
     // 将 v1 无期限草稿锁的一次性宽限租约持久化；重复读取和重启不能无限续期。
     const result = write(() => null);
-    if (result?.then)
-      initializing = result.finally(() => {
+    if ((result as Promise<null>)?.then)
+      initializing = (result as Promise<null>).finally(() => {
         initializing = null;
       });
     return initializing;
@@ -369,7 +369,7 @@ export function createActionStore(adapter) {
     write
   };
 }
-export function createJsonActionStore({ getState, runTransaction, onChange }) {
+export function createJsonActionStore({ getState, runTransaction, onChange }: JsonActionOptions) {
   return createActionStore({
     transaction: runTransaction,
     identity: () => ({ datasetId: getState().datasetId, datasetEpoch: getState().datasetEpoch }),

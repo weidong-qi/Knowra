@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { createNoteActionService } from './action-service.js';
-import type { createActionInboxMethods } from './action-inbox.js';
+import type { createActionInboxMethods } from './action-inbox.ts';
 type ActionRoutePort = Pick<
   ReturnType<typeof createNoteActionService> & ReturnType<typeof createActionInboxMethods>,
   | 'apply'
