@@ -80,6 +80,11 @@ function props(overrides: Partial<KnowledgeWorkspaceViewProps> = {}): KnowledgeW
   };
 }
 
+async function clickDetailAction(name: string) {
+  await userEvent.click(await screen.findByRole('button', { name: '知识详情更多操作' }));
+  await userEvent.click(await screen.findByRole('menuitem', { name, exact: true }));
+}
+
 describe('KnowledgeWorkspaceView', () => {
   it('空库加载完成后，按工具栏范围唯一定位同名新建入口并打开候选对话框', async () => {
     const user = userEvent.setup();
@@ -328,7 +333,7 @@ describe('KnowledgeWorkspaceView', () => {
         .mockResolvedValue({ status: 'subject-purged', asset: purgePreview.asset, localState: 'recovery-required' })
     });
     render(<KnowledgeWorkspaceView {...input} />);
-    await userEvent.click(await screen.findByRole('button', { name: '永久删除…' }));
+    await clickDetailAction('永久删除…');
     await waitFor(() => expect(input.onInspectPurge).toHaveBeenCalledWith('k1'));
     await userEvent.click(await screen.findByRole('button', { name: '确认永久删除' }));
     expect(input.onPermanentDelete).toHaveBeenCalledWith('k1', {
@@ -354,7 +359,7 @@ describe('KnowledgeWorkspaceView', () => {
       })
     });
     render(<KnowledgeWorkspaceView {...input} />);
-    await userEvent.click(await screen.findByRole('button', { name: '永久删除…' }));
+    await clickDetailAction('永久删除…');
     await waitFor(() => expect(input.onInspectPurge).toHaveBeenCalledWith('k1'));
     await userEvent.click(await screen.findByRole('button', { name: '确认永久删除' }));
     expect(await screen.findByText(/清理结果待核对，原件已保留/)).toBeInTheDocument();
@@ -388,6 +393,7 @@ describe('KnowledgeWorkspaceView', () => {
     await user.clear(screen.getByRole('searchbox', { name: '搜索知识' }));
     await user.type(screen.getByRole('searchbox', { name: '搜索知识' }), '变换样本');
     expect(within(list).getByRole('button', { name: /数据增强/ })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('tab', { name: '来源', exact: true }));
     expect(screen.getByRole('region', { name: '知识来源' })).toHaveTextContent('样本变换');
     await user.click(screen.getByRole('button', { name: '打开来源笔记' }));
     expect(input.onOpenNote).toHaveBeenCalledWith('n1');
@@ -422,10 +428,10 @@ describe('KnowledgeWorkspaceView', () => {
     const user = userEvent.setup();
     const input = props();
     render(<KnowledgeWorkspaceView {...input} />);
-    await user.click(await screen.findByRole('button', { name: '归档' }));
+    await clickDetailAction('归档');
     expect(input.onArchive).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: '确认归档' }));
-    await user.click(await screen.findByRole('button', { name: '恢复为候选' }));
+    await clickDetailAction('恢复为候选');
     expect(input.onArchive).toHaveBeenCalledWith('k1', { expectedUpdatedAt: candidate.updatedAt });
     expect(input.onRestore).toHaveBeenCalledWith('k1', { expectedUpdatedAt: candidate.updatedAt });
     expect(await screen.findByText('已恢复为候选，请重新核对后确认。')).toBeInTheDocument();
@@ -435,11 +441,12 @@ describe('KnowledgeWorkspaceView', () => {
     const user = userEvent.setup();
     const input = props();
     render(<KnowledgeWorkspaceView {...input} />);
-    await user.click(await screen.findByRole('button', { name: '移入回收站' }));
+    await clickDetailAction('移入回收站');
     expect(screen.getByRole('dialog', { name: '移入知识回收站？' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '确认移入回收站' }));
     await waitFor(() => expect(input.onTrash).toHaveBeenCalledWith('k1', { expectedUpdatedAt: candidate.updatedAt }));
     expect(await screen.findByRole('button', { name: '从回收站恢复' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('tab', { name: '来源', exact: true }));
     expect(screen.getByRole('region', { name: '知识来源' })).toHaveTextContent('样本变换');
     await user.click(screen.getByRole('button', { name: '从回收站恢复' }));
     await waitFor(() =>
@@ -454,6 +461,7 @@ describe('KnowledgeWorkspaceView', () => {
       />
     );
     expect(await screen.findByText('原标注已移除')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('tab', { name: '来源', exact: true }));
     expect(screen.getByRole('region', { name: '知识来源' })).toHaveTextContent('样本变换');
   });
 
@@ -467,7 +475,8 @@ describe('KnowledgeWorkspaceView', () => {
     ).toBeDisabled();
     expect(await screen.findByRole('button', { name: '确认知识' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '编辑' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '归档' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: '知识详情更多操作' }));
+    expect(screen.getByRole('menuitem', { name: '归档' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('来源失效的候选不能确认，编辑冲突保留表单输入', async () => {
@@ -516,6 +525,7 @@ describe('KnowledgeWorkspaceView', () => {
     } as Annotation;
     const input = props({ notes: [sourceNote], onListAnnotations: vi.fn().mockResolvedValue([replacement]) });
     render(<KnowledgeWorkspaceView {...input} />);
+    await user.click(await screen.findByRole('tab', { name: '来源', exact: true }));
     await screen.findByText('样本变换');
 
     await user.click(await screen.findByRole('button', { name: '添加来源' }));

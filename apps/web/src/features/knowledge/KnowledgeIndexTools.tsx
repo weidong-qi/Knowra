@@ -1,4 +1,5 @@
 import { useState, type RefObject } from 'react';
+import { LibraryDisplayField as Field } from '../../components/workspace/LibraryDisplayField';
 import {
   IconButton,
   Menu,
@@ -9,8 +10,6 @@ import {
   PopoverDialog,
   PopoverTrigger,
   SearchBox,
-  SegmentedButton,
-  SegmentedControl,
   Switch,
   Tooltip,
   TooltipTrigger
@@ -19,6 +18,7 @@ import {
   DisplayOptionsIcon,
   FilterLinesIcon,
   MoreHorizontalIcon,
+  PanelIcon,
   PlusIcon,
   RefreshIcon,
   SearchIcon
@@ -60,31 +60,6 @@ const PROPERTIES: readonly [keyof KnowledgeDisplay['properties'], string][] = [
   ['updated', '更新时间']
 ];
 
-function Field<T extends string>({
-  label,
-  value,
-  options,
-  onChange
-}: {
-  label: string;
-  value: T;
-  options: readonly [T, string][];
-  onChange(value: T): void;
-}) {
-  return (
-    <div className={menuStyles.field}>
-      <span>{label}</span>
-      <SegmentedControl density="compact" aria-label={label}>
-        {options.map(([key, text]) => (
-          <SegmentedButton key={key} aria-pressed={value === key} onPress={() => onChange(key)}>
-            {text}
-          </SegmentedButton>
-        ))}
-      </SegmentedControl>
-    </div>
-  );
-}
-
 export interface KnowledgeIndexToolsProps {
   compact: boolean;
   query: string;
@@ -96,6 +71,8 @@ export interface KnowledgeIndexToolsProps {
   display: KnowledgeDisplay;
   canWrite: boolean;
   busy: boolean;
+  inspectorOpen?: boolean;
+  onToggleInspector?(): void;
   onRefresh(): void;
   onCreate(): void;
 }
@@ -198,6 +175,14 @@ export function KnowledgeIndexTools(props: KnowledgeIndexToolsProps) {
       </Popover>
     </PopoverTrigger>
   );
+  const inspector = (
+    <TooltipTrigger>
+      <IconButton size={28} aria-label="详情栏" aria-pressed={props.inspectorOpen} onPress={props.onToggleInspector}>
+        <PanelIcon size={16} />
+      </IconButton>
+      <Tooltip>详情栏</Tooltip>
+    </TooltipTrigger>
+  );
   const create = (
     <IconButton
       tone="floating"
@@ -216,6 +201,7 @@ export function KnowledgeIndexTools(props: KnowledgeIndexToolsProps) {
         {search}
         {filter}
         {displayMenu}
+        {inspector}
         <MenuTrigger>
           <IconButton size={30} aria-label="更多操作">
             <MoreHorizontalIcon size={16} />
@@ -237,6 +223,7 @@ export function KnowledgeIndexTools(props: KnowledgeIndexToolsProps) {
       {search}
       {filter}
       {displayMenu}
+      {inspector}
       <span className={styles.separator} />
       <TooltipTrigger>
         <IconButton size={28} aria-label="刷新" isDisabled={props.busy} onPress={props.onRefresh}>

@@ -80,11 +80,12 @@ describe('概念首版界面', () => {
     const list = vi.fn(async () => []);
     const user = userEvent.setup();
     render(<ConceptWorkspace selectedId="a" canWrite onListItems={list} onSelect={vi.fn()} onOpenItem={vi.fn()} />);
-    await screen.findByRole('button', { name: '合并到…' });
-    await user.click(screen.getByRole('button', { name: '合并到…' }));
+    await user.click(await screen.findByRole('button', { name: '概念更多操作' }));
+    await user.click(screen.getByRole('menuitem', { name: '合并到…' }));
     expect(screen.getByRole('dialog', { name: '合并概念？' })).toHaveTextContent('合并不可撤销');
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '取消' }));
-    await user.click(screen.getByRole('button', { name: '删除概念' }));
+    await user.click(screen.getByRole('button', { name: '概念更多操作' }));
+    await user.click(screen.getByRole('menuitem', { name: '删除概念' }));
     expect(screen.getByRole('dialog', { name: '删除概念？' })).toHaveTextContent('0 条关系');
   });
 });
