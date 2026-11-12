@@ -85,6 +85,7 @@ export function PdfReaderView({
   } | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
   const [textMode, setTextMode] = useState<PdfTextMode>('highlight');
+  const [dictionaryKind, setDictionaryKind] = useState('supplement');
   const [noteMove, setNoteMove] = useState<{ id: string; segment: PdfSegment } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
@@ -288,6 +289,7 @@ export function PdfReaderView({
       return;
     }
     const id = randomId();
+    setDictionaryKind(kind);
     change(id, { ...value, kind, comment });
     setSelected(id);
     if (value.type === 'note') {
@@ -303,12 +305,13 @@ export function PdfReaderView({
     setGhost(null);
     window.getSelection()?.removeAllRanges();
   }
-  function saveSelectionComment(source: { value: PdfSelection } | null, comment: string) {
+  function saveSelectionComment(source: { value: PdfSelection } | null, comment: string, kind = 'supplement') {
     if (!source || !editable) return;
     const value = { ...source.value, type: textMode };
     const existing = items.find(
       item =>
         item.type === value.type &&
+        item.kind === kind &&
         item.quoteText === value.quoteText &&
         JSON.stringify(item.segments) === JSON.stringify(value.segments) &&
         item.comment === comment
@@ -322,7 +325,7 @@ export function PdfReaderView({
       window.getSelection()?.removeAllRanges();
       return;
     }
-    createMark(value, 'supplement', comment);
+    createMark(value, kind, comment);
   }
   function textAnchor(): PdfBarAnchor | null {
     const selection = window.getSelection();
@@ -848,11 +851,13 @@ export function PdfReaderView({
                     anchor={dictionary.anchor}
                     mode={textMode}
                     onMode={setTextMode}
-                    onPick={kind => createMark({ ...dictionary.value, type: textMode }, kind)}
+                    selectedKind={dictionaryKind}
+                    onPick={setDictionaryKind}
                   />
                 ) : undefined
               }
-              onSave={comment => saveSelectionComment(dictionary, comment)}
+              onSave={comment => saveSelectionComment(dictionary, comment, dictionaryKind)}
+              onAnnotate={() => saveSelectionComment(dictionary, '', dictionaryKind)}
               onClose={() => setDictionary(null)}
             />
           ) : null}
