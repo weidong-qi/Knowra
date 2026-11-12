@@ -467,3 +467,16 @@ test('桌面端 AI 功能开关：默认关闭，经本地接口开启后保存�
   assert.deepEqual((await second.call('GET')).data, { knowledgeProposals: true });
   assert.equal(await gates.at(-1)(), true);
 });
+
+test('桌面概念命令通过真实 HTTP 白名单，拒绝直接删除概念实体', async t => {
+  const { call } = await localRequests(t);
+  const created = await call('/api/knowledge/concepts/commands', 'POST', {
+    command: { type: 'createConcept', id: 'concept-a', operationId: 'create-a', expectedRevision: 0, name: '概念 A' }
+  });
+  assert.equal(created.status, 200);
+  assert.equal(created.data.changed.concepts[0].name, '概念 A');
+  const listed = await call('/api/knowledge/concepts');
+  assert.equal(listed.data.concepts.length, 1);
+  const deleted = await call('/api/knowledge/concepts/concept-a', 'DELETE');
+  assert.equal(deleted.status, 409);
+});
