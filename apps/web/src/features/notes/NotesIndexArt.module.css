@@ -1,11 +1,17 @@
 .art {
   --art-color: var(--ni-ink-4, var(--text-muted));
+  --note-accent: #f59e0b;
+  --note-accent-dark: #d97706;
   display: grid;
   place-items: center;
   position: relative;
   width: 98px;
   height: 100px;
   flex: none;
+}
+.art[data-has-tag-color='true'] {
+  --note-accent: var(--art-color);
+  --note-accent-dark: color-mix(in srgb, var(--art-color) 82%, #000 18%);
 }
 .art[data-color='blue'] {
   --art-color: var(--color-info, #4b91ea);
@@ -35,28 +41,73 @@
   fill: var(--ni-surf, var(--surface-page));
   stroke: var(--ni-line-2, var(--border-subtle));
 }
-.noteAccent {
-  fill: #e58b53;
+.noteFold {
+  fill: var(--note-accent-dark);
 }
-.pdfBadge {
-  fill: #d76d60;
+.pdfFold {
+  fill: #b91c1c;
+}
+.noteBadgeStart {
+  stop-color: var(--note-accent);
+}
+.noteBadgeEnd {
+  stop-color: var(--note-accent-dark);
+}
+.noteBadgeLabel {
+  fill: #fff;
+  font: 900 9px var(--font-ui);
+  letter-spacing: 0.1em;
+  user-select: none;
 }
 .pdfLabel {
   fill: #fff;
-  font: 700 9px var(--font-ui);
+  font: 900 9.5px var(--font-ui);
+  letter-spacing: 0.1em;
+  user-select: none;
 }
-.fold {
-  fill: var(--ni-fill-2, var(--surface-hover));
+.noteLine {
+  fill: var(--note-accent);
+}
+.pdfLine {
+  fill: #ef4444;
+}
+.noteBadgeSmall {
+  fill: var(--note-accent);
+}
+.noteBadgeLabelSmall {
+  fill: #fff;
+  font: 800 6.5px var(--font-ui);
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+.pdfBadgeSmall {
+  fill: #dc2626;
+}
+.pdfLabelSmall {
+  fill: #fff;
+  font: 900 7px var(--font-ui);
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+.pdfTitle {
+  fill: #dc2626;
+  opacity: 0.85;
+}
+.noteBullet {
+  fill: var(--note-accent);
+}
+.noteBulletMuted {
+  fill: var(--ni-line-2, var(--border-subtle));
+}
+.pdfDivider {
   stroke: var(--ni-line, var(--border-subtle));
+  stroke-width: 0.8;
 }
 .paperTitle {
-  fill: var(--ni-ink-3, var(--text-muted));
+  fill: color-mix(in srgb, var(--note-accent) 65%, var(--ni-ink-3, var(--text-muted)));
 }
 .paperLine {
   fill: color-mix(in srgb, var(--ni-ink-3, var(--text-muted)) 35%, var(--ni-surf, var(--surface-page)));
-}
-.art .paperTitle {
-  fill: color-mix(in srgb, var(--art-color) 65%, var(--ni-ink-3, var(--text-muted)));
 }
 .folder {
   filter: drop-shadow(0 3px 5px var(--ni-f-shadow, rgba(80, 40, 10, 0.18)));

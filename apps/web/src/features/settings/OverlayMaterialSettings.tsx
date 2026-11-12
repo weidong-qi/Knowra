@@ -8,26 +8,48 @@ import {
   ACCENT_COLORS,
   BUTTON_STYLES,
   DIALOG_STYLES,
+  DOCUMENT_ICON_STYLES,
   setNotesIndexAppearance,
   useNotesIndexAppearance,
   type AccentColor,
   type ButtonStyle,
+  type DocumentIconStyle,
   type DialogStyle
 } from '../notes/notesIndexAppearanceModel';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
 
 const ACCENT_COLOR_LABELS: Record<AccentColor, string> = { ink: '墨黑', orange: '暖橙' };
+const DOCUMENT_ICON_STYLE_LABELS: Record<DocumentIconStyle, string> = { capsule: '胶囊徽标', layout: '学术版式' };
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
 
 export function OverlayMaterialSettings() {
-  const { overlayMaterial, buttonStyle, dialogStyle, accentColor } = useNotesIndexAppearance();
+  const { overlayMaterial, buttonStyle, dialogStyle, accentColor, documentIconStyle } = useNotesIndexAppearance();
   const compact = useCompactLayout();
   return (
     <section className={styles.group} aria-labelledby="settings-appearance-heading">
       <h3 id="settings-appearance-heading">外观</h3>
       <div className={styles.settingList}>
+        <div className={`${styles.settingRow} ${styles.materialRow}`}>
+          <div className={styles.settingCopy}>
+            <h4>文档图标风格</h4>
+            <p>切换笔记和 PDF 在图标视图中的风格，卡片封面保持原样。切换后即时保存。</p>
+          </div>
+          <div className={`${styles.settingControl} ${styles.materialControl}`}>
+            <SegmentedControl aria-label="文档图标风格">
+              {DOCUMENT_ICON_STYLES.map(style => (
+                <SegmentedButton
+                  key={style}
+                  aria-pressed={documentIconStyle === style}
+                  onPress={() => setNotesIndexAppearance({ documentIconStyle: style })}
+                >
+                  {DOCUMENT_ICON_STYLE_LABELS[style]}
+                </SegmentedButton>
+              ))}
+            </SegmentedControl>
+          </div>
+        </div>
         <div className={`${styles.settingRow} ${styles.materialRow}`}>
           <div className={styles.settingCopy}>
             <h4>强调色</h4>

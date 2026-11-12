@@ -75,11 +75,12 @@ describe('浮层材质设置', () => {
 it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后恢复焦点', async () => {
   const user = userEvent.setup();
   render(<SettingsSurface />);
-  for (const name of ['暖橙', '白玻璃', '内嵌托盘']) {
+  for (const name of ['暖橙', '白玻璃', '内嵌托盘', '学术版式']) {
     await user.click(screen.getByRole('button', { name }));
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
   expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
+    documentIconStyle: 'layout',
     accentColor: 'orange',
     buttonStyle: 'frost',
     dialogStyle: 'tray'
@@ -97,7 +98,7 @@ it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后�
   await waitFor(() => expect(trigger).toHaveFocus());
   cleanup();
   render(<SettingsSurface />);
-  for (const name of ['暖橙', '白玻璃', '内嵌托盘']) {
+  for (const name of ['暖橙', '白玻璃', '内嵌托盘', '学术版式']) {
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
 });
