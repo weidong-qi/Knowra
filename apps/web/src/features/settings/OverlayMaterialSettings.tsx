@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import { CalendarIcon, StatusRingIcon, TagIcon } from '../../components/icons/knowra';
 import { Button } from '../../components/ui/button/Button';
 import { SegmentedButton, SegmentedControl } from '../../components/ui/button/SegmentedControl';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogTrigger } from '../../components/ui/overlay/Dialog';
-import { TextField } from '../../components/ui/input';
+import { ColorPicker, Switch, TextField } from '../../components/ui/input';
 import { Menu, MenuItem, MenuPopover, MenuTrigger, SubmenuTrigger } from '../../components/ui/overlay/Menu';
 import {
   ACCENT_COLORS,
@@ -24,13 +25,98 @@ const DOCUMENT_ICON_STYLE_LABELS: Record<DocumentIconStyle, string> = { capsule:
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
 
+function ShellColorSetting({
+  title,
+  value,
+  fallback,
+  onChange
+}: {
+  title: string;
+  value: string | null;
+  fallback: string;
+  onChange(value: string | null): void;
+}) {
+  const [draft, setDraft] = useState(value ?? fallback);
+  useEffect(() => setDraft(value ?? fallback), [value, fallback]);
+  return (
+    <div className={`${styles.settingRow} ${styles.materialRow}`}>
+      <div className={styles.settingCopy}>
+        <h4>{title}</h4>
+        <p>单独设置当前浅色或深色模式的背景，输入有效颜色后即时保存。</p>
+      </div>
+      <div className={`${styles.settingControl} ${styles.materialControl}`}>
+        <ColorPicker
+          value={draft}
+          presets={[]}
+          onChange={next => {
+            setDraft(next);
+            if (/^#[0-9a-f]{6}$/i.test(next)) onChange(next);
+          }}
+        />
+        <Button
+          size="compact"
+          onPress={() => {
+            setDraft(fallback);
+            onChange(null);
+          }}
+        >
+          恢复默认
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function OverlayMaterialSettings() {
-  const { overlayMaterial, buttonStyle, dialogStyle, accentColor, documentIconStyle } = useNotesIndexAppearance();
+  const appearance = useNotesIndexAppearance();
+  const { mode, overlayMaterial, buttonStyle, dialogStyle, accentColor, documentIconStyle } = appearance;
+  const shellColorKey = mode === 'dark' ? 'shellColorDark' : 'shellColorLight';
+  const sidebarColorKey = mode === 'dark' ? 'sidebarColorDark' : 'sidebarColorLight';
   const compact = useCompactLayout();
   return (
     <section className={styles.group} aria-labelledby="settings-appearance-heading">
       <h3 id="settings-appearance-heading">外观</h3>
       <div className={styles.settingList}>
+        <ShellColorSetting
+          key={`shell-${mode}`}
+          title="外栏背景"
+          value={appearance[shellColorKey]}
+          fallback={mode === 'dark' ? '#101114' : '#f1f2f5'}
+          onChange={value => setNotesIndexAppearance({ [shellColorKey]: value })}
+        />
+        <ShellColorSetting
+          key={`sidebar-${mode}`}
+          title="上下文侧栏背景"
+          value={appearance[sidebarColorKey]}
+          fallback={mode === 'dark' ? '#1e2025' : '#fafafb'}
+          onChange={value => setNotesIndexAppearance({ [sidebarColorKey]: value })}
+        />
+        <div className={`${styles.settingRow} ${styles.materialRow}`}>
+          <div className={styles.settingCopy}>
+            <h4>上下文侧栏外形</h4>
+            <p>独立调整侧栏与内容区的间距、圆角和细边线；窄屏仍使用弹层。</p>
+          </div>
+          <div className={`${styles.settingControl} ${styles.materialControl}`}>
+            <Switch
+              isSelected={appearance.sidebarCard}
+              onChange={sidebarCard => setNotesIndexAppearance({ sidebarCard })}
+            >
+              独立间距
+            </Switch>
+            <Switch
+              isSelected={appearance.sidebarRounded}
+              onChange={sidebarRounded => setNotesIndexAppearance({ sidebarRounded })}
+            >
+              四角圆角
+            </Switch>
+            <Switch
+              isSelected={appearance.sidebarBorder}
+              onChange={sidebarBorder => setNotesIndexAppearance({ sidebarBorder })}
+            >
+              细边线
+            </Switch>
+          </div>
+        </div>
         <div className={`${styles.settingRow} ${styles.materialRow}`}>
           <div className={styles.settingCopy}>
             <h4>文档图标风格</h4>

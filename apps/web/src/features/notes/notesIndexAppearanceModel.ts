@@ -9,6 +9,13 @@ export interface NotesIndexAppearance {
   dialogStyle: DialogStyle;
   accentColor: AccentColor;
   documentIconStyle: DocumentIconStyle;
+  shellColorLight: string | null;
+  shellColorDark: string | null;
+  sidebarColorLight: string | null;
+  sidebarColorDark: string | null;
+  sidebarCard: boolean;
+  sidebarRounded: boolean;
+  sidebarBorder: boolean;
 }
 
 export const ACCENT_COLORS = ['ink', 'orange'] as const;
@@ -34,11 +41,22 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   buttonStyle: 'paper',
   dialogStyle: 'float',
   accentColor: 'ink',
-  documentIconStyle: 'capsule'
+  documentIconStyle: 'capsule',
+  shellColorLight: null,
+  shellColorDark: null,
+  sidebarColorLight: null,
+  sidebarColorDark: null,
+  sidebarCard: false,
+  sidebarRounded: false,
+  sidebarBorder: false
 };
 const listeners = new Set<() => void>();
 let snapshot = readAppearance();
 let hasUnsavedChanges = false;
+
+function parseColor(value: unknown): string | null {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : null;
+}
 
 export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance {
   const candidate = value && typeof value === 'object' ? (value as Partial<NotesIndexAppearance>) : {};
@@ -59,7 +77,14 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
       : 'ink',
     documentIconStyle: DOCUMENT_ICON_STYLES.includes(candidate.documentIconStyle as DocumentIconStyle)
       ? (candidate.documentIconStyle as DocumentIconStyle)
-      : 'capsule'
+      : 'capsule',
+    shellColorLight: parseColor(candidate.shellColorLight),
+    shellColorDark: parseColor(candidate.shellColorDark),
+    sidebarColorLight: parseColor(candidate.sidebarColorLight),
+    sidebarColorDark: parseColor(candidate.sidebarColorDark),
+    sidebarCard: candidate.sidebarCard === true,
+    sidebarRounded: candidate.sidebarRounded === true,
+    sidebarBorder: candidate.sidebarBorder === true
   };
 }
 

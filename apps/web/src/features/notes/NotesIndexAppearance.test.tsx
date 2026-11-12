@@ -33,10 +33,20 @@ describe('全局定稿外观', () => {
       buttonStyle: 'paper',
       dialogStyle: 'float',
       accentColor: 'ink',
-      documentIconStyle: 'capsule'
+      documentIconStyle: 'capsule',
+      shellColorLight: null,
+      shellColorDark: null,
+      sidebarColorLight: null,
+      sidebarColorDark: null,
+      sidebarCard: false,
+      sidebarRounded: false,
+      sidebarBorder: false
     });
   });
   it('旧数据默认通透玻璃，只接受已支持的浮层材质', () => {
+    expect(
+      parseNotesIndexAppearance({ shellColorLight: 'red', sidebarColorDark: '#ABCDEF', sidebarCard: 'yes' })
+    ).toMatchObject({ shellColorLight: null, sidebarColorDark: '#abcdef', sidebarCard: false });
     expect(parseNotesIndexAppearance(null).overlayMaterial).toBe('glass');
     expect(parseNotesIndexAppearance({ overlayMaterial: 'unknown' }).overlayMaterial).toBe('glass');
     expect(parseNotesIndexAppearance({ overlayMaterial: 'acrylic' }).overlayMaterial).toBe('acrylic');
@@ -97,7 +107,14 @@ describe('全局定稿外观', () => {
       buttonStyle: 'paper',
       dialogStyle: 'float',
       accentColor: 'ink',
-      documentIconStyle: 'capsule'
+      documentIconStyle: 'capsule',
+      shellColorLight: null,
+      shellColorDark: null,
+      sidebarColorLight: null,
+      sidebarColorDark: null,
+      sidebarCard: false,
+      sidebarRounded: false,
+      sidebarBorder: false
     });
     await userEvent.click(screen.getByRole('button', { name: '切换浅色模式' }));
     expect(surface).toHaveAttribute('data-ni-mode', 'light');
@@ -111,7 +128,14 @@ describe('全局定稿外观', () => {
       buttonStyle: 'paper',
       dialogStyle: 'float',
       accentColor: 'ink',
-      documentIconStyle: 'capsule'
+      documentIconStyle: 'capsule',
+      shellColorLight: null,
+      shellColorDark: null,
+      sidebarColorLight: null,
+      sidebarColorDark: null,
+      sidebarCard: false,
+      sidebarRounded: false,
+      sidebarBorder: false
     });
   });
   it('存储不可用时依然允许切换并在重新挂载后保留会话设置', async () => {

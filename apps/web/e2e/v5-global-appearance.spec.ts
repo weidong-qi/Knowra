@@ -278,6 +278,51 @@ test('文档与 PDF 图标风格切换后在刷新及深色模式中保留', asy
   await page.screenshot({ path: info.outputPath('icons-layout-dark.png'), animations: 'disabled' });
 });
 
+test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ page }, info) => {
+  await mockEditorWorkspace(page, []);
+  await page.route('**/api/ai/model-settings', route =>
+    route.fulfill({
+      json: {
+        data: {
+          configured: false,
+          modelId: 'deepseek-flash',
+          modelSupported: true,
+          supportedModelIds: ['deepseek-flash']
+        }
+      }
+    })
+  );
+  await page.goto('/#/settings');
+  const outer = page.getByRole('heading', { name: '外栏背景', exact: true }).locator('xpath=../..');
+  const sidebarSetting = page.getByRole('heading', { name: '上下文侧栏背景', exact: true }).locator('xpath=../..');
+  await outer.getByRole('textbox', { name: '十六进制颜色' }).fill('#cdd9e6');
+  await sidebarSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#f4f0e8');
+  await page.getByRole('switch', { name: '独立间距' }).check();
+  await page.getByRole('switch', { name: '四角圆角' }).check();
+  await page.getByRole('switch', { name: '细边线' }).check();
+  await page.reload();
+  await expect(page.getByRole('switch', { name: '四角圆角' })).toBeChecked();
+  await expect(outer.getByRole('textbox', { name: '十六进制颜色' })).toHaveValue('#cdd9e6');
+  await page.goto('/#/materials');
+  const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
+  const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+  const stage = page.locator('#feature-stage');
+  await expect(shell).toHaveAttribute('data-sidebar-card', 'true');
+  await expect(sidebar).toHaveCSS('background-color', 'rgb(244, 240, 232)');
+  await expect(sidebar).toHaveCSS('border-top-right-radius', '12px');
+  await expect(sidebar).toHaveCSS('outline-width', '1px');
+  const gap = await sidebar.evaluate(element => {
+    const main = document.getElementById('feature-stage')!;
+    return main.getBoundingClientRect().left - element.getBoundingClientRect().right;
+  });
+  expect(gap).toBeGreaterThan(0);
+  await expect(stage).toHaveCSS('border-top-left-radius', '12px');
+  await page.screenshot({ path: info.outputPath('sidebar-independent.png'), animations: 'disabled' });
+  await page.getByRole('button', { name: '切换深色模式' }).click();
+  await expect(sidebar).not.toHaveCSS('background-color', 'rgb(244, 240, 232)');
+  await page.screenshot({ path: info.outputPath('sidebar-independent-dark.png'), animations: 'disabled' });
+});
+
 test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
   await page.route(

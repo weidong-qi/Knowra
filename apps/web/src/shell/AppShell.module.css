@@ -229,3 +229,24 @@
   --nav-selected-shadow: 0 0 transparent;
   --nav-count-ink: var(--ni-shell-ink-3);
 }
+
+/* 侧栏间距、圆角和边线独立组合；窄屏侧栏仍使用弹层。 */
+@media (min-width: 768px) {
+  .shellWithSidebar[data-sidebar-card='true'] {
+    grid-template-columns: var(--rail-size) calc(var(--sidebar-size) + var(--shell-gap)) minmax(0, 1fr);
+  }
+  .shellWithSidebar[data-sidebar-card='true'] .contextSidebar {
+    margin-right: var(--shell-gap);
+  }
+  .shellWithSidebar[data-sidebar-card='true'] .stage {
+    border-radius: var(--shell-panel-radius);
+  }
+  .shellWithSidebar[data-sidebar-rounded='true'] .contextSidebar {
+    border-radius: var(--shell-panel-radius);
+  }
+  .shellWithSidebar[data-sidebar-border='true'] .contextSidebar {
+    box-shadow:
+      var(--shadow-page),
+      inset 0 0 0 1px var(--border-strong);
+  }
+}
