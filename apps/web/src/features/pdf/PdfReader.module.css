@@ -359,6 +359,18 @@
   gap: 4px;
   min-width: 0;
 }
+.markSummary {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.markTitle {
+  min-width: 0;
+  font-weight: 700;
+  text-align: left;
+}
 .markJump {
   flex: 1 1 auto;
   min-width: 0;

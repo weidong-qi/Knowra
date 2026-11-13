@@ -59,23 +59,22 @@ export function PdfAnnotationsList({
             <p className={styles.panelEmpty}>当前选中标注不符合筛选，仍可继续编辑。</p>
           ) : null}
           <div className={styles.markHead}>
-            <PressableButton
-              className={styles.markJump}
-              onPress={() => onSelect(item)}
-              aria-label={`定位标注 第 ${item.segments[0].pageIndex + 1} 页 ${item.type === 'note' ? item.title?.trim() || '便签' : item.quoteText || '区域标注'}`}
-            >
-              <span>
-                第 {[...new Set(item.segments.map(segment => segment.pageIndex + 1))].join('、')} 页 ·{' '}
-                {KIND_OPTIONS.find(option => option.id === item.kind)?.label}
-              </span>
-              <strong>
-                {item.type === 'region'
-                  ? '区域标注'
-                  : item.type === 'note'
-                    ? item.title?.trim() || '便签'
-                    : item.quoteText}
-              </strong>
-            </PressableButton>
+            <div className={styles.markSummary}>
+              <PressableButton
+                className={styles.markJump}
+                onPress={() => onSelect(item)}
+                aria-label={`定位标注 第 ${item.segments[0].pageIndex + 1} 页 ${item.type === 'note' ? item.title?.trim() || '便签' : item.quoteText || '区域标注'}`}
+              >
+                <span>
+                  第 {[...new Set(item.segments.map(segment => segment.pageIndex + 1))].join('、')} 页 ·{' '}
+                  {KIND_OPTIONS.find(option => option.id === item.kind)?.label}
+                </span>
+                {item.type !== 'note' ? <strong>{item.type === 'region' ? '区域标注' : item.quoteText}</strong> : null}
+              </PressableButton>
+              {item.type === 'note' ? (
+                <NoteTitle item={item} canWrite={canWrite} onSelect={onSelect} onChange={onChange} />
+              ) : null}
+            </div>
             <div className={styles.markTrail}>
               <KindDotPicker kind={item.kind} canWrite={canWrite} onPick={kind => onChange(item.id, { kind })} />
               <span className={styles.markDeleteSlot}>
@@ -96,16 +95,6 @@ export function PdfAnnotationsList({
           </div>
           {selected === item.id ? (
             <>
-              {item.type === 'note' ? (
-                <TextField
-                  label="便签标题"
-                  value={item.title ?? ''}
-                  maxLength={200}
-                  placeholder="便签"
-                  isDisabled={!canWrite}
-                  onChange={title => onChange(item.id, { title })}
-                />
-              ) : null}
               <TextAreaField
                 label="评论"
                 presentation="composer"
@@ -123,6 +112,63 @@ export function PdfAnnotationsList({
         </section>
       ))}
     </>
+  );
+}
+
+/** 标题本身就是改名入口，不在卡片内重复显示第二份标题字段。 */
+function NoteTitle({
+  item,
+  canWrite,
+  onSelect,
+  onChange
+}: {
+  item: PdfAnnotation;
+  canWrite: boolean;
+  onSelect(item: PdfAnnotation): void;
+  onChange(id: string, fields: Partial<PdfAnnotation>): void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!editing) return;
+    const input = fieldRef.current?.querySelector('input');
+    input?.focus();
+    input?.select();
+  }, [editing]);
+  const title = item.title?.trim() || '便签';
+  return (
+    <div className={styles.markTitle}>
+      {editing && canWrite ? (
+        <TextField
+          ref={fieldRef}
+          label="便签标题"
+          hideLabel
+          appearance="bare"
+          value={item.title ?? ''}
+          maxLength={200}
+          placeholder="便签"
+          onChange={value => onChange(item.id, { title: value })}
+          onBlur={() => setEditing(false)}
+          onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
+              setEditing(false);
+            }
+          }}
+        />
+      ) : (
+        <PressableButton
+          aria-label={canWrite ? `编辑便签标题：${title}` : `定位便签：${title}`}
+          onPress={() => {
+            onSelect(item);
+            if (canWrite) setEditing(true);
+          }}
+        >
+          <strong>{title}</strong>
+        </PressableButton>
+      )}
+    </div>
   );
 }
 

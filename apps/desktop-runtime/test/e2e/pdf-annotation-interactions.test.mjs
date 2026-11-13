@@ -73,8 +73,15 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   const icon = page.locator(`[data-note-id="${sticky.id}"]`);
   await icon.click();
   await expect(noteEditor.getByRole('textbox', { name: '便签标题' })).toHaveValue('我的待验证猜想');
-  await noteEditor.getByRole('textbox', { name: '便签标题' }).fill('重新命名的猜想');
   await noteEditor.getByRole('button', { name: '完成', exact: true }).click();
+  const inspector = page.getByRole('complementary', { name: 'PDF 检查器' });
+  await inspector.getByRole('button', { name: '编辑便签标题：我的待验证猜想' }).click();
+  const inlineTitle = inspector.getByRole('textbox', { name: '便签标题' });
+  await expect(inlineTitle).toBeFocused();
+  await inlineTitle.fill('重新命名的猜想');
+  await inlineTitle.press('Enter');
+  await expect(inspector.getByRole('textbox', { name: '便签标题' })).toHaveCount(0);
+  await expect(inspector.getByRole('button', { name: '编辑便签标题：重新命名的猜想' })).toBeVisible();
   await save();
   // 图标仍可拖动；拖动完成不重复创建便签，标题与正文保留。
   const iconBox = await icon.boundingBox();

@@ -13,16 +13,36 @@ const note = {
 } as PdfAnnotation;
 const props = { selected: null, canWrite: true, onSelect: () => {}, onChange: () => {}, onDelete: () => {} };
 
-it('侧栏显示自定义便签标题，选中后可改名；旧便签使用默认标题', () => {
+it('直接点击粗体便签标题改名，不显示重复的标题字段', () => {
   const change = vi.fn();
   const view = render(<PdfAnnotationsList {...props} items={[note]} />);
   expect(screen.getByRole('button', { name: '定位标注 第 1 页 便签' })).toBeVisible();
+  expect(screen.getByRole('button', { name: '编辑便签标题：便签' })).toBeVisible();
+  expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
   view.rerender(
     <PdfAnnotationsList {...props} items={[{ ...note, title: '自定义标题' }]} selected="n" onChange={change} />
   );
   expect(screen.getByRole('button', { name: '定位标注 第 1 页 自定义标题' })).toBeVisible();
-  fireEvent.change(screen.getByRole('textbox', { name: '便签标题' }), { target: { value: '新的标题' } });
+  expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '编辑便签标题：自定义标题' }));
+  const field = screen.getByRole('textbox', { name: '便签标题' });
+  expect(field).toHaveFocus();
+  fireEvent.change(field, { target: { value: '新的标题' } });
   expect(change).toHaveBeenCalledWith('n', { title: '新的标题' });
+  view.rerender(
+    <PdfAnnotationsList {...props} items={[{ ...note, title: '新的标题' }]} selected="n" onChange={change} />
+  );
+  fireEvent.keyDown(field, { key: 'Enter' });
+  expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
+  expect(screen.getByRole('button', { name: '编辑便签标题：新的标题' })).toBeVisible();
+});
+
+it('只读便签的粗体标题仍可定位，但不进入改名状态', () => {
+  const select = vi.fn();
+  render(<PdfAnnotationsList {...props} items={[note]} canWrite={false} onSelect={select} />);
+  fireEvent.click(screen.getByRole('button', { name: '定位便签：便签' }));
+  expect(select).toHaveBeenCalledWith(note);
+  expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
 });
 
 it('正文选择与重复定位会滚动对应条目，编辑正文时不抢焦点或反复滚动', () => {
