@@ -61,12 +61,12 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   await page.getByRole('button', { name: '便签工具', exact: true }).click();
   await click(400, 160);
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
-  await expect(page.getByRole('button', { name: '文字选择', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const noteEditor = page.getByRole('dialog', { name: '编辑 PDF 批注' });
   await expect(noteEditor).toBeVisible();
   await noteEditor.getByRole('textbox', { name: '便签标题', exact: true }).fill('我的待验证猜想');
   await noteEditor.getByRole('textbox', { name: '批注内容', exact: true }).fill('只创建一条便签');
   await noteEditor.getByRole('button', { name: '完成', exact: true }).click();
+  await expect(page.getByRole('button', { name: '文字选择', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await save();
   const sticky = (await marks()).find(mark => mark.type === 'note');
   assert.equal(sticky.title, '我的待验证猜想');
