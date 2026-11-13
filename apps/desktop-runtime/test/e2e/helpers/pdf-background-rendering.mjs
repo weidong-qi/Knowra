@@ -69,7 +69,19 @@ export async function exercisePdfBackgroundRendering(page) {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const mark = page.locator('[data-pdf-annotation-id="background-mark"]');
     await expect(mark).toBeVisible();
-    const rect = await mark.boundingBox();
+    // 后台绘制会替换 SVG 节点；同一次页面执行中取当前节点与坐标，避免读取已脱离的句柄。
+    let rect;
+    await expect
+      .poll(async () => {
+        rect = await page.evaluate(() => {
+          const box = document.querySelector('[data-pdf-annotation-id="background-mark"]')?.getBoundingClientRect();
+          return box && box.width > 0 && box.height > 0
+            ? { x: box.x, y: box.y, width: box.width, height: box.height }
+            : null;
+        });
+        return Boolean(rect);
+      })
+      .toBe(true);
     assert(rect);
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
     const actions = page.getByRole('dialog', { name: 'PDF 标注操作', exact: true });
