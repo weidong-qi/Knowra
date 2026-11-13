@@ -801,7 +801,6 @@ export function PdfReaderView({
               point={commentEditor}
               canWrite={editable}
               onChange={comment => change(editingItem.id, { comment })}
-              onTitleChange={title => change(editingItem.id, { title })}
               onDelete={
                 editingItem.type === 'note'
                   ? () => {

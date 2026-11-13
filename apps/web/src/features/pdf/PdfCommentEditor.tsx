@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
-import { Button, IconButton, Popover, PopoverDialog, TextAreaField, TextField } from '../../components/ui';
+import { Button, IconButton, Popover, PopoverDialog, TextAreaField } from '../../components/ui';
 import { DeleteIcon } from '../../components/icons/knowra';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import styles from './PdfReader.module.css';
@@ -11,7 +11,6 @@ export function PdfCommentEditor({
   point,
   canWrite,
   onChange,
-  onTitleChange,
   onDelete,
   onClose
 }: {
@@ -19,7 +18,6 @@ export function PdfCommentEditor({
   point: { x: number; y: number };
   canWrite: boolean;
   onChange(comment: string): void;
-  onTitleChange?(title: string): void;
   onDelete?(): void;
   onClose(): void;
 }) {
@@ -56,16 +54,6 @@ export function PdfCommentEditor({
               完成
             </Button>
           </div>
-          {item.type === 'note' ? (
-            <TextField
-              label="便签标题"
-              value={item.title ?? ''}
-              maxLength={200}
-              placeholder="便签"
-              isDisabled={!canWrite}
-              onChange={title => onTitleChange?.(title)}
-            />
-          ) : null}
           {item.quoteText ? <p className={styles.commentQuote}>{item.quoteText}</p> : null}
           <TextAreaField
             autoFocus

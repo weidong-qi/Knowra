@@ -63,20 +63,35 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
   const noteEditor = page.getByRole('dialog', { name: '编辑 PDF 批注' });
   await expect(noteEditor).toBeVisible();
-  await noteEditor.getByRole('textbox', { name: '便签标题', exact: true }).fill('我的待验证猜想');
+  await expect(noteEditor.getByRole('textbox', { name: '便签标题', exact: true })).toHaveCount(0);
   await noteEditor.getByRole('textbox', { name: '批注内容', exact: true }).fill('只创建一条便签');
   await noteEditor.getByRole('button', { name: '完成', exact: true }).click();
   await expect(page.getByRole('button', { name: '文字选择', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await save();
+  const inspector = page.getByRole('complementary', { name: 'PDF 检查器' });
+  await inspector.getByRole('button', { name: '编辑便签标题：便签' }).click();
+  const inlineTitle = inspector.getByRole('textbox', { name: '便签标题' });
+  await expect(inlineTitle).toBeFocused();
+  const titleWidth = await inlineTitle.evaluate(element => {
+    const card = element.closest('section');
+    const style = getComputedStyle(card);
+    return {
+      actual: element.getBoundingClientRect().width,
+      available: card.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    };
+  });
+  expect(titleWidth.actual).toBeGreaterThanOrEqual(titleWidth.available - 4);
+  await inlineTitle.fill('我的待验证猜想');
+  await inlineTitle.press('Enter');
   await save();
   const sticky = (await marks()).find(mark => mark.type === 'note');
   assert.equal(sticky.title, '我的待验证猜想');
   const icon = page.locator(`[data-note-id="${sticky.id}"]`);
   await icon.click();
-  await expect(noteEditor.getByRole('textbox', { name: '便签标题' })).toHaveValue('我的待验证猜想');
+  await expect(noteEditor.getByRole('textbox', { name: '便签标题' })).toHaveCount(0);
+  await expect(noteEditor.getByRole('textbox', { name: '批注内容' })).toHaveValue('只创建一条便签');
   await noteEditor.getByRole('button', { name: '完成', exact: true }).click();
-  const inspector = page.getByRole('complementary', { name: 'PDF 检查器' });
   await inspector.getByRole('button', { name: '编辑便签标题：我的待验证猜想' }).click();
-  const inlineTitle = inspector.getByRole('textbox', { name: '便签标题' });
   await expect(inlineTitle).toBeFocused();
   await inlineTitle.fill('重新命名的猜想');
   await inlineTitle.press('Enter');

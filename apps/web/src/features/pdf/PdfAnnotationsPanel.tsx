@@ -58,7 +58,7 @@ export function PdfAnnotationsList({
           {filteredOutId === item.id ? (
             <p className={styles.panelEmpty}>当前选中标注不符合筛选，仍可继续编辑。</p>
           ) : null}
-          <div className={styles.markHead}>
+          <div className={styles.markHead} data-note={item.type === 'note' || undefined}>
             <div className={styles.markSummary}>
               <PressableButton
                 className={styles.markJump}
@@ -143,7 +143,7 @@ function NoteTitle({
           ref={fieldRef}
           label="便签标题"
           hideLabel
-          appearance="bare"
+          className={styles.markTitleField}
           value={item.title ?? ''}
           maxLength={200}
           placeholder="便签"

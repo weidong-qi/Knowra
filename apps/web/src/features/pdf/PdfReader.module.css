@@ -366,9 +366,29 @@
   flex-direction: column;
   gap: 6px;
 }
+.markHead[data-note] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  row-gap: 6px;
+}
+.markHead[data-note] .markSummary {
+  display: contents;
+}
+.markHead[data-note] .markJump {
+  grid-column: 1;
+  grid-row: 1;
+}
+.markHead[data-note] .markTrail {
+  grid-column: 2;
+  grid-row: 1;
+}
 .markTitle {
+  grid-column: 1 / -1;
   min-width: 0;
   text-align: left;
+}
+.markTitleField {
+  width: 100%;
 }
 .markJump {
   flex: 1 1 auto;
