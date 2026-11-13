@@ -11,25 +11,69 @@ import { NotesIndexArt } from './NotesIndexArt';
 import { formatUpdatedAt } from './notesIndexModel';
 import { DEFAULT_DISPLAY_PROPERTIES } from './notesIndexPresentation';
 
-const note: Note = { id: 'note', title: '真实笔记', folderId: null, rawMarkdown: '# 研究\n正文 **重点** [链接](https://example.com)', tagIds: ['tag'], internalLinks: [], favorite: true, deleted: false, contentLoaded: true, status: 'draft' };
-const tags = [{ id: 'tag', name: '研究', color: 'blue' as const }, { id: 'other', name: '不相关', color: 'red' as const }];
+const note: Note = {
+  id: 'note',
+  title: '真实笔记',
+  folderId: null,
+  rawMarkdown: '# 研究\n正文 **重点** [链接](https://example.com)',
+  tagIds: ['tag'],
+  internalLinks: [],
+  favorite: true,
+  deleted: false,
+  contentLoaded: true,
+  status: 'draft'
+};
+const tags = [
+  { id: 'tag', name: '研究', color: 'blue' as const },
+  { id: 'other', name: '不相关', color: 'red' as const }
+];
 function tileProps(overrides: Partial<ComponentProps<typeof IndexTile>> = {}): ComponentProps<typeof IndexTile> {
-  return { item: { kind: 'note', note }, notes: [note], selectedNoteId: null, onSelectFolder: vi.fn(), onSelectNote: vi.fn(), isRecycleView: false, recyclePendingId: null, onRestore: vi.fn(), onRequestPermanentDelete: vi.fn(), selectionMode: false, selected: false, onToggleSelection: vi.fn(), canWrite: true, onItemAction: vi.fn(), view: 'card', tags, ...overrides };
+  return {
+    item: { kind: 'note', note },
+    notes: [note],
+    selectedNoteId: null,
+    onSelectFolder: vi.fn(),
+    onSelectNote: vi.fn(),
+    isRecycleView: false,
+    recyclePendingId: null,
+    onRestore: vi.fn(),
+    onRequestPermanentDelete: vi.fn(),
+    selectionMode: false,
+    selected: false,
+    onToggleSelection: vi.fn(),
+    canWrite: true,
+    onItemAction: vi.fn(),
+    view: 'card',
+    tags,
+    ...overrides
+  };
 }
 function mount(ui: ReactNode) {
-  const dependencies = { api: {} as WorkspaceApi, cacheKey: 'index-items', mockSnapshot: createEmptyWorkspaceSnapshot() };
+  const dependencies = {
+    api: {} as WorkspaceApi,
+    cacheKey: 'index-items',
+    mockSnapshot: createEmptyWorkspaceSnapshot()
+  };
   const store = createAppStore(dependencies);
   store.setState({ dataMode: 'api', workspaceLoadState: 'ready' });
-  return render(<AppStoreProvider dependencies={dependencies} store={store}>{ui}</AppStoreProvider>);
+  return render(
+    <AppStoreProvider dependencies={dependencies} store={store}>
+      {ui}
+    </AppStoreProvider>
+  );
 }
 
 describe('Notes index item views', () => {
   it.each(['list', 'grid', 'card'] as const)('主按钮名称只包含标题，日期独立作为描述（%s）', async view => {
     const dated = { ...note, updatedAt: '2026-08-31T02:32:00.000Z' };
     const props = tileProps({ item: { kind: 'note', note: dated }, view: view === 'list' ? 'grid' : view });
-    const { container } = mount(view === 'list'
-      ? <NotesTable {...props} items={[props.item]} selectedNoteIds={new Set()} foldersById={{}} />
-      : <IndexTile {...props} />);
+    const { container } = mount(
+      view === 'list' ? (
+        <NotesTable {...props} items={[props.item]} selectedNoteIds={new Set()} foldersById={{}} />
+      ) : (
+        <IndexTile {...props} />
+      )
+    );
     const primary = screen.getByRole('button', { name: '真实笔记' });
     expect(primary).toHaveAttribute('data-index-primary');
     expect(primary).toHaveAccessibleDescription(expect.stringContaining('最近更新'));
@@ -85,13 +129,23 @@ describe('Notes index item views', () => {
     const readOnly = mount(<IndexTile {...tileProps({ canWrite: false })} />);
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     readOnly.unmount();
-    mount(<IndexTile {...tileProps({ isRecycleView: true, item: { kind: 'note', note: { ...note, deleted: true } } })} />);
+    mount(
+      <IndexTile {...tileProps({ isRecycleView: true, item: { kind: 'note', note: { ...note, deleted: true } } })} />
+    );
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('retains list table semantics, real metadata and independent open actions', async () => {
     const props = tileProps();
-    mount(<NotesTable {...props} items={[props.item]} selectedNoteIds={new Set()} foldersById={{}} properties={DEFAULT_DISPLAY_PROPERTIES} />);
+    mount(
+      <NotesTable
+        {...props}
+        items={[props.item]}
+        selectedNoteIds={new Set()}
+        foldersById={{}}
+        properties={DEFAULT_DISPLAY_PROPERTIES}
+      />
+    );
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByRole('table').querySelectorAll('colgroup > col')).toHaveLength(7);
     expect(screen.getByRole('columnheader', { name: '标签' })).toBeInTheDocument();
@@ -110,7 +164,12 @@ describe('Notes index item views', () => {
 
   it('gives every folder its own gradient and removes extra paper in plain mode', () => {
     const item = { kind: 'folder' as const, folder: { id: 'folder', name: '资料', parentId: null, children: [] } };
-    const { container, rerender } = render(<><NotesIndexArt item={item} noteCount={1} /><NotesIndexArt item={item} noteCount={1} /></>);
+    const { container, rerender } = render(
+      <>
+        <NotesIndexArt item={item} noteCount={1} />
+        <NotesIndexArt item={item} noteCount={1} />
+      </>
+    );
     const gradients = [...container.querySelectorAll('linearGradient')];
     expect(gradients).toHaveLength(2);
     expect(gradients[0].id).not.toBe(gradients[1].id);
@@ -119,13 +178,44 @@ describe('Notes index item views', () => {
       expect(container.querySelector(`[fill="url(#${gradient.id})"]`)).not.toBeNull();
     });
     expect(container.querySelectorAll('[data-folder-paper]')).toHaveLength(2);
-    rerender(<><NotesIndexArt item={item} noteCount={2} /><NotesIndexArt item={item} noteCount={8} /><NotesIndexArt item={item} /></>);
+    rerender(
+      <>
+        <NotesIndexArt item={item} noteCount={2} />
+        <NotesIndexArt item={item} noteCount={8} />
+        <NotesIndexArt item={item} />
+      </>
+    );
     expect(container.querySelectorAll('[data-folder-paper]')).toHaveLength(1 + 3 + 0);
+  });
+
+  it.each(['capsule', 'layout'] as const)('文档和 PDF 图标渲染 %s 样式并独立标识渐变', style => {
+    const pdf = { ...note, id: 'pdf', title: '示例 PDF', contentKind: 'pdf' as const, tagIds: [] };
+    const { container } = render(
+      <>
+        <NotesIndexArt item={{ kind: 'note', note }} tags={tags} documentStyle={style} />
+        <NotesIndexArt item={{ kind: 'note', note: pdf }} documentStyle={style} />
+      </>
+    );
+    const document = container.querySelector('[data-art-kind="document"]');
+    const pdfArt = container.querySelector('[data-art-kind="pdf"]');
+    expect(document).toHaveAttribute('data-has-tag-color', 'true');
+    expect(document?.querySelector('svg')).toHaveAttribute('data-document-style', style);
+    expect(pdfArt?.querySelector('svg')).toHaveAttribute('data-document-style', style);
+    expect(document).toHaveTextContent('NOTE');
+    expect(pdfArt).toHaveTextContent('PDF');
+    const gradients = [...container.querySelectorAll('linearGradient')];
+    expect(gradients).toHaveLength(style === 'capsule' ? 2 : 0);
+    if (style === 'capsule') {
+      expect(gradients[0].id).not.toBe(gradients[1].id);
+      gradients.forEach(gradient => expect(container.querySelector(`[fill="url(#${gradient.id})"]`)).not.toBeNull());
+    }
   });
 
   it('卡片视图的 PDF 使用叠页封面，图标视图仍是单页图标', () => {
     const pdf = { ...note, id: 'pdf', title: '示例 PDF', contentKind: 'pdf' as const, tagIds: [] };
-    const { container, unmount } = mount(<IndexTile {...tileProps({ item: { kind: 'note', note: pdf }, notes: [pdf] })} />);
+    const { container, unmount } = mount(
+      <IndexTile {...tileProps({ item: { kind: 'note', note: pdf }, notes: [pdf] })} />
+    );
     const cover = container.querySelector('[data-pdf-style="stack"]');
     expect(cover).toHaveAttribute('aria-hidden', 'true');
     expect(cover?.querySelectorAll('[class*="pdfPage"] em')).toHaveLength(1);
@@ -158,7 +248,14 @@ describe('Notes index item views', () => {
     const folder = { id: 'folder', name: '论文', parentId: null, children: [], updatedAt: '2026-11-01T00:00:00.000Z' };
     const inside = [
       { ...note, id: 'a', title: '较早笔记', folderId: 'folder', updatedAt: '2026-11-02T08:00:00.000Z' },
-      { ...note, id: 'b', title: '最新 PDF', folderId: 'folder', contentKind: 'pdf' as const, updatedAt: '2026-11-04T08:00:00.000Z' }
+      {
+        ...note,
+        id: 'b',
+        title: '最新 PDF',
+        folderId: 'folder',
+        contentKind: 'pdf' as const,
+        updatedAt: '2026-11-04T08:00:00.000Z'
+      }
     ];
     const { container } = mount(<IndexTile {...tileProps({ item: { kind: 'folder', folder }, notes: inside })} />);
     expect(container.querySelector('[data-folder-style="paper"]')).toHaveAttribute('aria-hidden', 'true');
@@ -171,7 +268,13 @@ describe('Notes index item views', () => {
   });
 
   it('空文件夹没有叠放的纸，并提示还没有内容', () => {
-    const folder = { id: 'folder', name: '待整理', parentId: null, children: [], updatedAt: '2026-11-06T01:12:00.000Z' };
+    const folder = {
+      id: 'folder',
+      name: '待整理',
+      parentId: null,
+      children: [],
+      updatedAt: '2026-11-06T01:12:00.000Z'
+    };
     const { container } = mount(<IndexTile {...tileProps({ item: { kind: 'folder', folder }, notes: [] })} />);
     expect(screen.getByText('还没有内容')).toBeInTheDocument();
     expect(screen.getByText('空文件夹')).toBeInTheDocument();
@@ -182,5 +285,4 @@ describe('Notes index item views', () => {
     render(<ItemFavorite />);
     expect(screen.getByLabelText('已收藏')).toBeInTheDocument();
   });
-
 });

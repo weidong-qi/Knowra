@@ -8,10 +8,25 @@ export interface NotesIndexAppearance {
   buttonStyle: ButtonStyle;
   dialogStyle: DialogStyle;
   accentColor: AccentColor;
+  documentIconStyle: DocumentIconStyle;
+  topbarColorLight: string | null;
+  topbarColorDark: string | null;
+  railColorLight: string | null;
+  railColorDark: string | null;
+  shellColorLight: string | null;
+  shellColorDark: string | null;
+  sidebarColorLight: string | null;
+  sidebarColorDark: string | null;
+  sidebarCard: boolean;
+  sidebarRounded: boolean;
+  sidebarBorder: boolean;
 }
 
 export const ACCENT_COLORS = ['ink', 'orange'] as const;
 export type AccentColor = (typeof ACCENT_COLORS)[number];
+
+export const DOCUMENT_ICON_STYLES = ['capsule', 'layout'] as const;
+export type DocumentIconStyle = (typeof DOCUMENT_ICON_STYLES)[number];
 
 /** 主按钮（Button primary）外观：纸感、白玻璃。 */
 export const BUTTON_STYLES = ['paper', 'frost'] as const;
@@ -29,11 +44,27 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   overlayMaterial: 'glass',
   buttonStyle: 'paper',
   dialogStyle: 'float',
-  accentColor: 'ink'
+  accentColor: 'ink',
+  documentIconStyle: 'capsule',
+  topbarColorLight: null,
+  topbarColorDark: null,
+  railColorLight: null,
+  railColorDark: null,
+  shellColorLight: null,
+  shellColorDark: null,
+  sidebarColorLight: null,
+  sidebarColorDark: null,
+  sidebarCard: false,
+  sidebarRounded: false,
+  sidebarBorder: false
 };
 const listeners = new Set<() => void>();
 let snapshot = readAppearance();
 let hasUnsavedChanges = false;
+
+function parseColor(value: unknown): string | null {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : null;
+}
 
 export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance {
   const candidate = value && typeof value === 'object' ? (value as Partial<NotesIndexAppearance>) : {};
@@ -51,7 +82,21 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
       : 'float',
     accentColor: ACCENT_COLORS.includes(candidate.accentColor as AccentColor)
       ? (candidate.accentColor as AccentColor)
-      : 'ink'
+      : 'ink',
+    documentIconStyle: DOCUMENT_ICON_STYLES.includes(candidate.documentIconStyle as DocumentIconStyle)
+      ? (candidate.documentIconStyle as DocumentIconStyle)
+      : 'capsule',
+    topbarColorLight: parseColor(candidate.topbarColorLight),
+    topbarColorDark: parseColor(candidate.topbarColorDark),
+    railColorLight: parseColor(candidate.railColorLight),
+    railColorDark: parseColor(candidate.railColorDark),
+    shellColorLight: parseColor(candidate.shellColorLight),
+    shellColorDark: parseColor(candidate.shellColorDark),
+    sidebarColorLight: parseColor(candidate.sidebarColorLight),
+    sidebarColorDark: parseColor(candidate.sidebarColorDark),
+    sidebarCard: candidate.sidebarCard === true,
+    sidebarRounded: candidate.sidebarRounded === true,
+    sidebarBorder: candidate.sidebarBorder === true
   };
 }
 

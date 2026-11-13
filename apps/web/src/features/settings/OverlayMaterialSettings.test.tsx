@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ScopedAppearanceProvider } from '../../components/ui/overlay/ScopedAppearance';
@@ -75,11 +75,12 @@ describe('浮层材质设置', () => {
 it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后恢复焦点', async () => {
   const user = userEvent.setup();
   render(<SettingsSurface />);
-  for (const name of ['暖橙', '白玻璃', '内嵌托盘']) {
+  for (const name of ['暖橙', '白玻璃', '内嵌托盘', '学术版式']) {
     await user.click(screen.getByRole('button', { name }));
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
   expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
+    documentIconStyle: 'layout',
     accentColor: 'orange',
     buttonStyle: 'frost',
     dialogStyle: 'tray'
@@ -97,7 +98,36 @@ it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后�
   await waitFor(() => expect(trigger).toHaveFocus());
   cleanup();
   render(<SettingsSurface />);
-  for (const name of ['暖橙', '白玻璃', '内嵌托盘']) {
+  for (const name of ['暖橙', '白玻璃', '内嵌托盘', '学术版式']) {
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
+});
+
+it('侧栏外形和每种模式的背景分别保存', async () => {
+  const user = userEvent.setup();
+  render(<SettingsSurface />);
+  const outer = screen.getByRole('heading', { name: '外栏背景' }).parentElement!.parentElement!;
+  const sidebar = screen.getByRole('heading', { name: '上下文侧栏背景' }).parentElement!.parentElement!;
+  const outerInput = within(outer).getByRole('textbox', { name: '十六进制颜色' });
+  const sidebarInput = within(sidebar).getByRole('textbox', { name: '十六进制颜色' });
+  await user.clear(outerInput);
+  await user.type(outerInput, '#123456');
+  await user.clear(sidebarInput);
+  await user.type(sidebarInput, '#abcdef');
+  await user.click(screen.getByRole('switch', { name: '独立间距' }));
+  await user.click(screen.getByRole('switch', { name: '细边线' }));
+  expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
+    shellColorLight: '#123456',
+    sidebarColorLight: '#abcdef',
+    sidebarCard: true,
+    sidebarRounded: false,
+    sidebarBorder: true
+  });
+  act(() => setNotesIndexAppearance({ mode: 'dark' }));
+  const darkOuter = screen.getByRole('heading', { name: '外栏背景' }).parentElement!.parentElement!;
+  expect(within(darkOuter).getByRole('textbox', { name: '十六进制颜色' })).toHaveValue('#101114');
+  expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
+    shellColorDark: null,
+    sidebarColorDark: null
+  });
 });

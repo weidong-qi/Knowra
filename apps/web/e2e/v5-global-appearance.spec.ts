@@ -59,6 +59,36 @@ for (const mode of ['light', 'dark'] as const) {
   });
 }
 
+for (const mode of ['light', 'dark'] as const) {
+  test(`笔记侧栏快速入口和文件夹在${mode === 'light' ? '浅色' : '深色'}模式显示主题选中卡片`, async ({
+    page
+  }, testInfo) => {
+    await mockEditorWorkspace(page, []);
+    await page.addInitScript(
+      mode => localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify({ mode })),
+      mode
+    );
+    await page.goto('/#/materials');
+    const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+    const allNotes = sidebar.getByRole('button', { name: /全部笔记/ });
+    await allNotes.click();
+    await expect(allNotes).toHaveAttribute('aria-current', 'page');
+    const folder = sidebar.locator('[data-folder-id="folder-1"]');
+    for (const entry of [allNotes, folder]) {
+      if (entry === folder) await folder.click();
+      await expect(entry).toHaveAttribute('aria-current', 'page');
+      if (mode === 'light') {
+        await expect(entry).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+        await expect(entry).toHaveCSS('background-image', 'none');
+      } else {
+        await expect(entry).toHaveCSS('background-image', /linear-gradient/);
+      }
+      await expect(entry).not.toHaveCSS('box-shadow', 'none');
+    }
+    await page.screenshot({ path: testInfo.outputPath(`侧栏选中态-${mode}.png`), animations: 'disabled' });
+  });
+}
+
 test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保留', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
   await page.route('**/api/ai/model-settings', route =>
@@ -232,6 +262,104 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
     'aria-pressed',
     'true'
   );
+});
+
+test('文档与 PDF 图标风格切换后在刷新及深色模式中保留', async ({ page }, info) => {
+  await mockEditorWorkspace(page, []);
+  await page.route('**/api/ai/model-settings', route =>
+    route.fulfill({
+      json: {
+        data: {
+          configured: false,
+          modelId: 'deepseek-flash',
+          modelSupported: true,
+          supportedModelIds: ['deepseek-flash']
+        }
+      }
+    })
+  );
+  const notes = [
+    createNote('', false, 'icon-note', '图标笔记', null),
+    { ...createNote('', false, 'icon-pdf', '图标 PDF', null), contentKind: 'pdf' }
+  ];
+  await page.route(
+    url => url.pathname === '/api/knowledge/notes',
+    route => route.fulfill({ json: { data: notes } })
+  );
+  await page.goto('/#/settings');
+  await expect(page.getByRole('button', { name: '胶囊徽标' })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/#/materials');
+  const document = page.locator('[data-art-kind="document"] svg[data-document-style]');
+  const pdf = page.locator('[data-art-kind="pdf"] svg[data-document-style]');
+  await expect(document).toHaveAttribute('data-document-style', 'capsule');
+  await expect(pdf).toHaveAttribute('data-document-style', 'capsule');
+  await page.screenshot({ path: info.outputPath('icons-capsule-light.png'), animations: 'disabled' });
+  await page.goto('/#/settings');
+  await page.getByRole('button', { name: '学术版式' }).click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: '学术版式' })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/#/materials');
+  await expect(document).toHaveAttribute('data-document-style', 'layout');
+  await expect(pdf).toHaveAttribute('data-document-style', 'layout');
+  await page.screenshot({ path: info.outputPath('icons-layout-light.png'), animations: 'disabled' });
+  await page.getByRole('button', { name: '切换深色模式' }).click();
+  await expect(document).toHaveAttribute('data-document-style', 'layout');
+  await expect(pdf).toHaveAttribute('data-document-style', 'layout');
+  await page.screenshot({ path: info.outputPath('icons-layout-dark.png'), animations: 'disabled' });
+});
+
+test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ page }, info) => {
+  await mockEditorWorkspace(page, []);
+  await page.route('**/api/ai/model-settings', route =>
+    route.fulfill({
+      json: {
+        data: {
+          configured: false,
+          modelId: 'deepseek-flash',
+          modelSupported: true,
+          supportedModelIds: ['deepseek-flash']
+        }
+      }
+    })
+  );
+  await page.goto('/#/settings');
+  const outer = page.getByRole('heading', { name: '外栏背景', exact: true }).locator('xpath=../..');
+  const topbarSetting = page.getByRole('heading', { name: '顶部栏背景', exact: true }).locator('xpath=../..');
+  const railSetting = page.getByRole('heading', { name: '左侧模块栏背景', exact: true }).locator('xpath=../..');
+  const sidebarSetting = page.getByRole('heading', { name: '上下文侧栏背景', exact: true }).locator('xpath=../..');
+  await outer.getByRole('textbox', { name: '十六进制颜色' }).fill('#cdd9e6');
+  await topbarSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#ddeeff');
+  await railSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#ccddee');
+  await sidebarSetting.getByRole('textbox', { name: '十六进制颜色' }).fill('#f4f0e8');
+  await page.getByRole('switch', { name: '独立间距' }).locator('xpath=ancestor::label').click();
+  await page.getByRole('switch', { name: '四角圆角' }).locator('xpath=ancestor::label').click();
+  await page.getByRole('switch', { name: '细边线' }).locator('xpath=ancestor::label').click();
+  await page.reload();
+  await expect(page.getByRole('switch', { name: '四角圆角' })).toBeChecked();
+  await expect(outer.getByRole('textbox', { name: '十六进制颜色' })).toHaveValue('#cdd9e6');
+  await page.goto('/#/materials');
+  const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
+  const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+  const stage = page.locator('#feature-stage');
+  await expect(shell).toHaveAttribute('data-sidebar-card', 'true');
+  await expect(page.getByRole('banner', { name: '全局顶栏' })).toHaveCSS('background-color', 'rgb(221, 238, 255)');
+  await expect(page.getByRole('navigation', { name: '工作域导航' })).toHaveCSS(
+    'background-color',
+    'rgb(204, 221, 238)'
+  );
+  await expect(sidebar).toHaveCSS('background-color', 'rgb(244, 240, 232)');
+  await expect(sidebar).toHaveCSS('border-top-right-radius', '12px');
+  await expect(sidebar).toHaveCSS('outline-width', '1px');
+  const gap = await sidebar.evaluate(element => {
+    const main = document.getElementById('feature-stage')!;
+    return main.getBoundingClientRect().left - element.getBoundingClientRect().right;
+  });
+  expect(gap).toBeGreaterThan(0);
+  await expect(stage).toHaveCSS('border-top-left-radius', '12px');
+  await page.screenshot({ path: info.outputPath('sidebar-independent.png'), animations: 'disabled' });
+  await page.getByRole('button', { name: '切换深色模式' }).click();
+  await expect(sidebar).not.toHaveCSS('background-color', 'rgb(244, 240, 232)');
+  await page.screenshot({ path: info.outputPath('sidebar-independent-dark.png'), animations: 'disabled' });
 });
 
 test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完整菜单', async ({ page }, info) => {

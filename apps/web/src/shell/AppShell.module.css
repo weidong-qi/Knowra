@@ -23,7 +23,7 @@
   grid-row: 1;
   min-width: 0;
   display: flex;
-  background: transparent;
+  background: var(--shell-topbar-color, transparent);
 }
 .desktopShell .desktopTitlebar {
   padding-left: max(var(--window-controls-clearance), env(titlebar-area-x, 0px));
@@ -129,7 +129,7 @@
   height: min(85dvh, 760px);
   max-width: min(360px, calc(100vw - 32px));
   padding: 0;
-  background: var(--surface-sidebar-solid);
+  background: var(--ni-shell-panel, var(--surface-sidebar-solid));
   display: flex;
   flex-direction: column;
 }
@@ -197,7 +197,11 @@
   background: var(--border-subtle);
 }
 
-/* 外壳表面（顶栏、模块栏、上下文侧栏）共用一套中性墨色与选中样式；侧栏内容自带主题类，所以对其子元素再声明一次。 */
+.shell > nav {
+  background: var(--shell-rail-color, transparent);
+}
+
+/* 外壳表面共用中性墨色与悬停层级；侧栏内容自带主题类，所以对其子元素再声明一次。 */
 .shell > .desktopTitlebar,
 .shell > nav,
 .shell .contextSidebar [data-ni-mode] {
@@ -219,13 +223,38 @@
   --surface-hover: var(--ni-shell-hover);
   --surface-pressed: var(--ni-shell-press);
   --surface-selected: var(--ni-shell-selected);
-  --surface-nav-selected: var(--ni-shell-card);
   --surface-rail-selected: var(--ni-shell-tile);
   --shadow-rail-selected: var(--ni-shell-tile-shadow);
+  --nav-count-ink: var(--ni-shell-ink-3);
+}
+
+/* 顶栏与模块栏保持外壳选中态，上下文侧栏使用主题中的浮起卡片。 */
+.shell > .desktopTitlebar,
+.shell > nav {
+  --surface-nav-selected: var(--ni-shell-card);
   --highlight-nav-selected: 0 0 transparent;
   --nav-selected-bg: var(--ni-shell-card);
   --nav-selected-line: transparent;
   --nav-selected-ink: var(--ni-shell-ink);
   --nav-selected-shadow: 0 0 transparent;
-  --nav-count-ink: var(--ni-shell-ink-3);
+}
+
+/* 侧栏间距、圆角和边线独立组合；窄屏侧栏仍使用弹层。 */
+@media (min-width: 768px) {
+  .shellWithSidebar[data-sidebar-card='true'] {
+    grid-template-columns: var(--rail-size) calc(var(--sidebar-size) + var(--shell-gap)) minmax(0, 1fr);
+  }
+  .shellWithSidebar[data-sidebar-card='true'] .contextSidebar {
+    margin-right: var(--shell-gap);
+  }
+  .shellWithSidebar[data-sidebar-card='true'] .stage {
+    border-radius: var(--shell-panel-radius);
+  }
+  .shellWithSidebar[data-sidebar-rounded='true'] .contextSidebar {
+    border-radius: var(--shell-panel-radius);
+  }
+  .shellWithSidebar[data-sidebar-border='true'] .contextSidebar {
+    outline: 1px solid var(--border-strong);
+    outline-offset: -1px;
+  }
 }
