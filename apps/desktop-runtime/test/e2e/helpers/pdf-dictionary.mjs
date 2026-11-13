@@ -107,6 +107,8 @@ export async function exercisePdfDictionary(page) {
   await page.reload();
   await expect(page.locator('.textLayer')).toContainText('Gradients');
   assert.equal((await marks())[0].comment, saved.comment);
+  await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const point = await wordPoint('Gradients');
   await page.mouse.move(point.x, point.y);
   await expect(page.getByRole('tooltip')).toContainText('梯度');
