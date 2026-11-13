@@ -185,7 +185,9 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
-  const textMark = await page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').boundingBox();
+  const textHighlight = page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]');
+  await expect(textHighlight).toBeVisible();
+  const textMark = await textHighlight.boundingBox();
   assert(textMark);
   await page.mouse.click(textMark.x + textMark.width / 2, textMark.y + textMark.height / 2);
   await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();

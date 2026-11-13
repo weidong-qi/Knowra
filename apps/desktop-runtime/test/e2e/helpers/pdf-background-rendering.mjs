@@ -68,6 +68,7 @@ export async function exercisePdfBackgroundRendering(page) {
     await expect(page.locator('.page[data-page-number="2"] canvas')).toBeVisible();
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const mark = page.locator('[data-pdf-annotation-id="background-mark"]');
+    await expect(mark).toBeVisible();
     const rect = await mark.boundingBox();
     assert(rect);
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);

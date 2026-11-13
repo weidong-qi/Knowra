@@ -85,7 +85,9 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   const clickRegion = async () => {
     if (await page.getByRole('complementary', { name: 'PDF 检查器' }).isVisible())
       await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
-    const b = await page.locator(`[data-pdf-annotation-id="${region.id}"]`).boundingBox();
+    const mark = page.locator(`[data-pdf-annotation-id="${region.id}"]`);
+    await expect(mark).toBeVisible();
+    const b = await mark.boundingBox();
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
   };

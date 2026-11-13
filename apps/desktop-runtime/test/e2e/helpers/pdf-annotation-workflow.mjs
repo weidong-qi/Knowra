@@ -79,6 +79,7 @@ export async function exercisePdfAnnotationWorkflow(page) {
     // 定位会产生异步 scroll 与覆盖层更新；等浏览器完成这轮布局后再点击。
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const mark = page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').first();
+    await expect(mark).toBeVisible();
     const rect = await mark.boundingBox();
     assert(rect);
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);

@@ -122,6 +122,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   const mark = page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]');
   await expect(mark).toHaveCount(1);
   await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
+  await expect(mark).toBeVisible();
   const box = await mark.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.getByRole('tooltip')).toContainText('悬停即可查看的批注');
@@ -274,6 +275,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
   const underlineHit = page.locator('[data-pdf-hit-area]');
+  await expect(underlineHit).toBeVisible();
   const lineBox = await underlineHit.boundingBox();
   await page.mouse.move(lineBox.x + lineBox.width / 2, lineBox.y + lineBox.height / 2);
   await expect(page.getByRole('tooltip')).toHaveAttribute('data-kind', 'question');
