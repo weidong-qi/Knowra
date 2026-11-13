@@ -20,6 +20,7 @@ export function PdfSidePanel({
   items,
   outline,
   selected,
+  selectionRevision,
   canWrite,
   onClose,
   onSelect,
@@ -32,6 +33,7 @@ export function PdfSidePanel({
   items: PdfAnnotation[];
   outline: PdfOutlineItem[];
   selected: string | null;
+  selectionRevision?: number;
   canWrite: boolean;
   onClose(): void;
   onSelect(item: PdfAnnotation): void;
@@ -73,6 +75,7 @@ export function PdfSidePanel({
                 filteredOutId={hiddenSelectedId}
                 emptyHint={!items.length}
                 selected={selected}
+                selectionRevision={selectionRevision}
                 canWrite={canWrite}
                 onSelect={onSelect}
                 onChange={onChange}

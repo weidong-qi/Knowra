@@ -57,6 +57,7 @@ export function PdfReaderView({
   const [loaded, setLoaded] = useState(false),
     [error, setError] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectionRevision, setSelectionRevision] = useState(0);
   const [annotationAction, setAnnotationAction] = useState<{ id: string; x: number; y: number } | null>(null);
   const [commentEditor, setCommentEditor] = useState<{ id: string; x: number; y: number } | null>(null);
   const annotationPress = useRef<{ id: string; x: number; y: number } | null>(null);
@@ -622,6 +623,8 @@ export function PdfReaderView({
             onExport={exportExcerpt}
             onExtract={extractToNote}
             onPanel={() => {
+              setAnnotationAction(null);
+              setCommentEditor(null);
               setPanel(panel && panelTab === 'marks' ? false : true);
               setPanelTab('marks');
             }}
@@ -683,7 +686,12 @@ export function PdfReaderView({
                 syncScrollPosition(event.currentTarget);
                 setSelected(press.id);
                 setPending(null);
-                setAnnotationAction({ id: press.id, x: event.clientX, y: event.clientY + 12 });
+                setCommentEditor(null);
+                if (panel) {
+                  setSelectionRevision(value => value + 1);
+                  setPanelTab('marks');
+                  setAnnotationAction(null);
+                } else setAnnotationAction({ id: press.id, x: event.clientX, y: event.clientY + 12 });
                 return;
               }
               const move = noteDrag.current;
@@ -772,6 +780,7 @@ export function PdfReaderView({
             items={items}
             enabled={
               tool === 'text' &&
+              !(panel && panelTab === 'marks') &&
               !pending &&
               !dictionary &&
               !translation &&
@@ -781,7 +790,7 @@ export function PdfReaderView({
             }
             revision={viewer.revision}
           />
-          {actionItem && annotationAction ? (
+          {actionItem && annotationAction && !(panel && panelTab === 'marks') ? (
             <PdfAnnotationActions
               item={actionItem}
               point={annotationAction}
@@ -813,7 +822,7 @@ export function PdfReaderView({
               }}
             />
           ) : null}
-          {editingItem && commentEditor ? (
+          {editingItem && commentEditor && !(panel && panelTab === 'marks') ? (
             <PdfCommentEditor
               item={editingItem}
               point={commentEditor}
@@ -917,6 +926,7 @@ export function PdfReaderView({
             items={items}
             outline={outline}
             selected={selected}
+            selectionRevision={selectionRevision}
             canWrite={editable}
             onSelect={jump}
             onChange={change}

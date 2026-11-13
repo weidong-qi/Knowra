@@ -61,10 +61,47 @@ function setup() {
   const item = { id: 'a1', kind: 'important', comment: '悬停批注' } as PdfAnnotation;
   const props = { containerRef: { current: container }, items: [item], enabled: true, revision: 1 };
   const view = render(<PdfAnnotationTooltip {...props} />);
-  const move = (x = 30) => fireEvent(target, new MouseEvent('pointermove', { clientX: x, clientY: 20, bubbles: true }));
+  const move = (x = 30, y = 20) =>
+    fireEvent(target, new MouseEvent('pointermove', { clientX: x, clientY: y, bubbles: true }));
   move();
   return { container, target, item, props, view, atPoint, move };
 }
+
+it('预览锚定同页多行标注的整体范围，移过同一标注时位置不变', () => {
+  const { container, view, move } = setup();
+  const secondLine = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  secondLine.dataset.pdfAnnotationId = 'a1';
+  container.querySelector('svg')!.append(secondLine);
+  vi.spyOn(secondLine, 'getBoundingClientRect').mockReturnValue({
+    left: 10,
+    right: 80,
+    top: 50,
+    bottom: 80
+  } as DOMRect);
+  move(30, 60);
+  const anchor = view.container.querySelector('span[aria-hidden="true"]')!;
+  expect(anchor).toHaveStyle({ left: '10px', top: '10px', width: '90px', height: '70px' });
+  move(80, 20);
+  expect(anchor).toHaveStyle({ left: '10px', top: '10px', width: '90px', height: '70px' });
+});
+
+it('重绘后按最新矩形更新锚点，仍按实际鼠标位置检查命中', () => {
+  const { container, view, props } = setup();
+  vi.mocked(container.querySelector('rect')!.getBoundingClientRect).mockReturnValue({
+    left: 0,
+    right: 120,
+    top: 0,
+    bottom: 45
+  } as DOMRect);
+  view.rerender(<PdfAnnotationTooltip {...props} revision={2} />);
+  expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
+  expect(view.container.querySelector('span[aria-hidden="true"]')).toHaveStyle({
+    left: '0px',
+    top: '0px',
+    width: '120px',
+    height: '45px'
+  });
+});
 
 it('文字层迟到的重绘保留仍命中的批注，位置失效时才收起', () => {
   const { item, props, view, atPoint } = setup();

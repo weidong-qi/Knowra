@@ -121,6 +121,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   assert.equal(marks[0].segments.length, 1, JSON.stringify(marks[0].segments));
   const mark = page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]');
   await expect(mark).toHaveCount(1);
+  await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
   const box = await mark.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.getByRole('tooltip')).toContainText('悬停即可查看的批注');
@@ -169,6 +170,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   assert.equal(replaced.status(), 200);
   await page.reload();
   await expect(page.locator('.textLayer')).toContainText('EGULARIZATION', { timeout: 25000 });
+  await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
   const legacyMark = page.locator(`[data-pdf-annotation-id="${marks[0].id}"]`);
   await expect(legacyMark).toHaveCount(1);
   for (let i = 0; i < 4; i++) {
@@ -196,6 +198,8 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     await expect(page.getByRole('tooltip')).toHaveCount(0);
   }
   // 通过浏览器输入管线模拟触控板捏合：PDF 缩放、外壳尺寸不变，并能反向缩小。
+  await page.getByRole('button', { name: '标注', exact: true }).click();
+  await expect(inspector).toBeVisible();
   const pdfCanvas = page.locator('.canvasWrapper').first();
   await page.getByRole('button', { name: '适合宽度', exact: true }).click();
   const initial = await pdfCanvas.boundingBox();
@@ -217,6 +221,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   assert.equal(await page.evaluate(() => window.visualViewport.scale), 1);
   await cdp.detach();
   await page.getByRole('button', { name: '适合宽度', exact: true }).click();
+  await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
   await legacyMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
   const clickMark = async locator => {
     const rect = await locator.boundingBox();
@@ -267,6 +272,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
   await inspector.getByRole('textbox', { name: '评论', exact: true }).fill('蓝色下划线批注');
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
   const underlineHit = page.locator('[data-pdf-hit-area]');
   const lineBox = await underlineHit.boundingBox();
   await page.mouse.move(lineBox.x + lineBox.width / 2, lineBox.y + lineBox.height / 2);
@@ -306,5 +312,17 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await panel.hover();
   await page.mouse.wheel(0, 5000);
   await expect(inspector.getByRole('button', { name: /定位标注.*Scroll mark 14/ })).toBeInViewport();
+  // 从正文选择列表末尾的标注，侧栏自动滚动；PDF 保持原位置且不弹出重复卡片。
+  await panel.evaluate(el => {
+    el.scrollTop = 0;
+  });
+  const lastMark = page.locator('[data-pdf-annotation-id="list-14"]');
+  await lastMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
+  const lastBox = await lastMark.boundingBox();
+  const beforeClick = await reader.evaluate(el => el.scrollTop);
+  await page.mouse.click(lastBox.x + lastBox.width / 2, lastBox.y + lastBox.height / 2);
+  await expect(inspector.getByRole('button', { name: /定位标注.*Scroll mark 14/ })).toBeInViewport();
+  await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
+  assert.equal(await reader.evaluate(el => el.scrollTop), beforeClick);
   assert.deepEqual(errors, []);
 });

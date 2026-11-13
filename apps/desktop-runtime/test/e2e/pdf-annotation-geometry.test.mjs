@@ -156,6 +156,8 @@ test('PDF 紧密行距：新旧高亮不重叠、下划线贴合原行、点击�
   );
   const hit = page.locator('[data-pdf-hit-area]').first();
   const clickMark = async () => {
+    if (await page.getByRole('complementary', { name: 'PDF 检查器' }).isVisible())
+      await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
     const box = await hit.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();

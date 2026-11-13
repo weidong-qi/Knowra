@@ -114,6 +114,7 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('退出前的本机评论', {
     timeout: 30000
   });
+  await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
   const savedRegion = page.locator('[data-knowra-pdf-overlay] [data-type="region"]');
   // 定位后的延迟布局可能改变阅读位置，用当前可见标注的坐标悬停。
   await expect
@@ -183,6 +184,7 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
     .toBe(true);
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
   const textMark = await page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').boundingBox();
   assert(textMark);
   await page.mouse.click(textMark.x + textMark.width / 2, textMark.y + textMark.height / 2);

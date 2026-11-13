@@ -63,6 +63,7 @@ export async function exercisePdfBackgroundRendering(page) {
     await page.reload();
     await page.goto(`${origin}/#/materials/notes/${note.id}`);
     await expect(page.locator('.textLayer').first()).toContainText('First editable text');
+    await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
     await expect.poll(() => page.evaluate(() => window.pdfBackgroundTextWaiting)).toBe(true);
     await expect(page.locator('.page[data-page-number="2"] canvas')).toBeVisible();
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));

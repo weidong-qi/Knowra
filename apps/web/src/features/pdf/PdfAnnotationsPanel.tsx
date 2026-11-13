@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { DeleteIcon } from '../../components/icons/knowra';
 import {
@@ -16,6 +16,7 @@ import styles from './PdfReader.module.css';
 export function PdfAnnotationsList({
   items,
   selected,
+  selectionRevision = 0,
   canWrite,
   onSelect,
   onChange,
@@ -25,6 +26,7 @@ export function PdfAnnotationsList({
 }: {
   items: PdfAnnotation[];
   selected: string | null;
+  selectionRevision?: number;
   canWrite: boolean;
   onSelect(item: PdfAnnotation): void;
   onChange(id: string, fields: Partial<PdfAnnotation>): void;
@@ -32,6 +34,10 @@ export function PdfAnnotationsList({
   emptyHint?: boolean;
   filteredOutId?: string;
 }) {
+  const selectedCardRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    selectedCardRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [selected, selectionRevision]);
   return (
     <>
       {!items.length && emptyHint ? (
@@ -42,6 +48,7 @@ export function PdfAnnotationsList({
       {sortPdfAnnotations(items).map(item => (
         <section
           key={item.id}
+          ref={selected === item.id ? selectedCardRef : undefined}
           className={styles.markCard}
           data-selected={selected === item.id || undefined}
           data-kind={item.kind}

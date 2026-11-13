@@ -71,15 +71,34 @@ export async function exercisePdfAnnotationWorkflow(page) {
   await redo.click();
   await expect.poll(async () => (await marks()).length).toBe(1);
   assert.notEqual((await marks())[0].id, originalId);
-  const clickMark = async () => {
+  const inspector = page.getByRole('complementary', { name: 'PDF 检查器' });
+  const sidebarField = inspector.getByRole('textbox', { name: '评论', exact: true });
+  const clickMark = async (inSidebar = false) => {
+    if (!inSidebar && (await inspector.isVisible()))
+      await page.getByRole('button', { name: '关闭 PDF 检查器', exact: true }).click();
     // 定位会产生异步 scroll 与覆盖层更新；等浏览器完成这轮布局后再点击。
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const mark = page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').first();
     const rect = await mark.boundingBox();
     assert(rect);
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
-    await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
+    if (inSidebar) {
+      await expect(sidebarField).toBeVisible();
+      await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
+      await expect(page.getByRole('dialog', { name: '编辑 PDF 批注' })).toHaveCount(0);
+      await expect(sidebarField).not.toBeFocused();
+    } else await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
   };
+  // 侧栏展开时直接选中对应条目，正文上不再重复显示操作或编辑卡片。
+  await clickMark(true);
+  await sidebarField.fill('侧栏输入批注');
+  await expect.poll(async () => (await marks())[0].comment).toBe('侧栏输入批注');
+  const highlighted = page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').first();
+  let highlightBox = await highlighted.boundingBox();
+  await page.mouse.move(highlightBox.x + highlightBox.width / 2, highlightBox.y + highlightBox.height / 2);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await sidebarField.fill('');
+  await expect.poll(async () => (await marks())[0].comment).toBe('');
   await clickMark();
   await page.getByRole('button', { name: '添加批注', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '编辑 PDF 批注' });
@@ -88,6 +107,17 @@ export async function exercisePdfAnnotationWorkflow(page) {
   await field.fill('需要复习的批注 ABC');
   await expect.poll(async () => (await marks())[0].comment).toBe('需要复习的批注 ABC');
   await editor.getByRole('button', { name: '完成', exact: true }).click();
+  // 侧栏关闭时保留预览；预览避开标注，并且不跟随鼠标在同一标注内移动。
+  highlightBox = await highlighted.boundingBox();
+  await page.mouse.move(highlightBox.x + highlightBox.width / 4, highlightBox.y + highlightBox.height / 2);
+  const preview = page.getByRole('tooltip');
+  await expect(preview).toContainText('需要复习的批注 ABC');
+  const previewBox = await preview.boundingBox();
+  assert(previewBox.y + previewBox.height <= highlightBox.y || previewBox.y >= highlightBox.y + highlightBox.height);
+  await page.mouse.move(highlightBox.x + (highlightBox.width * 3) / 4, highlightBox.y + highlightBox.height / 2);
+  await expect(preview).toBeVisible();
+  const movedBox = await preview.boundingBox();
+  assert(Math.abs(previewBox.x - movedBox.x) < 1 && Math.abs(previewBox.y - movedBox.y) < 1);
   await undo.click();
   await expect.poll(async () => (await marks())[0].comment).toBe('');
   await redo.click();
@@ -205,9 +235,6 @@ export async function exercisePdfAnnotationWorkflow(page) {
   // 用真实逐键输入验证筛选命中变化：编辑器不得卸载，只保存首字符或丢失焦点。
   await choose('批注状态', '无批注');
   await page.getByRole('button', { name: /定位标注.*filter-two/ }).click();
-  const sidebarField = page
-    .getByRole('complementary', { name: 'PDF 检查器' })
-    .getByRole('textbox', { name: '评论', exact: true });
   await sidebarField.click();
   const originalField = await sidebarField.elementHandle();
   assert(originalField);
@@ -232,16 +259,15 @@ export async function exercisePdfAnnotationWorkflow(page) {
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
     await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-annotation-filter-search.png') });
   }
-  // 点击过滤结果仍可定位；浮层最后一次输入在退出/重开验收中检查。
+  // 点击过滤结果仍可定位；侧栏最后一次输入在退出/重开验收中检查。
   await page.getByRole('button', { name: /定位标注.*First selected text/ }).click();
-  await clickMark();
-  await page.getByRole('button', { name: '编辑批注', exact: true }).click();
+  await clickMark(true);
   if (process.env.KNOWRA_E2E_OUTPUT)
-    await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-direct-comment-editor.png') });
-  await field.fill('暂时不匹配过滤条件');
+    await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-sidebar-comment-editor.png') });
+  await sidebarField.fill('暂时不匹配过滤条件');
   await expect(page.getByText('当前选中标注不符合筛选，仍可继续编辑。', { exact: true })).toBeVisible();
-  await expect(field).toBeVisible();
-  await field.fill('退出前直接编辑的批注 ABC');
+  await expect(sidebarField).toBeVisible();
+  await sidebarField.fill('退出前直接编辑的批注 ABC');
   assert.deepEqual(errors, []);
   return { url, noteId: note.id, comment: '退出前直接编辑的批注 ABC' };
 }
