@@ -228,19 +228,21 @@ export const pdfMaterialsTests = [
       })
   },
   {
-    name: 'PDF 便签：可拖动换位置，其余类型的几何保存后不可变',
+    name: 'PDF 便签：标题可修改并保留，便签可拖动，其余类型的几何不可变',
     run: () =>
-      fixture(async ({ pdf, input }) => {
+      fixture(async ({ pdf, input, root }) => {
         const note = await pdf.importPdf(input, Readable.from([syntheticPdf()]));
         const at = rect => [{ pageIndex: 0, rect }];
         const created = await pdf.mutate(note.id, 'sticky', {
           operationId: 'sticky-1',
           expectedRevision: 0,
           type: 'note',
+          title: '我的便签标题',
           segments: at([10, 10, 28, 28]),
           comment: '先写一句'
         });
         assert.equal(created.type, 'note');
+        assert.equal(created.title, '我的便签标题');
         const moved = await pdf.mutate(note.id, 'sticky', {
           operationId: 'sticky-2',
           expectedRevision: 1,
@@ -248,6 +250,27 @@ export const pdfMaterialsTests = [
         });
         assert.deepEqual(moved.segments, at([100, 120, 118, 138]));
         assert.equal(moved.comment, '先写一句');
+        assert.equal(moved.title, '我的便签标题');
+        const renamed = await pdf.mutate(note.id, 'sticky', {
+          operationId: 'sticky-title',
+          expectedRevision: 2,
+          title: '重命名后的便签'
+        });
+        assert.equal(renamed.title, '重命名后的便签');
+        assert.deepEqual(renamed.segments, moved.segments);
+        assert.equal(renamed.quoteText, '');
+        for (const title of [null, 12, 'x'.repeat(201), '多行\n标题']) {
+          await assert.rejects(
+            pdf.mutate(note.id, 'sticky', {
+              operationId: 'invalid-title',
+              expectedRevision: 3,
+              title
+            }),
+            { code: 'PDF_ANNOTATION_INVALID' }
+          );
+        }
+        const reopened = createFileDataStore(path.join(root, 'data.json'));
+        assert.equal(reopened.state.pdfAnnotations.find(item => item.id === 'sticky').title, '重命名后的便签');
         const underline = await pdf.mutate(note.id, 'under', {
           operationId: 'under-1',
           expectedRevision: 0,
@@ -256,6 +279,14 @@ export const pdfMaterialsTests = [
           quoteText: '被划线的原文'
         });
         assert.equal(underline.type, 'underline');
+        await assert.rejects(
+          pdf.mutate(note.id, 'under', {
+            operationId: 'under-title',
+            expectedRevision: 1,
+            title: '不应覆盖原文'
+          }),
+          { code: 'PDF_ANNOTATION_INVALID' }
+        );
         await assert.rejects(
           pdf.mutate(note.id, 'under-empty', {
             operationId: 'under-2',

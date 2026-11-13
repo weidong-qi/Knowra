@@ -32,6 +32,17 @@ const items = [
 ] as PdfAnnotation[];
 afterEach(cleanup);
 
+it('搜索覆盖自定义便签标题，也能找到缺省标题的旧便签', () => {
+  const notes = [
+    { ...items[0], id: 'custom', type: 'note' as const, quoteText: '', title: '我的 ABC 猜想' },
+    { ...items[0], id: 'legacy', type: 'note' as const, quoteText: '' }
+  ];
+  expect(filterPdfAnnotations(notes, { ...EMPTY_PDF_FILTER, query: 'ａｂｃ' }).map(item => item.id)).toEqual([
+    'custom'
+  ]);
+  expect(filterPdfAnnotations(notes, { ...EMPTY_PDF_FILTER, query: '便签' }).map(item => item.id)).toEqual(['legacy']);
+});
+
 async function chooseFilter(user: ReturnType<typeof userEvent.setup>, group: '标注分类' | '批注状态', label: string) {
   await user.click(screen.getByRole('button', { name: /^筛选标注/ }));
   const dialog = screen.getByRole('dialog', { name: '筛选标注' });

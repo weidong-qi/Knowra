@@ -2,14 +2,21 @@ import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { randomId } from './pdfApi';
 import type { PdfSession } from './pdfSession';
 
-type MarkState = Pick<PdfAnnotation, 'type' | 'segments' | 'quoteText' | 'kind' | 'comment'>;
-type Entry = { id: string; before: MarkState | null; after: MarkState | null; comment: boolean; at: number };
+type MarkState = Pick<PdfAnnotation, 'type' | 'segments' | 'quoteText' | 'kind' | 'comment' | 'title'>;
+type Entry = {
+  id: string;
+  before: MarkState | null;
+  after: MarkState | null;
+  textField: 'comment' | 'title' | null;
+  at: number;
+};
 const snapshot = (item: PdfAnnotation | undefined): MarkState | null =>
   item
     ? structuredClone({
         type: item.type,
         segments: item.segments,
         quoteText: item.quoteText,
+        ...(item.type === 'note' ? { title: item.title ?? '' } : {}),
         kind: item.kind,
         comment: item.comment
       })
@@ -45,13 +52,26 @@ export class PdfHistory {
     if (!same(before, after)) {
       const at = Date.now(),
         previous = this.past.at(-1);
-      const comment = !remove && Object.keys(fields).length === 1 && 'comment' in fields;
-      if (!this.future.length && comment && previous?.comment && previous.id === id && at - previous.at < 1000) {
+      const textField =
+        !remove && Object.keys(fields).length === 1
+          ? 'comment' in fields
+            ? 'comment'
+            : 'title' in fields
+              ? 'title'
+              : null
+          : null;
+      if (
+        !this.future.length &&
+        textField &&
+        previous?.textField === textField &&
+        previous.id === id &&
+        at - previous.at < 1000
+      ) {
         previous.after = after;
         previous.at = at;
         if (same(previous.before, after)) this.past.pop();
       } else {
-        this.past.push({ id, before, after, comment, at });
+        this.past.push({ id, before, after, textField, at });
         if (this.past.length > 100) this.past.shift();
       }
       this.future = [];
@@ -81,7 +101,7 @@ export class PdfHistory {
         for (const item of [...this.past, ...this.future]) if (item.id === previousId) item.id = id;
       }
       const pending = this.session.stage(entry.id, target ?? {}, !target);
-      entry.comment = false;
+      entry.textField = null;
       from.pop();
       to.push(entry);
       await pending;

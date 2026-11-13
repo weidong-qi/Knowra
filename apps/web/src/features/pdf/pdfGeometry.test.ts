@@ -71,6 +71,19 @@ it('摘录按页码排序，区域不伪造正文并保留可回跳的标注身�
   expect(result).toContain('pdfAnnotation=second');
 });
 
+it('Markdown 导出保留便签自定义标题与正文', () => {
+  const item = {
+    id: 'sticky',
+    type: 'note',
+    title: '自定义便签题目',
+    quoteText: '',
+    comment: '便签正文',
+    segments: [{ pageIndex: 0, rect: [1, 2, 3, 4] }]
+  } as PdfAnnotation;
+  expect(exportPdfExcerpt('论文', 'n1', [item])).toContain('自定义便签题目\n\n便签正文');
+  expect(exportPdfExcerpt('论文', 'n1', [{ ...item, title: undefined }])).toContain('便签\n\n便签正文');
+});
+
 describe('便签几何', () => {
   const viewport = {
     width: 200,

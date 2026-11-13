@@ -212,6 +212,7 @@ export function createPdfService({
           }),
           // 便签可以拖动换位置；其余标注的原文几何保存后不可变。
           ...(previous?.type === 'note' && input.segments ? { segments: input.segments } : {}),
+          ...(input.title !== undefined ? { title: input.title } : {}),
           kind: input.kind ?? previous?.kind ?? PDF_KINDS[0],
           comment: input.comment ?? previous?.comment ?? '',
           revision: (previous?.revision ?? 0) + 1,

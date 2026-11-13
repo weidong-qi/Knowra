@@ -20,7 +20,7 @@ export function buildPdfExtractNote(title: string, noteId: string, items: PdfAnn
         item.type === 'region'
           ? '区域标注'
           : item.type === 'note'
-            ? '便签'
+            ? escapeText(item.title?.trim() || '便签')
             : item.quoteText
                 .split('\n')
                 .map(line => '> ' + line)

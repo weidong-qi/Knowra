@@ -90,7 +90,7 @@ export function exportPdfExcerpt(title: string, noteId: string, items: PdfAnnota
           item.type === 'region'
             ? '区域标注'
             : item.type === 'note'
-              ? '便签'
+              ? escape(item.title?.trim() || '便签')
               : item.quoteText
                   .split('\n')
                   .map(line => '> ' + line)
