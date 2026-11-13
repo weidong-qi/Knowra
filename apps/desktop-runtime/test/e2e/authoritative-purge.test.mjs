@@ -107,7 +107,15 @@ async function fixture(t, { activeTrainingParents = false } = {}) {
   );
   const page = await context.newPage(),
     errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  let phase = '初始化与同步连接';
+  page.on('pageerror', error => {
+    errors.push(error.message);
+    // 保持零异常断言；即使后续步骤先失败，也把发生阶段与原始堆栈留在 CI 日志。
+    console.error(
+      '权威清理浏览器异常',
+      JSON.stringify({ phase, url: page.url(), message: error.message, stack: error.stack })
+    );
+  });
   await page.goto(runtime.launchUrl);
   const response = await context.request.post(`${runtime.origin}/api/local-runtime/sync/configure`, {
     data: { serverUrl: origin }
@@ -127,6 +135,9 @@ async function fixture(t, { activeTrainingParents = false } = {}) {
     unknown,
     training,
     errors,
+    setPhase(value) {
+      phase = value;
+    },
     setOffline(value) {
       offline = value;
     },
@@ -146,11 +157,13 @@ async function fixture(t, { activeTrainingParents = false } = {}) {
       return { ready, release };
     },
     async restart() {
+      phase = '重启本地 SQLite 运行时';
       await runtime.close();
       runtime = await startLocalRuntime(options);
       await page.goto(runtime.launchUrl);
     },
     async knowledgePage(target) {
+      phase = `打开知识详情：${target.title}`;
       await page.goto(`${runtime.origin}/#/knowledge?item=${target.id}`);
       await expect(page.getByRole('heading', { name: target.title, exact: true })).toBeVisible();
     },
@@ -246,6 +259,7 @@ for (const type of ['knowledgeItem', 'question'])
           .getByRole('button', { name: '回收站', exact: true })
           .click();
       }
+      f.setPhase('打开永久清理预检弹窗');
       if (type === 'knowledgeItem') await clickKnowledgeAction(page, '永久删除…');
       else await page.getByRole('button', { name: '永久清理…', exact: true }).click();
       const dialog = page.getByRole('dialog', {
@@ -258,9 +272,11 @@ for (const type of ['knowledgeItem', 'question'])
       });
       await expect(confirm).toBeEnabled();
       const hold = f.holdDeletionResponse();
+      f.setPhase('提交清理并等待云端响应');
       await confirm.click();
       await hold.ready;
       try {
+        f.setPhase('云端清理提交后恢复并编辑本地资料');
         // 云端已经实际提交；本地请求走融合后的正常恢复/编辑路由，不改SQLite或伪造响应。
         const current = f.runtime.store.state[collection].find(row => row.id === asset.id);
         const headers = { 'X-Knowra-Dataset': f.runtime.store.getStatus().datasetId };
@@ -276,6 +292,7 @@ for (const type of ['knowledgeItem', 'question'])
         });
         assert.equal(edited.status(), 200, await edited.text());
       } finally {
+        f.setPhase('释放清理响应并关闭弹窗、刷新详情');
         hold.release();
       }
       await expect(
@@ -309,12 +326,14 @@ for (const type of ['knowledgeItem', 'question'])
             record.snapshot[collection].some(row => row.id === asset.id && row[field] === text)
         )
       );
+      f.setPhase('重启后打开同步冲突弹窗');
       await openLocalSync(page, /资料待核对/);
       const sync = page.getByRole('dialog', { name: '云端同步', exact: true });
       await expect(sync).toContainText(text);
       await expect(sync.getByRole('button', { name: '采用本地', exact: true })).toBeDisabled();
       await sync.getByRole('button', { name: '采用本地', exact: true }).scrollIntoViewIfNeeded();
       await f.screenshot(`purge-${type}-edit-conflict-after-restart.png`);
+      f.setPhase('采用云端版本并保留本地恢复记录');
       await sync.getByRole('button', { name: '采用云端', exact: true }).click();
       await expect(sync.getByRole('button', { name: '采用云端', exact: true })).toHaveCount(0);
       const recovery = (await (await context.request.get(`${f.runtime.origin}/api/local-runtime/sync/recovery`)).json())
