@@ -178,3 +178,26 @@ it('当前内容被外部替换时拒绝撤销，不将旧快照覆盖到外部�
   expect(session.values()[0].kind).toBe('pitfall');
   expect(request).not.toHaveBeenCalled();
 });
+
+it('便签连续改名合并为一步，标题与正文分别撤销，保存后重做保留标题', async () => {
+  const { session, history } = setup();
+  session.items.set(base.id, { ...base, type: 'note', quoteText: '' });
+  await history.stage(base.id, { title: '自' });
+  await history.stage(base.id, { title: '自定义便签' });
+  await history.stage(base.id, { comment: '新的正文' });
+  await session.flush();
+  await history.move();
+  expect(session.values()[0]).toMatchObject({ title: '自定义便签', comment: base.comment });
+  await history.move();
+  await session.flush();
+  expect(session.values()[0].title).toBe('');
+  expect(history.canUndo).toBe(false);
+  await history.move(true);
+  await session.flush();
+  expect(session.values()[0].title).toBe('自定义便签');
+  await history.stage(base.id, {}, true);
+  await session.flush();
+  await history.move();
+  await session.flush();
+  expect(session.values()[0]).toMatchObject({ type: 'note', title: '自定义便签', comment: base.comment });
+});

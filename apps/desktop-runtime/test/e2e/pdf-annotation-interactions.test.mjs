@@ -62,11 +62,31 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   await click(400, 160);
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
   await expect(page.getByRole('button', { name: '文字选择', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page
-    .getByRole('group', { name: '便签内容' })
-    .getByRole('textbox', { name: '便签', exact: true })
-    .fill('只创建一条便签');
+  const noteEditor = page.getByRole('dialog', { name: '编辑 PDF 批注' });
+  await expect(noteEditor).toBeVisible();
+  await noteEditor.getByRole('textbox', { name: '便签标题', exact: true }).fill('我的待验证猜想');
+  await noteEditor.getByRole('textbox', { name: '批注内容', exact: true }).fill('只创建一条便签');
+  await noteEditor.getByRole('button', { name: '完成', exact: true }).click();
   await save();
+  const sticky = (await marks()).find(mark => mark.type === 'note');
+  assert.equal(sticky.title, '我的待验证猜想');
+  const icon = page.locator(`[data-note-id="${sticky.id}"]`);
+  await icon.click();
+  await expect(noteEditor.getByRole('textbox', { name: '便签标题' })).toHaveValue('我的待验证猜想');
+  await noteEditor.getByRole('textbox', { name: '便签标题' }).fill('重新命名的猜想');
+  await noteEditor.getByRole('button', { name: '完成', exact: true }).click();
+  await save();
+  // 图标仍可拖动；拖动完成不重复创建便签，标题与正文保留。
+  const iconBox = await icon.boundingBox();
+  await page.mouse.move(iconBox.x + iconBox.width / 2, iconBox.y + iconBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(iconBox.x + iconBox.width / 2 - 60, iconBox.y + iconBox.height / 2 + 40, { steps: 8 });
+  await page.mouse.up();
+  await save();
+  const movedSticky = (await marks()).find(mark => mark.id === sticky.id);
+  assert.notDeepEqual(movedSticky.segments, sticky.segments);
+  assert.equal(movedSticky.title, '重新命名的猜想');
+  assert.equal(movedSticky.comment, '只创建一条便签');
   await click(450, 360);
   await expect(page.getByRole('toolbar', { name: '选择标注分类' })).toHaveCount(0);
   assert.equal((await marks()).length, 1, '后续空白点击不创建第二条便签');
@@ -173,6 +193,8 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   assert.equal((await marks()).length, 4);
   await page.reload();
   await expect(page.locator('.textLayer')).toContainText('Gradients');
+  assert.equal((await marks()).find(mark => mark.id === sticky.id).title, '重新命名的猜想');
+  await expect(page.getByRole('button', { name: /定位标注.*重新命名的猜想/ })).toBeVisible();
   assert.equal((await marks()).filter(mark => mark.type === 'note').length, 1);
   assert.equal((await marks()).filter(mark => mark.type === 'region').length, 0);
   await expect(reader).toBeVisible();

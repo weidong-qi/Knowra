@@ -177,6 +177,7 @@ async function runPdfSync(t, postgres = false) {
     operationId: 'note-create',
     expectedRevision: 0,
     type: 'note',
+    title: '设备 A 的便签',
     segments: segments([10, 20, 28, 38]),
     comment: '原便签'
   });
@@ -190,7 +191,8 @@ async function runPdfSync(t, postgres = false) {
       operationId: `note-move-${revision}`,
       expectedRevision: revision,
       segments: segments(rect),
-      comment: '拖动后继续编辑'
+      comment: '拖动后继续编辑',
+      title: `离线便签标题 ${revision}`
     });
   }
   await a.engine.sync();
@@ -200,6 +202,7 @@ async function runPdfSync(t, postgres = false) {
   const moved = (await b.context.http.pdf.list(copy.id)).find(item => item.id === 'movable-note');
   assert.deepEqual(moved.segments, segments([50, 60, 68, 78]));
   assert.equal(moved.comment, '拖动后继续编辑');
+  assert.equal(moved.title, '离线便签标题 2');
   assert.equal(a.engine.status().pendingEntities, 0);
   // 只放开便签的坐标；来源、原文和类型继续保持不可变，修订不能倒退。
   for (const fields of [

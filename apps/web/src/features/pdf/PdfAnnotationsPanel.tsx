@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { DeleteIcon } from '../../components/icons/knowra';
 import {
@@ -7,7 +7,8 @@ import {
   PopoverDialog,
   PopoverTrigger,
   PressableButton,
-  TextAreaField
+  TextAreaField,
+  TextField
 } from '../../components/ui';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import { sortPdfAnnotations } from './pdfGeometry';
@@ -16,6 +17,7 @@ import styles from './PdfReader.module.css';
 export function PdfAnnotationsList({
   items,
   selected,
+  selectionRevision = 0,
   canWrite,
   onSelect,
   onChange,
@@ -25,6 +27,7 @@ export function PdfAnnotationsList({
 }: {
   items: PdfAnnotation[];
   selected: string | null;
+  selectionRevision?: number;
   canWrite: boolean;
   onSelect(item: PdfAnnotation): void;
   onChange(id: string, fields: Partial<PdfAnnotation>): void;
@@ -32,6 +35,10 @@ export function PdfAnnotationsList({
   emptyHint?: boolean;
   filteredOutId?: string;
 }) {
+  const selectedCardRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    selectedCardRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [selected, selectionRevision]);
   return (
     <>
       {!items.length && emptyHint ? (
@@ -42,6 +49,7 @@ export function PdfAnnotationsList({
       {sortPdfAnnotations(items).map(item => (
         <section
           key={item.id}
+          ref={selected === item.id ? selectedCardRef : undefined}
           className={styles.markCard}
           data-selected={selected === item.id || undefined}
           data-kind={item.kind}
@@ -54,13 +62,19 @@ export function PdfAnnotationsList({
             <PressableButton
               className={styles.markJump}
               onPress={() => onSelect(item)}
-              aria-label={`定位标注 第 ${item.segments[0].pageIndex + 1} 页 ${item.quoteText || '区域标注'}`}
+              aria-label={`定位标注 第 ${item.segments[0].pageIndex + 1} 页 ${item.type === 'note' ? item.title?.trim() || '便签' : item.quoteText || '区域标注'}`}
             >
               <span>
                 第 {[...new Set(item.segments.map(segment => segment.pageIndex + 1))].join('、')} 页 ·{' '}
                 {KIND_OPTIONS.find(option => option.id === item.kind)?.label}
               </span>
-              <strong>{item.type === 'region' ? '区域标注' : item.type === 'note' ? '便签' : item.quoteText}</strong>
+              <strong>
+                {item.type === 'region'
+                  ? '区域标注'
+                  : item.type === 'note'
+                    ? item.title?.trim() || '便签'
+                    : item.quoteText}
+              </strong>
             </PressableButton>
             <div className={styles.markTrail}>
               <KindDotPicker kind={item.kind} canWrite={canWrite} onPick={kind => onChange(item.id, { kind })} />
@@ -82,6 +96,16 @@ export function PdfAnnotationsList({
           </div>
           {selected === item.id ? (
             <>
+              {item.type === 'note' ? (
+                <TextField
+                  label="便签标题"
+                  value={item.title ?? ''}
+                  maxLength={200}
+                  placeholder="便签"
+                  isDisabled={!canWrite}
+                  onChange={title => onChange(item.id, { title })}
+                />
+              ) : null}
               <TextAreaField
                 label="评论"
                 presentation="composer"

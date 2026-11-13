@@ -329,6 +329,9 @@
   padding: 2px 4px;
   font-size: var(--font-size-meta);
 }
+.commentEditorHead strong {
+  flex: 1;
+}
 .commentQuote {
   max-height: 80px;
   overflow-y: auto;
@@ -650,36 +653,6 @@
 .viewport[data-note-tool] {
   cursor: copy;
   touch-action: none;
-}
-.noteCard {
-  position: fixed;
-  z-index: 30;
-  width: 220px;
-  padding: 4px 6px 6px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  background: var(--surface-raised);
-  box-shadow: 0 6px 18px -10px rgb(24 30 48 / 28%);
-  transition: border-color var(--motion-fast) var(--motion-ease);
-}
-.noteCard:focus-within {
-  border-color: var(--accent-solid);
-}
-/* 文本域沿用 composer 形态（无边框、自适应高度），这里只收紧卡片内的间距与高度范围。 */
-.noteCard textarea[data-input-control] {
-  min-height: 52px;
-  max-height: 200px;
-  padding: 4px 6px 6px;
-  font-size: 13px;
-}
-.noteHead {
-  display: flex;
-  justify-content: flex-end;
-  min-height: 24px;
-}
-.noteHead .noteDelete:hover:not(:disabled) {
-  color: var(--ink-danger);
-  background: var(--surface-hover);
 }
 .reader :global([data-knowra-pdf-overlay] [data-type='underline']) {
   fill-opacity: 0.95;

@@ -18,10 +18,9 @@ import { usePdfViewer } from './usePdfViewer';
 import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
 import { PdfHistory } from './pdfHistory';
-import { exportPdfExcerpt, moveRect, noteRectAt, rectToPdf, rectToViewport, type PdfSelection } from './pdfGeometry';
+import { exportPdfExcerpt, moveRect, noteRectAt, rectToPdf, type PdfSelection } from './pdfGeometry';
 import { paintPdfAnnotations, pdfAnnotationAtPoint, readPdfSelection } from './pdfOverlay';
 import { buildPdfExtractNote } from './pdfExtract';
-import { PdfNoteCard } from './PdfNoteCard';
 import { PdfAnnotationTooltip } from './PdfAnnotationTooltip';
 import { PdfAnnotationActions } from './PdfAnnotationActions';
 import { PdfCommentEditor } from './PdfCommentEditor';
@@ -57,6 +56,7 @@ export function PdfReaderView({
   const [loaded, setLoaded] = useState(false),
     [error, setError] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectionRevision, setSelectionRevision] = useState(0);
   const [annotationAction, setAnnotationAction] = useState<{ id: string; x: number; y: number } | null>(null);
   const [commentEditor, setCommentEditor] = useState<{ id: string; x: number; y: number } | null>(null);
   const annotationPress = useRef<{ id: string; x: number; y: number } | null>(null);
@@ -83,7 +83,6 @@ export function PdfReaderView({
     moved: boolean;
     last?: PdfSegment;
   } | null>(null);
-  const [cardOpen, setCardOpen] = useState(false);
   const [textMode, setTextMode] = useState<PdfTextMode>('highlight');
   const [dictionaryKind, setDictionaryKind] = useState('supplement');
   const [noteMove, setNoteMove] = useState<{ id: string; segment: PdfSegment } | null>(null);
@@ -118,8 +117,6 @@ export function PdfReaderView({
   const history = historyRef.current;
   const items = session.values();
   const editable = canWrite && loaded && Boolean(viewer.document) && !history.busy;
-  const cardItem = cardOpen ? items.find(item => item.id === selected && item.type === 'note') : undefined;
-  const cardAnchor = cardItem ? noteCardAnchor(cardItem) : null;
   const isTextSelection = pending?.value.type === 'highlight' || pending?.value.type === 'underline';
   const canLookup = isTextSelection && Boolean(normalizeDictionaryWord(pending!.value.quoteText));
   const canTranslate = isTextSelection && Boolean(pending!.value.quoteText.trim());
@@ -262,7 +259,6 @@ export function PdfReaderView({
     setCommentEditor(null);
     setDictionary(null);
     setTranslation(null);
-    setCardOpen(false);
     setPending(null);
     setGhost(null);
     try {
@@ -282,6 +278,11 @@ export function PdfReaderView({
       }),
     []
   );
+  function selectFromPage(id: string) {
+    setSelected(id);
+    setSelectionRevision(value => value + 1);
+    if (panel) setPanelTab('marks');
+  }
   function createMark(value: PdfSelection, kind: string, comment = '') {
     if (!editable) return;
     if (value.segments.length > 2000 || value.quoteText.length > 100000) {
@@ -290,10 +291,10 @@ export function PdfReaderView({
     }
     const id = randomId();
     setDictionaryKind(kind);
-    change(id, { ...value, kind, comment });
-    setSelected(id);
+    change(id, { ...value, kind, comment, ...(value.type === 'note' ? { title: '' } : {}) });
+    selectFromPage(id);
     if (value.type === 'note') {
-      setCardOpen(true);
+      if (pending) setCommentEditor({ id, x: pending.anchor.x, y: pending.anchor.bottom + 8 });
       setTool('text');
     } else {
       setPanel(true);
@@ -343,21 +344,6 @@ export function PdfReaderView({
     if (!page?.viewport || !canvas) return null;
     return { viewport: page.viewport, bounds: canvas.getBoundingClientRect() };
   }
-  /** 便签卡片贴在图标右侧；放不下时翻到左侧，图标滚出可视区域则不显示。 */
-  function noteCardAnchor(item: PdfAnnotation) {
-    const segment = item.segments[0],
-      geo = pageGeometry(segment.pageIndex),
-      frame = viewer.containerRef.current?.getBoundingClientRect();
-    if (!geo || !frame) return null;
-    const box = rectToViewport(geo.viewport, segment.rect);
-    const kx = geo.bounds.width / geo.viewport.width,
-      ky = geo.bounds.height / geo.viewport.height;
-    const top = geo.bounds.top + box.y * ky;
-    if (top < frame.top - 20 || top > frame.bottom) return null;
-    const right = geo.bounds.left + (box.x + box.width) * kx + 8;
-    const left = right + 220 > window.innerWidth - 8 ? geo.bounds.left + box.x * kx - 228 : right;
-    return { left: Math.max(8, left), top };
-  }
   function syncScrollPosition(element: HTMLElement) {
     const { scrollTop: top, scrollLeft: left } = element;
     const moved = scrollPosition.current.top !== top || scrollPosition.current.left !== left;
@@ -368,6 +354,7 @@ export function PdfReaderView({
     if (event.button !== 0) return;
     syncScrollPosition(event.currentTarget);
     setAnnotationAction(null);
+    setCommentEditor(null);
     setDictionary(null);
     setTranslation(null);
     annotationPress.current = null;
@@ -387,8 +374,6 @@ export function PdfReaderView({
       setPending(null);
       setGhost(null);
       setSelected(iconItem.id);
-      setCardOpen(true);
-      if (!editable) return;
       noteDrag.current = {
         id: iconItem.id,
         pageIndex: iconItem.segments[0].pageIndex,
@@ -397,12 +382,12 @@ export function PdfReaderView({
         rect: iconItem.segments[0].rect,
         moved: false
       };
+      if (!editable) return;
       event.currentTarget.setPointerCapture(event.pointerId);
       event.preventDefault();
       return;
     }
     // 点到页面任意空白处都先收起候选色条和预览框，再按当前工具决定是否开始新的标注。
-    setCardOpen(false);
     if (!annotationPress.current) setSelected(null);
     setPending(null);
     setGhost(null);
@@ -646,6 +631,7 @@ export function PdfReaderView({
             onPointerMove={event => {
               const move = noteDrag.current;
               if (move) {
+                if (!editable) return;
                 const dx = event.clientX - move.x,
                   dy = event.clientY - move.y;
                 if (!move.moved && Math.hypot(dx, dy) < 4) return;
@@ -681,7 +667,7 @@ export function PdfReaderView({
                 drag.current = null;
                 setGhost(null);
                 syncScrollPosition(event.currentTarget);
-                setSelected(press.id);
+                selectFromPage(press.id);
                 setPending(null);
                 setAnnotationAction({ id: press.id, x: event.clientX, y: event.clientY + 12 });
                 return;
@@ -691,6 +677,12 @@ export function PdfReaderView({
                 noteDrag.current = null;
                 setNoteMove(null);
                 if (move.moved && move.last) change(move.id, { segments: [move.last] });
+                else if (Math.hypot(event.clientX - move.x, event.clientY - move.y) < 4) {
+                  syncScrollPosition(event.currentTarget);
+                  selectFromPage(move.id);
+                  setCommentEditor({ id: move.id, x: event.clientX, y: event.clientY + 12 });
+                }
+                skipTextMouseUp.current = true;
                 return;
               }
               if (drag.current) {
@@ -739,7 +731,6 @@ export function PdfReaderView({
               setCommentEditor(null);
               setDictionary(null);
               setTranslation(null);
-              if (cardOpen) render(value => value + 1);
               // 文字选区随滚动重新定位；框选的位置无法回算，滚动即收起。
               setPending(current => {
                 if (!current) return current;
@@ -756,7 +747,6 @@ export function PdfReaderView({
               setAnnotationAction(null);
               setDictionary(null);
               setTranslation(null);
-              setCardOpen(false);
               setSelected(null);
               if (pending) {
                 setPending(null);
@@ -770,15 +760,7 @@ export function PdfReaderView({
           <PdfAnnotationTooltip
             containerRef={viewer.containerRef}
             items={items}
-            enabled={
-              tool === 'text' &&
-              !pending &&
-              !dictionary &&
-              !translation &&
-              !cardOpen &&
-              !annotationAction &&
-              !commentEditor
-            }
+            enabled={tool === 'text' && !pending && !dictionary && !translation && !annotationAction && !commentEditor}
             revision={viewer.revision}
           />
           {actionItem && annotationAction ? (
@@ -819,23 +801,19 @@ export function PdfReaderView({
               point={commentEditor}
               canWrite={editable}
               onChange={comment => change(editingItem.id, { comment })}
+              onTitleChange={title => change(editingItem.id, { title })}
+              onDelete={
+                editingItem.type === 'note'
+                  ? () => {
+                      change(editingItem.id, {}, true);
+                      setCommentEditor(null);
+                      setSelected(null);
+                    }
+                  : undefined
+              }
               onClose={() => {
                 setCommentEditor(null);
                 setSelected(null);
-              }}
-            />
-          ) : null}
-          {cardItem && cardAnchor && !noteMove ? (
-            <PdfNoteCard
-              left={cardAnchor.left}
-              top={cardAnchor.top}
-              value={cardItem.comment}
-              disabled={!editable}
-              onChange={comment => change(cardItem.id, { comment })}
-              onDelete={() => {
-                setCardOpen(false);
-                setSelected(null);
-                change(cardItem.id, {}, true);
               }}
             />
           ) : null}
@@ -917,6 +895,7 @@ export function PdfReaderView({
             items={items}
             outline={outline}
             selected={selected}
+            selectionRevision={selectionRevision}
             canWrite={editable}
             onSelect={jump}
             onChange={change}

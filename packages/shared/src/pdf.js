@@ -15,6 +15,8 @@ export function validatePdfAnnotation(value) {
     value.revision < 1 ||
     !validText(value.quoteText, 100000) ||
     !validText(value.comment, 2000) ||
+    (value.title !== undefined &&
+      (value.type !== 'note' || !validText(value.title, 200) || /[\r\n]/.test(value.title))) ||
     !Array.isArray(value.segments) ||
     !value.segments.length ||
     value.segments.length > 2000 ||
