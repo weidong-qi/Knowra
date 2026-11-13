@@ -169,6 +169,20 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   const lookup = page.getByRole('dialog', { name: 'PDF 查词' });
   await expect(lookup).toContainText('梯度');
   await expect(lookup.getByRole('toolbar', { name: '选择标注分类' })).toBeVisible();
+  await expect(lookup.getByRole('group', { name: '标注样式', exact: true })).toBeVisible();
+  const categories = lookup.getByRole('group', { name: '标注分类', exact: true });
+  await expect(categories.getByRole('button')).toHaveCount(5);
+  for (const name of ['重点', '疑问', '补充', '易错', '普通']) {
+    await expect(categories.getByRole('button', { name: `选择分类：${name}`, exact: true })).toHaveText(name);
+  }
+  const controlsFit = await lookup.evaluate(dialog => {
+    const bounds = dialog.getBoundingClientRect();
+    return [...dialog.querySelector('[role="toolbar"]').querySelectorAll('button')].every(button => {
+      const box = button.getBoundingClientRect();
+      return box.left >= bounds.left && box.right <= bounds.right;
+    });
+  });
+  assert(controlsFit, '样式和分类按钮应完整放在单词卡片内');
   await lookup.getByRole('button', { name: '标注样式：下划线', exact: true }).click();
   await lookup.getByRole('button', { name: '选择分类：重点', exact: true }).click();
   await expect(lookup).toBeVisible();

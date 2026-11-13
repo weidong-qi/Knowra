@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { PdfSelectionBar } from './PdfSelectionBar';
 
 afterEach(cleanup);
@@ -63,6 +63,15 @@ it('查词卡片内复用操作时不使用浮层坐标，样式与分类仍可�
   const bar = screen.getByRole('toolbar', { name: '选择标注分类' });
   expect(bar).not.toHaveAttribute('style');
   expect(bar).not.toHaveAttribute('data-below');
+  expect(screen.getByRole('group', { name: '标注样式', exact: true })).toBeVisible();
+  const kinds = within(screen.getByRole('group', { name: '标注分类', exact: true }));
+  expect(kinds.getAllByRole('button').map(button => button.textContent)).toEqual([
+    '重点',
+    '疑问',
+    '补充',
+    '易错',
+    '普通'
+  ]);
   fireEvent.click(screen.getByRole('button', { name: '标注样式：下划线' }));
   expect(mode).toHaveBeenCalledWith('underline');
   fireEvent.click(screen.getByRole('button', { name: '标注为重点' }));

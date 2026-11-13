@@ -1,4 +1,4 @@
-import { Button, PressableButton } from '../../components/ui';
+import { Button, PressableButton, SegmentedButton, SegmentedControl } from '../../components/ui';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import styles from './PdfReader.module.css';
 
@@ -38,9 +38,42 @@ export function PdfSelectionBar({
 }) {
   // 贴近视口顶部时翻到选区下方，避免被工具栏遮住。
   const below = anchor.top < 64;
+  const ModeButton = inline ? SegmentedButton : PressableButton;
+  const KindButton = inline ? SegmentedButton : PressableButton;
+  const modeButtons = TEXT_MODES.map(item => (
+    <ModeButton
+      key={item.id}
+      className={inline ? undefined : styles.modeButton}
+      aria-pressed={mode === item.id}
+      aria-label={`标注样式：${item.label}`}
+      onPress={() => onMode?.(item.id)}
+    >
+      {item.label}
+    </ModeButton>
+  ));
+  const kindButtons = KIND_OPTIONS.map(option => (
+    <KindButton
+      key={option.id}
+      className={inline ? undefined : styles.swatch}
+      data-kind={option.id}
+      aria-label={selectedKind === undefined ? `标注为${option.label}` : `选择分类：${option.label}`}
+      aria-pressed={selectedKind === undefined ? undefined : selectedKind === option.id}
+      title={option.label}
+      onPress={() => onPick(option.id)}
+    >
+      {inline ? (
+        <>
+          <span className={`${styles.swatch} ${styles.settingsKindDot}`} data-kind={option.id} aria-hidden="true" />
+          {option.label}
+        </>
+      ) : (
+        <span hidden>{option.label}</span>
+      )}
+    </KindButton>
+  ));
   return (
     <div
-      className={`${styles.selectionBar} ${inline ? styles.selectionBarInline : ''}`}
+      className={inline ? styles.selectionSettings : styles.selectionBar}
       role="toolbar"
       aria-label="选择标注分类"
       style={inline ? undefined : { left: anchor.x, top: below ? anchor.bottom + 8 : anchor.top - 8 }}
@@ -58,36 +91,37 @@ export function PdfSelectionBar({
         </Button>
       ) : null}
       {canAnnotate && mode && onMode ? (
-        <>
-          {TEXT_MODES.map(item => (
-            <PressableButton
-              key={item.id}
-              className={styles.modeButton}
-              aria-pressed={mode === item.id}
-              aria-label={`标注样式：${item.label}`}
-              onPress={() => onMode(item.id)}
-            >
-              {item.label}
-            </PressableButton>
-          ))}
-          <span className={styles.barDivider} aria-hidden="true" />
-        </>
+        inline ? (
+          <div className={styles.settingsGroup}>
+            <span className={styles.settingsLabel}>样式</span>
+            <SegmentedControl aria-label="标注样式" density="compact" className={styles.settingsModes}>
+              {modeButtons}
+            </SegmentedControl>
+          </div>
+        ) : (
+          <>
+            {modeButtons}
+            <span className={styles.barDivider} aria-hidden="true" />
+          </>
+        )
       ) : null}
-      {canAnnotate
-        ? KIND_OPTIONS.map(option => (
-            <PressableButton
-              key={option.id}
-              className={styles.swatch}
-              data-kind={option.id}
-              aria-label={selectedKind === undefined ? `标注为${option.label}` : `选择分类：${option.label}`}
-              aria-pressed={selectedKind === undefined ? undefined : selectedKind === option.id}
-              title={option.label}
-              onPress={() => onPick(option.id)}
+      {canAnnotate ? (
+        inline ? (
+          <div className={styles.settingsGroup}>
+            <span className={styles.settingsLabel}>分类</span>
+            <SegmentedControl
+              aria-label="标注分类"
+              variant="outline"
+              density="compact"
+              className={styles.settingsKinds}
             >
-              <span hidden>{option.label}</span>
-            </PressableButton>
-          ))
-        : null}
+              {kindButtons}
+            </SegmentedControl>
+          </div>
+        ) : (
+          kindButtons
+        )
+      ) : null}
     </div>
   );
 }
