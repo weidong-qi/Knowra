@@ -6,15 +6,23 @@ import { createConceptStore } from './conceptStore';
 import { ConceptEditor } from './ConceptEditor';
 
 afterEach(cleanup);
-const initial = {
+const initial: KnowledgeConcept = {
   id: 'a',
   name: '原概念',
   sense: '',
   aliases: [],
+  reviewStatus: 'confirmed',
+  sourceMode: 'manual',
+  focus: 'active',
   revision: 1,
+  createdAt: '2026-11-13T00:00:00.000Z',
+  updatedAt: '2026-11-13T00:00:00.000Z',
   deletedAt: null,
-  mergedInto: null
-} as KnowledgeConcept;
+  deletedBy: null,
+  operationId: 'create-a',
+  mergedInto: null,
+  operations: []
+};
 it('409 后保留草稿，显式核对最新基线后使用新 revision 保存', async () => {
   const user = userEvent.setup();
   let remote = initial;

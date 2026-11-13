@@ -97,7 +97,7 @@ it('投影不会自动写库，显式选择类型后保存依据和方向，删�
     sourceMode: 'manual'
   });
   expect(screen.queryByRole('button', { name: '选择类型并确认' })).toBeNull();
-  await user.click(screen.getByRole('button', { name: '删除关系', exact: true }));
+  await user.click(screen.getByRole('button', { name: '删除关系' }));
   dialog = screen.getByRole('dialog', { name: '删除这条关系？' });
   await user.click(within(dialog).getByRole('button', { name: '确认删除关系' }));
   await screen.findByRole('button', { name: '选择类型并确认' });
@@ -172,18 +172,18 @@ it('手工建立无依据骨架，再编辑为带两端挂靠依据的关系', a
   await user.click(screen.getByRole('button', { name: '建立关系' }));
   let dialog = screen.getByRole('dialog', { name: '建立概念关系' });
   await user.click(within(dialog).getByRole('button', { name: '终点概念' }));
-  await user.click(screen.getByRole('option', { name: '终点', exact: true }));
+  await user.click(screen.getByRole('option', { name: '终点' }));
   await user.click(within(dialog).getByRole('button', { name: /关系类型/ }));
-  await user.click(screen.getByRole('option', { name: '导致', exact: true }));
+  await user.click(screen.getByRole('option', { name: '导致' }));
   await user.click(within(dialog).getByRole('button', { name: '保存关系' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(f.state.relations[0]).toMatchObject({ type: 'causes', basisItemId: null });
   await user.click(screen.getByRole('button', { name: '编辑关系' }));
   dialog = screen.getByRole('dialog', { name: '编辑关系' });
   await user.click(within(dialog).getByRole('button', { name: /关系类型/ }));
-  await user.click(screen.getByRole('option', { name: '适用于', exact: true }));
+  await user.click(screen.getByRole('option', { name: '适用于' }));
   await user.click(within(dialog).getByRole('button', { name: /依据知识点/ }));
-  await user.click(screen.getByRole('option', { name: '合成依据', exact: true }));
+  await user.click(screen.getByRole('option', { name: '合成依据' }));
   await user.click(within(dialog).getByRole('button', { name: '保存关系' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(f.state.relations.filter(row => !row.deletedAt)).toHaveLength(1);
