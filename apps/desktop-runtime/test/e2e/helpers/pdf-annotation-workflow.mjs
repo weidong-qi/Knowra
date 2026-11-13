@@ -112,6 +112,7 @@ export async function exercisePdfAnnotationWorkflow(page) {
   await page.mouse.move(highlightBox.x + highlightBox.width / 4, highlightBox.y + highlightBox.height / 2);
   const preview = page.getByRole('tooltip');
   await expect(preview).toContainText('需要复习的批注 ABC');
+  await expect(preview).not.toHaveAttribute('data-entering');
   const previewBox = await preview.boundingBox();
   assert(previewBox.y + previewBox.height <= highlightBox.y || previewBox.y >= highlightBox.y + highlightBox.height);
   await page.mouse.move(highlightBox.x + (highlightBox.width * 3) / 4, highlightBox.y + highlightBox.height / 2);
