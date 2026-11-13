@@ -97,7 +97,7 @@ test('概念在两台 SQLite 设备间同步：直接合并、三集合原子迁
     expectedRevision: 2,
     operationId: 'merge',
     targetId: 'b',
-    expectedTargetRevision: 1
+    expectedTargetRevision: 2
   });
   await a.engine.sync();
   await b.engine.sync();
@@ -119,7 +119,7 @@ test('概念在两台 SQLite 设备间同步：直接合并、三集合原子迁
     expectedRevision: 2,
     operationId: 'merge',
     targetId: 'b',
-    expectedTargetRevision: 1
+    expectedTargetRevision: 2
   });
   assert.equal((await reopened.concepts.list()).concepts[0].revision, revision);
 });

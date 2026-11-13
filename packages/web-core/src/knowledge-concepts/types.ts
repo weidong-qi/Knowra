@@ -15,7 +15,7 @@ export interface KnowledgeConcept extends ConceptRecord {
   reviewStatus: 'candidate' | 'confirmed' | 'archived';
   sourceMode: 'manual' | 'ai';
   focus: 'active' | 'muted';
-  /** 仅用于已删除源概念的合并审计，读取和分组不跟随此字段。 */
+  /** 已删除源概念的合并去向，用于审计、同步闭包及显式撤销修复；普通读取和分组不跟随。 */
   mergedInto: string | null;
   /** 随记录持久化、同步和备份的命令回执，保证重启后重试也不重复执行。 */
   operations: { id: string; hash: string }[];

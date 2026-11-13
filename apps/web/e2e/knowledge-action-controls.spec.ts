@@ -143,7 +143,7 @@ for (const mode of ['light', 'dark'] as const) {
 }
 
 async function graphTarget(page: Page, kind: 'item-list' | 'neighbors' | 'concept-links') {
-  await page.goto('/#/knowledge/graph');
+  await page.goto('/#/knowledge/graph/experiment');
   await page.reload();
   await page.getByRole('button', { name: /^向量，/ }).click();
   const panel = page.getByRole('region', { name: '详情', exact: true });

@@ -10,6 +10,7 @@ import { ConceptWorkspace } from '../features/knowledge/concepts/ConceptWorkspac
 import conceptStyles from '../features/knowledge/concepts/Concepts.module.css';
 import { useAppStore } from '../store/AppStoreProvider';
 import { KnowledgeWorkspaceView } from '../features/knowledge/KnowledgeWorkspaceView';
+import { RealConceptGraphView } from '../features/knowledge/graph/RealConceptGraphView';
 import { ConceptGraphView } from '../features/knowledge/graph/ConceptGraphView';
 import { Button, LoadingState } from '../components/ui';
 import { workspaceCapabilities } from '../store/workspaceCapabilities';
@@ -27,9 +28,16 @@ function KnowledgeStageContent({ pathname, onOpenNote }: { pathname: string; onO
     () => (cache ? cache.list() : listKnowledgeItems({ includeDeleted: true })),
     [cache, listKnowledgeItems]
   );
-  // 概念图原型只读取本地示例数据，不依赖资料库连接。
-  if (pathname.split('?')[0] === '/knowledge/graph')
-    return <ConceptGraphView query={route.query} onQueryChange={query => changeRoute({ query }, true)} />;
+  // 旧渲染仅保留在显式实验入口，不能作为真实概念图。
+  if (pathname.split('?')[0] === '/knowledge/graph/experiment')
+    return (
+      <ConceptGraphView
+        query={route.query}
+        onQueryChange={query =>
+          navigate(`/knowledge/graph/experiment${query ? `?q=${encodeURIComponent(query)}` : ''}`, { replace: true })
+        }
+      />
+    );
   if (state.dataMode !== 'api')
     return (
       <WorkspacePanel as="main" className={indexStyles.panel} aria-label="知识库连接状态">
@@ -61,6 +69,29 @@ function KnowledgeStageContent({ pathname, onOpenNote }: { pathname: string; onO
           </div>
         </WorkspacePanelBody>
       </WorkspacePanel>
+    );
+  if (pathname.split('?')[0] === '/knowledge/graph')
+    return (
+      <RealConceptGraphView
+        query={route.query}
+        onQueryChange={query => {
+          const params = new URLSearchParams(pathname.split('?')[1]);
+          if (query) params.set('q', query);
+          else params.delete('q');
+          navigate(`/knowledge/graph?${params}`, { replace: true });
+        }}
+        selectedId={new URLSearchParams(pathname.split('?')[1]).get('concept')}
+        onSelect={id => {
+          const params = new URLSearchParams(pathname.split('?')[1]);
+          params.set('concept', id);
+          navigate(`/knowledge/graph?${params}`);
+        }}
+        onOpenConcept={id => navigate(`/knowledge/concepts?concept=${encodeURIComponent(id)}`)}
+        onOpenItem={id => navigate(`/knowledge?item=${encodeURIComponent(id)}`)}
+        onOpenExperiment={() => navigate('/knowledge/graph/experiment')}
+        onListItems={listConceptItems}
+        refreshKey={state.knowledgeGeneration}
+      />
     );
   const canWrite = state.canWriteWorkspace() && workspaceCapabilities(state.persistenceMode).writeKnowledge;
   if (pathname.split('?')[0] === '/knowledge/concepts')

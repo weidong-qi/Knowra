@@ -1,0 +1,35 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.tools {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.canvas {
+  height: clamp(320px, 55vh, 720px);
+  width: 100%;
+  border: 1px solid var(--border-default, #d7dbe2);
+  border-radius: 12px;
+  background: var(--surface-primary, #fff);
+}
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+}
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hint {
+  color: var(--text-secondary, #667085);
+  font-size: 13px;
+}

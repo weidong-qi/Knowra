@@ -152,12 +152,14 @@ for (const width of [1440, 390])
         await expect(editor).toHaveCount(0);
         await expect(page.getByRole('article', { name: '概念详情' })).toContainText('未保存的合成概念');
         await page.getByRole('button', { name: '关闭详情', exact: true }).click();
-        await (await openSidebar()).getByRole('button', { name: '概念图（原型）', exact: true }).click();
+        await (await openSidebar()).getByRole('button', { name: '概念图', exact: true }).click();
+        await expect(page.getByRole('heading', { name: '概念图', exact: true })).toBeVisible();
+        await page.getByRole('button', { name: '实验入口', exact: true }).click();
         await expect(page.getByRole('heading', { name: '概念图（原型）', exact: true })).toBeVisible();
         const graphSearch = page.getByRole('searchbox', { name: '搜索图中概念' });
         await graphSearch.locator('..').click();
         await graphSearch.fill('张量');
-        await expect(page).toHaveURL(/knowledge\/graph\?q=/);
+        await expect(page).toHaveURL(/knowledge\/graph\/experiment\?q=/);
         await page
           .getByRole('region', { name: '图中概念搜索结果' })
           .getByRole('button', { name: '张量', exact: true })

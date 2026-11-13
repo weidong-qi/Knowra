@@ -1,0 +1,57 @@
+.section {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.heading,
+.actions,
+.endpoints {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.heading {
+  justify-content: space-between;
+}
+.heading h3,
+.section h4,
+.section p {
+  margin: 0;
+}
+.hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rows {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rows li {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.rows .projection {
+  border-style: dashed;
+}
+.endpoints {
+  font-size: 13px;
+}
+.basis {
+  font-size: 12px;
+  text-align: start;
+}
+.form {
+  display: grid;
+  gap: 16px;
+}

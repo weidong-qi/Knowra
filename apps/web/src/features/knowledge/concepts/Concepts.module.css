@@ -195,3 +195,21 @@
   font-size: 12px;
   line-height: 1.6;
 }
+
+.definition {
+  padding: 16px;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.definition h3,
+.definition p {
+  margin: 0;
+}
+.definition details {
+  width: 100%;
+}
+.definition details > div {
+  padding: 12px 0;
+}

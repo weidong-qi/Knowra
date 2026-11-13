@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import type { KnowledgeConcept, KnowledgeConceptLink, KnowledgeItem } from '@study-accelerator/web-core';
+import {
+  conceptDefinitions,
+  type KnowledgeConcept,
+  type KnowledgeConceptLink,
+  type KnowledgeItem
+} from '@study-accelerator/web-core';
 import {
   Button,
   Checkbox,
@@ -27,7 +32,8 @@ export function ConceptDetail({
   onAction,
   onOpenItem,
   onRole,
-  onRemove
+  onRemove,
+  onOpenGraph
 }: {
   concept: KnowledgeConcept;
   items: Map<string, KnowledgeItem>;
@@ -40,13 +46,17 @@ export function ConceptDetail({
   onOpenItem(id: string): void;
   onRole(link: KnowledgeConceptLink): void;
   onRemove(ids: string[], move: boolean): void;
+  onOpenGraph?(): void;
 }) {
   const [batch, setBatch] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const selection = selected.filter(id => links.some(link => link.id === id));
+  const definitions = conceptDefinitions(concept.id, links, [...items.values()]);
+  const definitionIds = new Set([definitions.primary, ...definitions.others].filter(Boolean).map(row => row!.id));
   const groups = new Map<string, KnowledgeConceptLink[]>();
   for (const link of links) {
+    if (!batch && definitionIds.has(link.knowledgeItemId)) continue;
     const type = items.get(link.knowledgeItemId)?.knowledgeType ?? 'concept';
     groups.set(type, [...(groups.get(type) ?? []), link]);
   }
@@ -99,7 +109,52 @@ export function ConceptDetail({
             </MenuTrigger>
           </div>
         ) : null}
+        {onOpenGraph ? (
+          <Button variant="ghost" size="compact" onPress={onOpenGraph}>
+            在概念图中查看
+          </Button>
+        ) : null}
       </header>
+      {!batch ? (
+        <section className={styles.definition} aria-label="概念定义">
+          <h3>定义</h3>
+          {definitions.primary ? (
+            <>
+              <MathText text={definitions.primary.canonicalStatement || '尚未填写定义正文'} />
+              <Button size="compact" variant="ghost" onPress={() => onOpenItem(definitions.primary!.id)}>
+                查看定义知识点
+              </Button>
+              {definitions.others.length ? (
+                <details>
+                  <summary>其他定义（{definitions.others.length}）</summary>
+                  {definitions.others.map(item => (
+                    <div key={item.id}>
+                      <MathText text={item.canonicalStatement || '尚未填写定义正文'} />
+                      <Button size="compact" variant="ghost" onPress={() => onOpenItem(item.id)}>
+                        查看：{item.title}
+                      </Button>
+                    </div>
+                  ))}
+                </details>
+              ) : null}
+              {write ? (
+                <Button size="compact" variant="ghost" isDisabled={pending} onPress={() => setBatch(true)}>
+                  管理定义挂靠
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p>尚未挂入定义类知识点。</p>
+              {write ? (
+                <Button size="compact" isDisabled={pending} onPress={onAttach}>
+                  挂入定义知识点
+                </Button>
+              ) : null}
+            </>
+          )}
+        </section>
+      ) : null}
       {batch && write ? (
         <div className={styles.batchBar} aria-label="批量挂靠管理">
           <Checkbox
@@ -145,7 +200,7 @@ export function ConceptDetail({
               }
             >
               <ChevronDownIcon size={13} />
-              <strong>{knowledgeTypeLabel(type)}</strong>
+              <strong>{knowledgeTypeLabel(type)}类知识点</strong>
               <span>{rows.length}</span>
             </PressableButton>
             {!collapsed.includes(type) ? (
@@ -200,12 +255,12 @@ export function ConceptDetail({
             ) : null}
           </section>
         ))
-      ) : (
+      ) : !definitions.primary ? (
         <div className={indexStyles.empty}>
           <strong>这个概念下还没有知识点</strong>
           <p>挂入已有知识点，并标明它讲述或提及这个概念。</p>
         </div>
-      )}
+      ) : null}
     </article>
   );
 }

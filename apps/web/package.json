@@ -23,6 +23,7 @@
     "@study-accelerator/content-anchor": "1.0.0",
     "@study-accelerator/shared": "0.1.0",
     "@study-accelerator/web-core": "2.14.0",
+    "cytoscape": "3.35.0",
     "d3-force": "3.0.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
