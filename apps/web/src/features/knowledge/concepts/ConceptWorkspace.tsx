@@ -345,7 +345,7 @@ export function ConceptWorkspace({
               {concept ? (
                 <>
                   <ConceptDetail
-                    key={concept.id}
+                    key={`detail:${concept.id}`}
                     concept={concept}
                     items={itemsById}
                     links={links}
@@ -380,7 +380,7 @@ export function ConceptWorkspace({
                     onRemove={(ids, move) => setRemoval({ ids, move })}
                   />
                   <ConceptRelationSection
-                    key={concept.id}
+                    key={`relations:${concept.id}`}
                     concept={concept}
                     items={items}
                     store={store}

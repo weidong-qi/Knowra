@@ -44,6 +44,29 @@ function fixture(seed: ConceptCommand[] = []) {
   return { store, request, state: () => state };
 }
 describe('概念首版界面', () => {
+  it('反复切换概念只保留当前详情与关系，重置详情的批量管理状态', async () => {
+    fixture(
+      ['a', 'b'].map(id => ({ type: 'createConcept', id, operationId: `create-${id}`, expectedRevision: 0, name: id }))
+    );
+    const list = vi.fn(async () => []);
+    const props = { canWrite: true, onListItems: list, onSelect: vi.fn(), onOpenItem: vi.fn() };
+    const view = render(<ConceptWorkspace {...props} selectedId="a" />);
+    await screen.findByRole('heading', { name: 'a' });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '概念更多操作' }));
+    await user.click(screen.getByRole('menuitem', { name: '批量管理' }));
+    expect(screen.getByRole('button', { name: '完成' })).toBeInTheDocument();
+    for (const id of ['b', 'a', 'b', 'a']) {
+      view.rerender(<ConceptWorkspace {...props} selectedId={id} />);
+      await waitFor(() => expect(screen.getAllByRole('article', { name: '概念详情' })).toHaveLength(1));
+      expect(screen.getAllByRole('region', { name: '概念关系' })).toHaveLength(1);
+      expect(screen.getAllByRole('button', { name: '挂入知识点' })).toHaveLength(1);
+      expect(
+        within(screen.getByRole('article', { name: '概念详情' })).getByRole('heading', { name: id })
+      ).toBeVisible();
+      expect(screen.queryByRole('button', { name: '完成' })).not.toBeInTheDocument();
+    }
+  });
   it('新建弹窗保存名称、区分标签和别名', async () => {
     const user = userEvent.setup();
     const server = fixture();

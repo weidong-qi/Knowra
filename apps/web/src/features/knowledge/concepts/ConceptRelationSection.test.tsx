@@ -10,6 +10,7 @@ import {
 } from '@study-accelerator/web-core';
 import { ConceptRelationSection } from './ConceptRelationSection';
 import { createConceptStore } from './conceptStore';
+import { LibraryInspector } from '../../../components/workspace/LibraryIndex';
 afterEach(cleanup);
 async function fixture() {
   const items: KnowledgeItem[] = [
@@ -76,6 +77,30 @@ function show(f: Awaited<ReturnType<typeof fixture>>, canWrite = true) {
     />
   );
 }
+it('确认投影移除触发按钮后，弹窗焦点回到仍在页面中的检查器操作', async () => {
+  const f = await fixture();
+  const user = userEvent.setup();
+  render(
+    <LibraryInspector label="概念检查器" onClose={vi.fn()}>
+      <ConceptRelationSection
+        concept={f.state.concepts[0]}
+        items={f.items}
+        store={f.store}
+        canWrite
+        onOpenConcept={vi.fn()}
+        onOpenItem={vi.fn()}
+      />
+    </LibraryInspector>
+  );
+  await user.click(screen.getByRole('button', { name: '选择类型并确认' }));
+  const dialog = screen.getByRole('dialog', { name: '确认条目投影的关系类型' });
+  await user.click(within(dialog).getByRole('button', { name: /关系类型/ }));
+  await user.click(screen.getByRole('option', { name: '是一种' }));
+  await user.click(within(dialog).getByRole('button', { name: '确认并保存关系' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(screen.queryByRole('button', { name: '选择类型并确认' })).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: '关闭详情' })).toHaveFocus());
+});
 it('投影不会自动写库，显式选择类型后保存依据和方向，删除后投影再出现', async () => {
   const f = await fixture();
   const user = userEvent.setup();
