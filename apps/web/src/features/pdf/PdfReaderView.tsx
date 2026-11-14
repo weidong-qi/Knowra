@@ -20,10 +20,11 @@ import { PdfSession } from './pdfSession';
 import { PdfHistory } from './pdfHistory';
 import { exportPdfExcerpt, noteRectAt, rectToPdf, type PdfSelection } from './pdfGeometry';
 import { usePdfNoteDrag } from './usePdfNoteDrag';
-import { paintPdfAnnotations, pdfAnnotationAtPoint, readPdfSelection } from './pdfOverlay';
+import { paintPdfAnnotations, pdfAnnotationsAtPoint, readPdfSelection } from './pdfOverlay';
 import { buildPdfExtractNote } from './pdfExtract';
 import { PdfAnnotationTooltip } from './PdfAnnotationTooltip';
 import { PdfAnnotationActions } from './PdfAnnotationActions';
+import { PdfAnnotationPicker } from './PdfAnnotationPicker';
 import { PdfCommentEditor } from './PdfCommentEditor';
 import { PdfDictionaryPopover } from './PdfDictionaryPopover';
 import { PdfTranslationPopover } from './PdfTranslationPopover';
@@ -59,8 +60,9 @@ export function PdfReaderView({
   const [selected, setSelected] = useState<string | null>(null);
   const [selectionRevision, setSelectionRevision] = useState(0);
   const [annotationAction, setAnnotationAction] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [annotationPicker, setAnnotationPicker] = useState<{ ids: string[]; x: number; y: number } | null>(null);
   const [commentEditor, setCommentEditor] = useState<{ id: string; x: number; y: number } | null>(null);
-  const annotationPress = useRef<{ id: string; x: number; y: number } | null>(null);
+  const annotationPress = useRef<{ ids: string[]; pointerId: number; x: number; y: number } | null>(null);
   const skipTextMouseUp = useRef(false);
   const scrollPosition = useRef({ top: 0, left: 0 });
   const [pending, setPending] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
@@ -115,7 +117,12 @@ export function PdfReaderView({
   const canTranslate = isTextSelection && Boolean(pending!.value.quoteText.trim());
   const actionItem = annotationAction ? items.find(item => item.id === annotationAction.id) : undefined;
   const editingItem = commentEditor ? items.find(item => item.id === commentEditor.id) : undefined;
+  const pickerItems = annotationPicker?.ids.flatMap(id => items.filter(item => item.id === id)) ?? [];
   useEffect(() => {
+    if (annotationPicker && !pickerItems.length) setAnnotationPicker(null);
+  }, [annotationPicker, pickerItems.length]);
+  useEffect(() => {
+    setAnnotationPicker(null);
     setAnnotationAction(null);
     setCommentEditor(null);
     setDictionary(null);
@@ -250,6 +257,7 @@ export function PdfReaderView({
   async function moveHistory(redo = false) {
     if (!editable) return;
     if (timer.current) clearTimeout(timer.current);
+    setAnnotationPicker(null);
     setAnnotationAction(null);
     setCommentEditor(null);
     setDictionary(null);
@@ -277,6 +285,23 @@ export function PdfReaderView({
     setSelected(id);
     setSelectionRevision(value => value + 1);
     if (panel) setPanelTab('marks');
+  }
+  function openAnnotation(id: string, point: { x: number; y: number }) {
+    const item = session.values().find(value => value.id === id);
+    setAnnotationPicker(null);
+    if (!item) return;
+    selectFromPage(id);
+    if (item.type === 'note') setCommentEditor({ id, ...point });
+    else setAnnotationAction({ id, ...point });
+  }
+  function pickAnnotation(ids: string[], point: { x: number; y: number }) {
+    const currentIds = new Set(session.values().map(item => item.id));
+    const candidates = ids.filter(id => currentIds.has(id));
+    if (candidates.length === 1) openAnnotation(candidates[0], point);
+    else if (candidates.length > 1) {
+      setSelected(null);
+      setAnnotationPicker({ ids: candidates, ...point });
+    }
   }
   function createMark(value: PdfSelection, kind: string, comment = '') {
     if (!editable) return;
@@ -348,23 +373,27 @@ export function PdfReaderView({
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
     syncScrollPosition(event.currentTarget);
+    setAnnotationPicker(null);
     setAnnotationAction(null);
     setCommentEditor(null);
     setDictionary(null);
     setTranslation(null);
     annotationPress.current = null;
     skipTextMouseUp.current = false;
-    if ((tool === 'text' || tool === 'region') && event.target instanceof Element) {
-      const id = pdfAnnotationAtPoint(event.target, event.clientX, event.clientY);
-      const item = items.find(item => item.id === id);
-      if (
-        item &&
-        (item.type === 'region' || (tool === 'text' && (item.type === 'highlight' || item.type === 'underline')))
-      )
-        annotationPress.current = { id: item.id, x: event.clientX, y: event.clientY };
-    }
+    if (!(event.target instanceof Element)) return;
+    const ids = pdfAnnotationsAtPoint(event.target, event.clientX, event.clientY).filter(id =>
+      items.some(item => item.id === id)
+    );
     const icon = (event.target as Element).closest<SVGElement>('[data-note-id]');
     const iconItem = icon && items.find(item => item.id === icon.dataset.noteId);
+    if (
+      ids.length &&
+      (tool === 'text' ||
+        iconItem ||
+        (tool === 'region' && items.some(item => ids.includes(item.id) && item.type === 'region')))
+    ) {
+      annotationPress.current = { ids, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    }
     if (iconItem) {
       setPending(null);
       setGhost(null);
@@ -596,6 +625,8 @@ export function PdfReaderView({
               setPanelTab('marks');
             }}
             onTool={next => {
+              setAnnotationPicker(null);
+              annotationPress.current = null;
               setAnnotationAction(null);
               setCommentEditor(null);
               setDictionary(null);
@@ -629,29 +660,33 @@ export function PdfReaderView({
               // 区域工具捕获指针后 target 会变成阅读容器，按松开坐标重新命中页面。
               const hitTarget = document.elementFromPoint?.(event.clientX, event.clientY) ?? event.target;
               annotationPress.current = null;
-              if (
-                press &&
-                Math.hypot(event.clientX - press.x, event.clientY - press.y) < 4 &&
-                hitTarget instanceof Element &&
-                pdfAnnotationAtPoint(hitTarget, event.clientX, event.clientY) === press.id &&
-                (tool === 'region' || window.getSelection()?.isCollapsed !== false)
-              ) {
+              // 必须先结束便签拖动；移动过的图标不能被当作重叠位置的单击。
+              const move = noteDrag.finish(event);
+              if (move && !move.clicked) {
                 skipTextMouseUp.current = true;
-                drag.current = null;
-                setGhost(null);
-                syncScrollPosition(event.currentTarget);
-                selectFromPage(press.id);
-                setPending(null);
-                setAnnotationAction({ id: press.id, x: event.clientX, y: event.clientY + 12 });
                 return;
               }
-              const move = noteDrag.finish(event);
-              if (move) {
-                if (move.clicked) {
+              if (
+                press &&
+                press.pointerId === event.pointerId &&
+                Math.hypot(event.clientX - press.x, event.clientY - press.y) < 4 &&
+                hitTarget instanceof Element &&
+                (move?.clicked || tool === 'region' || window.getSelection()?.isCollapsed !== false)
+              ) {
+                const ids = pdfAnnotationsAtPoint(hitTarget, event.clientX, event.clientY).filter(
+                  id => press.ids.includes(id) && items.some(item => item.id === id)
+                );
+                if (ids.length) {
+                  skipTextMouseUp.current = true;
+                  drag.current = null;
+                  setGhost(null);
                   syncScrollPosition(event.currentTarget);
-                  selectFromPage(move.id);
-                  setCommentEditor({ id: move.id, x: event.clientX, y: event.clientY + 12 });
+                  setPending(null);
+                  pickAnnotation(ids, { x: event.clientX, y: event.clientY + 12 });
+                  return;
                 }
+              }
+              if (move) {
                 skipTextMouseUp.current = true;
                 return;
               }
@@ -688,6 +723,7 @@ export function PdfReaderView({
               const value = readPdfSelection(viewer.viewerRef.current, viewer.containerRef.current!);
               const anchor = value && textAnchor();
               if (!value || !anchor || !normalizeDictionaryWord(value.quoteText)) return;
+              setAnnotationPicker(null);
               setAnnotationAction(null);
               setCommentEditor(null);
               setPending(null);
@@ -698,6 +734,7 @@ export function PdfReaderView({
               noteDrag.refresh();
               // 布局调整的 scroll 事件可能晚于标注点击派发；当前位置没变时，浮层仍有效。
               if (!syncScrollPosition(event.currentTarget)) return;
+              setAnnotationPicker(null);
               setAnnotationAction(null);
               setCommentEditor(null);
               setDictionary(null);
@@ -715,6 +752,8 @@ export function PdfReaderView({
             }}
             onKeyDown={event => {
               if (event.key !== 'Escape') return;
+              setAnnotationPicker(null);
+              annotationPress.current = null;
               setAnnotationAction(null);
               setDictionary(null);
               setTranslation(null);
@@ -731,9 +770,28 @@ export function PdfReaderView({
           <PdfAnnotationTooltip
             containerRef={viewer.containerRef}
             items={items}
-            enabled={tool === 'text' && !pending && !dictionary && !translation && !annotationAction && !commentEditor}
+            enabled={
+              tool === 'text' &&
+              !pending &&
+              !dictionary &&
+              !translation &&
+              !annotationAction &&
+              !commentEditor &&
+              !annotationPicker
+            }
             revision={viewer.revision}
           />
+          {annotationPicker && pickerItems.length ? (
+            <PdfAnnotationPicker
+              items={pickerItems}
+              point={annotationPicker}
+              onPick={id => openAnnotation(id, annotationPicker)}
+              onClose={() => {
+                setAnnotationPicker(null);
+                viewer.containerRef.current?.focus({ preventScroll: true });
+              }}
+            />
+          ) : null}
           {actionItem && annotationAction ? (
             <PdfAnnotationActions
               item={actionItem}

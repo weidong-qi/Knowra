@@ -642,6 +642,19 @@
   padding: 6px;
   outline: none;
 }
+.annotationPicker {
+  width: min(320px, calc(100vw - 24px));
+  min-width: 0;
+  max-height: min(360px, 60vh);
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+.annotationPickerSummary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .annotationCommands {
   display: flex;
   justify-content: space-between;

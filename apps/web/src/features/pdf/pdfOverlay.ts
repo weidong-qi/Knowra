@@ -129,15 +129,21 @@ export function readPdfSelection(viewer: PDFViewer, container: HTMLElement): Pdf
     : null;
 }
 
-/** 文字层位于覆盖层上方，按实际绘制矩形命中批注，避免拦截原有文字拖选。 */
-export function pdfAnnotationAtPoint(target: Element, x: number, y: number) {
+/** 按实际绘制矩形收集标注，从上层到下层排列，同一标注的多个节点只返回一次。 */
+export function pdfAnnotationsAtPoint(target: Element, x: number, y: number): string[] {
   const marks = target.closest('.page')?.querySelectorAll<SVGElement>('[data-pdf-annotation-id]');
-  if (!marks) return null;
+  const ids = new Set<string>();
+  if (!marks) return [];
   for (const mark of [...marks].reverse()) {
     const box = mark.getBoundingClientRect();
     const tolerance = mark.dataset.type === 'underline' ? 3 : 0;
-    if (x >= box.left && x <= box.right && y >= box.top - tolerance && y <= box.bottom + tolerance)
-      return mark.dataset.pdfAnnotationId ?? null;
+    const id = mark.dataset.pdfAnnotationId;
+    if (id && x >= box.left && x <= box.right && y >= box.top - tolerance && y <= box.bottom + tolerance) ids.add(id);
   }
-  return null;
+  return [...ids];
+}
+
+/** 悬停预览仍取最上层标注，不拦截正文拖选。 */
+export function pdfAnnotationAtPoint(target: Element, x: number, y: number) {
+  return pdfAnnotationsAtPoint(target, x, y)[0] ?? null;
 }
