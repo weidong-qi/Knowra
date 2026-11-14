@@ -43,10 +43,14 @@ const JUMP_TOP_CLEARANCE = 96;
 export function PdfReaderView({
   note,
   canWrite,
+  panelOpen,
+  onPanelOpenChange,
   onOpenNote
 }: {
   note: Note;
   canWrite: boolean;
+  panelOpen?: boolean;
+  onPanelOpenChange?(open: boolean): void;
   onOpenNote(id: string): void;
 }) {
   const source = note.pdfSource!;
@@ -70,7 +74,15 @@ export function PdfReaderView({
   const [dictionary, setDictionary] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [translation, setTranslation] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
   const [tool, setTool] = useState('text'),
-    [panel, setPanel] = useState(true);
+    [localPanel, setLocalPanel] = useState(true);
+  const panel = panelOpen ?? localPanel;
+  const setPanel = useCallback(
+    (open: boolean) => {
+      if (onPanelOpenChange) onPanelOpenChange(open);
+      else setLocalPanel(open);
+    },
+    [onPanelOpenChange]
+  );
   const [ghost, setGhost] = useState<PdfSegment | null>(null);
   const [password, setPassword] = useState('');
   const [outline, setOutline] = useState<Array<{ title: string; dest: unknown; depth: number }>>([]);
@@ -221,7 +233,7 @@ export function PdfReaderView({
       setPanel(true);
       setPanelTab('marks');
     },
-    [viewer.viewerRef]
+    [setPanel, viewer.viewerRef]
   );
   useEffect(() => {
     if (!loaded || !viewer.count) return;

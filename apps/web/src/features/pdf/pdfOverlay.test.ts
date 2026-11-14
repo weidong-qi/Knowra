@@ -21,7 +21,7 @@ function mark(element: HTMLElement, id: string, type = 'highlight', top = 10, bo
   element.querySelector('svg')!.append(rect);
 }
 
-it('收集同页全部命中，按绘制层级逆序排列，悬停仍取第一条', () => {
+it('收集同页全部命中，按绘制层级逆序排列，单结果接口默认取第一条', () => {
   const element = page();
   mark(element, 'highlight');
   mark(element, 'region', 'region');
@@ -29,6 +29,8 @@ it('收集同页全部命中，按绘制层级逆序排列，悬停仍取第一�
   mark(page(), 'other-page');
   expect(pdfAnnotationsAtPoint(element.querySelector('span')!, 20, 20)).toEqual(['note', 'region', 'highlight']);
   expect(pdfAnnotationAtPoint(element, 20, 20)).toBe('note');
+  expect(pdfAnnotationAtPoint(element, 20, 20, id => id === 'highlight')).toBe('highlight');
+  expect(pdfAnnotationAtPoint(element, 20, 20, () => false)).toBeNull();
 });
 
 it('同一条标注的多个片段、下划线命中区与细线只出现一次，独立标注不合并', () => {

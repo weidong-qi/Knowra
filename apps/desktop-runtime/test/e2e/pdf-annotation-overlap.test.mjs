@@ -8,7 +8,7 @@ import { chromium, expect } from '@playwright/test';
 import { syntheticPdf } from '../../../../scripts/test-support/pdf-fixtures.mjs';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 
-test('PDF 重叠标注：四种类型均可选择底层，拖选、便签移动与菜单关闭互不干扰', { timeout: 120000 }, async t => {
+test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层，拖选与便签移动互不干扰', { timeout: 120000 }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-pdf-overlap-'));
   const runtime = await startLocalRuntime({
     dataDirectory: root,
@@ -43,17 +43,17 @@ test('PDF 重叠标注：四种类型均可选择底层，拖选、便签移动�
   const textRect = [40, 500, 300, 540];
   const fixtures = [
     { id: 'lower-highlight', type: 'highlight', quoteText: '底层文字', rect: textRect },
-    { id: 'upper-highlight', type: 'highlight', quoteText: '上层文字', rect: textRect },
+    { id: 'upper-highlight', type: 'highlight', quoteText: '上层文字', comment: ' ', rect: textRect },
     { id: 'underline', type: 'underline', quoteText: '下划线原文', rect: textRect },
-    { id: 'region', type: 'region', quoteText: '', rect: [30, 495, 320, 545] },
+    { id: 'region', type: 'region', quoteText: '', comment: '', rect: [30, 495, 320, 545] },
     { id: 'lower-note', type: 'note', title: '底层便签', quoteText: '', rect: [100, 515, 118, 533] },
-    { id: 'upper-note', type: 'note', title: '上层便签', quoteText: '', rect: [100, 515, 118, 533] }
+    { id: 'upper-note', type: 'note', title: '上层便签', quoteText: '', comment: '', rect: [100, 515, 118, 533] }
   ];
-  for (const { id, rect, ...fields } of fixtures) {
+  for (const { id, rect, comment = `${id} 的批注`, ...fields } of fixtures) {
     await api(`${url}/${id}`, 'PUT', {
       ...fields,
       kind: 'question',
-      comment: `${id} 的批注`,
+      comment,
       segments: [{ pageIndex: 0, rect }],
       expectedRevision: 0,
       operationId: `create-${id}`
@@ -86,6 +86,19 @@ test('PDF 重叠标注：四种类型均可选择底层，拖选、便签移动�
   };
   const selected = id => page.locator(`[data-pdf-annotation-id="${id}"][data-selected]`).first();
 
+  // 空批注区域和高亮不能挡住文字批注；空便签也不能挡住底层便签的正文。
+  const textHit = await page.locator('[data-pdf-annotation-id="underline"][data-pdf-hit-area]').boundingBox();
+  assert(textHit);
+  await page.mouse.move(textHit.x + textHit.width / 2, textHit.y + textHit.height / 2);
+  await expect(page.getByRole('tooltip')).toContainText('underline 的批注');
+  const notePoint = await center('lower-note');
+  await page.mouse.move(notePoint.x, notePoint.y);
+  await expect(page.getByRole('tooltip')).toContainText('lower-note 的批注');
+  const regionBox = await page.locator('[data-pdf-annotation-id="region"]').boundingBox();
+  assert(regionBox);
+  await page.mouse.move(regionBox.x + 2, regionBox.y + regionBox.height / 2);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+
   await open();
   if (process.env.KNOWRA_E2E_OUTPUT) {
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
@@ -112,7 +125,7 @@ test('PDF 重叠标注：四种类型均可选择底层，拖选、便签移动�
   await open();
   await pick('区域：区域标注');
   await expect(selected('region')).toBeVisible();
-  await actions.getByRole('button', { name: '编辑批注', exact: true }).click();
+  await actions.getByRole('button', { name: '添加批注', exact: true }).click();
   await editor.getByRole('textbox', { name: '批注内容' }).fill('修改区域批注');
   await editor.getByRole('button', { name: '完成', exact: true }).click();
   await save();

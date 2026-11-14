@@ -53,7 +53,7 @@ vi.mock('./PdfReaderToolbar', () => ({
     </button>
   )
 }));
-vi.mock('./PdfSidePanel', () => ({ PdfSidePanel: () => null }));
+vi.mock('./PdfSidePanel', () => ({ PdfSidePanel: () => <aside aria-label="PDF 侧栏" /> }));
 
 const sha256 = 'a'.repeat(64);
 const note = { id: 'n1', spaceId: 's1', pdfSource: { attachmentId: 'att', sha256 } } as unknown as Note;
@@ -144,4 +144,32 @@ it('点击返回时跳转到 PDF 所在文件夹，无文件夹时回到资料�
   fireEvent.click(screen.getByRole('button', { name: '返回资料库' }));
   expect(mocks.selectNotesScope).toHaveBeenCalledWith('all');
   expect(mocks.navigate).toHaveBeenCalledWith('/materials');
+});
+
+it('支持由外部受控显隐右侧标注面板', async () => {
+  list.mockResolvedValue([]);
+  const onPanelOpenChange = vi.fn();
+  const view = render(
+    <PdfReaderView
+      note={note}
+      canWrite
+      panelOpen={true}
+      onPanelOpenChange={onPanelOpenChange}
+      onOpenNote={() => undefined}
+    />
+  );
+  await waitFor(() => expect(list).toHaveBeenCalled());
+  await settle();
+  expect(screen.getByLabelText('PDF 侧栏')).toBeInTheDocument();
+
+  view.rerender(
+    <PdfReaderView
+      note={note}
+      canWrite
+      panelOpen={false}
+      onPanelOpenChange={onPanelOpenChange}
+      onOpenNote={() => undefined}
+    />
+  );
+  expect(screen.queryByLabelText('PDF 侧栏')).not.toBeInTheDocument();
 });

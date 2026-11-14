@@ -147,9 +147,7 @@
   border-bottom: 1px solid var(--ni-line);
   text-align: left;
   color: var(--ni-ink);
-  background:
-    linear-gradient(var(--ni-ink), var(--ni-ink)) 12.5px 100%/20px 1px no-repeat,
-    color-mix(in srgb, var(--ni-page) 86%, transparent);
+  background: color-mix(in srgb, var(--ni-page) 86%, transparent);
   backdrop-filter: blur(10px);
   font: 400 13px/1.5 var(--font-ui);
   cursor: pointer;

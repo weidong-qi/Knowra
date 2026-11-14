@@ -58,13 +58,80 @@ function setup() {
   } as DOMRect);
   const atPoint = vi.fn(() => target);
   Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: atPoint });
-  const item = { id: 'a1', kind: 'important', comment: '悬停批注' } as PdfAnnotation;
+  const item = { id: 'a1', type: 'highlight', kind: 'important', comment: '悬停批注' } as PdfAnnotation;
   const props = { containerRef: { current: container }, items: [item], enabled: true, revision: 1 };
   const view = render(<PdfAnnotationTooltip {...props} />);
   const move = (x = 30) => fireEvent(target, new MouseEvent('pointermove', { clientX: x, clientY: 20, bubbles: true }));
   move();
   return { container, target, item, props, view, atPoint, move };
 }
+
+function addMark(container: HTMLElement, item: PdfAnnotation, left = 0, right = 200) {
+  const mark = document.createElementNS('http://www.w3.org/2000/svg', item.type === 'note' ? 'g' : 'rect');
+  mark.dataset.pdfAnnotationId = item.id;
+  mark.dataset.type = item.type;
+  vi.spyOn(mark, 'getBoundingClientRect').mockReturnValue({ left, right, top: 0, bottom: 100 } as DOMRect);
+  container.querySelector('svg')!.append(mark);
+}
+
+it.each(['highlight', 'underline', 'region', 'note'] as const)('上层 %s 没有批注时，悬停和重绘均保留底层批注', type => {
+  const { container, item, props, view, move } = setup();
+  const cover = { ...item, id: 'cover', type, comment: ' \n\t ' };
+  addMark(container, cover);
+  view.rerender(<PdfAnnotationTooltip {...props} items={[item, cover]} revision={2} />);
+  // 鼠标不移动时，也不能因重绘校验只命中上层而丢失底层预览。
+  expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
+  fireEvent.pointerDown(container);
+  expect(screen.queryByRole('tooltip')).toBeNull();
+  move();
+  expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
+});
+
+it('一个空批注区域覆盖多条标注时，逐条预览指针下的内容，不借用邻近批注', () => {
+  vi.useFakeTimers();
+  const { container, item, props, view, move } = setup();
+  const second = { ...item, id: 'second', kind: 'question', comment: '另一条批注' };
+  const cover = { ...item, id: 'cover', type: 'region' as const, comment: '' };
+  addMark(container, second, 110, 140);
+  addMark(container, cover);
+  view.rerender(<PdfAnnotationTooltip {...props} items={[item, second, cover]} />);
+  move();
+  expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
+  move(120);
+  expect(screen.getByRole('tooltip')).toHaveTextContent('另一条批注');
+  expect(screen.getByRole('tooltip')).toHaveAttribute('data-kind', 'question');
+  move(180);
+  act(() => vi.advanceTimersByTime(300));
+  expect(screen.queryByRole('tooltip')).toBeNull();
+});
+
+it('多层都有批注时仍优先最上层，所有命中内容为空时关闭预览', () => {
+  const { container, item, props, view, move } = setup();
+  const cover = { ...item, id: 'cover', type: 'region' as const, comment: '上层批注' };
+  addMark(container, cover);
+  view.rerender(<PdfAnnotationTooltip {...props} items={[item, cover]} />);
+  move();
+  expect(screen.getByRole('tooltip')).toHaveTextContent('上层批注');
+  view.rerender(
+    <PdfAnnotationTooltip
+      {...props}
+      items={[
+        { ...item, comment: '' },
+        { ...cover, comment: '' }
+      ]}
+    />
+  );
+  move();
+  expect(screen.queryByRole('tooltip')).toBeNull();
+});
+
+it('忽略已经不在当前数据中的覆盖节点，仍可预览有效的底层批注', () => {
+  const { container, item, move } = setup();
+  fireEvent.pointerDown(container);
+  addMark(container, { ...item, id: 'stale' });
+  move();
+  expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
+});
 
 it('文字层迟到的重绘保留仍命中的批注，位置失效时才收起', () => {
   const { item, props, view, atPoint } = setup();

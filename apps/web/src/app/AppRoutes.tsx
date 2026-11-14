@@ -81,6 +81,8 @@ export interface AppRoutesProps {
   onPreferencesChange(preferences: AppPreferences): void;
   sidebarOpen: boolean;
   onSidebarOpenChange(open: boolean): void;
+  pdfPanelOpen: boolean;
+  onPdfPanelOpenChange(open: boolean): void;
 }
 
 export function AppRoutes(props: AppRoutesProps) {
@@ -175,6 +177,8 @@ export function AppRoutes(props: AppRoutesProps) {
         canWrite={props.canWrite}
         onEditorViewAction={props.onEditorViewAction}
         onOpenNote={props.onOpenNote}
+        pdfPanelOpen={props.pdfPanelOpen}
+        onPdfPanelOpenChange={props.onPdfPanelOpenChange}
       />
     );
   }
@@ -196,13 +200,17 @@ function NoteEditorStage({
   editorView,
   canWrite,
   onEditorViewAction,
-  onOpenNote
+  onOpenNote,
+  pdfPanelOpen,
+  onPdfPanelOpenChange
 }: {
   noteId: string;
   editorView: EffectiveEditorViewState;
   canWrite: boolean;
   onEditorViewAction(action: EditorViewAction): void;
   onOpenNote(noteId: string): void;
+  pdfPanelOpen: boolean;
+  onPdfPanelOpenChange(open: boolean): void;
 }) {
   const serverData = useAppStore(state => state.serverData);
   const navigation = useAppStore(state => state.navigation);
@@ -301,7 +309,14 @@ function NoteEditorStage({
         )}
       >
         <Suspense fallback={<LoadingState label="正在加载 PDF 阅读器…" />}>
-          <PdfReaderView key={note.id} note={note} canWrite={canWrite} onOpenNote={onOpenNote} />
+          <PdfReaderView
+            key={note.id}
+            note={note}
+            canWrite={canWrite}
+            panelOpen={pdfPanelOpen}
+            onPanelOpenChange={onPdfPanelOpenChange}
+            onOpenNote={onOpenNote}
+          />
         </Suspense>
       </ErrorBoundary>
     );

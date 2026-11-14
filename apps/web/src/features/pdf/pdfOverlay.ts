@@ -143,7 +143,12 @@ export function pdfAnnotationsAtPoint(target: Element, x: number, y: number): st
   return [...ids];
 }
 
-/** 悬停预览仍取最上层标注，不拦截正文拖选。 */
-export function pdfAnnotationAtPoint(target: Element, x: number, y: number) {
-  return pdfAnnotationsAtPoint(target, x, y)[0] ?? null;
+/** 按绘制层级取首个满足条件的标注，悬停可跳过没有批注内容的候选。 */
+export function pdfAnnotationAtPoint(
+  target: Element,
+  x: number,
+  y: number,
+  accept: (id: string) => boolean = () => true
+) {
+  return pdfAnnotationsAtPoint(target, x, y).find(accept) ?? null;
 }

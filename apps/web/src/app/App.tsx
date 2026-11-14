@@ -77,6 +77,7 @@ function AppContent() {
     ...initialEditorViewState,
     showLeftSidebar: readNotesSidebarPreference()
   }));
+  const [pdfPanelOpen, setPdfPanelOpen] = useState(true);
   const [knowledgeSidebarOpen, setKnowledgeSidebarOpen] = useState(() => {
     try {
       return localStorage.getItem('knowra:knowledge-sidebar-open') !== 'false';
@@ -219,7 +220,6 @@ function AppContent() {
   const isNoteEditor = editorNoteId !== null;
   const effectiveEditorView = useMemo(() => getEffectiveEditorViewState(editorView), [editorView]);
   const editorNote = editorNoteId ? (notes.find(note => note.id === editorNoteId) ?? null) : null;
-  // PDF 阅读页有自己的工具栏与右侧检查器，外壳的检查器/专注模式开关不适用。
   const isPdfEditor = editorNote?.contentKind === 'pdf';
   const openNoteTabs = openNoteTabIds
     .map(id => notes.find(note => note.id === id && !note.deleted))
@@ -411,10 +411,15 @@ function AppContent() {
                     {
                       id: 'inspector' as const,
                       label: '检查器',
-                      active: isNoteEditor && effectiveEditorView.showRightSidebar,
+                      active: isPdfEditor ? pdfPanelOpen : isNoteEditor && effectiveEditorView.showRightSidebar,
                       onToggle: () => {
                         if (!isNoteEditor) {
                           setLiveAnnouncement('检查器仅在笔记编辑页面可用');
+                          return;
+                        }
+                        if (isPdfEditor) {
+                          setLiveAnnouncement(pdfPanelOpen ? '已隐藏右侧面板' : '已显示右侧面板');
+                          setPdfPanelOpen(open => !open);
                           return;
                         }
                         handleEditorViewAction('toggle-right-sidebar');
@@ -432,9 +437,7 @@ function AppContent() {
                         handleEditorViewAction('toggle-focus');
                       }
                     }
-                  ].filter(
-                    panel => (isNoteEditor || panel.id === 'sidebar') && !(isPdfEditor && panel.id !== 'sidebar')
-                  )
+                  ].filter(panel => isNoteEditor || panel.id === 'sidebar')
           }}
           mobileTabs
           liveAnnouncement={liveAnnouncement}
@@ -463,6 +466,8 @@ function AppContent() {
               onPreferencesChange={setPreferences}
               sidebarOpen={editorView.showLeftSidebar}
               onSidebarOpenChange={open => setEditorView(current => ({ ...current, showLeftSidebar: open }))}
+              pdfPanelOpen={pdfPanelOpen}
+              onPdfPanelOpenChange={setPdfPanelOpen}
               onSelectNote={noteId => openNote(noteId)}
             />
           </div>

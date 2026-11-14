@@ -50,15 +50,16 @@ export function PdfAnnotationTooltip({
       clear();
       return;
     }
+    const commentIds = new Set(items.filter(value => value.comment.trim()).map(value => value.id));
+    const commentAtPoint = (target: Element, x: number, y: number) =>
+      pdfAnnotationAtPoint(target, x, y, id => commentIds.has(id));
     // 文字层完成绘制可能晚于首次悬停；移入预览框后也应保留批注。
     setHover(current => {
       if (!current) return null;
-      if (!items.some(value => value.id === current.id && value.comment.trim())) return null;
+      if (!commentIds.has(current.id)) return null;
       if (overTooltip.current) return current;
       const target = document.elementFromPoint(current.left, current.top);
-      return target &&
-        container.contains(target) &&
-        pdfAnnotationAtPoint(target, current.left, current.top) === current.id
+      return target && container.contains(target) && commentAtPoint(target, current.left, current.top) === current.id
         ? current
         : null;
     });
@@ -71,8 +72,8 @@ export function PdfAnnotationTooltip({
         clear();
         return;
       }
-      const id = pdfAnnotationAtPoint(event.target, event.clientX, event.clientY);
-      if (!id || !items.some(value => value.id === id && value.comment.trim())) {
+      const id = commentAtPoint(event.target, event.clientX, event.clientY);
+      if (!id) {
         leave();
         return;
       }
