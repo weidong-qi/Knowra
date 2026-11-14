@@ -13,6 +13,7 @@ import { downloadTextFile } from '../../browser/downloadFile';
 import { writeClipboardText } from '../../browser/clipboard';
 import { EditorTabs } from '../editor/EditorTabs';
 import { downloadAttachment } from '../editor/attachmentAccess';
+import { indexRoute } from '../notes/notesIndexNavigation';
 import { listPdfAnnotations, pdfFileUrl, pdfRequest, randomId } from './pdfApi';
 import { usePdfViewer } from './usePdfViewer';
 import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
@@ -481,6 +482,13 @@ export function PdfReaderView({
   const openNotes = store.navigation.openNoteTabs.flatMap(id =>
     store.serverData.notes.filter(item => item.id === id && !item.deleted)
   );
+  const foldersById = store.serverData.foldersById;
+  const backFolderId = note.folderId && (!foldersById || foldersById[note.folderId]) ? note.folderId : null;
+  function returnToFolder() {
+    if (backFolderId) store.selectNotesFolder?.(backFolderId);
+    else store.selectNotesScope?.('all');
+    navigate(indexRoute('all', backFolderId));
+  }
   const tabs: ReactNode = (
     <EditorTabs
       notes={openNotes}
@@ -492,7 +500,7 @@ export function PdfReaderView({
         const next = store.closeNoteTab(id);
         if (id === note.id) {
           if (next) onOpenNote(next);
-          else navigate('/materials');
+          else returnToFolder();
         }
       }}
       onCloseOtherNotes={store.closeOtherNoteTabs}
@@ -605,7 +613,7 @@ export function PdfReaderView({
             panel={panel && panelTab === 'marks'}
             outlineOpen={panel && panelTab === 'outline'}
             tool={tool}
-            onBack={() => navigate('/materials')}
+            onBack={returnToFolder}
             onFavorite={async () => {
               try {
                 await store.setNoteFavorite(note.id, !note.favorite);
@@ -939,7 +947,7 @@ export function PdfReaderView({
           title="解锁 PDF"
           isOpen
           onOpenChange={open => {
-            if (!open) navigate('/materials');
+            if (!open) returnToFolder();
           }}
         >
           <DialogBody>
@@ -947,7 +955,7 @@ export function PdfReaderView({
             <TextField label="PDF 密码" type="password" value={password} onChange={setPassword} />
           </DialogBody>
           <DialogFooter>
-            <Button variant="ghost" onPress={() => navigate('/materials')}>
+            <Button variant="ghost" onPress={returnToFolder}>
               取消
             </Button>
             <Button

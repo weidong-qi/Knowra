@@ -111,12 +111,16 @@
     0 0 0 1px rgb(24 30 48 / 7%), var(--shadow-panel-contact), 0 6px 18px -6px rgb(24 30 48 / 10%),
     0 22px 48px -18px rgb(24 30 48 / 14%);
   --shadow-popover: 0 0 0 1px rgb(24 30 48 / 8%), 0 4px 10px rgb(24 30 48 / 6%), 0 24px 64px -12px rgb(24 30 48 / 28%);
-  /* 两类形状共存：内容/表单/导航使用小圆角，轻量操作/标签使用胶囊。
+  /* 形状与圆角分档：
+   * 1. 胶囊/圆形（--radius-pill: 999px）：轻量操作、标签、工具栏搜索与分段切换。
+   * 2. 圆角矩形分两档：
+   *    - 小容器与控件（6px / 8px）：表单、按钮、页签、导航项（--radius-control / --radius-tab: 6px），普通浮层菜单与小型附着容器（--radius-popover: 8px）。
+   *    - 大容器面板（12px）：外壳主舞台、上下文侧栏、页面工作区面板、大卡片与默认对话框（--radius-panel: 12px）。
    * 主题不得用胶囊覆盖通用圆角；按钮形状由基础组件显式选择。 */
   --radius-control: 6px;
   --radius-tab: 6px;
   --radius-popover: 8px;
-  --radius-panel: 8px;
+  --radius-panel: 12px;
   --radius-pill: 999px;
   --space-1: 4px;
   --space-2: 8px;

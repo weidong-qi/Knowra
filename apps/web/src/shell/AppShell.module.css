@@ -1,8 +1,8 @@
 /* V5：全局外壳，上下文侧栏与内容区连成一张面板，各自独立滚动。 */
 .shell {
   --shell-content-row: 2;
-  /* 外壳主面板（侧栏 + 内容区）的圆角，比功能区内部面板大一档。 */
-  --shell-panel-radius: 12px;
+  /* 外壳主面板（上下文侧栏 + 内容区）复用大容器面板圆角（12px）。 */
+  --shell-panel-radius: var(--radius-panel);
   width: 100%;
   height: 100dvh;
   min-height: 0;

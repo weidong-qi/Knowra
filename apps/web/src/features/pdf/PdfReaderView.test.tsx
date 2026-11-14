@@ -1,8 +1,15 @@
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Note } from '@study-accelerator/web-core';
 import { PdfReaderView } from './PdfReaderView';
 import { readRuntimeConfig } from '../../app/runtimeConfig';
 import { listPdfAnnotations } from './pdfApi';
+
+const mocks = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  selectNotesFolder: vi.fn(),
+  selectNotesScope: vi.fn(),
+  foldersById: { 'folder-aug': { id: 'folder-aug', name: '数据增强', parentId: null } } as Record<string, object>
+}));
 
 // 阅读器状态测试不启动 PDF.js 或加载浏览器 worker。
 vi.mock('./pdfRuntime', () => ({ pdfViewerCss: '' }));
@@ -23,15 +30,29 @@ vi.mock('./pdfApi', async importOriginal => ({
 }));
 vi.mock('../../store/AppStoreProvider', () => ({
   useAppStore: (selector: (state: object) => unknown) =>
-    selector({ navigation: { openNoteTabs: [] }, serverData: { notes: [] } })
+    selector({
+      navigation: { openNoteTabs: [] },
+      serverData: { notes: [], foldersById: mocks.foldersById },
+      selectNotesFolder: mocks.selectNotesFolder,
+      selectNotesScope: mocks.selectNotesScope
+    })
 }));
 vi.mock('../../shell/DesktopTitlebarContext', () => ({ useDesktopTitlebar: () => ({ host: null }) }));
-vi.mock('../../app/router', () => ({ useNavigate: () => vi.fn(), useLocation: () => ({ pathname: '/', search: '' }) }));
+vi.mock('../../app/router', () => ({
+  useNavigate: () => mocks.navigate,
+  useLocation: () => ({ pathname: '/', search: '' })
+}));
 vi.mock('../../app/desktopLifecycle', () => ({ registerDesktopSave: () => () => undefined }));
 vi.mock('../../app/navigationGuard', () => ({ registerNavigationGuard: () => () => undefined }));
 vi.mock('../editor/EditorTabs', () => ({ EditorTabs: () => null }));
 vi.mock('./PdfPageBar', () => ({ PdfPageBar: () => null }));
-vi.mock('./PdfReaderToolbar', () => ({ PdfReaderToolbar: () => null }));
+vi.mock('./PdfReaderToolbar', () => ({
+  PdfReaderToolbar: ({ onBack }: { onBack(): void }) => (
+    <button type="button" onClick={onBack}>
+      返回资料库
+    </button>
+  )
+}));
 vi.mock('./PdfSidePanel', () => ({ PdfSidePanel: () => null }));
 
 const sha256 = 'a'.repeat(64);
@@ -67,6 +88,9 @@ beforeEach(() => {
   });
   localStorage.setItem(storageKey, stored);
   list.mockReset();
+  mocks.navigate.mockReset();
+  mocks.selectNotesFolder.mockReset();
+  mocks.selectNotesScope.mockReset();
 });
 afterEach(() => {
   cleanup();
@@ -98,4 +122,26 @@ it('加载成功并恢复后离开，草稿仍保留', async () => {
   view.unmount();
   await Promise.resolve();
   expect(JSON.parse(localStorage.getItem(storageKey)!).drafts).toHaveLength(1);
+});
+
+it('点击返回时跳转到 PDF 所在文件夹，无文件夹时回到资料库根目录', async () => {
+  list.mockResolvedValue([]);
+  const folderNote = { ...note, folderId: 'folder-aug' } as Note;
+  const view = render(<PdfReaderView note={folderNote} canWrite onOpenNote={() => undefined} />);
+  await waitFor(() => expect(list).toHaveBeenCalled());
+  await settle();
+  fireEvent.click(screen.getByRole('button', { name: '返回资料库' }));
+  expect(mocks.selectNotesFolder).toHaveBeenCalledWith('folder-aug');
+  expect(mocks.navigate).toHaveBeenCalledWith('/materials?folder=folder-aug');
+
+  view.unmount();
+  mocks.navigate.mockReset();
+  list.mockClear();
+  const rootNote = { ...note, folderId: null } as Note;
+  render(<PdfReaderView note={rootNote} canWrite onOpenNote={() => undefined} />);
+  await waitFor(() => expect(list).toHaveBeenCalled());
+  await settle();
+  fireEvent.click(screen.getByRole('button', { name: '返回资料库' }));
+  expect(mocks.selectNotesScope).toHaveBeenCalledWith('all');
+  expect(mocks.navigate).toHaveBeenCalledWith('/materials');
 });

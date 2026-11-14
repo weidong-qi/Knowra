@@ -7,6 +7,7 @@ import { LoadingState } from '../components/ui/status';
 import { Button } from '../components/ui/button/Button';
 import { NoteEditorView } from '../features/editor';
 import { CreateEntryDialog, DeleteTreeEntryDialog, NotesIndexView, type CreateMode } from '../features/notes';
+import { indexRoute } from '../features/notes/notesIndexNavigation';
 import { MarkdownImportDialog } from '../features/editor/MarkdownImportDialog';
 import type { EditorViewAction, EffectiveEditorViewState } from '../features/editor/editorViewState';
 import { HomeView } from '../views/HomeView';
@@ -295,7 +296,7 @@ function NoteEditorStage({
           <section>
             <p role="alert">PDF 阅读器暂时不可用，请重新打开资料。</p>
             <p>{error instanceof Error ? `${error.name}: ${error.message}` : String(error)}</p>
-            <Button onPress={() => navigate('/materials')}>返回资料库</Button>
+            <Button onPress={() => navigate(indexRoute('all', folder?.id ?? null))}>返回资料库</Button>
           </section>
         )}
       >
