@@ -1,3 +1,4 @@
+import { handleKnowledgeConceptRoute } from './modules/knowledge-concepts/routes.ts';
 import { handlePdfRoute } from './modules/pdf/routes.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { handleTaskWorkspaceRoute } from './modules/task-workspaces/routes.ts';
@@ -34,7 +35,12 @@ export interface ServerAppContext
     Partial<
       Pick<
         PersistentContext,
-        'taskWorkspaces' | 'taskWorkspaceContext' | 'personalTodos' | 'knowledgeExtractionTasks' | 'aiOwnerId'
+        | 'taskWorkspaces'
+        | 'taskWorkspaceContext'
+        | 'personalTodos'
+        | 'knowledgeConcepts'
+        | 'knowledgeExtractionTasks'
+        | 'aiOwnerId'
       >
     > {
   aiLocation?: string;
@@ -130,6 +136,8 @@ export function createServer({ appContext, cors = {}, logger = console }: Server
         })
       )
         return;
+
+      if (await handleKnowledgeConceptRoute({ request, response, url, service: appContext.knowledgeConcepts })) return;
 
       if (await handlePersonalTodoRoute({ request, response, url, service: appContext.personalTodos })) return;
 

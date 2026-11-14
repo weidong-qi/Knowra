@@ -27,6 +27,9 @@ export interface SyncModelNames {
   questions: 'question';
   questionObjectives: 'questionObjective';
   questionSources: 'questionSource';
+  knowledgeConcepts: 'knowledgeConcept';
+  knowledgeConceptLinks: 'knowledgeConceptLink';
+  knowledgeConceptRelations: 'knowledgeConceptRelation';
   personalTodos: 'personalTodo';
 }
 interface ReadRows {
@@ -51,6 +54,9 @@ interface ReadRows {
   questions: Models.Question;
   questionObjectives: Models.QuestionObjective;
   questionSources: Models.QuestionSource;
+  knowledgeConcepts: Models.KnowledgeConcept;
+  knowledgeConceptLinks: Models.KnowledgeConceptLink;
+  knowledgeConceptRelations: Models.KnowledgeConceptRelation;
   personalTodos: Models.PersonalTodo;
 }
 type JsonFields =
@@ -103,6 +109,9 @@ type MapperSuffix = {
   questions: 'Question';
   questionObjectives: 'QuestionObjective';
   questionSources: 'QuestionSource';
+  knowledgeConcepts: 'KnowledgeConcept';
+  knowledgeConceptLinks: 'KnowledgeConceptLink';
+  knowledgeConceptRelations: 'KnowledgeConceptRelation';
   personalTodos: 'PersonalTodo';
 };
 export type SyncTable = {

@@ -7,11 +7,13 @@ import { useLayoutEffect, type ReactNode } from 'react';
 describe('workspace browser history', () => {
   it('reads a location change between the first render and event subscription', () => {
     window.history.replaceState(null, '', '#/');
-    const wrapper = ({ children }: { children: ReactNode }) => {
-      useLayoutEffect(() => { window.history.replaceState(null, '', '#/materials?scope=trash'); }, []);
+    const Wrapper = ({ children }: { children: ReactNode }) => {
+      useLayoutEffect(() => {
+        window.history.replaceState(null, '', '#/materials?scope=trash');
+      }, []);
       return children;
     };
-    const { result } = renderHook(() => useHashNavigation(), { wrapper });
+    const { result } = renderHook(() => useHashNavigation(), { wrapper: Wrapper });
     expect(result.current.pathname).toBe('/materials?scope=trash');
   });
   it('keeps an unsaved explicit form mounted until its navigation guard is released', async () => {
@@ -21,12 +23,27 @@ describe('workspace browser history', () => {
     try {
       act(() => result.current.navigate('/materials'));
       expect(result.current.pathname).toBe('/knowledge');
-      act(() => { window.location.hash = '#/materials'; });
+      act(() => {
+        window.location.hash = '#/materials';
+      });
       await waitFor(() => expect(window.location.hash).toBe('#/knowledge'));
       expect(result.current.pathname).toBe('/knowledge');
-    } finally { release(); }
+    } finally {
+      release();
+    }
     act(() => result.current.navigate('/materials'));
     expect(result.current.pathname).toBe('/materials');
+  });
+  it('replaces search edits without adding history entries and preserves forward navigation', async () => {
+    window.history.replaceState(null, '', '#/knowledge');
+    const { result } = renderHook(() => useHashNavigation());
+    act(() => result.current.navigate('/knowledge?scope=candidate'));
+    act(() => result.current.navigate('/knowledge?scope=candidate&q=卷积', { replace: true }));
+    act(() => result.current.navigate('/knowledge/concepts?concept=cnn'));
+    act(() => result.current.back());
+    await waitFor(() => expect(decodeURI(result.current.pathname)).toBe('/knowledge?scope=candidate&q=卷积'));
+    act(() => result.current.back());
+    await waitFor(() => expect(result.current.pathname).toBe('/knowledge'));
   });
   it('restores folder addresses and truncates forward history after a new branch', async () => {
     window.history.replaceState(null, '', '#/materials');

@@ -1,3 +1,6 @@
+import { knowledgeLibraryNavigationKey } from '../features/knowledge/library/knowledgeLibraryRoute';
+import { KnowledgeLibraryProvider } from '../features/knowledge/library/KnowledgeLibraryProvider';
+import { KnowledgeContextSidebar } from '../features/knowledge/library/KnowledgeContextSidebar';
 import { ScopedAppearanceProvider } from '../components/ui/overlay';
 import { NotesIndexAppearanceControls, notesIndexAppearanceProps } from '../features/notes/NotesIndexAppearance';
 import { useNotesIndexAppearance } from '../features/notes/notesIndexAppearanceModel';
@@ -42,7 +45,7 @@ import { AppRoutes, DOMAIN_INFO } from './AppRoutes';
 import { applyAppPreferences, readAppPreferences } from '../features/settings/preferences';
 import styles from './App.module.css';
 
-export function App() {
+function AppContent() {
   useMaterialsRoute();
   const location = useLocation();
   const routePathname = location.pathname.split('?')[0];
@@ -74,6 +77,20 @@ export function App() {
     ...initialEditorViewState,
     showLeftSidebar: readNotesSidebarPreference()
   }));
+  const [knowledgeSidebarOpen, setKnowledgeSidebarOpen] = useState(() => {
+    try {
+      return localStorage.getItem('knowra:knowledge-sidebar-open') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('knowra:knowledge-sidebar-open', String(knowledgeSidebarOpen));
+    } catch {
+      /* 本次会话保留。 */
+    }
+  }, [knowledgeSidebarOpen]);
   const previousPathRef = useRef(location.pathname);
 
   useEffect(() => {
@@ -116,8 +133,9 @@ export function App() {
   }, [storeActiveDomain, location.pathname, setActiveWorkDomain]);
 
   useEffect(() => {
-    if (previousPathRef.current === location.pathname) return;
+    const previousKey = knowledgeLibraryNavigationKey(previousPathRef.current);
     previousPathRef.current = location.pathname;
+    if (previousKey === knowledgeLibraryNavigationKey(location.pathname)) return;
     const stage = document.getElementById('feature-stage');
     stage?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     stage?.focus({ preventScroll: true });
@@ -249,7 +267,10 @@ export function App() {
   const indexAppearance = useNotesIndexAppearance();
   const isTodos = routeDomain === 'learning' && !isShowcaseActive && !isSettingsActive && !isAssistantActive && !isHome;
   const showNotesContextSidebar =
-    (isNotesIndex && editorView.showLeftSidebar) || (isNoteEditor && effectiveEditorView.showLeftSidebar) || isTodos;
+    (isNotesIndex && editorView.showLeftSidebar) ||
+    (isNoteEditor && effectiveEditorView.showLeftSidebar) ||
+    isTodos ||
+    (isKnowledgeWorkspace && knowledgeSidebarOpen);
 
   return (
     <EntryDragDropProvider>
@@ -260,6 +281,7 @@ export function App() {
           navigationKey={location.pathname}
           activeDomain={activeDomain}
           contextSidebarOpen={showNotesContextSidebar}
+          contextSidebarLabel={isKnowledgeWorkspace ? '知识库导航' : isTodos ? '待办导航' : '笔记导航'}
           contextSidebar={
             isNotesIndex || isNoteEditor ? (
               <NotesContextSidebar
@@ -267,6 +289,8 @@ export function App() {
                 onOpenIndex={openNotesIndex}
                 onOpenSearch={() => setSearchOpen(true)}
               />
+            ) : isKnowledgeWorkspace ? (
+              <KnowledgeContextSidebar />
             ) : isTodos ? (
               <TodosContextSidebar />
             ) : undefined
@@ -354,7 +378,16 @@ export function App() {
               ) : undefined,
             panels:
               !isNoteEditor && !isNotesIndex
-                ? []
+                ? isKnowledgeWorkspace
+                  ? [
+                      {
+                        id: 'sidebar' as const,
+                        label: '知识库侧栏',
+                        active: knowledgeSidebarOpen,
+                        onToggle: () => setKnowledgeSidebarOpen(value => !value)
+                      }
+                    ]
+                  : []
                 : [
                     {
                       id: 'sidebar' as const,
@@ -453,6 +486,14 @@ export function App() {
         </AppShell>
       </ScopedAppearanceProvider>
     </EntryDragDropProvider>
+  );
+}
+
+export function App() {
+  return (
+    <KnowledgeLibraryProvider>
+      <AppContent />
+    </KnowledgeLibraryProvider>
   );
 }
 

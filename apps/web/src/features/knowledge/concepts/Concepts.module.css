@@ -1,0 +1,197 @@
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.tabs {
+  display: flex;
+  padding: var(--space-3) var(--space-5);
+  flex: none;
+}
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.content > * {
+  flex: 1;
+  min-width: 0;
+}
+.workspace {
+  overflow: auto;
+  padding: var(--space-6);
+  color: var(--text-primary);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 40vh;
+  overflow: auto;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.conceptRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  text-align: left;
+}
+.conceptRow:hover,
+.conceptRow[data-hovered] {
+  background: var(--surface-hover);
+}
+.membership {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+@media (max-width: 680px) {
+  .workspace {
+    padding: var(--space-3);
+  }
+  .tabs {
+    padding: var(--space-2);
+  }
+}
+
+.conceptName {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  overflow: hidden;
+}
+.conceptName strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.conceptName > span {
+  color: var(--ni-ink-3);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conceptCounts {
+  flex: none;
+  color: var(--ni-ink-2);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.conceptCard {
+  min-height: 128px;
+}
+.conceptCard .conceptName {
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.conceptCard .conceptName strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 20px;
+  background: var(--accent-soft);
+  color: var(--accent-on-tint);
+  font-size: 12px;
+}
+.batchBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface-hover);
+  font-size: 12px;
+}
+.linkRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 12px 4px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.linkTitle {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 6px 0;
+  overflow-wrap: anywhere;
+  border: 0;
+  background: transparent;
+}
+.linkTitle:hover {
+  color: var(--accent);
+}
+.role {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-control);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+.role[data-role='subject'] {
+  color: var(--accent-on-tint);
+  background: var(--accent-soft);
+}
+@container (max-width:600px) {
+  .conceptCounts {
+    display: none;
+  }
+}
+
+.selectionCount {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}

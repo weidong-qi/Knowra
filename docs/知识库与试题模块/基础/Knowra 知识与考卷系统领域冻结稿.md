@@ -187,9 +187,11 @@ EmbeddingRecord
 知识图谱由以下正式数据投影产生：
 
 ```text id="phcm64"
-KnowledgeItem
+KnowledgeConcept
 +
-KnowledgeRelation
+KnowledgeConceptLink
++
+KnowledgeConceptRelation
 ```
 
 图谱只是一种呈现和探索方式。
@@ -455,43 +457,31 @@ comparison
 
 ---
 
-## 3.8 KnowledgeRelation：知识关系
+## 3.8 概念身份、挂靠与概念关系
 
-职责：
+2026-11-12 修订：概念身份独立于知识陈述；原先连接知识点并自带说明的 KnowledgeRelation 由以下三类正式对象取代。已有 KnowledgeItem、LearningObjective 字段不变，旧 concept 类型知识点不自动迁移。
 
-> 表达两个知识点之间的语义联系。
+### KnowledgeConcept：概念
 
-建议字段：
+只保存名称、区分标签、别名、审阅状态、来源方式、关注状态与必要的版本/删除信息，不保存知识正文。同名或别名重叠的概念须用不同且非空的区分标签消歧。
 
-```text id="0oxifc"
-id
-sourceKnowledgeId
-targetKnowledgeId
-relationType
-description
-sourceMode
-reviewStatus
-confidence
-createdAt
-updatedAt
-```
+用户手工新建为 confirmed。归档与不关注不改变身份。合并用于同一概念的重复身份：事务内迁移关联与关系、去重，源名称收为目标别名，源概念停用；不提供撤销合并，不在读取时追踪合并链。
 
-第一版冻结六种关系：
+### KnowledgeConceptLink：知识点与概念的挂靠
 
-```text id="lskuki"
-partOf
-prerequisiteOf
-contrastsWith
-causes
-appliesTo
-relatedTo
-```
+一条知识点可关联多个概念，角色为 subject（主体：这条知识讲的是它）或 mentions（提及：这条知识用到了它）。挂靠只保存身份和角色，不复制正文。
 
-暂不单独增加“依赖、相似、易混、演化”等关系，避免语义重复。
+知识点进入回收站时保留挂靠，展示过滤；恢复后重新出现。永久删除知识点时，同一事务软删除挂靠及以其为依据的概念关系，预览列明数量。
 
-这些关系可以通过 `description` 表达更具体的含义。
+### KnowledgeConceptRelation：概念关系
 
-AI 推荐的关系默认进入候选态。
+关系连接两个不同的有效概念，类型为 partOf、prerequisiteOf、contrastsWith、causes、appliesTo、relatedTo、isA；contrastsWith、relatedTo 不分方向。
+
+关系不保存说明正文。解释写入 KnowledgeItem，以 basisItemId 指向该知识点；依据知识点必须同时挂靠关系两端。只有用户手工绘制的骨架边允许没有依据。AI 产物保持 candidate，公开手工命令不得自称 AI 来源。
+
+解除或移动挂靠导致关系依据失效时，弹窗说明将删除的关系；确认一次，在同一事务完成关联变更及关系软删除。服务端重新核对确认范围，变化时拒绝执行。
+
+第一期实现三类对象的存储、校验、同步及手工概念/挂靠界面；关系编辑与真实概念图在第二期开放。具体契约见[概念层首版开发方案](../概念层首版-开发方案.md)。
 
 ---
 
@@ -974,7 +964,8 @@ KnowledgeTopic
 ↕
 KnowledgeItem
 ├── KnowledgeEvidence ─→ Note / Annotation / ExternalSource
-├── KnowledgeRelation ─→ KnowledgeItem
+├── KnowledgeConceptLink ─→ KnowledgeConcept
+│                              └── KnowledgeConceptRelation ─→ KnowledgeConcept
 └── LearningObjective
         ├── ExamFocus ─→ ExamProfile
         ├── QuestionObjective ─→ Question
@@ -1104,7 +1095,9 @@ SourceAnchor
 KnowledgeTopic
 KnowledgeItem
 KnowledgeEvidence
-KnowledgeRelation
+KnowledgeConcept
+KnowledgeConceptLink
+KnowledgeConceptRelation
 LearningObjective
 ```
 

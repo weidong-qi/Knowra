@@ -85,7 +85,7 @@ export function createSqliteDataStore(filePath, { beforeCommit = () => {} } = {}
       initial[row.collection].push(JSON.parse(row.payload));
     }
     const schema = db.prepare("SELECT value FROM metadata WHERE key = 'localDataSchemaVersion'").get()?.value;
-    if (schema !== undefined && !/^[1-8]$/.test(schema)) throw new Error('本地业务 schema 版本未知，请升级应用。');
+    if (schema !== undefined && !/^[1-9]$/.test(schema)) throw new Error('本地业务 schema 版本未知，请升级应用。');
     const schemaVersion = schema === undefined ? 6 : Number(schema);
     state = validatePersistedLocalState({ schemaVersion, ...initial });
     readKnowledgeLifecycleBoundaries(db);
