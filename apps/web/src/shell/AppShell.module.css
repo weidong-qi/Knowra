@@ -241,6 +241,43 @@
 
 /* 侧栏间距、圆角和边线独立组合；窄屏侧栏仍使用弹层。 */
 @media (min-width: 768px) {
+  .focusShell {
+    grid-template-rows: minmax(0, 1fr);
+    padding-top: var(--shell-gap);
+  }
+  .focusShell .stage {
+    grid-row: 1;
+  }
+  .focusTitlebarTrigger {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10px;
+    z-index: 39;
+  }
+  .focusShell .desktopTitlebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--topbar-size);
+    z-index: 40;
+    background: var(--shell-topbar-color, var(--surface-chrome));
+    border-bottom: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-panel-contact);
+    transform: translateY(calc(-100% - 8px));
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform var(--motion-mid) var(--motion-ease),
+      opacity var(--motion-fast) var(--motion-ease);
+  }
+  .focusShell .desktopTitlebar[data-revealed='true'] {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
   .shellWithSidebar[data-sidebar-card='true'] {
     grid-template-columns: var(--rail-size) calc(var(--sidebar-size) + var(--shell-gap)) minmax(0, 1fr);
   }

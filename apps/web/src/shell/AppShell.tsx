@@ -1,6 +1,6 @@
 // V5 全局外壳：常驻标签/操作顶栏、模块轨道、上下文侧栏与内容面板。
 
-import { useEffect, useState, type ReactNode, type HTMLAttributes } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type HTMLAttributes } from 'react';
 import { ModuleRail } from './ModuleRail';
 import { type PathSegment, type StatusPanel } from './StatusBar';
 import { MobileTabs } from './MobileTabs';
@@ -91,6 +91,38 @@ export function AppShell({
   );
   const [sidebarOverlayOpen, setSidebarOverlayOpen] = useState(false);
   const [skipFocused, setSkipFocused] = useState(false);
+  const [focusTitlebarRevealed, setFocusTitlebarRevealed] = useState(false);
+  const titlebarRef = useRef<HTMLElement | null>(null);
+  const hideTitlebarTimerRef = useRef<number | null>(null);
+  const pointerInsideTitlebarRef = useRef(false);
+
+  const clearHideTitlebarTimer = useCallback(() => {
+    if (hideTitlebarTimerRef.current !== null) {
+      window.clearTimeout(hideTitlebarTimerRef.current);
+      hideTitlebarTimerRef.current = null;
+    }
+  }, []);
+
+  const hasActiveTitlebarOverlay = useCallback(() => {
+    const element = titlebarRef.current;
+    if (!element) return false;
+    return Boolean(element.querySelector('[aria-expanded="true"]')) || element.contains(document.activeElement);
+  }, []);
+
+  const revealFocusTitlebar = useCallback(() => {
+    clearHideTitlebarTimer();
+    setFocusTitlebarRevealed(true);
+  }, [clearHideTitlebarTimer]);
+
+  const scheduleHideFocusTitlebar = useCallback(() => {
+    clearHideTitlebarTimer();
+    hideTitlebarTimerRef.current = window.setTimeout(() => {
+      hideTitlebarTimerRef.current = null;
+      if (pointerInsideTitlebarRef.current || hasActiveTitlebarOverlay()) return;
+      setFocusTitlebarRevealed(false);
+    }, 160);
+  }, [clearHideTitlebarTimer, hasActiveTitlebarOverlay]);
+
   useEffect(() => {
     const media = window.matchMedia?.('(max-width: 920px)');
     if (!media) return;
@@ -103,8 +135,33 @@ export function AppShell({
     setSkipFocused(false);
   }, [navigationKey]);
   useEffect(() => {
-    if (focusMode) setSidebarOverlayOpen(false);
-  }, [focusMode]);
+    if (focusMode) {
+      setSidebarOverlayOpen(false);
+      // 若通过顶栏按钮进入专注模式且指针仍在顶栏内，等鼠标移开后再收起，避免指针下突然悬空。
+      setFocusTitlebarRevealed(pointerInsideTitlebarRef.current);
+      return clearHideTitlebarTimer;
+    }
+    clearHideTitlebarTimer();
+    setFocusTitlebarRevealed(false);
+    return clearHideTitlebarTimer;
+  }, [clearHideTitlebarTimer, focusMode]);
+
+  useEffect(() => {
+    if (!focusMode || !focusTitlebarRevealed) return;
+    const handleMouseMove = (event: MouseEvent) => {
+      if (event.clientY <= 10) {
+        revealFocusTitlebar();
+        return;
+      }
+      const inside = Boolean(titlebarRef.current?.contains(event.target as Node));
+      pointerInsideTitlebarRef.current = inside;
+      if (!inside && event.clientY > 56 && !hasActiveTitlebarOverlay()) {
+        scheduleHideFocusTitlebar();
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [focusMode, focusTitlebarRevealed, hasActiveTitlebarOverlay, revealFocusTitlebar, scheduleHideFocusTitlebar]);
   const sidebarVisible = !focusMode && (compact ? sidebarOverlayOpen : contextSidebarOpen);
   const toolbarStatus = {
     ...statusbar,
@@ -146,7 +203,44 @@ export function AppShell({
           跳到主内容
         </a>
 
-        <header className={styles.desktopTitlebar} aria-label={desktop ? 'Mac 窗口标题栏' : '全局顶栏'}>
+        {focusMode ? (
+          <div
+            className={styles.focusTitlebarTrigger}
+            data-testid="focus-titlebar-trigger"
+            aria-hidden="true"
+            onMouseEnter={revealFocusTitlebar}
+            onPointerEnter={revealFocusTitlebar}
+          />
+        ) : null}
+
+        <header
+          ref={titlebarRef}
+          className={styles.desktopTitlebar}
+          aria-label={desktop ? 'Mac 窗口标题栏' : '全局顶栏'}
+          data-revealed={(focusMode && focusTitlebarRevealed) || undefined}
+          onMouseEnter={() => {
+            pointerInsideTitlebarRef.current = true;
+            if (focusMode) revealFocusTitlebar();
+          }}
+          onPointerEnter={() => {
+            pointerInsideTitlebarRef.current = true;
+            if (focusMode) revealFocusTitlebar();
+          }}
+          onMouseLeave={() => {
+            pointerInsideTitlebarRef.current = false;
+            if (focusMode) scheduleHideFocusTitlebar();
+          }}
+          onPointerLeave={() => {
+            pointerInsideTitlebarRef.current = false;
+            if (focusMode) scheduleHideFocusTitlebar();
+          }}
+          onFocusCapture={() => {
+            if (focusMode) revealFocusTitlebar();
+          }}
+          onBlurCapture={() => {
+            if (focusMode) scheduleHideFocusTitlebar();
+          }}
+        >
           <ShellToolbar status={toolbarStatus}>
             <div ref={setTitlebarHost} className={styles.desktopTitlebarHost}>
               {!desktopTitlebarEditor

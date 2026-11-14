@@ -1167,6 +1167,9 @@ test('V4-07 视图菜单统一控制阅读、编辑、专注、双侧栏与源�
   await page.getByRole('menuitem', { name: '专注模式', exact: true }).click();
   await expect(page.getByRole('navigation', { name: '工作域导航' })).toHaveCount(0);
   await expect(page.getByRole('complementary', { name: '笔记上下文导航' })).toHaveCount(0);
+  await expect(page.getByRole('banner', { name: '全局顶栏' })).not.toHaveAttribute('data-revealed', 'true');
+  await page.mouse.move(400, 2);
+  await expect(page.getByRole('banner', { name: '全局顶栏' })).toHaveAttribute('data-revealed', 'true');
   await expect(page.getByRole('button', { name: '切换专注模式' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: '切换专注模式' }).click();
   await expect(page.getByRole('navigation', { name: '工作域导航' })).toBeVisible();
