@@ -33,6 +33,9 @@ const models = [
   'question',
   'questionObjective',
   'questionSource',
+  'knowledgeConcept',
+  'knowledgeConceptLink',
+  'knowledgeConceptRelation',
   'personalTodo',
   'syncJournal'
 ];

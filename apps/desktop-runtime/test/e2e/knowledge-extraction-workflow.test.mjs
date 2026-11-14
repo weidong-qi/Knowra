@@ -143,6 +143,7 @@ test('真实 Web Mock 提炼：关闭和刷新不取消，候选对照、个人�
     await taskDialog(page).getByRole('button', { name: '查看候选 1', exact: true }).click();
     await expect(page.getByRole('heading', { name: '数据增强', exact: true })).toBeVisible();
     await expect(page.getByText(demoLabel, { exact: true })).toBeVisible();
+    await page.getByRole('tab', { name: '来源', exact: true }).click();
     await page.getByRole('button', { name: '对照来源', exact: true }).click();
     const comparison = page.getByRole('dialog', { name: '来源对照', exact: true });
     await expect(comparison.getByLabel('历史版本正文', { exact: true })).toContainText(

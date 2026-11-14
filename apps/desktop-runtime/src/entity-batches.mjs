@@ -1,3 +1,4 @@
+import { KNOWLEDGE_CONCEPT_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.ts';
 import { todoComponents } from './personal-todo-sync.mjs';
 import { SYNC_CLIENT_BATCH_BODY_LIMIT_BYTES } from '@study-accelerator/shared/http-limits';
 import { calculateContentHash } from '../../api/src/modules/knowledge/domain/note-version.ts';
@@ -39,6 +40,17 @@ export function selectEntityBatch(
   for (const entry of base.values())
     if (entry.collection === 'contentAnnotations' && entry.value) annotationNotes.set(entry.id, entry.value.noteId);
   // 同一关联树原子提交，独立树可以分批；移动同时考虑旧树与新树。
+  const operationGroups = new Map();
+  for (const entry of changes) {
+    if (!KNOWLEDGE_CONCEPT_COLLECTIONS.includes(entry.collection)) continue;
+    const key = syncKey(entry.collection, entry.id);
+    for (const value of [entry.value, base.get(key)?.value]) {
+      if (!value?.operationId) continue;
+      if (operationGroups.has(value.operationId)) join(key, operationGroups.get(value.operationId));
+      else operationGroups.set(value.operationId, key);
+    }
+    for (const ref of changeReferencesFor(entry, before, state)) join(key, syncKey(ref.collection, ref.id));
+  }
   const components = todoComponents(before.personalTodos ?? [], state.personalTodos ?? []);
   const todoGroups = new Map();
   for (const entry of changes) {

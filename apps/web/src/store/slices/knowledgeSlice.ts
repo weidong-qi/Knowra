@@ -1,18 +1,46 @@
 import type { WorkspaceDependencies } from '../types';
-import type { GetStore } from '../workspaceSnapshotState';
-import type { AuthoritativePurgeStatus, PurgeConfirmationInput, CreateKnowledgeCandidateInput, CreateKnowledgeEvidenceInput, KnowledgeEvidence, KnowledgeEvidenceMutationResult, KnowledgeItem, KnowledgeProvenance, KnowledgePurgePreview, KnowledgePurgeResult, KnowledgeReviewStatus, UpdateKnowledgeItemInput } from '@study-accelerator/web-core';
+import type { GetStore, SetStore } from '../workspaceSnapshotState';
+import type {
+  AuthoritativePurgeStatus,
+  PurgeConfirmationInput,
+  CreateKnowledgeCandidateInput,
+  CreateKnowledgeEvidenceInput,
+  KnowledgeEvidence,
+  KnowledgeEvidenceMutationResult,
+  KnowledgeItem,
+  KnowledgeProvenance,
+  KnowledgePurgePreview,
+  KnowledgePurgeResult,
+  KnowledgeReviewStatus,
+  UpdateKnowledgeItemInput
+} from '@study-accelerator/web-core';
 import { assertLocalPurgeConfirmation } from '../assetPurge';
 import { workspaceCapabilities } from '../workspaceCapabilities';
 
 export interface KnowledgeSlice {
-  listKnowledgeItems(query?: { reviewStatus?: KnowledgeReviewStatus; query?: string; noteId?: string; includeDeleted?: boolean }): Promise<KnowledgeItem[]>;
+  listKnowledgeItems(query?: {
+    reviewStatus?: KnowledgeReviewStatus;
+    query?: string;
+    noteId?: string;
+    includeDeleted?: boolean;
+  }): Promise<KnowledgeItem[]>;
   getKnowledgeItem(id: string): Promise<KnowledgeItem>;
   getKnowledgeProvenance(id: string): Promise<KnowledgeProvenance>;
   listKnowledgeEvidence(id: string): Promise<KnowledgeEvidence[]>;
   createKnowledgeEvidence(id: string, input: CreateKnowledgeEvidenceInput): Promise<KnowledgeEvidence>;
-  retireKnowledgeEvidence(id: string, evidenceId: string, input?: { expectedUpdatedAt?: string }): Promise<KnowledgeEvidenceMutationResult>;
-  readoptKnowledgeEvidence(id: string, evidenceId: string, input?: { expectedUpdatedAt?: string }): Promise<KnowledgeEvidenceMutationResult>;
-  createKnowledgeCandidate(input: CreateKnowledgeCandidateInput): Promise<{ item: KnowledgeItem; evidence: KnowledgeEvidence[] }>;
+  retireKnowledgeEvidence(
+    id: string,
+    evidenceId: string,
+    input?: { expectedUpdatedAt?: string }
+  ): Promise<KnowledgeEvidenceMutationResult>;
+  readoptKnowledgeEvidence(
+    id: string,
+    evidenceId: string,
+    input?: { expectedUpdatedAt?: string }
+  ): Promise<KnowledgeEvidenceMutationResult>;
+  createKnowledgeCandidate(
+    input: CreateKnowledgeCandidateInput
+  ): Promise<{ item: KnowledgeItem; evidence: KnowledgeEvidence[] }>;
   updateKnowledgeItem(id: string, input: UpdateKnowledgeItemInput): Promise<KnowledgeItem>;
   confirmKnowledgeItem(id: string, input: { expectedUpdatedAt: string }): Promise<KnowledgeItem>;
   archiveKnowledgeItem(id: string, input: { expectedUpdatedAt: string }): Promise<KnowledgeItem>;
@@ -25,41 +53,86 @@ export interface KnowledgeSlice {
 }
 
 /** 知识显式保存的错误留在表单中，不覆盖正在编辑的笔记保存状态。 */
-export function createKnowledgeSlice(get: GetStore, { api }: WorkspaceDependencies): KnowledgeSlice {
+export function createKnowledgeSlice(set: SetStore, get: GetStore, { api }: WorkspaceDependencies): KnowledgeSlice {
   function spaceId() {
     const state = get();
     if (state.dataMode !== 'api' || !state.serverData.currentSpaceId) throw new Error('资料库尚未连接，请先重试加载。');
     return state.serverData.currentSpaceId;
   }
-  function assertWrite() {
-    spaceId();
+  function mutate<T>(action: () => Promise<T>): Promise<T> {
+    const scope = spaceId();
+    return action().then(result => {
+      // 只让当前空间的成功变更使共享列表失效；失败不污染缓存。
+      if (get().serverData.currentSpaceId === scope && get().dataMode === 'api')
+        set(state => ({ knowledgeGeneration: state.knowledgeGeneration + 1 }));
+      return result;
+    });
   }
   function requireMethod<T>(method: T | undefined): T {
     if (!method) throw new Error('当前服务尚未接通知识管理，请更新应用后重试。');
     return method;
   }
   return {
-    listKnowledgeItems: query => { spaceId(); return requireMethod(api.listKnowledgeItems)({ includeArchived: true, ...query }); },
-    getKnowledgeItem: id => { spaceId(); return requireMethod(api.getKnowledgeItem)(id); },
-    getKnowledgeProvenance: id => { spaceId(); return requireMethod(api.getKnowledgeProvenance)(id); },
-    listKnowledgeEvidence: id => { spaceId(); return requireMethod(api.listKnowledgeEvidence)(id); },
-    createKnowledgeEvidence: (id, input) => { assertWrite(); return requireMethod(api.createKnowledgeEvidence)(id, input); },
-    retireKnowledgeEvidence: (id, evidenceId, input) => { assertWrite(); return requireMethod(api.retireKnowledgeEvidence)(id, evidenceId, input); },
-    readoptKnowledgeEvidence: (id, evidenceId, input) => { assertWrite(); return requireMethod(api.readoptKnowledgeEvidence)(id, evidenceId, input); },
-    createKnowledgeCandidate: input => { assertWrite(); return requireMethod(api.createKnowledgeCandidate)(input); },
-    updateKnowledgeItem: (id, input) => { assertWrite(); return requireMethod(api.updateKnowledgeItem)(id, input); },
-    confirmKnowledgeItem: (id, input) => { assertWrite(); return requireMethod(api.confirmKnowledgeItem)(id, input); },
-    archiveKnowledgeItem: (id, input) => { assertWrite(); return requireMethod(api.archiveKnowledgeItem)(id, input); },
-    restoreKnowledgeItem: (id, input) => { assertWrite(); return requireMethod(api.restoreKnowledgeItem)(id, input); },
-    trashKnowledgeItem: (id, input) => { assertWrite(); return requireMethod(api.trashKnowledgeItem)(id, input); },
-    restoreDeletedKnowledgeItem: (id, input) => { assertWrite(); return requireMethod(api.restoreDeletedKnowledgeItem)(id, input); },
-    inspectKnowledgePurge: id => { spaceId(); return requireMethod(api.inspectKnowledgePurge)(id); },
-    permanentlyDeleteKnowledgeItem: (id, input) => {
-      assertWrite();
-      if (!get().canWriteWorkspace() || !workspaceCapabilities(get().persistenceMode).purgeKnowledge) throw new Error('当前资料库只读，不能永久清理。');
-      if (get().persistenceMode === 'desktop-local') assertLocalPurgeConfirmation(input);
-      return requireMethod(api.permanentlyDeleteKnowledgeItem)(id, input);
+    listKnowledgeItems: query => {
+      spaceId();
+      return requireMethod(api.listKnowledgeItems)({ includeArchived: true, ...query });
     },
-    getAuthoritativePurgeStatus: () => { spaceId(); return requireMethod(api.getAuthoritativePurgeStatus)(); },
+    getKnowledgeItem: id => {
+      spaceId();
+      return requireMethod(api.getKnowledgeItem)(id);
+    },
+    getKnowledgeProvenance: id => {
+      spaceId();
+      return requireMethod(api.getKnowledgeProvenance)(id);
+    },
+    listKnowledgeEvidence: id => {
+      spaceId();
+      return requireMethod(api.listKnowledgeEvidence)(id);
+    },
+    createKnowledgeEvidence: (id, input) => {
+      return mutate(() => requireMethod(api.createKnowledgeEvidence)(id, input));
+    },
+    retireKnowledgeEvidence: (id, evidenceId, input) => {
+      return mutate(() => requireMethod(api.retireKnowledgeEvidence)(id, evidenceId, input));
+    },
+    readoptKnowledgeEvidence: (id, evidenceId, input) => {
+      return mutate(() => requireMethod(api.readoptKnowledgeEvidence)(id, evidenceId, input));
+    },
+    createKnowledgeCandidate: input => {
+      return mutate(() => requireMethod(api.createKnowledgeCandidate)(input));
+    },
+    updateKnowledgeItem: (id, input) => {
+      return mutate(() => requireMethod(api.updateKnowledgeItem)(id, input));
+    },
+    confirmKnowledgeItem: (id, input) => {
+      return mutate(() => requireMethod(api.confirmKnowledgeItem)(id, input));
+    },
+    archiveKnowledgeItem: (id, input) => {
+      return mutate(() => requireMethod(api.archiveKnowledgeItem)(id, input));
+    },
+    restoreKnowledgeItem: (id, input) => {
+      return mutate(() => requireMethod(api.restoreKnowledgeItem)(id, input));
+    },
+    trashKnowledgeItem: (id, input) => {
+      return mutate(() => requireMethod(api.trashKnowledgeItem)(id, input));
+    },
+    restoreDeletedKnowledgeItem: (id, input) => {
+      return mutate(() => requireMethod(api.restoreDeletedKnowledgeItem)(id, input));
+    },
+    inspectKnowledgePurge: id => {
+      spaceId();
+      return requireMethod(api.inspectKnowledgePurge)(id);
+    },
+    permanentlyDeleteKnowledgeItem: (id, input) => {
+      spaceId();
+      if (!get().canWriteWorkspace() || !workspaceCapabilities(get().persistenceMode).purgeKnowledge)
+        throw new Error('当前资料库只读，不能永久清理。');
+      if (get().persistenceMode === 'desktop-local') assertLocalPurgeConfirmation(input);
+      return mutate(() => requireMethod(api.permanentlyDeleteKnowledgeItem)(id, input));
+    },
+    getAuthoritativePurgeStatus: () => {
+      spaceId();
+      return requireMethod(api.getAuthoritativePurgeStatus)();
+    }
   };
 }

@@ -70,6 +70,9 @@ const collections: {
   annotationRevisions: ['annotationRevision'],
   analysisScopeSnapshots: ['analysisScopeSnapshot'],
   knowledgeArtifactProvenance: ['knowledgeArtifactProvenance', 'mapKnowledgeArtifactProvenance'],
+  knowledgeConcepts: ['knowledgeConcept', 'mapKnowledgeConcept'],
+  knowledgeConceptLinks: ['knowledgeConceptLink', 'mapKnowledgeConceptLink'],
+  knowledgeConceptRelations: ['knowledgeConceptRelation', 'mapKnowledgeConceptRelation'],
   personalTodos: ['personalTodo', 'mapPersonalTodo']
 };
 

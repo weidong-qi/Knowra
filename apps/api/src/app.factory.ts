@@ -1,3 +1,8 @@
+import {
+  createKnowledgeConceptService,
+  createStateBackedConceptStore,
+  purgeStateBackedConceptItem
+} from './modules/knowledge-concepts/service.ts';
 import { createPdfService } from './modules/pdf/service.ts';
 import { createTaskWorkspaceService } from './modules/task-workspaces/service.ts';
 import { createPersonalTodoService, createStateBackedTodoStore } from './modules/personal-todos/service.ts';
@@ -121,6 +126,7 @@ export interface AppContext extends PersistentContextExtensions {
     guard(): boolean;
   };
   personalTodos: ReturnType<typeof createPersonalTodoService>;
+  knowledgeConcepts: ReturnType<typeof createKnowledgeConceptService>;
   knowledgeExtractionCommit: ReturnType<typeof createKnowledgeExtractionCommitService<void>> | null;
   knowledgeExtractionTasks: ReturnType<typeof createKnowledgeExtractionTaskService<void>> | null;
   dataStore: LocalAppDataStore | undefined;
@@ -171,6 +177,16 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
       : null);
 
   const knowledge = createKnowledgeModule({
+    inspectConceptPurge: id => ({
+      links:
+        dataStore?.state.knowledgeConceptLinks.filter(row => !row.deletedAt && row.knowledgeItemId === id).length ?? 0,
+      relations:
+        dataStore?.state.knowledgeConceptRelations.filter(row => !row.deletedAt && row.basisItemId === id).length ?? 0
+    }),
+    purgeConceptItem: id => {
+      if (dataStore?.runTransaction)
+        purgeStateBackedConceptItem(dataStore as LocalAppDataStore & Pick<FileDataStore, 'runTransaction'>, id);
+    },
     pdfAnnotationRepository:
       options.pdfAnnotationRepository ??
       (dataStore
@@ -406,6 +422,12 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
       guard: () => !request.aborted && !(response?.destroyed && !response.writableFinished) && Date.now() < deadline
     };
   };
+  const knowledgeConcepts = createKnowledgeConceptService({
+    store:
+      dataStore?.state && dataStore.runTransaction
+        ? createStateBackedConceptStore(dataStore as LocalAppDataStore & Pick<FileDataStore, 'runTransaction'>)
+        : null
+  });
   const personalTodos = createPersonalTodoService({
     store:
       dataStore?.state && dataStore.runTransaction
@@ -416,6 +438,7 @@ export function createAppContext(options: AppContextOptions = {}): AppContext {
     taskWorkspaces,
     taskWorkspaceContext,
     personalTodos,
+    knowledgeConcepts,
     knowledgeExtractionCommit,
     knowledgeExtractionTasks,
     dataStore,

@@ -60,57 +60,54 @@ export function createPostgresSnapshotService({
   };
 
   async function exportKnowledgeBase() {
-    const [
-      spaces,
-      folders,
-      tags,
-      tagGroups,
-      notes,
-      noteVersions,
-      annotations,
-      knowledgeItems,
-      knowledgeEvidence,
-      knowledgeArtifactProvenance,
-      learningObjectives,
-      examProfiles,
-      examFocuses,
-      questions,
-      attachments,
-      attachmentFiles,
-      annotationExclusions,
-      annotationRevisions,
-      analysisScopeSnapshots
-    ] = await Promise.all([
-      repositories!.knowledgeSpaceRepository.list(),
-      repositories!.folderRepository.list(),
-      repositories!.tagRepository.list(),
-      repositories!.tagGroupRepository.list(),
-      repositories!.noteRepository.list({ includeDeleted: true }),
-      repositories!.noteVersionRepository.list(),
-      repositories!.contentAnnotationRepository.list({ includeDeleted: true }),
-      repositories!.knowledgeItemRepository.list({ includeArchived: true, includeDeleted: true }),
-      repositories!.knowledgeEvidenceRepository.list(),
-      repositories!.knowledgeArtifactProvenanceRepository.list(),
-      repositories!.learningObjectiveRepository.list({ includeArchived: true }),
-      repositories!.examProfileRepository.list({ includeArchived: true }),
-      repositories!.examFocusRepository.list({ includeArchived: true }),
-      repositories!.questionRepository.list({ includeArchived: true }),
-      attachmentStore!.listAttachments(),
-      attachmentStore!.exportAttachmentsSnapshot(),
-      repositories!.annotationExclusionRepository?.list({ includeDeleted: true }) ?? [],
-      repositories!.annotationRevisionRepository?.list() ?? [],
-      repositories!.analysisScopeRepository?.list({ includeDeleted: true }) ?? []
-    ]);
-    const questionIds = questions.map(question => question.id);
-    const [questionObjectives, questionSources] = await Promise.all([
-      repositories!.questionObjectiveRepository.listByQuestionIds(questionIds),
-      repositories!.questionSourceRepository.list()
-    ]);
-    return {
-      exportedAt: new Date().toISOString(),
-      version: LOCAL_SNAPSHOT_VERSION,
-      schemaVersion: LOCAL_DATA_SCHEMA_VERSION,
-      data: {
+    // 元数据在同步客户端的同一数据库事务中读取，文件内容在事务结束后导出。
+    const data = await client!.$transaction(async () => {
+      const [
+        spaces,
+        folders,
+        tags,
+        tagGroups,
+        notes,
+        noteVersions,
+        annotations,
+        knowledgeItems,
+        knowledgeEvidence,
+        knowledgeArtifactProvenance,
+        learningObjectives,
+        examProfiles,
+        examFocuses,
+        questions,
+        attachments,
+        annotationExclusions,
+        annotationRevisions,
+        analysisScopeSnapshots
+      ] = await Promise.all([
+        repositories!.knowledgeSpaceRepository.list(),
+        repositories!.folderRepository.list(),
+        repositories!.tagRepository.list(),
+        repositories!.tagGroupRepository.list(),
+        repositories!.noteRepository.list({ includeDeleted: true }),
+        repositories!.noteVersionRepository.list(),
+        repositories!.contentAnnotationRepository.list({ includeDeleted: true }),
+        repositories!.knowledgeItemRepository.list({ includeArchived: true, includeDeleted: true }),
+        repositories!.knowledgeEvidenceRepository.list(),
+        repositories!.knowledgeArtifactProvenanceRepository.list(),
+        repositories!.learningObjectiveRepository.list({ includeArchived: true }),
+        repositories!.examProfileRepository.list({ includeArchived: true }),
+        repositories!.examFocusRepository.list({ includeArchived: true }),
+        repositories!.questionRepository.list({ includeArchived: true }),
+        attachmentStore!.listAttachments(),
+        repositories!.annotationExclusionRepository?.list({ includeDeleted: true }) ?? [],
+        repositories!.annotationRevisionRepository?.list() ?? [],
+        repositories!.analysisScopeRepository?.list({ includeDeleted: true }) ?? []
+      ]);
+      const questionIds = questions.map(question => question.id);
+      const [questionObjectives, questionSources] = await Promise.all([
+        repositories!.questionObjectiveRepository.listByQuestionIds(questionIds),
+        repositories!.questionSourceRepository.list()
+      ]);
+
+      return {
         spaces,
         folders,
         tags,
@@ -131,8 +128,21 @@ export function createPostgresSnapshotService({
         pdfAnnotations: (await client!.$transaction(async tx => tx.pdfAnnotation.findMany())).map(row => row.payload),
         annotationExclusions,
         annotationRevisions,
-        analysisScopeSnapshots
-      },
+        analysisScopeSnapshots,
+        personalTodos: (await client!.$transaction(async tx => tx.personalTodo.findMany())).map(row => row.data),
+        ...(await client!.$transaction(async tx => ({
+          knowledgeConcepts: (await tx.knowledgeConcept.findMany()).map(row => row.data),
+          knowledgeConceptLinks: (await tx.knowledgeConceptLink.findMany()).map(row => row.data),
+          knowledgeConceptRelations: (await tx.knowledgeConceptRelation.findMany()).map(row => row.data)
+        })))
+      };
+    });
+    const attachmentFiles = await attachmentStore!.exportAttachmentsSnapshot();
+    return {
+      exportedAt: new Date().toISOString(),
+      version: LOCAL_SNAPSHOT_VERSION,
+      schemaVersion: LOCAL_DATA_SCHEMA_VERSION,
+      data,
       attachmentFiles
     };
   }

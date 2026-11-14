@@ -1,3 +1,4 @@
+import { readPostgresConceptState, purgePostgresConceptItem } from '../knowledge-concepts/postgres-store.ts';
 import {
   degradeInlineSourceEvidenceAsync,
   deriveInlineAnnotations,
@@ -243,6 +244,16 @@ export function createPostgresKnowledgeModule({
             client.$transaction(
               async tx =>
                 operation({
+                  conceptPurge: {
+                    inspect: async id => {
+                      const state = await readPostgresConceptState(tx);
+                      return {
+                        links: state.links.filter(row => !row.deletedAt && row.knowledgeItemId === id).length,
+                        relations: state.relations.filter(row => !row.deletedAt && row.basisItemId === id).length
+                      };
+                    },
+                    purge: id => purgePostgresConceptItem(tx, id)
+                  },
                   folderRepository: createPostgresFolderRepository({ db: tx }),
                   knowledgeSpaceRepository: createPostgresKnowledgeSpaceRepository({ db: tx }),
                   tagRepository: createPostgresTagRepository({ db: tx }),
@@ -648,7 +659,15 @@ export function createPostgresKnowledgeModule({
     ]);
     const epoch = await getPurgeDatasetEpoch?.();
     return supplementPurgePreview(
-      inspectKnowledgeItemPurge({ item, evidence, provenance, learningObjectives, questionSources, analysisScopes }),
+      inspectKnowledgeItemPurge({
+        item,
+        evidence,
+        provenance,
+        learningObjectives,
+        questionSources,
+        analysisScopes,
+        conceptCleanup: await source.conceptPurge?.inspect(id)
+      }),
       await asyncTaskCoverage(readPurgeTaskState),
       epoch
     );
@@ -687,6 +706,7 @@ export function createPostgresKnowledgeModule({
         input,
         await transaction.knowledgeArtifactProvenanceRepository.list({ artifactId: id })
       );
+      await transaction.conceptPurge?.purge(id);
       const removedProvenance = await transaction.knowledgeArtifactProvenanceRepository.deleteByKnowledgeItemId(id);
       const removedEvidence = await transaction.knowledgeEvidenceRepository.deleteByKnowledgeItemId(id);
       await transaction.knowledgeItemRepository.delete(id);

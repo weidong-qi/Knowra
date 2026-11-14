@@ -11,7 +11,7 @@ export const knowledgeBaseSnapshotServiceTests = [
       try {
         const imported = fixture.storage.importKnowledgeBase(createImportedSnapshot());
 
-        assert.equal(imported.schemaVersion, 8);
+        assert.equal(imported.schemaVersion, 9);
         assert.equal(imported.data.notes[0].id, 'note-imported');
         assert.equal(imported.attachmentFiles[0].id, 'attachment-imported');
         assert.equal(fixture.dataStore.state.notes[0].id, 'note-imported');

@@ -1,5 +1,6 @@
 const READ_METHODS = new Set(['GET', 'HEAD']);
 const MUTATIONS = [
+  ['POST', /^\/api\/knowledge\/concepts\/commands$/],
   ['POST', /^\/api\/storage\/pdf-imports$/],
   ['PUT', /^\/api\/storage\/pdf-files\/[^/]+$/],
   ['PUT', /^\/api\/pdf\/[^/]+\/annotations\/[^/]+$/],

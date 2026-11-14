@@ -4,12 +4,24 @@ import { canNavigate } from './navigationGuard';
 const HISTORY_KEY = 'knowraNavigation';
 const MAXIMUM_KEY = 'knowraNavigationMaximum';
 function savedMaximum(fallback: number) {
-  try { return readPosition() === null ? fallback : Math.max(fallback, Number(sessionStorage.getItem(MAXIMUM_KEY)) || fallback); } catch { return fallback; }
+  try {
+    return readPosition() === null
+      ? fallback
+      : Math.max(fallback, Number(sessionStorage.getItem(MAXIMUM_KEY)) || fallback);
+  } catch {
+    return fallback;
+  }
 }
 function saveMaximum(value: number) {
-  try { sessionStorage.setItem(MAXIMUM_KEY, String(value)); } catch { /* 存储被禁用时仍可使用本次会话历史。 */ }
+  try {
+    sessionStorage.setItem(MAXIMUM_KEY, String(value));
+  } catch {
+    /* 存储被禁用时仍可使用本次会话历史。 */
+  }
 }
-function readPath() { return globalThis.location?.hash.slice(1) || '/'; }
+function readPath() {
+  return globalThis.location?.hash.slice(1) || '/';
+}
 function readPosition(): number | null {
   const value = globalThis.history?.state?.[HISTORY_KEY];
   return Number.isInteger(value) ? value : null;
@@ -54,19 +66,29 @@ export function useHashNavigation() {
       globalThis.removeEventListener('hashchange', onChange);
     };
   }, []);
-  const navigate = useCallback((to: string) => {
+  const navigate = useCallback((to: string, options?: { replace?: boolean }) => {
     if (readPath() === to) return;
     if (!canNavigate()) return;
-    const next = current.current + 1;
-    history.pushState({ [HISTORY_KEY]: next }, '', `#${to}`);
+    const next = options?.replace ? current.current : current.current + 1;
+    if (options?.replace) history.replaceState({ ...history.state, [HISTORY_KEY]: next }, '', `#${to}`);
+    else history.pushState({ [HISTORY_KEY]: next }, '', `#${to}`);
     current.current = next;
-    maximum.current = next;
-    saveMaximum(next);
+    if (!options?.replace) {
+      maximum.current = next;
+      saveMaximum(next);
+    }
     setPosition(next);
     setPathname(to);
     currentPath.current = to;
   }, []);
-  const back = useCallback(() => { if (current.current > 0 && canNavigate()) history.back(); }, []);
-  const forward = useCallback(() => { if (current.current < maximum.current && canNavigate()) history.forward(); }, []);
-  return useMemo(() => ({ pathname, navigate, back, forward, canGoBack: position > 0, canGoForward: position < maximum.current }), [pathname, navigate, back, forward, position]);
+  const back = useCallback(() => {
+    if (current.current > 0 && canNavigate()) history.back();
+  }, []);
+  const forward = useCallback(() => {
+    if (current.current < maximum.current && canNavigate()) history.forward();
+  }, []);
+  return useMemo(
+    () => ({ pathname, navigate, back, forward, canGoBack: position > 0, canGoForward: position < maximum.current }),
+    [pathname, navigate, back, forward, position]
+  );
 }

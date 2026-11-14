@@ -23,6 +23,12 @@ export interface SyncReferenceEntity {
   noteVersionId?: string | null;
   annotationId?: string | null;
   parentAnnotationId?: string | null;
+  conceptId?: string;
+  fromConceptId?: string;
+  toConceptId?: string;
+  basisItemId?: string | null;
+  mergedInto?: string | null;
+  deletedAt?: string | null;
   knowledgeItemId?: string;
   learningObjectiveId?: string;
   examProfileId?: string;
@@ -72,6 +78,12 @@ export const TRAINING_COLLECTIONS = Object.freeze([
 // 个人待办：整条记录同步；树结构与归档封存由云端批次校验。
 export const PERSONAL_TODOS_SYNC_CAPABILITY = 'personal-todos-v1';
 export const PERSONAL_TODO_COLLECTIONS = Object.freeze(['personalTodos']);
+export const KNOWLEDGE_CONCEPTS_SYNC_CAPABILITY = 'knowledge-concepts-v1';
+export const KNOWLEDGE_CONCEPT_COLLECTIONS = Object.freeze([
+  'knowledgeConcepts',
+  'knowledgeConceptLinks',
+  'knowledgeConceptRelations'
+]);
 export const WRITABLE_COLLECTIONS = Object.freeze([
   'spaces',
   'folders',
@@ -87,7 +99,8 @@ export const WRITABLE_COLLECTIONS = Object.freeze([
   'analysisScopeSnapshots',
   ...KNOWLEDGE_COLLECTIONS,
   ...TRAINING_COLLECTIONS,
-  ...PERSONAL_TODO_COLLECTIONS
+  ...PERSONAL_TODO_COLLECTIONS,
+  ...KNOWLEDGE_CONCEPT_COLLECTIONS
 ]);
 export const IMMUTABLE_COLLECTIONS = new Set([
   'noteVersions',
@@ -111,7 +124,16 @@ export const sameEntity = (collection: string, left: object | null | undefined, 
 
 export function referencesFor(collection: string, value: SyncReferenceEntity | null | undefined): SyncReference[] {
   if (!value) return [];
+  // 合并墓碑仍携带持久引用；operationId 会被后续编辑覆盖，不能代替该依赖。
+  if (KNOWLEDGE_CONCEPT_COLLECTIONS.includes(collection) && value.deletedAt)
+    return collection === 'knowledgeConcepts' && value.mergedInto
+      ? [{ collection: 'knowledgeConcepts', id: value.mergedInto }]
+      : [];
   const fields = {
+    conceptId: 'knowledgeConcepts',
+    fromConceptId: 'knowledgeConcepts',
+    toConceptId: 'knowledgeConcepts',
+    basisItemId: 'knowledgeItems',
     spaceId: 'spaces',
     folderId: 'folders',
     groupId: 'tagGroups',
@@ -180,6 +202,24 @@ export function syncReferencesFor(
   const refs = referencesFor(collection, value).filter(
     ref => collection !== 'analysisScopeSnapshots' || ref.collection !== 'noteVersions'
   );
+  if (collection === 'knowledgeConcepts' && value) {
+    // 沿双向合并链收集闭包：即使中间墓碑本批未变化，也不能拆开源与最终目标。
+    const connected = new Set([value.id]);
+    const concepts = state.knowledgeConcepts ?? [];
+    let expanded = true;
+    while (expanded) {
+      expanded = false;
+      for (const concept of concepts) {
+        if (!concept.mergedInto || (!connected.has(concept.id) && !connected.has(concept.mergedInto))) continue;
+        for (const id of [concept.id, concept.mergedInto]) {
+          if (connected.has(id)) continue;
+          connected.add(id);
+          expanded = true;
+        }
+      }
+    }
+    for (const id of connected) if (id !== value.id) refs.push({ collection: 'knowledgeConcepts', id });
+  }
   if (collection === 'analysisScopeSnapshots' && value)
     for (const binding of value.noteVersions ?? []) {
       refs.push({
@@ -231,7 +271,7 @@ export function changeReferencesFor(
   after: SyncReferenceState
 ): SyncReference[] {
   const refs = syncReferencesFor(change.collection, change.value, after);
-  if (TRAINING_COLLECTIONS.includes(change.collection)) {
+  if (TRAINING_COLLECTIONS.includes(change.collection) || KNOWLEDGE_CONCEPT_COLLECTIONS.includes(change.collection)) {
     const previous = before[change.collection].find(item => item.id === change.id);
     refs.push(...syncReferencesFor(change.collection, previous, before));
   }

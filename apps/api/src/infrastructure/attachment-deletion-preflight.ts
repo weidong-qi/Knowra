@@ -32,7 +32,7 @@ interface ProvenanceReferenceModel {
 export type AttachmentReferenceDatabase = Partial<{
   [M in (typeof POSTGRES_MODELS)[ReferenceCollection]]: M extends 'knowledgeArtifactProvenance' | 'pdfAnnotation'
     ? ProvenanceReferenceModel
-    : M extends 'personalTodo'
+    : M extends 'personalTodo' | 'knowledgeConcept' | 'knowledgeConceptLink' | 'knowledgeConceptRelation'
       ? TodoReferenceModel
       : AttachmentReferenceModel;
 }>;
@@ -64,6 +64,9 @@ const POSTGRES_MODELS = Object.freeze({
   annotationExclusions: 'annotationExclusion',
   annotationRevisions: 'annotationRevision',
   analysisScopeSnapshots: 'analysisScopeSnapshot',
+  knowledgeConcepts: 'knowledgeConcept',
+  knowledgeConceptLinks: 'knowledgeConceptLink',
+  knowledgeConceptRelations: 'knowledgeConceptRelation',
   personalTodos: 'personalTodo'
 });
 
@@ -148,7 +151,9 @@ export async function loadPostgresAttachmentReferenceState(
         collection,
         ['knowledgeArtifactProvenance', 'pdfAnnotations'].includes(collection)
           ? (rows as { payload: unknown }[]).map(row => row.payload)
-          : collection === 'personalTodos'
+          : ['personalTodos', 'knowledgeConcepts', 'knowledgeConceptLinks', 'knowledgeConceptRelations'].includes(
+                collection
+              )
             ? (rows as { data: AttachmentReferenceRecord }[]).map(row => row.data)
             : rows
       ];

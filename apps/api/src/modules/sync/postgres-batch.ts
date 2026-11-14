@@ -32,6 +32,9 @@ const tables = [
   ['questions', 'question', 'dbQuestion'],
   ['questionObjectives', 'questionObjective', 'dbQuestionObjective'],
   ['questionSources', 'questionSource', 'dbQuestionSource'],
+  ['knowledgeConcepts', 'knowledgeConcept', 'dbKnowledgeConcept'],
+  ['knowledgeConceptLinks', 'knowledgeConceptLink', 'dbKnowledgeConceptLink'],
+  ['knowledgeConceptRelations', 'knowledgeConceptRelation', 'dbKnowledgeConceptRelation'],
   ['personalTodos', 'personalTodo', 'dbPersonalTodo']
 ] as const satisfies readonly SyncTable[];
 

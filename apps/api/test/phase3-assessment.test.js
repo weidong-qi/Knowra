@@ -369,7 +369,7 @@ export const phase3AssessmentTests = [
           sources: [{ sourceType: 'learningObjective', sourceId: objective.id }]
         });
         const persisted = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        assert.equal(persisted.schemaVersion, 8);
+        assert.equal(persisted.schemaVersion, 9);
         assert.equal(persisted.learningObjectives.length, 1);
         assert.equal(persisted.questions.length, 1);
         assert.equal(persisted.questionObjectives.length, 1);
