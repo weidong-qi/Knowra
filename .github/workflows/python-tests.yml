@@ -1,0 +1,45 @@
+name: Python 示例测试
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'calculator.py'
+      - 'test_calculator.py'
+      - 'requirements.txt'
+      - '.github/workflows/python-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'calculator.py'
+      - 'test_calculator.py'
+      - 'requirements.txt'
+      - '.github/workflows/python-tests.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-tests:
+    name: Python 3.11 · 单元测试
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: 设置 Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: 安装测试依赖
+        run: python -m pip install -r requirements.txt
+      - name: 运行 Python 单元测试
+        run: python -m pytest -v test_calculator.py
