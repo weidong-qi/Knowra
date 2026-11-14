@@ -1,3 +1,5 @@
+import { reconcileLocalConceptChoice } from './knowledge-concept-sync.mjs';
+import { KNOWLEDGE_CONCEPT_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.ts';
 import { reconcileLocalTodoChoice } from './personal-todo-sync.mjs';
 import { encodeSyncHistory } from './sync-history.mjs';
 import {
@@ -903,7 +905,8 @@ function resolveEntityConflictInternal(
         entry =>
           KNOWLEDGE_COLLECTIONS.includes(entry.collection) ||
           TRAINING_COLLECTIONS.includes(entry.collection) ||
-          PERSONAL_TODO_COLLECTIONS.includes(entry.collection)
+          PERSONAL_TODO_COLLECTIONS.includes(entry.collection) ||
+          KNOWLEDGE_CONCEPT_COLLECTIONS.includes(entry.collection)
       )
     ) {
       throw new Error('包含知识或来源、训练资产或待办的关联冲突请采用本地或云端；正文合并与保留两篇不能安全处理。');
@@ -1067,6 +1070,7 @@ function resolveEntityConflictInternal(
         replace(merged, entry);
       }
     }
+    if (choice === 'local') reconcileLocalConceptChoice(merged, dirty, remote);
     if (choice === 'local' && dirty.some(entry => entry.collection === 'personalTodos'))
       merged.personalTodos = reconcileLocalTodoChoice(merged.personalTodos, dirty, remote);
     preserveRemoteNotePrivacy(merged, remote);

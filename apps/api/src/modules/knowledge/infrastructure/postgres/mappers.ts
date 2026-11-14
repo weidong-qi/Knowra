@@ -504,3 +504,19 @@ export function mapKnowledgeArtifactProvenance(
 export function mapPersonalTodo(row: Models.PersonalTodo): SyncMappedEntityMap['personalTodos'] {
   return structuredClone(row.data) as unknown as SyncMappedEntityMap['personalTodos'];
 }
+
+export function mapKnowledgeConcept(row: Models.KnowledgeConcept): SyncMappedEntityMap['knowledgeConcepts'] {
+  return structuredClone(row.data) as unknown as SyncMappedEntityMap['knowledgeConcepts'];
+}
+
+export function mapKnowledgeConceptLink(
+  row: Models.KnowledgeConceptLink
+): SyncMappedEntityMap['knowledgeConceptLinks'] {
+  return structuredClone(row.data) as unknown as SyncMappedEntityMap['knowledgeConceptLinks'];
+}
+
+export function mapKnowledgeConceptRelation(
+  row: Models.KnowledgeConceptRelation
+): SyncMappedEntityMap['knowledgeConceptRelations'] {
+  return structuredClone(row.data) as unknown as SyncMappedEntityMap['knowledgeConceptRelations'];
+}

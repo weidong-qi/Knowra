@@ -90,6 +90,9 @@ export interface SyncEntityMap {
   questions: Question;
   questionObjectives: SyncQuestionObjective;
   questionSources: QuestionSource;
+  knowledgeConcepts: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConcept;
+  knowledgeConceptLinks: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConceptLink;
+  knowledgeConceptRelations: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConceptRelation;
   personalTodos: import('../../../../../packages/web-core/src/personal-todos/types.ts').Todo;
 }
 export type SyncCollection = keyof SyncEntityMap;

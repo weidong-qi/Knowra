@@ -103,6 +103,8 @@ export interface KnowledgeModuleOptions {
   questions?: NonNullable<Parameters<typeof createInMemoryQuestionRepository>[0]>['records'];
   questionObjectives?: NonNullable<Parameters<typeof createInMemoryQuestionObjectiveRepository>[0]>['records'];
   questionSources?: NonNullable<Parameters<typeof createInMemoryQuestionSourceRepository>[0]>['records'];
+  inspectConceptPurge?: (id: string) => { links: number; relations: number };
+  purgeConceptItem?: (id: string) => void;
   enforceReferences?: boolean;
   runTransaction?: <Result>(operation: () => Result) => Result;
   getPurgeTombstone?: LocalTrainingAssetDependencies['getTombstone'];
@@ -528,6 +530,7 @@ export function createKnowledgeModule(options: KnowledgeModuleOptions = {}) {
     return supplementPurgePreview(
       inspectKnowledgeItemPurge({
         item,
+        conceptCleanup: options.inspectConceptPurge?.(id),
         evidence: knowledgeEvidenceRepository.list({ knowledgeItemId: id }),
         provenance: knowledgeArtifactProvenanceRepository.list({ artifactId: id }),
         learningObjectives: learningObjectiveRepository.list({ includeArchived: true, includeDeleted: true }),
@@ -568,6 +571,7 @@ export function createKnowledgeModule(options: KnowledgeModuleOptions = {}) {
         input,
         knowledgeArtifactProvenanceRepository.list({ artifactId: id })
       );
+      options.purgeConceptItem?.(id);
       const removedProvenance = knowledgeArtifactProvenanceRepository.deleteByKnowledgeItemId(id);
       const removedEvidence = knowledgeEvidenceRepository.deleteByKnowledgeItemId(id);
       knowledgeItemRepository.delete(id);

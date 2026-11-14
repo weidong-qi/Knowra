@@ -1,3 +1,4 @@
+import { clickKnowledgeAction } from './helpers/knowledge-index.mjs';
 import { openLocalSync } from './helpers/workspace-status.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -165,7 +166,7 @@ test('生产页面：五类手工资产联网权威清理，引用阻塞与通�
   const f = await fixture(t),
     { page, runtime } = f;
   await f.knowledgePage(f.blocked);
-  await page.getByRole('button', { name: '永久删除…', exact: true }).click();
+  await clickKnowledgeAction(page, '永久删除…');
   const blocked = page.getByRole('dialog', { name: '永久删除知识点？', exact: true });
   await expect(blocked).toContainText('关联对象');
   await expect(blocked.getByRole('button', { name: '确认永久删除', exact: true })).toBeDisabled();
@@ -178,7 +179,7 @@ test('生产页面：五类手工资产联网权威清理，引用阻塞与通�
     if (request.method() === 'DELETE' && request.url().endsWith('/permanent'))
       confirmations.push(request.postDataJSON());
   });
-  await page.getByRole('button', { name: '永久删除…', exact: true }).click();
+  await clickKnowledgeAction(page, '永久删除…');
   const dialog = page.getByRole('dialog', { name: '永久删除知识点？', exact: true });
   await expect(dialog.getByRole('button', { name: '确认永久删除', exact: true })).toBeEnabled();
   await f.screenshot('purge-knowledge-confirmation.png');
@@ -245,9 +246,8 @@ for (const type of ['knowledgeItem', 'question'])
           .getByRole('button', { name: '回收站', exact: true })
           .click();
       }
-      await page
-        .getByRole('button', { name: type === 'knowledgeItem' ? '永久删除…' : '永久清理…', exact: true })
-        .click();
+      if (type === 'knowledgeItem') await clickKnowledgeAction(page, '永久删除…');
+      else await page.getByRole('button', { name: '永久清理…', exact: true }).click();
       const dialog = page.getByRole('dialog', {
         name: type === 'knowledgeItem' ? '永久删除知识点？' : '永久清理题目？',
         exact: true
@@ -350,13 +350,13 @@ test('生产页面：离线预检保留原件；云端已提交但丢响应时�
     { page, runtime } = f;
   await f.knowledgePage(f.unknown);
   f.setOffline(true);
-  await page.getByRole('button', { name: '永久删除…', exact: true }).click();
+  await clickKnowledgeAction(page, '永久删除…');
   await expect(page.getByRole('alert')).toContainText(/云端|网络/);
   assert(runtime.store.state.knowledgeItems.some(row => row.id === f.unknown.id));
   assert.equal(f.executions(), 0);
   await f.screenshot('purge-offline-original-retained.png');
   f.setOffline(false);
-  await page.getByRole('button', { name: '永久删除…', exact: true }).click();
+  await clickKnowledgeAction(page, '永久删除…');
   const dialog = page.getByRole('dialog', { name: '永久删除知识点？', exact: true });
   await expect(dialog.getByRole('button', { name: '确认永久删除', exact: true })).toBeEnabled();
   f.loseDeletionResponse();

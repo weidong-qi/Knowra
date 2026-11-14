@@ -19,3 +19,4 @@ export {
 
 export * from './api/task-workspace-api.js';
 export * from './personal-todos/index.js';
+export * from './knowledge-concepts/index.js';

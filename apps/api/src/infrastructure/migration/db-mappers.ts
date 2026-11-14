@@ -347,3 +347,21 @@ export function dbPersonalTodo(todo: Todo) {
     updatedAt: new Date(todo.updatedAt as string)
   };
 }
+
+export function dbKnowledgeConcept(
+  record: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConcept
+) {
+  return { id: record.id, data: JSON.parse(JSON.stringify(record)), updatedAt: new Date(record.updatedAt) };
+}
+
+export function dbKnowledgeConceptLink(
+  record: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConceptLink
+) {
+  return { id: record.id, data: JSON.parse(JSON.stringify(record)), updatedAt: new Date(record.updatedAt) };
+}
+
+export function dbKnowledgeConceptRelation(
+  record: import('../../../../../packages/web-core/src/knowledge-concepts/types.ts').KnowledgeConceptRelation
+) {
+  return { id: record.id, data: JSON.parse(JSON.stringify(record)), updatedAt: new Date(record.updatedAt) };
+}

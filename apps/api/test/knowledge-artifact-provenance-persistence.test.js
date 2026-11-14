@@ -38,7 +38,7 @@ export const knowledgeArtifactProvenancePersistenceTests = [
           assert.deepEqual(store.state.knowledgeArtifactProvenance, [f.provenance]);
           assert.equal(store.state.knowledgeItems[0].title, '用户修订');
           const disk = JSON.parse(fs.readFileSync(f.file, 'utf8'));
-          assert.equal(disk.schemaVersion, 8);
+          assert.equal(disk.schemaVersion, 9);
           assert.deepEqual(disk.knowledgeExtractionCommits.receipts[0], f.receipt);
           assertMinimalProvenanceTransport(store.exportSnapshot(), f.provenance);
           assertMinimalProvenanceTransport(store.getSyncJournal(), f.provenance);

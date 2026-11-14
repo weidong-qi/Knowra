@@ -1,3 +1,5 @@
+import { assertConceptSyncChange } from './concept-batch-domain.ts';
+import { KNOWLEDGE_CONCEPT_COLLECTIONS } from './entity-contract.ts';
 import type { Folder as FolderEntity } from '../knowledge/domain/folder.ts';
 import type {
   PreparedSyncAttachment,
@@ -259,6 +261,7 @@ export function prepareBatchState(
     let value: SyncWorkingEntity | null = cloneJsonData(change.value);
     value = normalizeKnowledgeChange(collection, value, old);
     value = normalizeTrainingChange({ ...change, value }, old, changes);
+    if (KNOWLEDGE_CONCEPT_COLLECTIONS.includes(collection)) assertConceptSyncChange(old, value);
     if (collection === 'personalTodos') assertTodoSyncChange(old, value);
     if (collection === 'knowledgeArtifactProvenance') {
       if (!value) throw syncError('SYNC_PROVENANCE_DELETE_UNSUPPORTED', '来源摘要只能随受控知识清理删除。', 422);

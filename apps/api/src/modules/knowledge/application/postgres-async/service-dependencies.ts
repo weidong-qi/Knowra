@@ -68,7 +68,12 @@ export interface PostgresRepositories {
 }
 // 无独立事务宿主时直接返回回调结果；有宿主时 Promise 采用回调的完成值。
 // 关联 Result 与返回值，避免把本来始终异步的回调降为 T | Promise<T>。
-export type KnowledgeModuleRepositories = Omit<PostgresRepositories, 'attachmentRepository'>;
+export type KnowledgeModuleRepositories = Omit<PostgresRepositories, 'attachmentRepository'> & {
+  conceptPurge?: {
+    inspect(id: string): Promise<{ links: number; relations: number }>;
+    purge(id: string): Promise<{ links: number; relations: number }>;
+  };
+};
 export interface KnowledgeModuleTransaction {
   <Result>(operation: (repositories: KnowledgeModuleRepositories) => Result): Result | Promise<Awaited<Result>>;
 }
@@ -223,7 +228,11 @@ export interface NoteDependencies extends TransactionDependencies {
 export interface PostgresModuleDependencies extends Partial<PostgresRepositories> {
   client?:
     | import('../../../../infrastructure/postgres-transaction-port.ts').PostgresTransactionHost<
-        import('../../infrastructure/postgres/navigation-repository-types.ts').SpaceRepositoryOptions['db'] &
+        Pick<
+          import('@prisma/client').Prisma.TransactionClient,
+          'knowledgeConcept' | 'knowledgeConceptLink' | 'knowledgeConceptRelation' | 'knowledgeItem'
+        > &
+          import('../../infrastructure/postgres/navigation-repository-types.ts').SpaceRepositoryOptions['db'] &
           import('../../infrastructure/postgres/navigation-repository-types.ts').FolderRepositoryOptions['db'] &
           import('../../infrastructure/postgres/navigation-repository-types.ts').TagRepositoryOptions['db'] &
           import('../../infrastructure/postgres/navigation-repository-types.ts').TagGroupRepositoryOptions['db'] &

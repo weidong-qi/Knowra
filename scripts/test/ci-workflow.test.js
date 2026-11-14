@@ -28,7 +28,8 @@ test('CI partitions every npm test entry exactly once and keeps Chromium in addi
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts v5-global-appearance.spec.ts'
+    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts v5-global-appearance.spec.ts',
+    'test:e2e -w @study-accelerator/web -- --config playwright.knowledge-concepts.config.ts'
   ]);
   const matrix = workflow
     .match(/suite: \[([^\]]+)\]/)[1]
@@ -216,16 +217,16 @@ test('all split suites retain database, production identity, serial runtime and 
   const runtime = JSON.parse(read('apps/desktop-runtime/package.json'));
   assert.match(runtime.scripts.test, /--test-concurrency=1/);
   assert.match(runtime.scripts['test:e2e'], /--test-concurrency=1/);
-  assert.match(workflow, /permissions:\n  contents: read/);
+  assert.match(workflow, /permissions:\n {2}contents: read/);
   assert.doesNotMatch(workflow, /pull_request_target|secrets\.|continue-on-error/);
 });
 
 test('main pushes and PRs remain automatic; branch candidates have manual fallback', () => {
   for (const file of ['.github/workflows/ci.yml', '.github/workflows/mac-build.yml']) {
     const text = read(file);
-    assert.match(text, /  pull_request:/);
-    assert.match(text, /  workflow_dispatch:/);
-    assert.match(text, /  push:\n    branches:(?:\n      - main| \[main\])/);
+    assert.match(text, / {2}pull_request:/);
+    assert.match(text, / {2}workflow_dispatch:/);
+    assert.match(text, / {2}push:\n {4}branches:(?:\n {6}- main| \[main\])/);
     assert.doesNotMatch(text, /codex\/\*\*/);
   }
   assert.match(workflow, /\[\[ "\$EVENT_NAME" == "push" && -n "\$BEFORE_SHA"/);

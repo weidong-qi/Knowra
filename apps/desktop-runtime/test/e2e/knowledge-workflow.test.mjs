@@ -1,4 +1,4 @@
-import { knowledgeCreateButton } from './helpers/knowledge-index.mjs';
+import { clickKnowledgeAction, knowledgeCreateButton } from './helpers/knowledge-index.mjs';
 import { openLocalSync, closeLocalSync } from './helpers/workspace-status.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -97,10 +97,10 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   await expect(
     page.getByRole('article', { name: '知识详情', exact: true }).getByText('另一个页面已更新', { exact: true })
   ).toBeVisible();
-  await page.getByRole('button', { name: '归档', exact: true }).click();
+  await clickKnowledgeAction(page, '归档');
   await page.getByRole('button', { name: '确认归档', exact: true }).click();
   await expect.poll(() => dataStore.state.knowledgeItems[0].reviewStatus).toBe('archived');
-  await page.getByRole('button', { name: '恢复为候选', exact: true }).click();
+  await clickKnowledgeAction(page, '恢复为候选');
   await expect.poll(() => dataStore.state.knowledgeItems[0].reviewStatus).toBe('candidate');
   await expect(page.getByRole('button', { name: '确认知识', exact: true })).toBeEnabled();
   if (process.env.KNOWRA_E2E_OUTPUT) {

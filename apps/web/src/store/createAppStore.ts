@@ -14,9 +14,12 @@ export function createAppStore(dependencies: WorkspaceDependencies) {
     ...createNavigationSlice(set, get, dependencies),
     ...createNotesIndexSlice(set, get, dependencies.api.searchNoteIds),
     ...createWorkspaceSlice(set, get, dependencies),
-    ...createKnowledgeSlice(get, dependencies),
+    ...createKnowledgeSlice(set, get, dependencies),
     ...createTrainingSlice(get, dependencies),
-    searchCommandNotes: bindCommandNoteSearch(dependencies.api.searchCommandNotes, () => get().serverData.currentSpaceId)
+    searchCommandNotes: bindCommandNoteSearch(
+      dependencies.api.searchCommandNotes,
+      () => get().serverData.currentSpaceId
+    )
   }));
 }
 
