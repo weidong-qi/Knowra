@@ -63,7 +63,16 @@ test('PDF 便签跨页拖动、边缘自动滚动、撤销重做与取消', { ti
   const reader = page.getByLabel('PDF 页面', { exact: true });
   const icon = page.locator(`[data-note-id="${original.id}"]`);
   const paper = index => page.locator(`.page[data-page-number="${index}"] .canvasWrapper`);
-  const previewPage = () => icon.evaluate(element => element.closest('.page').dataset.pageNumber);
+  // 覆盖层逐帧重画，查询与读取放在同一次页面脚本中，避免持有已被替换的 SVG。
+  const previewPage = () =>
+    page.evaluate(
+      id =>
+        document
+          .querySelector(`[data-note-id="${CSS.escape(id)}"]`)
+          ?.closest('.page')
+          ?.getAttribute('data-page-number') ?? null,
+      original.id
+    );
   const savedOn = async index => {
     await expect.poll(async () => (await sticky()).segments[0].pageIndex).toBe(index);
     await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
