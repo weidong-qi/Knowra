@@ -16,7 +16,7 @@ export function PdfConflictDialog({
   const describe = (value: Partial<PdfAnnotation>) => (
     <>
       <p>
-        {value.quoteText || (value.type === 'note' ? '便签' : '区域标注')} ·{' '}
+        {value.type === 'note' ? value.title?.trim() || '便签' : value.quoteText || '区域标注'} ·{' '}
         {KIND_OPTIONS.find(option => option.id === value.kind)?.label}
       </p>
       <p>{value.comment || '没有评论'}</p>

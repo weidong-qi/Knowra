@@ -32,7 +32,11 @@ export function filterPdfAnnotations(items: PdfAnnotation[], filter: PdfMarkFilt
       (filter.kind === 'all' || item.kind === filter.kind) &&
       (filter.page === 'all' || item.segments.some(segment => segment.pageIndex + 1 === Number(filter.page))) &&
       (filter.comment === 'all' || Boolean(item.comment?.trim()) === (filter.comment === 'with')) &&
-      (!query || `${item.quoteText}\n${item.comment}`.normalize('NFKC').toLocaleLowerCase().includes(query))
+      (!query ||
+        `${item.type === 'note' ? item.title?.trim() || '便签' : ''}\n${item.quoteText}\n${item.comment}`
+          .normalize('NFKC')
+          .toLocaleLowerCase()
+          .includes(query))
   );
 }
 export function PdfAnnotationFilters({
@@ -79,7 +83,7 @@ export function PdfAnnotationFilters({
           icon={<SearchIcon size={16} />}
           size="sidebar"
           surfaceProps={{ style: { margin: 0 } }}
-          placeholder="搜索摘录或批注"
+          placeholder="搜索标题、摘录或批注"
           value={filter.query}
           onChange={event => update('query', event.target.value)}
           onClear={filter.query ? () => update('query', '') : undefined}

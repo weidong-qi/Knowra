@@ -90,7 +90,7 @@ export function exportPdfExcerpt(title: string, noteId: string, items: PdfAnnota
           item.type === 'region'
             ? '区域标注'
             : item.type === 'note'
-              ? '便签'
+              ? escape(item.title?.trim() || '便签')
               : item.quoteText
                   .split('\n')
                   .map(line => '> ' + line)
@@ -114,15 +114,19 @@ export function noteRectAt(viewport: ScaledViewport, bounds: PageBounds, x: numb
     bottom: y + size / 2
   });
 }
-/** 把便签按屏幕位移平移，并限制在页面内，返回新的 PDF 坐标矩形。 */
-export function moveRect(viewport: PdfViewport, bounds: PageBounds, rect: number[], dx: number, dy: number) {
-  const box = rectToViewport(viewport, rect);
-  const kx = bounds.width / viewport.width,
-    ky = bounds.height / viewport.height;
-  const width = box.width * kx,
-    height = box.height * ky;
-  const left = Math.max(bounds.left, Math.min(bounds.left + bounds.width - width, bounds.left + box.x * kx + dx));
-  const top = Math.max(bounds.top, Math.min(bounds.top + bounds.height - height, bounds.top + box.y * ky + dy));
+/** 跨页放置便签，保留 PDF 尺寸和鼠标在图标内的相对抓取位置；只在目标页内约束边界。 */
+export function noteRectOnPage(
+  viewport: PdfViewport,
+  bounds: PageBounds,
+  size: { width: number; height: number },
+  grab: { x: number; y: number },
+  point: { clientX: number; clientY: number }
+) {
+  const box = rectToViewport(viewport, [0, 0, size.width, size.height]);
+  const width = Math.min(bounds.width, (box.width * bounds.width) / viewport.width);
+  const height = Math.min(bounds.height, (box.height * bounds.height) / viewport.height);
+  const left = Math.max(bounds.left, Math.min(bounds.left + bounds.width - width, point.clientX - width * grab.x));
+  const top = Math.max(bounds.top, Math.min(bounds.top + bounds.height - height, point.clientY - height * grab.y));
   return rectToPdf(viewport, bounds, { left, top, right: left + width, bottom: top + height });
 }
 export type PdfSelection = {

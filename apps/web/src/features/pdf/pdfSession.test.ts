@@ -71,6 +71,36 @@ it('响应丢失后重开使用同一个操作和请求重试，不重复创建'
   expect(request.mock.calls[1][1]!.body).toBe(first);
   expect(reopened.drafts.size).toBe(0);
 });
+
+it('便签标题随未保存草稿恢复，损坏的标题草稿保留原件', async () => {
+  const session = new PdfSession('note', base.sha256, 'title-draft', () => {});
+  await session.stage('sticky', { ...base, id: 'sticky', type: 'note', title: '尚未提交的标题' });
+  const reopened = new PdfSession(
+    'note',
+    base.sha256,
+    'title-draft',
+    () => {},
+    () => true,
+    true
+  );
+  reopened.recover();
+  expect(reopened.values()[0].title).toBe('尚未提交的标题');
+  const broken = JSON.parse(localStorage.getItem('title-draft')!);
+  broken.drafts[0].fields.title = 12;
+  const original = JSON.stringify(broken);
+  localStorage.setItem('title-draft', original);
+  const corrupted = new PdfSession(
+    'note',
+    base.sha256,
+    'title-draft',
+    () => {},
+    () => true,
+    true
+  );
+  expect(() => corrupted.recover()).toThrow('恢复草稿无效');
+  await expect(corrupted.persist()).rejects.toThrow('恢复草稿无效');
+  expect(localStorage.getItem('title-draft')).toBe(original);
+});
 it.each([false, true])('失败后继续编辑，重放旧请求后仍提交最新评论（重开：%s）', async reopen => {
   request.mockRejectedValueOnce(new Error('lost response'));
   let session = new PdfSession('note', base.sha256, 'test-key', () => {});

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
-import { Button, Popover, PopoverDialog, TextAreaField } from '../../components/ui';
+import { Button, IconButton, Popover, PopoverDialog, TextAreaField } from '../../components/ui';
+import { DeleteIcon } from '../../components/icons/knowra';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import styles from './PdfReader.module.css';
 
@@ -10,12 +11,14 @@ export function PdfCommentEditor({
   point,
   canWrite,
   onChange,
+  onDelete,
   onClose
 }: {
   item: PdfAnnotation;
   point: { x: number; y: number };
   canWrite: boolean;
   onChange(comment: string): void;
+  onDelete?(): void;
   onClose(): void;
 }) {
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -42,6 +45,11 @@ export function PdfCommentEditor({
         <PopoverDialog aria-label="编辑 PDF 批注">
           <div className={styles.commentEditorHead}>
             <strong>{KIND_OPTIONS.find(option => option.id === item.kind)?.label} · 批注</strong>
+            {onDelete ? (
+              <IconButton size={24} aria-label="删除便签" title="删除便签" isDisabled={!canWrite} onPress={onDelete}>
+                <DeleteIcon size={14} />
+              </IconButton>
+            ) : null}
             <Button variant="ghost" size="mini" onPress={onClose}>
               完成
             </Button>

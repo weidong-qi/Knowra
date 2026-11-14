@@ -73,6 +73,11 @@ export class PdfSession {
               segment.rect.every(Number.isFinite)
           ) &&
           typeof draft.fields.quoteText === 'string' &&
+          (draft.fields.title === undefined ||
+            (draft.fields.type === 'note' &&
+              typeof draft.fields.title === 'string' &&
+              draft.fields.title.length <= 200 &&
+              !/[\r\n]/.test(draft.fields.title))) &&
           (draft.expectedRevision === undefined || isRevision(draft.expectedRevision)) &&
           (draft.taskRemove === undefined || typeof draft.taskRemove === 'boolean') &&
           (!draft.task || (typeof draft.task.operationId === 'string' && isRevision(draft.task.expectedRevision)))

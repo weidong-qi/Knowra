@@ -41,8 +41,21 @@ test('PDF 真实 PostgreSQL：导入事务、CAS、快照、ZIP 恢复与永久�
   );
   assert.equal(attempts.filter(item => item.status === 'fulfilled').length, 1);
   assert.equal((await pdf.list(note.id))[0].revision, 2);
+  await pdf.mutate(note.id, 'pg-note', {
+    expectedRevision: 0,
+    operationId: 'note-initial',
+    type: 'note',
+    title: 'PG 便签标题',
+    segments: [{ pageIndex: 0, rect: [50, 60, 68, 78] }]
+  });
+  await pdf.mutate(note.id, 'pg-note', {
+    expectedRevision: 1,
+    operationId: 'note-rename',
+    title: '修改后的便签标题'
+  });
   const snapshot = await context.http.storage.exportKnowledgeBase();
-  assert.equal(snapshot.data.pdfAnnotations.length, 1);
+  assert.equal(snapshot.data.pdfAnnotations.length, 2);
+  assert.equal(snapshot.data.pdfAnnotations.find(item => item.id === 'pg-note').title, '修改后的便签标题');
   const chunks = [];
   await pdf.archive.export(
     new Writable({
@@ -55,7 +68,8 @@ test('PDF 真实 PostgreSQL：导入事务、CAS、快照、ZIP 恢复与永久�
   const preview = await pdf.archive.inspect(Readable.from(chunks));
   const restored = await pdf.archive.restore(preview.token);
   assert.equal(restored.restored, true);
-  assert.equal((await pdf.list(note.id)).length, 1);
+  assert.equal((await pdf.list(note.id)).length, 2);
+  assert.equal((await pdf.list(note.id)).find(item => item.id === 'pg-note').title, '修改后的便签标题');
   await knowledge.noteService.deleteNote(note.id);
   await context.http.knowledge.permanentlyDeleteNote({ id: note.id });
   assert.equal(await context.prisma.pdfAnnotation.count(), 0);

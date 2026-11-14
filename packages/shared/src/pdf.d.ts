@@ -18,6 +18,8 @@ export interface PdfAnnotation {
   type: 'highlight' | 'underline' | 'region' | 'note';
   segments: PdfSegment[];
   quoteText: string;
+  /** 便签的自定义标题；旧便签缺省显示“便签”。 */
+  title?: string;
   kind: string;
   comment: string;
   revision: number;

@@ -134,7 +134,8 @@ export function PdfAnnotationTooltip({
           <>
             <strong>
               <span className={styles.commentDot} aria-hidden="true" />
-              {KIND_OPTIONS.find(option => option.id === item.kind)?.label} · 批注
+              {KIND_OPTIONS.find(option => option.id === item.kind)?.label} ·{' '}
+              {item.type === 'note' ? item.title?.trim() || '便签' : '批注'}
             </strong>
             <p>{item.comment}</p>
           </>

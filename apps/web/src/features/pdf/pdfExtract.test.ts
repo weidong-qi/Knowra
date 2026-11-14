@@ -41,3 +41,12 @@ it('没有可用标注时返回 null，已删除的不计入', () => {
   expect(buildPdfExtractNote('t', 'n', [])).toBeNull();
   expect(buildPdfExtractNote('t', 'n', [mark('x', 'important', 0, { deletedAt: '2026-01-02' })])).toBeNull();
 });
+
+it('便签摘录使用自定义标题，旧便签仍显示默认标题', () => {
+  const text = buildPdfExtractNote('论文', 'n1', [
+    mark('new', 'important', 0, { type: 'note', title: '待验证的想法', quoteText: '', comment: '验证正文' }),
+    mark('old', 'important', 1, { type: 'note', quoteText: '' })
+  ])!;
+  expect(text).toContain('待验证的想法\n\n验证正文');
+  expect(text).toContain('便签\n\n[第 2 页]');
+});
