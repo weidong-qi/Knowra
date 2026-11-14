@@ -71,6 +71,31 @@ test('真实页面与 SQLite：新建、挂靠、改角色、一键删除关系�
       await expect(dialog).toHaveCount(0);
     };
     await open(a.id);
+    await page.getByRole('button', { name: '概念更多操作', exact: true }).click();
+    await page.getByRole('menuitem', { name: '编辑概念', exact: true }).click();
+    const editor = page.getByRole('dialog', { name: '编辑概念', exact: true });
+    await editor.getByRole('textbox', { name: '概念名称' }).fill('CNN 草稿');
+    const concurrent = await page.request.post(`${runtime.origin}/api/knowledge/concepts/commands`, {
+      data: {
+        command: {
+          type: 'updateConcept',
+          id: a.id,
+          expectedRevision: a.revision,
+          operationId: 'synthetic-concurrent-edit',
+          patch: { name: 'CNN 远端' }
+        }
+      }
+    });
+    expect(concurrent.ok(), await concurrent.text()).toBeTruthy();
+    await editor.getByRole('button', { name: '保存概念' }).click();
+    await expect(editor.getByText('CNN 远端', { exact: true })).toBeVisible();
+    await expect(editor.getByRole('textbox', { name: '概念名称' })).toHaveValue('CNN 草稿');
+    await expect(editor.getByRole('button', { name: '保存概念' })).toBeDisabled();
+    await editor.getByRole('button', { name: '已核对，采用最新版本基线' }).click();
+    await editor.getByRole('textbox', { name: '概念名称' }).fill('CNN');
+    await editor.getByRole('button', { name: '保存概念' }).click();
+    await expect(editor).toHaveCount(0);
+    expect((await snapshot()).concepts.find(row => row.id === a.id)?.name).toBe('CNN');
     await link();
     await page.getByRole('button', { name: '挂靠操作：合成卷积知识', exact: true }).click();
     await page.getByRole('menuitem', { name: '改为提及', exact: true }).click();

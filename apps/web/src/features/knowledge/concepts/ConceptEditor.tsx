@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { KnowledgeConcept } from '@study-accelerator/web-core';
+import { ApiRequestError, type KnowledgeConcept } from '@study-accelerator/web-core';
 import { Button, Dialog, DialogBody, DialogFooter, TextField } from '../../../components/ui';
 import { useKnowledgeFormSafety } from '../KnowledgeItemForm';
 import { randomId } from '../../../browser/randomId';
@@ -26,9 +26,21 @@ export function ConceptEditor({
   const [sense, setSense] = useState(concept?.sense ?? '');
   const [aliases, setAliases] = useState(concept?.aliases.join('、') ?? '');
   const [id] = useState(() => concept?.id ?? randomId());
-  const [operationId] = useState(() => randomId());
+  const [operationId, setOperationId] = useState(() => randomId());
+  const [baseline, setBaseline] = useState(concept);
+  const [conflicted, setConflicted] = useState(false);
   const state = useConceptState(store);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const latest = state.concepts.find(row => row.id === id);
+  const targetUnavailable = Boolean(concept && (!latest || latest.deletedAt || latest.mergedInto));
+  const needsReview = Boolean(concept && (conflicted || latest?.revision !== baseline?.revision));
+  const blocked = state.status !== 'ready' || state.unavailable || targetUnavailable || needsReview;
+  const adoptBaseline = () => {
+    if (!latest || targetUnavailable || state.pending || state.status !== 'ready') return;
+    setBaseline(latest);
+    setOperationId(randomId());
+    setConflicted(false);
+  };
   const dirty =
     name !== (concept?.name ?? initialName) ||
     sense !== (concept?.sense ?? '') ||
@@ -47,7 +59,7 @@ export function ConceptEditor({
     }
   };
   const submit = async () => {
-    if (!canWrite) return;
+    if (!canWrite || state.pending || blocked) return;
     const fields = {
       name,
       sense,
@@ -59,7 +71,7 @@ export function ConceptEditor({
     try {
       await store.execute(
         concept
-          ? { type: 'updateConcept', operationId, id, expectedRevision: concept.revision, patch: fields }
+          ? { type: 'updateConcept', operationId, id, expectedRevision: baseline!.revision, patch: fields }
           : {
               type: 'createConcept',
               operationId,
@@ -73,7 +85,12 @@ export function ConceptEditor({
       releaseSafety();
       onSaved?.(id);
       onClose();
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof ApiRequestError &&
+        ['CONCEPT_REVISION_CONFLICT', 'CONCEPT_MERGED', 'CONCEPT_NOT_FOUND'].includes(error.code ?? '')
+      )
+        setConflicted(true);
       /* 错误在弹窗中展示，保留输入。 */
     }
   };
@@ -115,6 +132,40 @@ export function ConceptEditor({
             />
             {itemId ? <p>创建后，会将当前知识点作为主体挂入。</p> : null}
             {state.error ? <p role="alert">{state.error}</p> : null}
+            {concept && targetUnavailable ? (
+              <p role="status">此概念已删除、合并或不再可用，不能保存旧编辑。草稿仍保留，请复制后关闭。</p>
+            ) : concept && needsReview ? (
+              <section aria-label="核对概念最新版本">
+                <p>
+                  远端概念已变化。你的草稿仍保留；请核对最新内容，明确采用新版本为基线后再保存。保存将用当前草稿替换这些字段。
+                </p>
+                {latest ? (
+                  <dl>
+                    <dt>最新名称</dt>
+                    <dd>{latest.name}</dd>
+                    <dt>最新区分标签</dt>
+                    <dd>{latest.sense || '无'}</dd>
+                    <dt>最新别名</dt>
+                    <dd>{latest.aliases.join('、') || '无'}</dd>
+                  </dl>
+                ) : null}
+                <Button
+                  isDisabled={
+                    !canWrite || state.pending || state.status !== 'ready' || latest?.revision === baseline?.revision
+                  }
+                  onPress={adoptBaseline}
+                >
+                  已核对，采用最新版本基线
+                </Button>
+                <Button
+                  variant="ghost"
+                  isDisabled={state.pending}
+                  onPress={() => void store.load({ preserveError: true })}
+                >
+                  重新获取最新版本
+                </Button>
+              </section>
+            ) : null}
           </div>
         </DialogBody>
         <DialogFooter>
@@ -123,7 +174,7 @@ export function ConceptEditor({
           </Button>
           <Button
             variant="primary"
-            isDisabled={!canWrite || !name.trim()}
+            isDisabled={!canWrite || !name.trim() || blocked}
             isPending={state.pending}
             onPress={() => void submit()}
           >

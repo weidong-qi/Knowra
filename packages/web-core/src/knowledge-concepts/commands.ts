@@ -184,13 +184,57 @@ export function applyConceptCommand(
       case 'undeleteConcept': {
         if (!owner.deletedAt) conceptFail('CONCEPT_INVALID_INPUT', '概念未被删除');
         const marker = owner.deletedBy;
-        for (const kind of ['concepts', 'links', 'relations'] as const)
-          for (const row of state[kind])
-            if (row.deletedBy === marker && row.deletedAt) {
-              row.deletedAt = null;
-              row.deletedBy = null;
-              touch(kind, row);
-            }
+        const restore = (kind: keyof ConceptState, row: ConceptRecord) => {
+          row.deletedAt = null;
+          row.deletedBy = null;
+          touch(kind, row);
+        };
+        // 撤销只撤回此次删除；之后发生的永久删除、合并、独立删除仍然有效。
+        restore('concepts', owner);
+        const resolveEndpoint = (id: string): string | null => {
+          const visited = new Set<string>();
+          let row = state.concepts.find(row => row.id === id);
+          while (row?.mergedInto && !visited.has(row.id)) {
+            visited.add(row.id);
+            row = state.concepts.find(candidate => candidate.id === row!.mergedInto);
+          }
+          return row && !row.deletedAt ? row.id : null;
+        };
+        for (const row of state.links) {
+          if (row.deletedBy !== marker || !row.deletedAt) continue;
+          const concept = resolveEndpoint(row.conceptId);
+          if (
+            !concept ||
+            !items.some(item => item.id === row.knowledgeItemId) ||
+            state.links.some(
+              other => !other.deletedAt && other.conceptId === concept && other.knowledgeItemId === row.knowledgeItemId
+            )
+          )
+            continue;
+          row.conceptId = concept;
+          restore('links', row);
+        }
+        for (const row of state.relations) {
+          if (row.deletedBy !== marker || !row.deletedAt) continue;
+          const from = resolveEndpoint(row.fromConceptId);
+          const to = resolveEndpoint(row.toConceptId);
+          if (!from || !to || from === to) continue;
+          const candidate = { ...row, fromConceptId: from, toConceptId: to };
+          if (state.relations.some(other => !other.deletedAt && relationKey(other) === relationKey(candidate)))
+            continue;
+          if (
+            row.basisItemId !== null &&
+            (!items.some(item => item.id === row.basisItemId) ||
+              ![from, to].every(id =>
+                state.links.some(
+                  link => !link.deletedAt && link.conceptId === id && link.knowledgeItemId === row.basisItemId
+                )
+              ))
+          )
+            continue;
+          Object.assign(row, candidate);
+          restore('relations', row);
+        }
         break;
       }
       case 'linkItems':
@@ -309,6 +353,16 @@ export function applyConceptCommand(
       }
       default:
         conceptFail('CONCEPT_INVALID_INPUT', '命令类型无效');
+    }
+  }
+  // 所有关系入口（含清理、合并和恢复）统一使旧/新两端的删除确认失效。
+  // Set 保证一个命令涉及多条边时，每个端点也只推进一次版本。
+  for (const relation of state.relations) {
+    if (!touched.relations.has(relation.id)) continue;
+    const previous = before.relations.find(row => row.id === relation.id);
+    for (const id of [previous?.fromConceptId, previous?.toConceptId, relation.fromConceptId, relation.toConceptId]) {
+      const endpoint = state.concepts.find(row => row.id === id);
+      if (endpoint) touch('concepts', endpoint);
     }
   }
   owner.operations.push({ id: command.operationId, hash: context.requestHash });

@@ -11,12 +11,12 @@ import {
 import type { ConceptCommand, ConceptState } from '../src/knowledge-concepts/types.ts';
 const now = '2026-11-12T08:00:00.000Z';
 const items = [{ id: 'k1' }, { id: 'k2' }];
-function fixture() {
+function fixture(currentItems = [...items]) {
   let state = emptyConceptState();
   let seq = 0;
   const execute = (input: Omit<ConceptCommand, 'operationId'>, operationId = `op${++seq}`) => {
     const command = { ...input, operationId } as ConceptCommand;
-    const changed = applyConceptCommand(state, items, command, {
+    const changed = applyConceptCommand(state, currentItems, command, {
       now,
       requestHash: seq.toString(16).padStart(64, '0')
     });
@@ -61,7 +61,7 @@ describe('概念规则与直接合并', () => {
       relationType: 'relatedTo',
       basisItemId: 'k1'
     });
-    f.execute({ type: 'mergeConcept', id: 'a', expectedRevision: 2, targetId: 'b', expectedTargetRevision: 1 });
+    f.execute({ type: 'mergeConcept', id: 'a', expectedRevision: 2, targetId: 'b', expectedTargetRevision: 2 });
     expect(f.state.concepts.find(row => row.id === 'b')?.aliases).toEqual(['CNN']);
     expect(f.state.links.filter(row => !row.deletedAt)).toEqual(
       expect.arrayContaining([expect.objectContaining({ conceptId: 'b', knowledgeItemId: 'k1', role: 'subject' })])
@@ -145,7 +145,7 @@ it('无向关系去重、关系依据和别名约束在同一校验器执行', (
     f.execute({
       type: 'createRelation',
       id: 'b',
-      expectedRevision: 1,
+      expectedRevision: 2,
       relationId: 'reverse',
       toConceptId: 'a',
       relationType: 'relatedTo',
@@ -156,7 +156,7 @@ it('无向关系去重、关系依据和别名约束在同一校验器执行', (
     f.execute({
       type: 'createRelation',
       id: 'b',
-      expectedRevision: 1,
+      expectedRevision: 2,
       relationId: 'missing',
       toConceptId: 'a',
       relationType: 'partOf',
@@ -190,7 +190,7 @@ it('整批移动实际迁移关联，目标已有挂靠时去重并一次删除�
     id: 'a',
     expectedRevision: 2,
     targetId: 'b',
-    expectedTargetRevision: 1,
+    expectedTargetRevision: 2,
     linkIds: [link.id],
     deleteRelationIds: ['r']
   });
@@ -202,7 +202,7 @@ it('整批移动实际迁移关联，目标已有挂靠时去重并一次删除�
   ]);
   expect(f.state.relations[0]?.deletedAt).toBe(now);
   expect(() =>
-    f.execute({ type: 'linkItems', id: 'b', expectedRevision: 2, itemIds: ['k1'], role: 'subject' })
+    f.execute({ type: 'linkItems', id: 'b', expectedRevision: 3, itemIds: ['k1'], role: 'subject' })
   ).toThrow('已挂入');
 });
 
@@ -215,4 +215,171 @@ it('已有知识点的历史 Unicode ID 可直接挂靠，不改变旧资产身�
     { now, requestHash: 'a'.repeat(64) }
   );
   expect(changed.links[0]?.knowledgeItemId).toBe(id);
+});
+
+it('新入边使旧删除确认失效；改端点与删边各推进所有新旧端点一次', () => {
+  const f = fixture();
+  for (const id of ['a', 'b', 'c']) f.execute({ type: 'createConcept', id, expectedRevision: 0, name: id });
+  f.execute({
+    type: 'createRelation',
+    id: 'b',
+    expectedRevision: 1,
+    relationId: 'r',
+    toConceptId: 'a',
+    relationType: 'partOf',
+    basisItemId: null
+  });
+  expect(() => f.execute({ type: 'deleteConcept', id: 'a', expectedRevision: 1 })).toThrow('别处修改');
+  expect(f.state.concepts.map(row => row.revision)).toEqual([2, 2, 1]);
+  const changed = f.execute({
+    type: 'updateRelation',
+    id: 'b',
+    expectedRevision: 2,
+    relationId: 'r',
+    expectedRelationRevision: 1,
+    toConceptId: 'c',
+    relationType: 'partOf',
+    basisItemId: null
+  });
+  expect(changed.concepts.map(row => row.id)).toEqual(['a', 'b', 'c']);
+  expect(f.state.concepts.map(row => row.revision)).toEqual([3, 3, 2]);
+  f.execute({ type: 'deleteRelation', id: 'b', expectedRevision: 3, relationId: 'r', expectedRelationRevision: 2 });
+  expect(f.state.concepts.map(row => row.revision)).toEqual([3, 4, 3]);
+});
+
+it('删除与撤销多条边时，每端点只推进一次；过时的对端删除也被拒绝', () => {
+  const f = fixture();
+  for (const id of ['a', 'b']) f.execute({ type: 'createConcept', id, expectedRevision: 0, name: id });
+  for (const [index, relationType] of ['partOf', 'relatedTo'].entries())
+    f.execute({
+      type: 'createRelation',
+      id: 'a',
+      expectedRevision: index + 1,
+      relationId: `r${index}`,
+      toConceptId: 'b',
+      relationType,
+      basisItemId: null
+    });
+  f.execute({ type: 'deleteConcept', id: 'a', expectedRevision: 3 });
+  expect(f.state.concepts.map(row => row.revision)).toEqual([4, 4]);
+  expect(() => f.execute({ type: 'deleteConcept', id: 'b', expectedRevision: 3 })).toThrow('别处修改');
+  f.execute({ type: 'undeleteConcept', id: 'a', expectedRevision: 4 });
+  expect(f.state.concepts.map(row => row.revision)).toEqual([5, 5]);
+  expect(f.state.relations.every(row => !row.deletedAt)).toBe(true);
+});
+
+it('概念删除后知识点永久删除，撤销恢复概念但不复活失效挂靠与依据边', () => {
+  const currentItems = [...items];
+  const f = fixture(currentItems);
+  for (const id of ['a', 'b']) f.execute({ type: 'createConcept', id, expectedRevision: 0, name: id, itemIds: ['k1'] });
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'partOf',
+    basisItemId: 'k1'
+  });
+  f.execute({ type: 'deleteConcept', id: 'a', expectedRevision: 2 });
+  // 永久删除协调器已经移除了仍有效的挂靠；旧墓碑可以继续保存历史引用。
+  f.state.links = f.state.links.filter(row => row.deletedAt);
+  currentItems.splice(0, 1);
+  f.execute({ type: 'undeleteConcept', id: 'a', expectedRevision: 3 });
+  expect(f.state.concepts.find(row => row.id === 'a')?.deletedAt).toBeNull();
+  expect(f.state.links.every(row => row.deletedAt)).toBe(true);
+  expect(f.state.relations[0]?.deletedAt).toBe(now);
+  expect(() => assertConceptState(f.state, currentItems)).not.toThrow();
+});
+
+it('撤销沿另一端的合并链重定向关系，并保留独立删除事实', () => {
+  const f = fixture();
+  for (const id of ['a', 'b', 'c', 'd'])
+    f.execute({ type: 'createConcept', id, expectedRevision: 0, name: id, itemIds: ['k1'] });
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'partOf',
+    basisItemId: 'k1'
+  });
+  f.execute({ type: 'deleteConcept', id: 'a', expectedRevision: 2 });
+  f.execute({ type: 'mergeConcept', id: 'b', expectedRevision: 3, targetId: 'c', expectedTargetRevision: 1 });
+  f.execute({ type: 'mergeConcept', id: 'c', expectedRevision: 2, targetId: 'd', expectedTargetRevision: 1 });
+  f.execute({ type: 'undeleteConcept', id: 'a', expectedRevision: 3 });
+  expect(f.state.relations[0]).toMatchObject({ fromConceptId: 'a', toConceptId: 'd', deletedAt: null });
+  expect(f.state.concepts.filter(row => !row.deletedAt).map(row => row.id)).toEqual(['a', 'd']);
+  expect(() => assertConceptState(f.state, items)).not.toThrow();
+});
+
+it('撤销不恢复另一端已独立删除的边，移除依据边也推进对端版本', () => {
+  const f = fixture();
+  for (const id of ['a', 'b']) f.execute({ type: 'createConcept', id, expectedRevision: 0, name: id, itemIds: ['k1'] });
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    relationId: 'r',
+    toConceptId: 'b',
+    relationType: 'partOf',
+    basisItemId: 'k1'
+  });
+  const link = f.state.links.find(row => row.conceptId === 'a')!;
+  f.execute({ type: 'unlinkItems', id: 'a', expectedRevision: 2, linkIds: [link.id], deleteRelationIds: ['r'] });
+  expect(f.state.concepts.map(row => row.revision)).toEqual([3, 3]);
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 3,
+    relationId: 'manual',
+    toConceptId: 'b',
+    relationType: 'partOf',
+    basisItemId: null
+  });
+  f.execute({ type: 'deleteConcept', id: 'a', expectedRevision: 4 });
+  f.execute({ type: 'deleteConcept', id: 'b', expectedRevision: 5 });
+  f.execute({ type: 'undeleteConcept', id: 'a', expectedRevision: 5 });
+  expect(f.state.relations.every(row => row.deletedAt)).toBe(true);
+});
+
+it('合并对外边推进旧新端点版本；撤销重定向撞边只恢复一条有效关系', () => {
+  const f = fixture();
+  for (const id of ['a', 'b', 'c']) f.execute({ type: 'createConcept', id, expectedRevision: 0, name: id });
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 1,
+    relationId: 'ab',
+    toConceptId: 'b',
+    relationType: 'partOf',
+    basisItemId: null
+  });
+  f.execute({
+    type: 'createRelation',
+    id: 'a',
+    expectedRevision: 2,
+    relationId: 'ac',
+    toConceptId: 'c',
+    relationType: 'partOf',
+    basisItemId: null
+  });
+  f.execute({ type: 'deleteConcept', id: 'a', expectedRevision: 3 });
+  f.execute({ type: 'mergeConcept', id: 'b', expectedRevision: 3, targetId: 'c', expectedTargetRevision: 3 });
+  f.execute({ type: 'undeleteConcept', id: 'a', expectedRevision: 4 });
+  expect(f.state.relations.filter(row => !row.deletedAt)).toHaveLength(1);
+  expect(f.state.relations.find(row => !row.deletedAt)).toMatchObject({ fromConceptId: 'a', toConceptId: 'c' });
+  // 此时从 a 合并到新的 d，a/c/d 各推进一次，哪怕 a 同时是命令主体。
+  f.execute({ type: 'createConcept', id: 'd', expectedRevision: 0, name: 'd' });
+  const prior = new Map(f.state.concepts.map(row => [row.id, row.revision]));
+  const changed = f.execute({
+    type: 'mergeConcept',
+    id: 'a',
+    expectedRevision: prior.get('a')!,
+    targetId: 'd',
+    expectedTargetRevision: 1
+  });
+  expect(changed.concepts.map(row => row.id)).toEqual(['a', 'c', 'd']);
+  for (const row of changed.concepts) expect(row.revision).toBe(prior.get(row.id)! + 1);
 });
