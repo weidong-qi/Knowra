@@ -179,6 +179,8 @@ export function PdfReaderView({
       ? items.map(item => (item.id === noteMove.id ? { ...item, segments: [noteMove.segment] } : item))
       : items;
     paintPdfAnnotations(viewer.viewerRef.current, painted, selected, ghost);
+    // 目标页可能在滚动停止后才绘制完成；静止指针也要接续到新就绪的纸面。
+    noteDrag.refresh();
   });
   const pendingJump = useRef<string | null>(null);
   const jump = useCallback(

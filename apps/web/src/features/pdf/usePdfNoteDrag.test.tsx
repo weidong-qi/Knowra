@@ -147,6 +147,20 @@ it('滚动后静止的鼠标继续定位到目标页，松开即清理自动滚�
   expect(commit).toHaveBeenCalledTimes(1);
 });
 
+it('目标页迟到绘制后可用静止指针接续预览', () => {
+  const { result, begin, move, container, commit } = setup();
+  const page = container.querySelector<HTMLElement>('[data-page-number="2"]')!;
+  const canvas = page.querySelector('.canvasWrapper')!;
+  canvas.remove();
+  begin();
+  move(200, 430);
+  expect(result.current.preview).toBeNull();
+  page.append(canvas);
+  act(() => result.current.refresh());
+  expect(result.current.preview?.segment.pageIndex).toBe(1);
+  expect(commit).not.toHaveBeenCalled();
+});
+
 it('左右边缘自动滚动，离开阅读区后停止，到滚动尽头不空转', () => {
   const { begin, move, frame, container, frames } = setup();
   begin();
