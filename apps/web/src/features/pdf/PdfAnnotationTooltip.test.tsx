@@ -133,6 +133,22 @@ it('忽略已经不在当前数据中的覆盖节点，仍可预览有效的底�
   expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
 });
 
+it('恢复草稿缺少批注字段时跳过该候选，当前批注字段缺失时安全关闭', () => {
+  const { container, item, props, view, move } = setup();
+  const draft = { ...item, id: 'draft' };
+  Reflect.deleteProperty(draft, 'comment');
+  addMark(container, draft);
+  view.rerender(<PdfAnnotationTooltip {...props} items={[item, draft]} />);
+  expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
+  fireEvent.pointerDown(container);
+  move();
+  expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');
+  const partial = { ...item };
+  Reflect.deleteProperty(partial, 'comment');
+  view.rerender(<PdfAnnotationTooltip {...props} items={[partial, draft]} />);
+  expect(screen.queryByRole('tooltip')).toBeNull();
+});
+
 it('文字层迟到的重绘保留仍命中的批注，位置失效时才收起', () => {
   const { item, props, view, atPoint } = setup();
   expect(screen.getByRole('tooltip')).toHaveTextContent('悬停批注');

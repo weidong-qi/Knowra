@@ -25,7 +25,7 @@ export function PdfAnnotationTooltip({
   const overTooltip = useRef(false);
   const closeTimer = useRef<number | undefined>(undefined);
   const [hover, setHover] = useState<{ id: string; left: number; top: number } | null>(null);
-  const item = enabled ? items.find(value => value.id === hover?.id && value.comment.trim()) : undefined;
+  const item = enabled ? items.find(value => value.id === hover?.id && value.comment?.trim()) : undefined;
   const cancelClose = useCallback(() => {
     window.clearTimeout(closeTimer.current);
     closeTimer.current = undefined;
@@ -50,7 +50,7 @@ export function PdfAnnotationTooltip({
       clear();
       return;
     }
-    const commentIds = new Set(items.filter(value => value.comment.trim()).map(value => value.id));
+    const commentIds = new Set(items.filter(value => value.comment?.trim()).map(value => value.id));
     const commentAtPoint = (target: Element, x: number, y: number) =>
       pdfAnnotationAtPoint(target, x, y, id => commentIds.has(id));
     // 文字层完成绘制可能晚于首次悬停；移入预览框后也应保留批注。
