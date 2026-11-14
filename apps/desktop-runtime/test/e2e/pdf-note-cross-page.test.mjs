@@ -148,16 +148,25 @@ test('PDF 便签跨页拖动、边缘自动滚动、撤销重做与取消', { ti
   await begin();
   const beforeScroll = await readScroll();
   await edge(true);
-  await expect.poll(previewPage, { timeout: 10000 }).toBe('2');
-  assert((await readScroll()) > beforeScroll + 30);
+  // 目标页可能已露在阅读区底部，不能把命中目标页当成动画已滚动的信号。
+  await expect
+    .poll(async () => ({ page: await previewPage(), scrolled: (await readScroll()) > beforeScroll + 40 }), {
+      timeout: 10000
+    })
+    .toEqual({ page: '2', scrolled: true });
   await page.mouse.up();
   await savedOn(1);
   assert.equal((await sticky()).revision, beforeAuto.revision + 1);
   await stopped();
   await locate();
   await begin();
+  const beforeUp = await readScroll();
   await edge(false);
-  await expect.poll(previewPage, { timeout: 10000 }).toBe('1');
+  await expect
+    .poll(async () => ({ page: await previewPage(), scrolled: (await readScroll()) < beforeUp - 40 }), {
+      timeout: 10000
+    })
+    .toEqual({ page: '1', scrolled: true });
   await page.mouse.up();
   await savedOn(0);
   await stopped();
