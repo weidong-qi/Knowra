@@ -657,6 +657,8 @@
   --note-color: var(--pdf-mark-important);
   pointer-events: all;
   cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 .reader :global([data-knowra-pdf-overlay] [data-note-id][data-kind='question']) {
   --note-color: var(--pdf-mark-question);

@@ -18,7 +18,8 @@ import { usePdfViewer } from './usePdfViewer';
 import { PdfConflictDialog, type PdfConflictReview } from './PdfConflictDialog';
 import { PdfSession } from './pdfSession';
 import { PdfHistory } from './pdfHistory';
-import { exportPdfExcerpt, moveRect, noteRectAt, rectToPdf, type PdfSelection } from './pdfGeometry';
+import { exportPdfExcerpt, noteRectAt, rectToPdf, type PdfSelection } from './pdfGeometry';
+import { usePdfNoteDrag } from './usePdfNoteDrag';
 import { paintPdfAnnotations, pdfAnnotationAtPoint, readPdfSelection } from './pdfOverlay';
 import { buildPdfExtractNote } from './pdfExtract';
 import { PdfAnnotationTooltip } from './PdfAnnotationTooltip';
@@ -74,18 +75,8 @@ export function PdfReaderView({
   const [saveDialog, setSaveDialog] = useState(false);
   const [review, setReview] = useState<PdfConflictReview | null>(null);
   const drag = useRef<{ index: number; x: number; y: number } | null>(null);
-  const noteDrag = useRef<{
-    id: string;
-    pageIndex: number;
-    x: number;
-    y: number;
-    rect: number[];
-    moved: boolean;
-    last?: PdfSegment;
-  } | null>(null);
   const [textMode, setTextMode] = useState<PdfTextMode>('highlight');
   const [dictionaryKind, setDictionaryKind] = useState('supplement');
-  const [noteMove, setNoteMove] = useState<{ id: string; segment: PdfSegment } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
   const permission = useRef(canWrite);
@@ -117,6 +108,8 @@ export function PdfReaderView({
   const history = historyRef.current;
   const items = session.values();
   const editable = canWrite && loaded && Boolean(viewer.document) && !history.busy;
+  const noteDrag = usePdfNoteDrag(viewer.viewerRef, editable, (id, segment) => change(id, { segments: [segment] }));
+  const noteMove = noteDrag.preview;
   const isTextSelection = pending?.value.type === 'highlight' || pending?.value.type === 'underline';
   const canLookup = isTextSelection && Boolean(normalizeDictionaryWord(pending!.value.quoteText));
   const canTranslate = isTextSelection && Boolean(pending!.value.quoteText.trim());
@@ -374,17 +367,7 @@ export function PdfReaderView({
       setPending(null);
       setGhost(null);
       setSelected(iconItem.id);
-      noteDrag.current = {
-        id: iconItem.id,
-        pageIndex: iconItem.segments[0].pageIndex,
-        x: event.clientX,
-        y: event.clientY,
-        rect: iconItem.segments[0].rect,
-        moved: false
-      };
-      if (!editable) return;
-      event.currentTarget.setPointerCapture(event.pointerId);
-      event.preventDefault();
+      noteDrag.begin(event, iconItem);
       return;
     }
     // 点到页面任意空白处都先收起候选色条和预览框，再按当前工具决定是否开始新的标注。
@@ -629,25 +612,13 @@ export function PdfReaderView({
             tabIndex={0}
             onPointerDown={pointerDown}
             onPointerMove={event => {
-              const move = noteDrag.current;
-              if (move) {
-                if (!editable) return;
-                const dx = event.clientX - move.x,
-                  dy = event.clientY - move.y;
-                if (!move.moved && Math.hypot(dx, dy) < 4) return;
-                const geo = pageGeometry(move.pageIndex);
-                if (!geo) return;
-                move.moved = true;
-                move.last = { pageIndex: move.pageIndex, rect: moveRect(geo.viewport, geo.bounds, move.rect, dx, dy) };
-                setNoteMove({ id: move.id, segment: move.last });
-                return;
-              }
+              if (noteDrag.update(event)) return;
               if (drag.current) setGhost(dragSegment(event));
             }}
+            onLostPointerCapture={() => noteDrag.cancel()}
             onPointerCancel={() => {
               annotationPress.current = null;
-              noteDrag.current = null;
-              setNoteMove(null);
+              noteDrag.cancel();
               drag.current = null;
               setGhost(null);
             }}
@@ -672,12 +643,9 @@ export function PdfReaderView({
                 setAnnotationAction({ id: press.id, x: event.clientX, y: event.clientY + 12 });
                 return;
               }
-              const move = noteDrag.current;
+              const move = noteDrag.finish(event);
               if (move) {
-                noteDrag.current = null;
-                setNoteMove(null);
-                if (move.moved && move.last) change(move.id, { segments: [move.last] });
-                else if (Math.hypot(event.clientX - move.x, event.clientY - move.y) < 4) {
+                if (move.clicked) {
                   syncScrollPosition(event.currentTarget);
                   selectFromPage(move.id);
                   setCommentEditor({ id: move.id, x: event.clientX, y: event.clientY + 12 });
@@ -725,6 +693,7 @@ export function PdfReaderView({
               setDictionary({ value, anchor });
             }}
             onScroll={event => {
+              noteDrag.refresh();
               // 布局调整的 scroll 事件可能晚于标注点击派发；当前位置没变时，浮层仍有效。
               if (!syncScrollPosition(event.currentTarget)) return;
               setAnnotationAction(null);

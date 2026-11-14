@@ -3,7 +3,7 @@ import {
   rectToViewport,
   exportPdfExcerpt,
   noteRectAt,
-  moveRect,
+  noteRectOnPage,
   PDF_NOTE_SIZE,
   mergePdfTextSegments
 } from './pdfGeometry';
@@ -99,14 +99,35 @@ describe('便签几何', () => {
     expect(rect[3] - rect[1]).toBeCloseTo(PDF_NOTE_SIZE);
     expect((rect[0] + rect[2]) / 2).toBeCloseTo(100);
   });
-  it('按屏幕位移平移并限制在页面内', () => {
+  it('按抓取位置移动，图标完整限制在目标页内', () => {
     const rect = noteRectAt(viewport, bounds, 200, 200);
-    const moved = moveRect(viewport, bounds, rect, 30, -20);
+    const size = { width: 18, height: 18 },
+      grab = { x: 0.5, y: 0.5 };
+    const moved = noteRectOnPage(viewport, bounds, size, grab, { clientX: 230, clientY: 180 });
     expect(moved[0] - rect[0]).toBeCloseTo(30);
     expect(moved[1] - rect[1]).toBeCloseTo(20);
-    const clamped = moveRect(viewport, bounds, rect, -9999, -9999);
+    const clamped = noteRectOnPage(viewport, bounds, size, grab, { clientX: 100, clientY: 50 });
     expect(clamped[0]).toBeCloseTo(0);
     expect(clamped[3]).toBeCloseTo(300);
+    const bottomRight = noteRectOnPage(viewport, bounds, size, grab, { clientX: 300, clientY: 350 });
+    expect(bottomRight).toEqual([182, 0, 200, 18]);
+  });
+  it('目标页旋转、缩放和偏移后，保留 PDF 尺寸与图标内的抓取比例', () => {
+    const target = {
+      width: 600,
+      height: 400,
+      convertToPdfPoint: (x: number, y: number) => [y / 2, x / 2],
+      convertToViewportPoint: (x: number, y: number) => [y * 2, x * 2]
+    };
+    const bounds = { left: 70, top: 420, width: 300, height: 200 };
+    const grab = { x: 0.25, y: 0.75 },
+      point = { clientX: 160, clientY: 500 };
+    const rect = noteRectOnPage(target, bounds, { width: 18, height: 18 }, grab, point);
+    expect(rect[2] - rect[0]).toBeCloseTo(18);
+    expect(rect[3] - rect[1]).toBeCloseTo(18);
+    const box = rectToViewport(target, rect);
+    expect(bounds.left + (box.x + box.width * grab.x) / 2).toBeCloseTo(point.clientX);
+    expect(bounds.top + (box.y + box.height * grab.y) / 2).toBeCloseTo(point.clientY);
   });
 });
 
