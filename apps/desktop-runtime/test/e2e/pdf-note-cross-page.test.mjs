@@ -192,6 +192,8 @@ test('PDF 便签跨页拖动、边缘自动滚动、撤销重做与取消', { ti
   await stopped();
   assert.deepEqual(await sticky(), beforeCancel);
   await page.reload();
+  // 阅读位置独立恢复，先从侧栏定位已保存的便签，再核对纸面标记。
+  await locate();
   await expect(icon).toHaveCount(1);
   assert.equal((await marks()).length, 1);
   assert.deepEqual((await sticky()).segments, beforeCancel.segments);
