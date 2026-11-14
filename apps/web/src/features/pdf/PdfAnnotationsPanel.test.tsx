@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, createEvent, fireEvent, render, screen } from '@testing-library/react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { PdfAnnotationsList } from './PdfAnnotationsPanel';
 
@@ -35,6 +35,40 @@ it('直接点击粗体便签标题改名，不显示重复的标题字段', () =
   fireEvent.keyDown(field, { key: 'Enter' });
   expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
   expect(screen.getByRole('button', { name: '编辑便签标题：新的标题' })).toBeVisible();
+});
+
+it.each([
+  { key: 'Enter', guard: 'isComposing', keyboard: { isComposing: true, keyCode: 13 } },
+  { key: 'Escape', guard: 'isComposing', keyboard: { isComposing: true, keyCode: 27 } },
+  { key: 'Enter', guard: 'keyCode 229', keyboard: { isComposing: false, keyCode: 229 } },
+  { key: 'Escape', guard: 'keyCode 229', keyboard: { isComposing: false, keyCode: 229 } }
+])('$key 在 $guard 组合输入期间保留标题编辑，候选确认后可继续输入并完成', ({ key, keyboard }) => {
+  const change = vi.fn();
+  const view = render(<PdfAnnotationsList {...props} items={[note]} onChange={change} />);
+  fireEvent.click(screen.getByRole('button', { name: '编辑便签标题：便签' }));
+  const field = screen.getByRole('textbox', { name: '便签标题' });
+  fireEvent.compositionStart(field);
+  fireEvent.change(field, { target: { value: 'zhongwen' } });
+  const event = createEvent.keyDown(field, { key, ...keyboard });
+  fireEvent(field, event);
+  expect(event.defaultPrevented).toBe(false);
+  expect(screen.getByRole('textbox', { name: '便签标题' })).toBe(field);
+  expect(field).toHaveFocus();
+  fireEvent.compositionEnd(field, { data: '中文' });
+  fireEvent.change(field, { target: { value: '中文标题' } });
+  expect(change).toHaveBeenLastCalledWith('n', { title: '中文标题' });
+  view.rerender(<PdfAnnotationsList {...props} items={[{ ...note, title: '中文标题' }]} onChange={change} />);
+  fireEvent.keyDown(field, { key: 'Enter', isComposing: false, keyCode: 13 });
+  expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
+  expect(screen.getByRole('button', { name: '编辑便签标题：中文标题' })).toBeVisible();
+});
+
+it('非组合输入时 Escape 正常结束标题编辑', () => {
+  render(<PdfAnnotationsList {...props} items={[note]} />);
+  fireEvent.click(screen.getByRole('button', { name: '编辑便签标题：便签' }));
+  fireEvent.keyDown(screen.getByRole('textbox', { name: '便签标题' }), { key: 'Escape' });
+  expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
+  expect(screen.getByRole('button', { name: '编辑便签标题：便签' })).toBeVisible();
 });
 
 it('只读便签的粗体标题仍可定位，但不进入改名状态', () => {

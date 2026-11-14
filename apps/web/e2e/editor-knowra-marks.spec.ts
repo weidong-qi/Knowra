@@ -42,23 +42,11 @@ for (const mode of ['text', 'code'] as const)
     const text = mode === 'code' ? editor.locator('[data-code-block] code') : editor;
     await expect(editor.locator('mark[data-knowra-mark="a"]')).toHaveText('abc');
     await editor.focus();
-    await editor.locator('mark[data-knowra-mark="a"]').evaluate(mark => {
-      const range = document.createRange();
-      range.selectNodeContents(mark);
-      const selection = window.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
-    });
+    await editor.locator('mark[data-knowra-mark="a"]').evaluate(setTextSelection, { from: 0, to: 3 });
+    await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('abc');
     await page.keyboard.press('ControlOrMeta+c');
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('abc');
-    await editor.locator('mark[data-knowra-mark="a"]').evaluate(mark => {
-      const range = document.createRange();
-      range.selectNodeContents(mark);
-      range.collapse(false);
-      const selection = window.getSelection()!;
-      selection.removeAllRanges();
-      selection.addRange(range);
-    });
+    await editor.locator('mark[data-knowra-mark="a"]').evaluate(setTextSelection, { from: 3 });
     await expect.poll(() => caretOffsetIn(text)).toBe(3);
     await page.keyboard.press('ControlOrMeta+v');
     await expect(text).toHaveText('abcabc');

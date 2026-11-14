@@ -150,6 +150,7 @@ function NoteTitle({
           onChange={value => onChange(item.id, { title: value })}
           onBlur={() => setEditing(false)}
           onKeyDown={event => {
+            if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             if (event.key === 'Enter' || event.key === 'Escape') {
               event.preventDefault();
               event.stopPropagation();

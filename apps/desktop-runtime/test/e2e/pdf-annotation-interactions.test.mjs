@@ -81,7 +81,18 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
     };
   });
   expect(titleWidth.actual).toBeGreaterThanOrEqual(titleWidth.available - 4);
-  await inlineTitle.fill('我的待验证猜想');
+  // 合成输入法事件覆盖组合状态与 Safari 的 229 兼容路径，候选确认不卸载输入框。
+  for (const keyboard of [{ isComposing: true }, { isComposing: false, keyCode: 229 }]) {
+    await inlineTitle.dispatchEvent('compositionstart', { data: '' });
+    await inlineTitle.fill('wode');
+    for (const key of ['Enter', 'Escape']) {
+      await inlineTitle.dispatchEvent('keydown', { key, ...keyboard });
+      await expect(inlineTitle).toBeFocused();
+      await expect(inlineTitle).toHaveValue('wode');
+    }
+    await inlineTitle.fill('我的待验证猜想');
+    await inlineTitle.dispatchEvent('compositionend', { data: '我的待验证猜想' });
+  }
   await inlineTitle.press('Enter');
   await save();
   const sticky = (await marks()).find(mark => mark.type === 'note');
