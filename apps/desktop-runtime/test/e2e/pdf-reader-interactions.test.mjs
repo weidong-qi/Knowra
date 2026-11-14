@@ -306,7 +306,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await panel.hover();
   await page.mouse.wheel(0, 5000);
   await expect(inspector.getByRole('button', { name: /定位标注.*Scroll mark 14/ })).toBeInViewport();
-  // 正文点击定位右侧对应批注；重复点击同一标注也能再次滚动定位。
+  // 这些标注使用相同坐标：点击后明确选择目标，再核对侧栏定位；重复选择也要再次滚动。
   const finalMark = page.locator('[data-pdf-annotation-id="list-14"]');
   await finalMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -319,6 +319,13 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     });
     const beforeClick = await reader.evaluate(el => el.scrollTop);
     await page.mouse.click(point.x, point.y);
+    const picker = page.getByRole('menu', { name: '选择标注', exact: true });
+    await expect(picker).toBeVisible();
+    await expect(picker.getByRole('menuitem')).toHaveCount(16);
+    await picker.getByRole('menuitem', { name: /高亮：Scroll mark 14$/ }).click();
+    await expect(picker).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toBeVisible();
+    await expect(finalMark).toHaveAttribute('data-selected', '');
     await expect(inspector.getByRole('button', { name: /定位标注.*Scroll mark 14/ })).toBeInViewport();
     assert.equal(await reader.evaluate(el => el.scrollTop), beforeClick);
     await page.getByRole('button', { name: '改为易错', exact: true }).click();
