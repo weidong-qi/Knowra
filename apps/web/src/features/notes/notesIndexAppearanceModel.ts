@@ -7,6 +7,8 @@ export interface NotesIndexAppearance {
   overlayMaterial: 'glass' | 'acrylic';
   buttonStyle: ButtonStyle;
   dialogStyle: DialogStyle;
+  inspectorStyle: InspectorStyle;
+  stageStyle: StageStyle;
   accentColor: AccentColor;
   documentIconStyle: DocumentIconStyle;
   topbarColorLight: string | null;
@@ -36,7 +38,16 @@ export type ButtonStyle = (typeof BUTTON_STYLES)[number];
 export const DIALOG_STYLES = ['float', 'tray'] as const;
 export type DialogStyle = (typeof DIALOG_STYLES)[number];
 
+/** 文档检查器外壳形态：浮岛卡片、贴边分栏。 */
+export const INSPECTOR_STYLES = ['float', 'docked'] as const;
+export type InspectorStyle = (typeof INSPECTOR_STYLES)[number];
+
+/** 中间功能页面质感：纸面柔影（#fbfcfd/#18191d + 四层投影）、经典平面（#fefefe/#1a1c20 + 短描边投影）。 */
+export const STAGE_STYLES = ['soft', 'flat'] as const;
+export type StageStyle = (typeof STAGE_STYLES)[number];
+
 export const NOTES_INDEX_APPEARANCE_KEY = 'knowra:notes-index-appearance:v1';
+const LEGACY_SHELL_V2_KEY = 'knowra:notes-index-appearance:shell-v2';
 export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   mode: 'light',
   theme: 'orange',
@@ -44,6 +55,8 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   overlayMaterial: 'glass',
   buttonStyle: 'paper',
   dialogStyle: 'float',
+  inspectorStyle: 'float',
+  stageStyle: 'soft',
   accentColor: 'ink',
   documentIconStyle: 'capsule',
   topbarColorLight: null,
@@ -80,6 +93,12 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle)
       ? (candidate.dialogStyle as DialogStyle)
       : 'float',
+    inspectorStyle: INSPECTOR_STYLES.includes(candidate.inspectorStyle as InspectorStyle)
+      ? (candidate.inspectorStyle as InspectorStyle)
+      : 'float',
+    stageStyle: STAGE_STYLES.includes(candidate.stageStyle as StageStyle)
+      ? (candidate.stageStyle as StageStyle)
+      : 'soft',
     accentColor: ACCENT_COLORS.includes(candidate.accentColor as AccentColor)
       ? (candidate.accentColor as AccentColor)
       : 'ink',
@@ -102,7 +121,24 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
 
 function readAppearance(): NotesIndexAppearance {
   try {
-    return parseNotesIndexAppearance(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY) ?? 'null'));
+    const parsed = parseNotesIndexAppearance(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY) ?? 'null'));
+    if (localStorage.getItem(LEGACY_SHELL_V2_KEY) !== null) {
+      // 撤销临时分层外壳升级留下的本地开关缓存，恢复默认贴边分栏。
+      const reverted: NotesIndexAppearance = {
+        ...parsed,
+        sidebarCard: false,
+        sidebarRounded: false,
+        sidebarBorder: false
+      };
+      try {
+        localStorage.setItem(NOTES_INDEX_APPEARANCE_KEY, JSON.stringify(reverted));
+        localStorage.removeItem(LEGACY_SHELL_V2_KEY);
+      } catch {
+        // 无存储权限时仅在当前会话生效。
+      }
+      return reverted;
+    }
+    return parsed;
   } catch {
     return { ...DEFAULT_NOTES_INDEX_APPEARANCE };
   }

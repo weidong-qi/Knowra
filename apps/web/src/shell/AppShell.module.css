@@ -294,4 +294,21 @@
     outline: 1px solid var(--border-strong);
     outline-offset: -1px;
   }
+  /* 纸面柔影且侧栏贴合时，由网格伪元素承接整张双栏面板的外投影，避免右侧主面板的左向阴影污染侧栏接缝。 */
+  .shellWithSidebar[data-stage-style='soft'][data-sidebar-card='false']::before {
+    content: '';
+    grid-column: 2 / 4;
+    grid-row: var(--shell-content-row);
+    margin-right: var(--shell-gap);
+    border-radius: var(--shell-panel-radius);
+    box-shadow: var(--shadow-page);
+    pointer-events: none;
+  }
+  .shellWithSidebar[data-stage-style='soft'][data-sidebar-card='false'] .contextSidebar {
+    box-shadow: inset -1px 0 0 rgb(var(--ink-rgb) / 0.08);
+  }
+  .shellWithSidebar[data-stage-style='soft'][data-sidebar-card='false'] .stage,
+  .shellWithSidebar[data-stage-style='soft'][data-sidebar-card='false'] .stage:focus-visible {
+    box-shadow: none;
+  }
 }

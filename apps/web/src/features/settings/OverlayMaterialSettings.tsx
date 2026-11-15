@@ -10,12 +10,16 @@ import {
   BUTTON_STYLES,
   DIALOG_STYLES,
   DOCUMENT_ICON_STYLES,
+  INSPECTOR_STYLES,
+  STAGE_STYLES,
   setNotesIndexAppearance,
   useNotesIndexAppearance,
   type AccentColor,
   type ButtonStyle,
   type DocumentIconStyle,
-  type DialogStyle
+  type DialogStyle,
+  type InspectorStyle,
+  type StageStyle
 } from '../notes/notesIndexAppearanceModel';
 import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
@@ -24,6 +28,8 @@ const ACCENT_COLOR_LABELS: Record<AccentColor, string> = { ink: '墨黑', orange
 const DOCUMENT_ICON_STYLE_LABELS: Record<DocumentIconStyle, string> = { capsule: '胶囊徽标', layout: '学术版式' };
 const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
+const INSPECTOR_STYLE_LABELS: Record<InspectorStyle, string> = { float: '浮岛卡片', docked: '贴边分栏' };
+const STAGE_STYLE_LABELS: Record<StageStyle, string> = { soft: '纸面柔影', flat: '经典平面' };
 
 function ShellColorSetting({
   title,
@@ -69,7 +75,16 @@ function ShellColorSetting({
 
 export function OverlayMaterialSettings() {
   const appearance = useNotesIndexAppearance();
-  const { mode, overlayMaterial, buttonStyle, dialogStyle, accentColor, documentIconStyle } = appearance;
+  const {
+    mode,
+    overlayMaterial,
+    buttonStyle,
+    dialogStyle,
+    inspectorStyle,
+    stageStyle,
+    accentColor,
+    documentIconStyle
+  } = appearance;
   const topbarColorKey = mode === 'dark' ? 'topbarColorDark' : 'topbarColorLight';
   const railColorKey = mode === 'dark' ? 'railColorDark' : 'railColorLight';
   const shellColorKey = mode === 'dark' ? 'shellColorDark' : 'shellColorLight';
@@ -131,6 +146,49 @@ export function OverlayMaterialSettings() {
             >
               细边线
             </Switch>
+          </div>
+        </div>
+        <div className={`${styles.settingRow} ${styles.materialRow}`}>
+          <div className={styles.settingCopy}>
+            <h4>文档检查器样式</h4>
+            <p>
+              调整笔记与 PDF
+              右侧检查器的呈现方式。浮岛卡片独立留白与投影，贴边分栏紧贴右侧边缘并与画布平齐分隔，切换后即时保存。
+            </p>
+          </div>
+          <div className={`${styles.settingControl} ${styles.materialControl}`}>
+            <SegmentedControl aria-label="文档检查器样式">
+              {INSPECTOR_STYLES.map(style => (
+                <SegmentedButton
+                  key={style}
+                  aria-pressed={inspectorStyle === style}
+                  onPress={() => setNotesIndexAppearance({ inspectorStyle: style })}
+                >
+                  {INSPECTOR_STYLE_LABELS[style]}
+                </SegmentedButton>
+              ))}
+            </SegmentedControl>
+          </div>
+        </div>
+        <div className={`${styles.settingRow} ${styles.materialRow}`}>
+          <div className={styles.settingCopy}>
+            <h4>功能页面质感</h4>
+            <p>
+              调整中间工作区（笔记编辑、索引与知识库）的纸面底色与外框投影。纸面柔影带多层柔和环境阴影，经典平面为轻描边短投影，切换后即时保存。
+            </p>
+          </div>
+          <div className={`${styles.settingControl} ${styles.materialControl}`}>
+            <SegmentedControl aria-label="功能页面质感">
+              {STAGE_STYLES.map(style => (
+                <SegmentedButton
+                  key={style}
+                  aria-pressed={stageStyle === style}
+                  onPress={() => setNotesIndexAppearance({ stageStyle: style })}
+                >
+                  {STAGE_STYLE_LABELS[style]}
+                </SegmentedButton>
+              ))}
+            </SegmentedControl>
           </div>
         </div>
         <div className={`${styles.settingRow} ${styles.materialRow}`}>

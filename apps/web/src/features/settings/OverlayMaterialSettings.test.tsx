@@ -131,3 +131,39 @@ it('侧栏外形和每种模式的背景分别保存', async () => {
     sidebarColorDark: null
   });
 });
+
+it('文档检查器样式切换后即时保存并在重新挂载后保留', async () => {
+  const user = userEvent.setup();
+  render(<SettingsSurface />);
+  const floatBtn = screen.getByRole('button', { name: '浮岛卡片' });
+  const dockedBtn = screen.getByRole('button', { name: '贴边分栏' });
+  expect(floatBtn).toHaveAttribute('aria-pressed', 'true');
+  expect(dockedBtn).toHaveAttribute('aria-pressed', 'false');
+  await user.click(dockedBtn);
+  expect(dockedBtn).toHaveAttribute('aria-pressed', 'true');
+  expect(floatBtn).toHaveAttribute('aria-pressed', 'false');
+  expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
+    inspectorStyle: 'docked'
+  });
+  cleanup();
+  render(<SettingsSurface />);
+  expect(screen.getByRole('button', { name: '贴边分栏' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('功能页面质感切换后即时保存并在重新挂载后保留', async () => {
+  const user = userEvent.setup();
+  render(<SettingsSurface />);
+  const softBtn = screen.getByRole('button', { name: '纸面柔影' });
+  const flatBtn = screen.getByRole('button', { name: '经典平面' });
+  expect(softBtn).toHaveAttribute('aria-pressed', 'true');
+  expect(flatBtn).toHaveAttribute('aria-pressed', 'false');
+  await user.click(flatBtn);
+  expect(flatBtn).toHaveAttribute('aria-pressed', 'true');
+  expect(softBtn).toHaveAttribute('aria-pressed', 'false');
+  expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
+    stageStyle: 'flat'
+  });
+  cleanup();
+  render(<SettingsSurface />);
+  expect(screen.getByRole('button', { name: '经典平面' })).toHaveAttribute('aria-pressed', 'true');
+});

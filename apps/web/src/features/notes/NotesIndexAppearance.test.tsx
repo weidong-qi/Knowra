@@ -32,6 +32,8 @@ describe('全局定稿外观', () => {
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
       dialogStyle: 'float',
+      inspectorStyle: 'float',
+      stageStyle: 'soft',
       accentColor: 'ink',
       documentIconStyle: 'capsule',
       topbarColorLight: null,
@@ -68,6 +70,12 @@ describe('全局定稿外观', () => {
     expect(parseNotesIndexAppearance({ dialogStyle: 'unknown' }).dialogStyle).toBe('float');
     expect(parseNotesIndexAppearance({ dialogStyle: 'glass' }).dialogStyle).toBe('float');
     expect(parseNotesIndexAppearance({ dialogStyle: 'tray' }).dialogStyle).toBe('tray');
+    expect(parseNotesIndexAppearance(null).inspectorStyle).toBe('float');
+    expect(parseNotesIndexAppearance({ inspectorStyle: 'unknown' }).inspectorStyle).toBe('float');
+    expect(parseNotesIndexAppearance({ inspectorStyle: 'docked' }).inspectorStyle).toBe('docked');
+    expect(parseNotesIndexAppearance(null).stageStyle).toBe('soft');
+    expect(parseNotesIndexAppearance({ stageStyle: 'unknown' }).stageStyle).toBe('soft');
+    expect(parseNotesIndexAppearance({ stageStyle: 'flat' }).stageStyle).toBe('flat');
   });
   it('保存材质并在明暗切换与重新挂载时保留', async () => {
     render(
@@ -76,15 +84,19 @@ describe('全局定稿外观', () => {
         <Surface />
       </>
     );
-    act(() => setNotesIndexAppearance({ overlayMaterial: 'acrylic' }));
+    act(() => setNotesIndexAppearance({ overlayMaterial: 'acrylic', inspectorStyle: 'docked', stageStyle: 'flat' }));
     await userEvent.click(screen.getByRole('button', { name: '切换深色模式' }));
     expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
       mode: 'dark',
-      overlayMaterial: 'acrylic'
+      overlayMaterial: 'acrylic',
+      inspectorStyle: 'docked',
+      stageStyle: 'flat'
     });
     cleanup();
     render(<Surface />);
     expect(screen.getByTestId('surface')).toHaveAttribute('data-overlay-material', 'acrylic');
+    expect(screen.getByTestId('surface')).toHaveAttribute('data-inspector-style', 'docked');
+    expect(screen.getByTestId('surface')).toHaveAttribute('data-stage-style', 'flat');
     expect(screen.getByTestId('surface')).toHaveAttribute('data-ni-mode', 'dark');
   });
   it('只保留明暗切换，统一完整装饰、胶囊与橙色并持久化', async () => {
@@ -110,6 +122,8 @@ describe('全局定稿外观', () => {
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
       dialogStyle: 'float',
+      inspectorStyle: 'float',
+      stageStyle: 'soft',
       accentColor: 'ink',
       documentIconStyle: 'capsule',
       topbarColorLight: null,
@@ -135,6 +149,8 @@ describe('全局定稿外观', () => {
       overlayMaterial: 'glass',
       buttonStyle: 'paper',
       dialogStyle: 'float',
+      inspectorStyle: 'float',
+      stageStyle: 'soft',
       accentColor: 'ink',
       documentIconStyle: 'capsule',
       topbarColorLight: null,
@@ -178,5 +194,25 @@ describe('全局定稿外观', () => {
     expect(screen.getByTestId('surface')).toHaveAttribute('data-ni-mode', 'dark');
     expect(screen.getByTestId('surface')).not.toHaveAttribute('data-ni-deco');
     expect(screen.getByTestId('surface')).toHaveAttribute('data-overlay-material', 'acrylic');
+  });
+  it('存在遗留的 shell-v2 标记时自动将上下文侧栏恢复为贴边分栏并保留检查器样式', () => {
+    render(<Surface />);
+    localStorage.setItem(
+      NOTES_INDEX_APPEARANCE_KEY,
+      JSON.stringify({
+        inspectorStyle: 'docked',
+        sidebarCard: true,
+        sidebarRounded: true,
+        sidebarBorder: true
+      })
+    );
+    localStorage.setItem('knowra:notes-index-appearance:shell-v2', '1');
+    act(() => window.dispatchEvent(new StorageEvent('storage', { key: NOTES_INDEX_APPEARANCE_KEY })));
+    const surface = screen.getByTestId('surface');
+    expect(surface).toHaveAttribute('data-sidebar-card', 'false');
+    expect(surface).toHaveAttribute('data-sidebar-rounded', 'false');
+    expect(surface).toHaveAttribute('data-sidebar-border', 'false');
+    expect(surface).toHaveAttribute('data-inspector-style', 'docked');
+    expect(localStorage.getItem('knowra:notes-index-appearance:shell-v2')).toBeNull();
   });
 });

@@ -29,6 +29,8 @@ export function notesIndexAppearanceProps(appearance: NotesIndexAppearance) {
     'data-overlay-material': appearance.overlayMaterial,
     'data-button-style': appearance.buttonStyle,
     'data-dialog-style': appearance.dialogStyle,
+    'data-inspector-style': appearance.inspectorStyle,
+    'data-stage-style': appearance.stageStyle,
     'data-accent-color': appearance.accentColor
   };
 }

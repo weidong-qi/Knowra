@@ -15,7 +15,7 @@
   --ni-shell-card: rgba(36, 84, 140, 0.075);
   --ni-shell-tile: #fff;
   --ni-shell-tile-shadow: 0 0 0 1px rgba(24, 26, 32, 0.07), 0 1px 2px rgba(24, 26, 32, 0.1);
-  --ni-page: #fefefe;
+  --ni-page: #fbfcfd;
   --ni-ink: #0f1115;
   --ni-ink-2: #4d535e;
   --ni-ink-3: #747a86;
@@ -50,7 +50,7 @@
   --ni-toast-act: #ffb98f;
   --ni-btn-on-accent: #fff;
   --ink-rgb: 24 30 48;
-  --ink-bg-rgb: 254 254 254;
+  --ink-bg-rgb: 251 252 253;
 
   --ni-surf: #fff;
   --ni-surf-2: rgba(255, 255, 255, 0.55);
@@ -81,8 +81,10 @@
   --ni-danger: #c23a3a;
   --ni-danger-soft: #fbeeee;
   --ni-danger-ring: #e5a3a3;
-  /* 面板靠清晰的 1px 描边加一道贴边短投影立住，不用大范围模糊阴影。 */
-  --ni-sh-page: 0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.06);
+  /* 面板采用 1px 细描边配合四层柔和环境投影，呈现纸面浮起质感。 */
+  --ni-sh-page:
+    0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.05), 0 6px 18px -6px rgba(24, 30, 48, 0.1),
+    0 22px 48px -18px rgba(24, 30, 48, 0.14);
   --ni-sh-ctx: 0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.06);
   --ni-sh-pop:
     inset 0 1px 0 var(--ni-ctx-hl), 0 0 0 1px var(--ni-ring), 0 2px 4px rgba(24, 30, 48, 0.05),
@@ -150,7 +152,7 @@
   --shadow-action-satin-pressed: inset 0 2px 4px #4e271b80;
   color-scheme: dark;
   --ink-rgb: 245 245 247;
-  --ink-bg-rgb: 26 28 32;
+  --ink-bg-rgb: 24 25 29;
   /* 白天友好版：页面底色略提亮、分隔线与弱化文字加亮，保证强光下层次和文字仍可辨认。 */
   --ni-chrome: #101114;
   --ni-shell-ink: #f5f5f7;
@@ -166,7 +168,7 @@
   --ni-shell-card: rgba(255, 255, 255, 0.1);
   --ni-shell-tile: linear-gradient(180deg, #2d2f36, #25272d);
   --ni-shell-tile-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 1px rgba(255, 255, 255, 0.07);
-  --ni-page: #1a1c20;
+  --ni-page: #18191d;
   --ni-ink: #f5f5f7;
   --ni-ink-2: #b6bac3;
   --ni-ink-3: #9196a0;
@@ -240,7 +242,9 @@
   --ni-sheen: rgba(255, 255, 255, 0.03);
   --ni-hl-c: rgba(255, 255, 255, 0.07);
   --ni-sh-ctx: 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --ni-sh-page: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --ni-sh-page:
+    0 0 0 1px rgba(255, 255, 255, 0.07), 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.55),
+    0 22px 48px -18px rgba(0, 0, 0, 0.6);
   --ni-sh-pop:
     inset 0 1px 0 var(--ni-ctx-hl), 0 0 0 1px rgba(255, 255, 255, 0.11), 0 2px 4px rgba(0, 0, 0, 0.35),
     0 10px 24px -8px rgba(0, 0, 0, 0.5), 0 28px 64px -14px rgba(0, 0, 0, 0.75);
@@ -449,4 +453,17 @@
 .theme[data-ni-mode='dark'][data-accent-color='orange'] {
   --text-on-action-satin: #fff9f4;
   --ni-btn-on-accent: #fff;
+}
+
+/* 经典平面：切换回早先的页面底色与 1px 轻描边贴边短投影。 */
+.theme[data-stage-style='flat'] {
+  --ni-page: #fefefe;
+  --ink-bg-rgb: 254 254 254;
+  --ni-sh-page: 0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.06);
+}
+
+.theme[data-ni-mode='dark'][data-stage-style='flat'] {
+  --ni-page: #1a1c20;
+  --ink-bg-rgb: 26 28 32;
+  --ni-sh-page: 0 0 0 1px rgba(255, 255, 255, 0.07);
 }

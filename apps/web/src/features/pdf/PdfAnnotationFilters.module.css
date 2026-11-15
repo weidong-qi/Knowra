@@ -7,7 +7,7 @@
   gap: 10px;
   padding: 6px 4px 10px;
   margin-bottom: 8px;
-  background: var(--surface-card-tint, var(--surface-page));
+  background: var(--pdf-panel-sticky-bg, var(--surface-card-tint, var(--surface-page)));
   border-bottom: 1px solid var(--border-subtle);
 }
 .searchRow {
