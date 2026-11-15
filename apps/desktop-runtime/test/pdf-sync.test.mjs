@@ -79,6 +79,7 @@ async function runPdfSync(t, postgres = false) {
   assert.equal(a.engine.status().error, null);
   await b.engine.sync();
   assert.equal(b.engine.status().error, null);
+  const beforeActivity = b.store.state.notes.find(item => item.id === note.id).updatedAt;
   assert.equal(b.transfer.read(b.store.state.attachments.find(file => file.noteId === note.id)).length, bytes.length);
   assert.equal((await b.context.http.pdf.list(note.id))[0].comment, '设备 A 标注');
   const backup = createRuntimeBackup(b.store, b.directory);
@@ -115,6 +116,11 @@ async function runPdfSync(t, postgres = false) {
   await b.engine.resolve({ conflictId, choice: 'remote' });
   await b.engine.sync();
   assert.equal((await b.context.http.pdf.list(note.id))[0].comment, 'A 离线修改');
+  assert.ok(b.store.state.notes.find(item => item.id === note.id).updatedAt > beforeActivity);
+  assert.equal(
+    b.store.state.notes.find(item => item.id === note.id).updatedAt,
+    (await cloud.modules.knowledge.noteService.getNote(note.id)).updatedAt
+  );
   await a.context.http.pdf.mutate(note.id, 'region', {
     operationId: 'a-again',
     expectedRevision: 2,
@@ -286,6 +292,31 @@ async function runPdfSync(t, postgres = false) {
     (await b.context.http.pdf.list(copy.id)).find(item => item.id === moved.id).segments,
     segments([70, 80, 88, 98])
   );
+  // 不同批注的离线改动只合并活动日期，不应制造额外的父资料冲突。
+  for (const [device, id] of [
+    [a, 'separate-a'],
+    [b, 'separate-b']
+  ]) {
+    await device.context.http.pdf.mutate(copy.id, id, {
+      operationId: id,
+      expectedRevision: 0,
+      type: 'region',
+      segments: segments([10, 20, 30, 40])
+    });
+  }
+  await a.engine.sync();
+  await b.engine.sync();
+  await a.engine.sync();
+  for (const device of [a, b]) {
+    assert.equal(device.engine.status().error, null);
+    assert.equal(device.engine.status().entityConflict, null);
+    const latest = await cloud.modules.knowledge.noteService.getNote(copy.id);
+    assert.equal(device.store.state.notes.find(item => item.id === copy.id).updatedAt, latest.updatedAt);
+    assert.equal(
+      (await device.context.http.pdf.list(copy.id)).filter(item => item.id.startsWith('separate-')).length,
+      2
+    );
+  }
 }
 test('PDF 真实双 SQLite / HTTP：二进制文件、标注、重启、回收站、三种冲突与完整备份', { timeout: 60000 }, t =>
   runPdfSync(t)

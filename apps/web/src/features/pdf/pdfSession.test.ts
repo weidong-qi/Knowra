@@ -37,6 +37,45 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.unstubAllGlobals());
+it('only notifies successful annotation saves, including deletion and partial success before conflicts', async () => {
+  const saved = vi.fn();
+  const session = new PdfSession(
+    'note',
+    base.sha256,
+    'activity',
+    () => {},
+    () => true,
+    false,
+    saved
+  );
+  const conflict = Object.assign(new Error('conflict'), { code: 'PDF_ANNOTATION_CONFLICT' });
+  request
+    .mockRejectedValueOnce(conflict)
+    .mockResolvedValueOnce({ ...base, id: 'new', updatedAt: '2026-11-15T00:00:00Z' });
+  session.items.set('mark', base);
+  await session.stage('mark', { comment: '冲突草稿' });
+  await session.stage('new', { ...base, id: 'new' });
+  expect(saved).not.toHaveBeenCalled();
+  await expect(session.flush()).rejects.toThrow('conflict');
+  expect(saved).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'new' }));
+  session.drafts.delete('mark');
+  const deleted = {
+    ...base,
+    id: 'new',
+    revision: 2,
+    deletedAt: '2026-11-15T00:01:00Z',
+    updatedAt: '2026-11-15T00:01:00Z'
+  };
+  request.mockResolvedValueOnce(deleted);
+  await session.stage('new', {}, true);
+  await session.flush();
+  expect(saved).toHaveBeenLastCalledWith(deleted);
+  expect(saved).toHaveBeenCalledTimes(2);
+  request.mockRejectedValueOnce(new Error('offline'));
+  await session.stage('failed', { ...base, id: 'failed' });
+  await expect(session.flush()).rejects.toThrow('offline');
+  expect(saved).toHaveBeenCalledTimes(2);
+});
 it('在途评论更新串行提交，后续请求使用成功修订并保留最新文字', async () => {
   let finish!: (value: PdfAnnotation) => void;
   request
