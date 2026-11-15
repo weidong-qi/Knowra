@@ -25,6 +25,7 @@ export function ConceptDetail({
   pending,
   onEdit,
   onAttach,
+  onOpenGraph,
   onWriteDefinition,
   onAction,
   onOpenItem,
@@ -39,6 +40,7 @@ export function ConceptDetail({
   pending: boolean;
   onEdit(): void;
   onAttach(): void;
+  onOpenGraph?: () => void;
   onWriteDefinition?: () => void;
   onAction(action: 'focus' | 'archive' | 'merge' | 'delete'): void;
   onOpenItem(id: string): void;
@@ -127,6 +129,11 @@ export function ConceptDetail({
               </MenuPopover>
             </MenuTrigger>
           </div>
+        ) : null}
+        {onOpenGraph ? (
+          <Button variant="ghost" size="compact" onPress={onOpenGraph}>
+            在概念图中查看
+          </Button>
         ) : null}
       </header>
       {batch && write ? (

@@ -20,14 +20,29 @@ export interface KnowledgeLibraryRoute {
   scope: string;
   query: string;
   id: string | null;
+  edgeId?: string | null;
+  includeMuted?: boolean;
+  includeProjections?: boolean;
 }
 export function parseKnowledgeLibraryRoute(pathname: string): KnowledgeLibraryRoute {
   const [path, search] = pathname.split('?');
-  const page = path === '/knowledge/graph' ? 'graph' : path === '/knowledge/concepts' ? 'concepts' : 'items';
+  const page = path?.startsWith('/knowledge/graph') ? 'graph' : path === '/knowledge/concepts' ? 'concepts' : 'items';
   const params = new URLSearchParams(search);
   const options = page === 'concepts' ? CONCEPT_SCOPES : KNOWLEDGE_SCOPES;
   const scope = options.find(([key]) => key === params.get('scope'))?.[0] ?? 'all';
-  return { page, scope, query: params.get('q') ?? '', id: params.get(page === 'concepts' ? 'concept' : 'item') };
+  return {
+    page,
+    scope,
+    query: params.get('q') ?? '',
+    id: params.get(page === 'items' ? 'item' : 'concept'),
+    ...(page === 'graph'
+      ? {
+          edgeId: params.get('edge'),
+          includeMuted: params.get('muted') === '1',
+          includeProjections: params.get('projections') !== '0'
+        }
+      : {})
+  };
 }
 export function knowledgeLibraryPath(route: KnowledgeLibraryRoute): string {
   const path =
@@ -35,7 +50,12 @@ export function knowledgeLibraryPath(route: KnowledgeLibraryRoute): string {
   const params = new URLSearchParams();
   if (route.scope !== 'all') params.set('scope', route.scope);
   if (route.query) params.set('q', route.query);
-  if (route.id) params.set(route.page === 'concepts' ? 'concept' : 'item', route.id);
+  if (route.id) params.set(route.page === 'items' ? 'item' : 'concept', route.id);
+  if (route.page === 'graph') {
+    if (route.edgeId) params.set('edge', route.edgeId);
+    if (route.includeMuted) params.set('muted', '1');
+    if (route.includeProjections === false) params.set('projections', '0');
+  }
   return `${path}${params.size ? `?${params}` : ''}`;
 }
 
@@ -44,6 +64,10 @@ export function knowledgeLibraryNavigationKey(pathname: string) {
   if (!pathname.startsWith('/knowledge')) return pathname;
   const [path, query] = pathname.split('?');
   const params = new URLSearchParams(query);
-  for (const key of ['q', 'item', 'concept']) params.delete(key);
+  for (const key of ['q', 'item', 'concept', 'edge']) params.delete(key);
+  if (path?.startsWith('/knowledge/graph')) {
+    params.delete('muted');
+    params.delete('projections');
+  }
   return `${path}${params.size ? `?${params}` : ''}`;
 }

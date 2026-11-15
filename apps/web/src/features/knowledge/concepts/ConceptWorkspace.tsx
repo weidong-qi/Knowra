@@ -23,6 +23,7 @@ import { CONCEPT_SCOPES } from '../library/knowledgeLibraryRoute';
 import { handleKnowledgeListKeys } from '../KnowledgeIndexItems';
 import { ConceptActionDialog } from './ConceptActionDialog';
 import { ConceptDetail } from './ConceptDetail';
+import { ConceptRelationSection } from './ConceptRelationSection';
 import {
   CreateKnowledgeCandidateDialog,
   type CreateKnowledgeCandidateDialogProps
@@ -374,44 +375,56 @@ export function ConceptWorkspace({
               }}
             >
               {concept ? (
-                <ConceptDetail
-                  key={concept.id}
-                  concept={concept}
-                  items={itemsById}
-                  links={links}
-                  definitions={conceptDefinitions(state, items, concept.id)}
-                  write={write}
-                  pending={state.pending}
-                  onEdit={() => setEditor(concept)}
-                  onAttach={() => setLinkOpen(true)}
-                  onWriteDefinition={
-                    onCreateItem && !definitionLink.task ? () => setDefinitionConcept(concept) : undefined
-                  }
-                  onOpenItem={onOpenItem}
-                  onAction={key => {
-                    if (key === 'merge' || key === 'delete') setAction(key);
-                    else if (key === 'focus')
+                <>
+                  <ConceptDetail
+                    key={concept.id}
+                    concept={concept}
+                    items={itemsById}
+                    links={links}
+                    definitions={conceptDefinitions(state, items, concept.id)}
+                    write={write}
+                    pending={state.pending}
+                    onEdit={() => setEditor(concept)}
+                    onOpenGraph={() => navigate(`/knowledge/graph?concept=${encodeURIComponent(concept.id)}`)}
+                    onAttach={() => setLinkOpen(true)}
+                    onWriteDefinition={
+                      onCreateItem && !definitionLink.task ? () => setDefinitionConcept(concept) : undefined
+                    }
+                    onOpenItem={onOpenItem}
+                    onAction={key => {
+                      if (key === 'merge' || key === 'delete') setAction(key);
+                      else if (key === 'focus')
+                        void run({
+                          ...base(concept),
+                          type: 'updateConcept',
+                          patch: { focus: concept.focus === 'active' ? 'muted' : 'active' }
+                        });
+                      else
+                        void run({
+                          ...base(concept),
+                          type: concept.reviewStatus === 'archived' ? 'restoreConcept' : 'archiveConcept'
+                        });
+                    }}
+                    onRole={link => {
                       void run({
                         ...base(concept),
-                        type: 'updateConcept',
-                        patch: { focus: concept.focus === 'active' ? 'muted' : 'active' }
+                        type: 'setLinkRole',
+                        linkIds: [link.id],
+                        role: link.role === 'subject' ? 'mentions' : 'subject'
                       });
-                    else
-                      void run({
-                        ...base(concept),
-                        type: concept.reviewStatus === 'archived' ? 'restoreConcept' : 'archiveConcept'
-                      });
-                  }}
-                  onRole={link => {
-                    void run({
-                      ...base(concept),
-                      type: 'setLinkRole',
-                      linkIds: [link.id],
-                      role: link.role === 'subject' ? 'mentions' : 'subject'
-                    });
-                  }}
-                  onRemove={(ids, move) => setRemoval({ ids, move })}
-                />
+                    }}
+                    onRemove={(ids, move) => setRemoval({ ids, move })}
+                  />
+                  <ConceptRelationSection
+                    key={`relations:${concept.id}`}
+                    concept={concept}
+                    items={items}
+                    store={store}
+                    canWrite={write}
+                    onOpenConcept={onSelect}
+                    onOpenItem={onOpenItem}
+                  />
+                </>
               ) : (
                 <div className={indexStyles.empty}>
                   <KnowledgeIcon size={26} />

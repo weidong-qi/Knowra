@@ -72,9 +72,11 @@ const shortTitle = (title: string) =>
 export function ConceptGraphView({
   data: sample = CONCEPT_GRAPH_SAMPLE,
   query: routeQuery,
-  onQueryChange
+  onQueryChange,
+  initialTool
 }: {
   data?: ConceptGraphData;
+  initialTool?: string | null;
   query?: string;
   onQueryChange?(value: string): void;
 }) {
@@ -88,6 +90,10 @@ export function ConceptGraphView({
   const [loadError, setLoadError] = useState('');
   const [confirmationDemoOpen, setConfirmationDemoOpen] = useState(false);
   const [reportReviewOpen, setReportReviewOpen] = useState(false);
+  useEffect(() => {
+    if (initialTool === 'confirmation') setConfirmationDemoOpen(true);
+    if (initialTool === 'review') setReportReviewOpen(true);
+  }, [initialTool]);
   const [layers, setLayers] = useState<Record<RelationLayer, boolean>>({
     relation: true,
     suggestion: true,
@@ -200,6 +206,9 @@ export function ConceptGraphView({
                 回到示例
               </Button>
             ) : null}
+            <Button size="workspace" onPress={() => navigate('/knowledge/graph')}>
+              返回真实概念图
+            </Button>
             <Button size="workspace" onPress={() => navigate('/knowledge')}>
               返回知识列表
             </Button>

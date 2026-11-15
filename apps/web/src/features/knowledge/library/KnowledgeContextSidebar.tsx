@@ -115,7 +115,7 @@ export function KnowledgeContextSidebar() {
           <SideNavItem
             density="compact"
             icon={<KnowledgeIcon size={16} />}
-            label="概念图（原型）"
+            label="概念图"
             aria-current={route.page === 'graph' ? 'page' : undefined}
             onPress={() => navigate('/knowledge/graph')}
           />
