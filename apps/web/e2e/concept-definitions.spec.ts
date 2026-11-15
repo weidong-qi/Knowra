@@ -121,7 +121,8 @@ test('概念定义：明确知识分组、最早主体定义、角色变更及�
     await expect(page.getByRole('article', { name: '知识详情' })).toContainText('能够感知环境并采取行动的实体。');
     expect(errors).toEqual([]);
   } finally {
-    await runtime.stop();
+    await page.close();
+    await runtime.close();
     fs.rmSync(root, { recursive: true, force: true });
   }
 });

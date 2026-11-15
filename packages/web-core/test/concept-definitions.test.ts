@@ -19,6 +19,8 @@ describe('概念定义视图', () => {
     ];
     const liveItems = items.filter(item => !item.deletedAt);
     const options = { now: '2026-11-03T00:00:00Z', requestHash: 'a'.repeat(64) };
+    let sequence = 0;
+    const nextOptions = () => ({ ...options, requestHash: (++sequence).toString(16).padStart(64, '0') });
     let state = applyConceptCommand(
       emptyConceptState(),
       liveItems,
@@ -30,7 +32,7 @@ describe('概念定义视图', () => {
         operationId: 'create-a',
         expectedRevision: 0
       },
-      options
+      nextOptions()
     );
     state = mergeConceptChanges(
       state,
@@ -45,7 +47,7 @@ describe('概念定义视图', () => {
           operationId: 'mention',
           expectedRevision: 1
         },
-        options
+        nextOptions()
       )
     );
     state = mergeConceptChanges(
@@ -60,7 +62,7 @@ describe('概念定义视图', () => {
           operationId: 'remove',
           expectedRevision: 2
         },
-        options
+        nextOptions()
       )
     );
     state = mergeConceptChanges(
@@ -76,7 +78,7 @@ describe('概念定义视图', () => {
           operationId: 'create-b',
           expectedRevision: 0
         },
-        options
+        nextOptions()
       )
     );
     // 已删除知识可能仍有历史挂靠，视图不会把它选为定义。

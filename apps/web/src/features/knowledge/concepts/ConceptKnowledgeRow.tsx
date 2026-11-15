@@ -1,4 +1,5 @@
 import type { KnowledgeConceptLink, KnowledgeItem } from '@study-accelerator/web-core';
+import { useId } from 'react';
 import {
   Checkbox,
   IconButton,
@@ -40,18 +41,22 @@ export function ConceptKnowledgeRow({
   onRemove(move: boolean): void;
 }) {
   const title = item?.title || '未命名知识';
+  const descriptionId = useId();
   return (
     <li className={styles.linkRow} data-definition={definition || undefined} data-batch={(batch && write) || undefined}>
       {batch && write ? <Checkbox aria-label={`选择${title}`} isSelected={selected} onChange={onSelect} /> : null}
       <PressableButton
         className={`${styles.linkTitle} ${definition ? styles.definitionText : ''}`}
         aria-label={definition ? `查看定义知识：${title}` : undefined}
+        aria-describedby={definition ? descriptionId : undefined}
         onPress={onOpen}
       >
-        <MathText
-          text={definition ? item?.canonicalStatement || '尚未填写定义正文，点击补充。' : title}
-          inlineOnly={!definition}
-        />
+        <span id={definition ? descriptionId : undefined}>
+          <MathText
+            text={definition ? item?.canonicalStatement || '尚未填写定义正文，点击查看知识点。' : title}
+            inlineOnly={!definition}
+          />
+        </span>
       </PressableButton>
       {definition && item ? (
         <span className={styles.definitionStatus}>{knowledgeStatusLabel(item.reviewStatus)}</span>
