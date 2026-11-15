@@ -71,7 +71,8 @@ export function usePdfViewer(attachmentId: string, noteId: string, sha256: strin
       imageResourcesPath: '/pdf-assets/images/',
       annotationMode: 1,
       annotationEditorMode: -1,
-      removePageBorders: true
+      // 保留 pdf.js 页宽模式 40px 水平留白（与 .pdfViewer 两侧 20px 内边距一致），页面边框由样式统一控制。
+      removePageBorders: false
     });
     viewerRef.current = viewer;
     const detachPinchZoom = attachPdfPinchZoom(container, viewer);

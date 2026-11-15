@@ -6,15 +6,14 @@ const css = readFileSync('src/components/ui/button/Button.module.css', 'utf8');
 // jsdom 不替代浏览器材质验收，这里验证禁用态不会被后置外观选择器覆盖。
 describe('按钮外观的禁用反馈', () => {
   const properties = ['color', 'background-color', 'border-top-color', 'box-shadow', 'backdrop-filter'];
-  const snapshot = (button) => {
+  const snapshot = button => {
     const style = getComputedStyle(button);
     return properties.map(property => style.getPropertyValue(property));
   };
   for (const mode of ['light', 'dark']) {
     for (const [attribute, appearance, variant, hasShadow] of [
-      ['data-button-style', 'paper', 'primary', true],
-      ['data-button-style', 'frost', 'primary', true],
-      // 默认按钮是细线样式：没有投影，启用时是透明底。
+      // 主按钮统一为纸感样式，默认按钮为细线样式（无投影，启用时透明底）。
+      ['data-ni-mode', mode, 'primary', true],
       ['data-ni-mode', mode, '', false]
     ]) {
       for (const disabled of ['disabled', 'data-disabled']) {

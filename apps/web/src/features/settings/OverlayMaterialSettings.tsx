@@ -7,16 +7,12 @@ import { ColorPicker, Switch, TextField } from '../../components/ui/input';
 import { Menu, MenuItem, MenuPopover, MenuTrigger, SubmenuTrigger } from '../../components/ui/overlay/Menu';
 import {
   ACCENT_COLORS,
-  BUTTON_STYLES,
   DIALOG_STYLES,
-  DOCUMENT_ICON_STYLES,
   INSPECTOR_STYLES,
   STAGE_STYLES,
   setNotesIndexAppearance,
   useNotesIndexAppearance,
   type AccentColor,
-  type ButtonStyle,
-  type DocumentIconStyle,
   type DialogStyle,
   type InspectorStyle,
   type StageStyle
@@ -25,8 +21,6 @@ import { useCompactLayout } from '../../shell/useCompactLayout';
 import styles from './SettingsView.module.css';
 
 const ACCENT_COLOR_LABELS: Record<AccentColor, string> = { ink: '墨黑', orange: '暖橙' };
-const DOCUMENT_ICON_STYLE_LABELS: Record<DocumentIconStyle, string> = { capsule: '胶囊徽标', layout: '学术版式' };
-const BUTTON_STYLE_LABELS: Record<ButtonStyle, string> = { paper: '纸感', frost: '白玻璃' };
 const DIALOG_STYLE_LABELS: Record<DialogStyle, string> = { float: '浮起卡片', tray: '内嵌托盘' };
 const INSPECTOR_STYLE_LABELS: Record<InspectorStyle, string> = { float: '浮岛卡片', docked: '贴边分栏' };
 const STAGE_STYLE_LABELS: Record<StageStyle, string> = { soft: '纸面柔影', flat: '经典平面' };
@@ -75,16 +69,7 @@ function ShellColorSetting({
 
 export function OverlayMaterialSettings() {
   const appearance = useNotesIndexAppearance();
-  const {
-    mode,
-    overlayMaterial,
-    buttonStyle,
-    dialogStyle,
-    inspectorStyle,
-    stageStyle,
-    accentColor,
-    documentIconStyle
-  } = appearance;
+  const { mode, overlayMaterial, dialogStyle, inspectorStyle, stageStyle, accentColor } = appearance;
   const topbarColorKey = mode === 'dark' ? 'topbarColorDark' : 'topbarColorLight';
   const railColorKey = mode === 'dark' ? 'railColorDark' : 'railColorLight';
   const shellColorKey = mode === 'dark' ? 'shellColorDark' : 'shellColorLight';
@@ -193,25 +178,6 @@ export function OverlayMaterialSettings() {
         </div>
         <div className={`${styles.settingRow} ${styles.materialRow}`}>
           <div className={styles.settingCopy}>
-            <h4>文档图标风格</h4>
-            <p>切换笔记和 PDF 在图标视图中的风格，卡片封面保持原样。切换后即时保存。</p>
-          </div>
-          <div className={`${styles.settingControl} ${styles.materialControl}`}>
-            <SegmentedControl aria-label="文档图标风格">
-              {DOCUMENT_ICON_STYLES.map(style => (
-                <SegmentedButton
-                  key={style}
-                  aria-pressed={documentIconStyle === style}
-                  onPress={() => setNotesIndexAppearance({ documentIconStyle: style })}
-                >
-                  {DOCUMENT_ICON_STYLE_LABELS[style]}
-                </SegmentedButton>
-              ))}
-            </SegmentedControl>
-          </div>
-        </div>
-        <div className={`${styles.settingRow} ${styles.materialRow}`}>
-          <div className={styles.settingCopy}>
             <h4>强调色</h4>
             <p>切换全局强调色，浅色与深色模式自动适配，切换后即时保存。</p>
           </div>
@@ -277,28 +243,6 @@ export function OverlayMaterialSettings() {
                 </Menu>
               </MenuPopover>
             </MenuTrigger>
-          </div>
-        </div>
-        <div className={`${styles.settingRow} ${styles.materialRow}`}>
-          <div className={styles.settingCopy}>
-            <h4>按钮样式</h4>
-            <p>影响各处的主要操作按钮（如「创建」「保存」）。纸感简洁，白玻璃轻盈通透，切换后即时保存。</p>
-          </div>
-          <div className={`${styles.settingControl} ${styles.materialControl}`}>
-            <SegmentedControl aria-label="按钮样式">
-              {BUTTON_STYLES.map(style => (
-                <SegmentedButton
-                  key={style}
-                  aria-pressed={buttonStyle === style}
-                  onPress={() => setNotesIndexAppearance({ buttonStyle: style })}
-                >
-                  {BUTTON_STYLE_LABELS[style]}
-                </SegmentedButton>
-              ))}
-            </SegmentedControl>
-            <Button variant="primary" size="compact">
-              主要按钮预览
-            </Button>
           </div>
         </div>
         <div className={`${styles.settingRow} ${styles.materialRow}`}>

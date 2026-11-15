@@ -72,17 +72,19 @@ describe('浮层材质设置', () => {
   });
 });
 
-it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后恢复焦点', async () => {
+it('对话框与外观偏好持久化，弹窗继承深色模式并在关闭后恢复焦点', async () => {
   const user = userEvent.setup();
   render(<SettingsSurface />);
-  for (const name of ['暖橙', '白玻璃', '内嵌托盘', '学术版式']) {
+  expect(screen.queryByRole('heading', { name: '按钮样式' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('group', { name: '按钮样式' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: '文档图标风格' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('group', { name: '文档图标风格' })).not.toBeInTheDocument();
+  for (const name of ['暖橙', '内嵌托盘']) {
     await user.click(screen.getByRole('button', { name }));
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
   expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({
-    documentIconStyle: 'layout',
     accentColor: 'orange',
-    buttonStyle: 'frost',
     dialogStyle: 'tray'
   });
   act(() => setNotesIndexAppearance({ mode: 'dark' }));
@@ -91,14 +93,14 @@ it('按钮和对话框偏好持久化，弹窗继承深色模式并在关闭后�
   const scope = screen.getByRole('dialog', { name: '新建文件夹' }).closest('[data-dialog-style]');
   expect(scope).toHaveAttribute('data-accent-color', 'orange');
   expect(scope).toHaveAttribute('data-dialog-style', 'tray');
-  expect(scope).toHaveAttribute('data-button-style', 'frost');
+  expect(scope).not.toHaveAttribute('data-button-style');
   expect(scope).not.toHaveAttribute('data-default-button-style');
   expect(scope).toHaveAttribute('data-ni-mode', 'dark');
   await user.keyboard('{Escape}');
   await waitFor(() => expect(trigger).toHaveFocus());
   cleanup();
   render(<SettingsSurface />);
-  for (const name of ['暖橙', '白玻璃', '内嵌托盘', '学术版式']) {
+  for (const name of ['暖橙', '内嵌托盘']) {
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
 });

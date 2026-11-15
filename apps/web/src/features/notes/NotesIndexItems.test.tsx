@@ -188,27 +188,25 @@ describe('Notes index item views', () => {
     expect(container.querySelectorAll('[data-folder-paper]')).toHaveLength(1 + 3 + 0);
   });
 
-  it.each(['capsule', 'layout'] as const)('文档和 PDF 图标渲染 %s 样式并独立标识渐变', style => {
+  it('文档和 PDF 图标统一渲染胶囊徽标样式并独立标识渐变', () => {
     const pdf = { ...note, id: 'pdf', title: '示例 PDF', contentKind: 'pdf' as const, tagIds: [] };
     const { container } = render(
       <>
-        <NotesIndexArt item={{ kind: 'note', note }} tags={tags} documentStyle={style} />
-        <NotesIndexArt item={{ kind: 'note', note: pdf }} documentStyle={style} />
+        <NotesIndexArt item={{ kind: 'note', note }} tags={tags} />
+        <NotesIndexArt item={{ kind: 'note', note: pdf }} />
       </>
     );
     const document = container.querySelector('[data-art-kind="document"]');
     const pdfArt = container.querySelector('[data-art-kind="pdf"]');
     expect(document).toHaveAttribute('data-has-tag-color', 'true');
-    expect(document?.querySelector('svg')).toHaveAttribute('data-document-style', style);
-    expect(pdfArt?.querySelector('svg')).toHaveAttribute('data-document-style', style);
+    expect(document?.querySelector('svg')).not.toHaveAttribute('data-document-style');
+    expect(pdfArt?.querySelector('svg')).not.toHaveAttribute('data-document-style');
     expect(document).toHaveTextContent('NOTE');
     expect(pdfArt).toHaveTextContent('PDF');
     const gradients = [...container.querySelectorAll('linearGradient')];
-    expect(gradients).toHaveLength(style === 'capsule' ? 2 : 0);
-    if (style === 'capsule') {
-      expect(gradients[0].id).not.toBe(gradients[1].id);
-      gradients.forEach(gradient => expect(container.querySelector(`[fill="url(#${gradient.id})"]`)).not.toBeNull());
-    }
+    expect(gradients).toHaveLength(2);
+    expect(gradients[0].id).not.toBe(gradients[1].id);
+    gradients.forEach(gradient => expect(container.querySelector(`[fill="url(#${gradient.id})"]`)).not.toBeNull());
   });
 
   it('卡片视图的 PDF 使用叠页封面，图标视图仍是单页图标', () => {

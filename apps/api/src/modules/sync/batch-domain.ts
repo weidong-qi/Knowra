@@ -38,6 +38,7 @@ import { buildCreateFolderDto } from '../knowledge/application/dto/folder.dto.ts
 import { buildCreateTagDto } from '../knowledge/application/dto/tag.dto.ts';
 import { buildCreateTagGroupDto } from '../knowledge/application/dto/tag-group.dto.ts';
 import { reconcileSyncedSourceStates } from '../../infrastructure/local-data-relations.ts';
+import { recordPdfAnnotationActivity } from '../pdf/annotation-activity.ts';
 import { createHash } from 'node:crypto';
 import { Note } from '../knowledge/domain/note.ts';
 import { Folder } from '../knowledge/domain/folder.ts';
@@ -392,6 +393,14 @@ export function prepareBatchState(
       }
     }
     replace(state, collection, id, value);
+  }
+  // 时间字段不作为笔记内容上传；仅同步批注时也要更新所属 PDF 的索引日期。
+  for (const change of changes.filter(item => item.collection === 'pdfAnnotations' && item.value)) {
+    const annotation = state.pdfAnnotations.find(item => item.id === change.id)!;
+    const previous = before.pdfAnnotations.find(item => item.id === change.id);
+    if (sameEntity('pdfAnnotations', previous, annotation)) continue;
+    const note = state.notes.find(item => item.id === annotation.noteId);
+    if (note?.contentKind === 'pdf') recordPdfAnnotationActivity(note, annotation);
   }
   // 同正文的版本沿用云端稳定 ID，重写本批标注中的版本引用。
   const byHash = new Map(before.noteVersions.map(version => [`${version.noteId}:${version.contentHash}`, version.id]));

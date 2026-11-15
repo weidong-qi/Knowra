@@ -30,7 +30,8 @@ export class PdfSession {
     readonly key: string,
     private changed: () => void,
     private canWrite = () => true,
-    requireRecovery = false
+    requireRecovery = false,
+    private saved: (annotation: PdfAnnotation) => void = () => {}
   ) {
     this.recovered = !requireRecovery;
   }
@@ -199,6 +200,7 @@ export class PdfSession {
           continue;
         }
         this.items.set(id, saved);
+        this.saved(saved);
         const current = this.drafts.get(id)!;
         const latestTask = {
           ...current.fields,

@@ -483,6 +483,81 @@ describe('NotesContextSidebar', () => {
     await userEvent.click(screen.getByRole('button', { name: '删除' }));
     await waitFor(() => expect(api.deleteNote).toHaveBeenCalledWith('note-2'));
   });
+
+  it('toggles note favorite directly from the note row quick action button', async () => {
+    const { api } = renderSidebar();
+    await userEvent.click(screen.getByRole('button', { name: '展开产品设计' }));
+
+    const favoriteBtn = screen.getByRole('button', { name: '收藏设计复盘' });
+    expect(favoriteBtn).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(favoriteBtn);
+    await waitFor(() => expect(api.setNoteFavorite).toHaveBeenCalledWith('note-2', true));
+
+    // 无持久化 storage 的测试替身在 mutation 刷新后会清空 openFolders，需重新展开目录。
+    await userEvent.click(screen.getByRole('button', { name: '展开产品设计' }));
+    const unfavoriteBtn = screen.getByRole('button', { name: '取消收藏规划草案' });
+    expect(unfavoriteBtn).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(unfavoriteBtn);
+    await waitFor(() => expect(api.setNoteFavorite).toHaveBeenCalledWith('note-1', false));
+  });
+
+  it('shows folder hover card without recent titles and runs dialog actions', async () => {
+    renderSidebar();
+    const folderDragArea = screen.getByRole('button', { name: /产品设计2/ }).closest('[draggable]') as HTMLElement;
+
+    fireEvent.pointerEnter(folderDragArea, { pointerType: 'mouse' });
+    const card = await screen.findByRole('region', { name: '产品设计文件夹信息' });
+
+    expect(folderDragArea).toHaveAttribute('data-hover-active', 'true');
+    expect(card).toHaveTextContent('2 篇笔记');
+    expect(card).toHaveTextContent('笔记库');
+    expect(card).toHaveTextContent(/更新于/);
+    expect(card).not.toHaveTextContent('规划草案');
+    expect(card).not.toHaveTextContent('设计复盘');
+
+    await userEvent.click(screen.getByRole('button', { name: '重命名' }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: '产品设计文件夹信息' })).not.toBeInTheDocument());
+    expect(screen.getByRole('textbox', { name: '文件夹名称' })).toHaveValue('产品设计');
+  });
+
+  it('shows note hover card with tags and toggles favorite without closing', async () => {
+    const { api } = renderSidebar();
+    await userEvent.click(screen.getByRole('button', { name: '展开产品设计' }));
+    const noteDragArea = screen.getByRole('button', { name: '规划草案' }).closest('[draggable]') as HTMLElement;
+
+    fireEvent.pointerEnter(noteDragArea, { pointerType: 'mouse' });
+    const card = await screen.findByRole('region', { name: '规划草案信息' });
+
+    expect(card).toHaveTextContent('笔记库 / 产品设计');
+    expect(card).toHaveTextContent(/更新于/);
+    expect(card).toHaveTextContent('设计');
+
+    await userEvent.click(screen.getByRole('button', { name: '取消收藏' }));
+    await waitFor(() => expect(api.setNoteFavorite).toHaveBeenCalledWith('note-1', false));
+    expect(screen.getByRole('region', { name: '规划草案信息' })).toBeInTheDocument();
+  });
+
+  it('keeps hover card open while hovered and dismisses on Escape or context menu', async () => {
+    renderSidebar();
+    const folderDragArea = screen.getByRole('button', { name: /产品设计2/ }).closest('[draggable]') as HTMLElement;
+
+    fireEvent.pointerEnter(folderDragArea, { pointerType: 'mouse' });
+    const card = await screen.findByRole('region', { name: '产品设计文件夹信息' });
+
+    fireEvent.pointerLeave(folderDragArea, { pointerType: 'mouse' });
+    fireEvent.pointerEnter(card, { pointerType: 'mouse' });
+    await new Promise(resolve => setTimeout(resolve, 220));
+    expect(screen.getByRole('region', { name: '产品设计文件夹信息' })).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('region', { name: '产品设计文件夹信息' })).not.toBeInTheDocument());
+
+    fireEvent.pointerEnter(folderDragArea, { pointerType: 'mouse' });
+    await screen.findByRole('region', { name: '产品设计文件夹信息' });
+    fireEvent.contextMenu(screen.getByRole('button', { name: /产品设计2/ }));
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('region', { name: '产品设计文件夹信息' })).not.toBeInTheDocument());
+  });
 });
 
 function renderSidebar({

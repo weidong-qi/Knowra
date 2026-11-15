@@ -20,7 +20,9 @@ vi.mock('./pdfRuntime', () => ({
     private scale = 'page-width';
     pagesRotation = 0;
     scrollPageIntoView = vi.fn();
-    constructor(private options: { eventBus: { dispatch(name: string, event: unknown): void } }) {}
+    constructor(
+      public options: { eventBus: { dispatch(name: string, event: unknown): void }; removePageBorders?: boolean }
+    ) {}
     get currentPageNumber() {
       return this.page;
     }
@@ -128,6 +130,9 @@ it.each([
   await waitFor(() => expect(viewer.document).toBe(runtime.pdf));
   expect(viewer.error).toBe('');
   expect(viewer.count).toBe(2);
+  expect(
+    (viewer.viewerRef.current as unknown as { options: { removePageBorders?: boolean } }).options.removePageBorders
+  ).toBe(false);
   expect(viewer.viewerRef.current!.currentPageNumber).toBe(1);
   expect(viewer.viewerRef.current!.currentScaleValue).toBe('page-width');
   expect(viewer.viewerRef.current!.pagesRotation).toBe(0);

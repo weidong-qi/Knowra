@@ -102,19 +102,37 @@
   box-shadow: none;
 }
 
+/* 主按钮统一使用纸感样式。 */
 .primary {
   --knowra-icon-accent: currentColor;
-  background: var(--button-primary-bg, var(--accent-solid));
-  color: var(--button-primary-ink, var(--text-on-accent, var(--surface-page)));
+  --bs-accent: #e5743a;
+  font-weight: 600;
+  background: var(--bs-accent);
+  color: #fff;
   border-color: transparent;
-  box-shadow: var(--shadow-accent, none);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 20%),
+    0 1px 1px rgb(150 60 20 / 35%),
+    0 2px 4px -1px rgb(150 60 20 / 25%);
 }
 
-.primary[data-hovered]:not([data-disabled]):not([data-pending]),
-.primary[data-pressed]:not([data-disabled]):not([data-pending]) {
-  background: var(--button-primary-hover, var(--accent-hover));
+:global([data-ni-mode='dark']) .primary {
+  --bs-accent: #d06a37;
+}
+
+.primary[data-hovered]:not([data-disabled]):not([disabled]):not([data-pending]) {
+  background: color-mix(in srgb, var(--bs-accent) 92%, #000);
+  color: #fff;
   border-color: transparent;
-  color: var(--button-primary-ink, var(--text-on-accent, var(--surface-page)));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 20%),
+    0 1px 1px rgb(150 60 20 / 35%),
+    0 3px 6px -1px rgb(150 60 20 / 30%);
+}
+
+.primary[data-pressed]:not([data-disabled]):not([disabled]):not([data-pending]) {
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 20%);
+  transform: scale(0.975);
 }
 
 .danger {
@@ -209,76 +227,6 @@
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
-}
-
-/* ===== 主按钮样式（设置 → 外观 → 按钮样式）：由祖先 data-button-style 切换，只影响 primary ===== */
-:global([data-button-style]) .primary {
-  --bs-accent: #e5743a;
-  font-weight: 600;
-}
-:global([data-button-style])
-  .primary:where(:not([data-disabled], [disabled]))[data-pressed]:not([data-disabled]):not([data-pending]) {
-  transform: scale(0.975);
-}
-
-/* 纸感 */
-:global([data-button-style='paper']) .primary:where(:not([data-disabled], [disabled])) {
-  background: var(--bs-accent);
-  color: #fff;
-  border-color: transparent;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 20%),
-    0 1px 1px rgb(150 60 20 / 35%),
-    0 2px 4px -1px rgb(150 60 20 / 25%);
-}
-:global([data-button-style='paper'])
-  .primary:where(:not([data-disabled], [disabled]))[data-hovered]:not([data-disabled]):not([data-pending]) {
-  background: color-mix(in srgb, var(--bs-accent) 92%, #000);
-  color: #fff;
-  border-color: transparent;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 20%),
-    0 1px 1px rgb(150 60 20 / 35%),
-    0 3px 6px -1px rgb(150 60 20 / 30%);
-}
-:global([data-button-style='paper'])
-  .primary:where(:not([data-disabled], [disabled]))[data-pressed]:not([data-disabled]):not([data-pending]) {
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 20%);
-}
-:global([data-ni-mode='dark'][data-button-style='paper']) .primary {
-  --bs-accent: #d06a37;
-}
-
-/* 白玻璃 */
-:global([data-button-style='frost']) .primary:where(:not([data-disabled], [disabled])) {
-  background: rgb(255 255 255 / 62%);
-  color: #b8501d;
-  border-color: color-mix(in srgb, var(--bs-accent) 45%, rgb(255 255 255 / 60%));
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  backdrop-filter: blur(14px) saturate(160%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 90%),
-    0 3px 10px -4px color-mix(in srgb, var(--bs-accent) 45%, transparent);
-}
-:global([data-button-style='frost'])
-  .primary:where(:not([data-disabled], [disabled]))[data-hovered]:not([data-disabled]):not([data-pending]) {
-  background: rgb(255 255 255 / 80%);
-  color: #b8501d;
-  border-color: var(--bs-accent);
-}
-:global([data-ni-mode='dark'][data-button-style='frost']) .primary:where(:not([data-disabled], [disabled])) {
-  background: rgb(255 255 255 / 10%);
-  color: #ff9a5c;
-  border-color: color-mix(in srgb, var(--bs-accent) 55%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 10%),
-    0 3px 10px -4px rgb(0 0 0 / 50%);
-}
-:global([data-ni-mode='dark'][data-button-style='frost'])
-  .primary:where(:not([data-disabled], [disabled]))[data-hovered]:not([data-disabled]):not([data-pending]) {
-  background: rgb(255 255 255 / 16%);
-  color: #ffb07a;
-  border-color: var(--bs-accent);
 }
 
 /* ===== 默认按钮：细线。透明底加 1px 描边，悬停填一层灰，按下加深；不用投影和玻璃，明暗共用同一套令牌。 ===== */

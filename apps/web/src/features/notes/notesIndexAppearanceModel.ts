@@ -5,12 +5,10 @@ export interface NotesIndexAppearance {
   theme: 'orange';
   shape: 'pill';
   overlayMaterial: 'glass' | 'acrylic';
-  buttonStyle: ButtonStyle;
   dialogStyle: DialogStyle;
   inspectorStyle: InspectorStyle;
   stageStyle: StageStyle;
   accentColor: AccentColor;
-  documentIconStyle: DocumentIconStyle;
   topbarColorLight: string | null;
   topbarColorDark: string | null;
   railColorLight: string | null;
@@ -26,13 +24,6 @@ export interface NotesIndexAppearance {
 
 export const ACCENT_COLORS = ['ink', 'orange'] as const;
 export type AccentColor = (typeof ACCENT_COLORS)[number];
-
-export const DOCUMENT_ICON_STYLES = ['capsule', 'layout'] as const;
-export type DocumentIconStyle = (typeof DOCUMENT_ICON_STYLES)[number];
-
-/** 主按钮（Button primary）外观：纸感、白玻璃。 */
-export const BUTTON_STYLES = ['paper', 'frost'] as const;
-export type ButtonStyle = (typeof BUTTON_STYLES)[number];
 
 /** 对话框面板外观：浮起卡片、内嵌托盘。 */
 export const DIALOG_STYLES = ['float', 'tray'] as const;
@@ -53,12 +44,10 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   theme: 'orange',
   shape: 'pill',
   overlayMaterial: 'glass',
-  buttonStyle: 'paper',
   dialogStyle: 'float',
   inspectorStyle: 'float',
   stageStyle: 'soft',
   accentColor: 'ink',
-  documentIconStyle: 'capsule',
   topbarColorLight: null,
   topbarColorDark: null,
   railColorLight: null,
@@ -87,9 +76,6 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     theme: 'orange',
     shape: 'pill',
     overlayMaterial: candidate.overlayMaterial === 'acrylic' ? 'acrylic' : 'glass',
-    buttonStyle: BUTTON_STYLES.includes(candidate.buttonStyle as ButtonStyle)
-      ? (candidate.buttonStyle as ButtonStyle)
-      : 'paper',
     dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle)
       ? (candidate.dialogStyle as DialogStyle)
       : 'float',
@@ -102,9 +88,6 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     accentColor: ACCENT_COLORS.includes(candidate.accentColor as AccentColor)
       ? (candidate.accentColor as AccentColor)
       : 'ink',
-    documentIconStyle: DOCUMENT_ICON_STYLES.includes(candidate.documentIconStyle as DocumentIconStyle)
-      ? (candidate.documentIconStyle as DocumentIconStyle)
-      : 'capsule',
     topbarColorLight: parseColor(candidate.topbarColorLight),
     topbarColorDark: parseColor(candidate.topbarColorDark),
     railColorLight: parseColor(candidate.railColorLight),

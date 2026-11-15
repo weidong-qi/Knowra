@@ -4,7 +4,6 @@ import { tagColorStyle } from '../tags';
 import { normalizeTagColor } from '../tags/tagColor';
 import type { IndexItem } from './notesIndexPresentation';
 import { notePreview } from './NotesIndexItemMeta';
-import { useNotesIndexAppearance, type DocumentIconStyle } from './notesIndexAppearanceModel';
 import styles from './NotesIndexArt.module.css';
 
 const DOCUMENT_LINES = [
@@ -20,18 +19,14 @@ export function NotesIndexArt({
   tags = [],
   cover = false,
   folderStyle = 'illustrated',
-  noteCount = 0,
-  documentStyle
+  noteCount = 0
 }: {
   item: IndexItem;
   tags?: Tag[];
   cover?: boolean;
   folderStyle?: 'illustrated' | 'paper';
   noteCount?: number;
-  documentStyle?: DocumentIconStyle;
 }) {
-  const appearance = useNotesIndexAppearance();
-  const effectiveDocumentStyle = documentStyle ?? appearance.documentIconStyle;
   const gradientId = `ni-folder-${useId()}`;
   const badgeGradientId = `ni-badge-${useId().replace(/:/g, '')}`;
   const folder = item.kind === 'folder';
@@ -154,117 +149,49 @@ export function NotesIndexArt({
           <path className={styles.folderEdge} d="M11.5 17.3h49" />
         </svg>
       ) : (
-        <svg
-          className={styles.document}
-          width="54"
-          height="76"
-          viewBox="0 0 58 80"
-          fill="none"
-          data-document-style={effectiveDocumentStyle}
-        >
+        <svg className={styles.document} width="54" height="76" viewBox="0 0 58 80" fill="none">
           <path className={styles.paper} d="M6 3h30l16 16v54a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Z" />
           <path className={pdf ? styles.pdfFold : styles.noteFold} d="M36 3v12a4 4 0 0 0 4 4h12Z" />
-          {effectiveDocumentStyle === 'capsule' ? (
+          <defs>
+            {pdf ? (
+              <linearGradient id={badgeGradientId} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#b91c1c" />
+              </linearGradient>
+            ) : (
+              <linearGradient id={badgeGradientId} x1="0" y1="0" x2="1" y2="1">
+                <stop className={styles.noteBadgeStart} offset="0%" stopColor="var(--note-accent)" />
+                <stop className={styles.noteBadgeEnd} offset="100%" stopColor="var(--note-accent-dark)" />
+              </linearGradient>
+            )}
+          </defs>
+          {pdf ? (
             <>
-              <defs>
-                {pdf ? (
-                  <linearGradient id={badgeGradientId} x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" />
-                    <stop offset="100%" stopColor="#b91c1c" />
-                  </linearGradient>
-                ) : (
-                  <linearGradient id={badgeGradientId} x1="0" y1="0" x2="1" y2="1">
-                    <stop className={styles.noteBadgeStart} offset="0%" stopColor="var(--note-accent)" />
-                    <stop className={styles.noteBadgeEnd} offset="100%" stopColor="var(--note-accent-dark)" />
-                  </linearGradient>
-                )}
-              </defs>
-              {pdf ? (
-                <>
-                  <rect x="10" y="22" width="38" height="14.5" rx="3.5" fill={`url(#${badgeGradientId})`} />
-                  <text className={styles.pdfLabel} x="29" y="32" dominantBaseline="middle" textAnchor="middle">
-                    PDF
-                  </text>
-                </>
-              ) : (
-                <>
-                  <rect x="10" y="22" width="38" height="14.5" rx="3.5" fill={`url(#${badgeGradientId})`} />
-                  <text className={styles.noteBadgeLabel} x="29" y="32" dominantBaseline="middle" textAnchor="middle">
-                    NOTE
-                  </text>
-                </>
-              )}
-              {DOCUMENT_LINES.map((line, index) => (
-                <rect
-                  key={index}
-                  className={pdf ? styles.pdfLine : styles.noteLine}
-                  x="10"
-                  y={line.y}
-                  width={line.width}
-                  height="2.5"
-                  rx="1.25"
-                  opacity={line.opacity}
-                />
-              ))}
+              <rect x="10" y="22" width="38" height="14.5" rx="3.5" fill={`url(#${badgeGradientId})`} />
+              <text className={styles.pdfLabel} x="29" y="32" dominantBaseline="middle" textAnchor="middle">
+                PDF
+              </text>
             </>
           ) : (
             <>
-              {pdf ? (
-                <>
-                  <rect className={styles.pdfBadgeSmall} x="10" y="10" width="22" height="8.5" rx="2" />
-                  <text className={styles.pdfLabelSmall} x="21" y="15.5" dominantBaseline="middle" textAnchor="middle">
-                    PDF
-                  </text>
-                  <rect className={styles.pdfTitle} x="10" y="25" width="26" height="3" rx="1.5" />
-                  {[16, 16, 13, 16, 16, 11].map((length, index) => (
-                    <rect
-                      key={`left-${index}`}
-                      className={styles.paperLine}
-                      x="10"
-                      y={33 + index * 5}
-                      width={length}
-                      height="2.2"
-                      rx="1.1"
-                    />
-                  ))}
-                  {[16, 16, 16, 16, 12, 16].map((length, index) => (
-                    <rect
-                      key={`right-${index}`}
-                      className={styles.paperLine}
-                      x="32"
-                      y={33 + index * 5}
-                      width={length}
-                      height="2.2"
-                      rx="1.1"
-                    />
-                  ))}
-                  <line className={styles.pdfDivider} x1="10" y1="66" x2="48" y2="66" />
-                </>
-              ) : (
-                <>
-                  <rect className={styles.noteBadgeSmall} x="10" y="10" width="22" height="8.5" rx="2" />
-                  <text
-                    className={styles.noteBadgeLabelSmall}
-                    x="21"
-                    y="15.5"
-                    dominantBaseline="middle"
-                    textAnchor="middle"
-                  >
-                    NOTE
-                  </text>
-                  <rect className={styles.paperTitle} x="10" y="25" width="26" height="3" rx="1.5" />
-                  <circle className={styles.noteBullet} cx="12.5" cy="35" r="1.5" />
-                  <rect className={styles.paperLine} x="17" y="33.8" width="31" height="2.4" rx="1.2" />
-                  <circle className={styles.noteBullet} cx="12.5" cy="43" r="1.5" />
-                  <rect className={styles.paperLine} x="17" y="41.8" width="31" height="2.4" rx="1.2" />
-                  <circle className={styles.noteBulletMuted} cx="12.5" cy="51" r="1.5" />
-                  <rect className={styles.paperLine} x="17" y="49.8" width="24" height="2.4" rx="1.2" />
-                  <rect className={styles.paperLine} x="10" y="58" width="38" height="2.4" rx="1.2" />
-                  <rect className={styles.paperLine} x="10" y="65" width="20" height="2.4" rx="1.2" />
-                </>
-              )}
+              <rect x="10" y="22" width="38" height="14.5" rx="3.5" fill={`url(#${badgeGradientId})`} />
+              <text className={styles.noteBadgeLabel} x="29" y="32" dominantBaseline="middle" textAnchor="middle">
+                NOTE
+              </text>
             </>
           )}
+          {DOCUMENT_LINES.map((line, index) => (
+            <rect
+              key={index}
+              className={pdf ? styles.pdfLine : styles.noteLine}
+              x="10"
+              y={line.y}
+              width={line.width}
+              height="2.5"
+              rx="1.25"
+              opacity={line.opacity}
+            />
+          ))}
         </svg>
       )}
       {cover && !folder && !pdf ? (

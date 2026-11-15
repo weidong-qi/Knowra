@@ -138,7 +138,9 @@
   color: var(--text-muted);
 }
 .folderRow:hover,
-.documentRow:hover {
+.documentRow:hover,
+.entryDragArea[data-hover-active] :where(.folderRow),
+.entryDragArea[data-hover-active] :where(.documentRow) {
   background: var(--surface-hover);
   color: var(--text-primary);
 }
@@ -242,12 +244,18 @@
   border-left: 1px solid var(--border-subtle);
 }
 
-.folderRow span,
-.documentRow span {
+.folderRow > span,
+.documentRow > span {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.folderRow > small {
+  grid-column: 3;
+  grid-row: 1;
 }
 .sectionToggle:focus-visible,
 .folderToggle:focus-visible,
@@ -446,24 +454,24 @@
   color: var(--text-primary);
 }
 
-/* 悬停操作：行右侧淡入「＋」「…」，文件夹的数量让位；键盘聚焦到行内时同样出现。 */
+/* 悬停操作：行右侧无底色按钮组淡入，文件夹数量让位，长标题同步横向渐隐，避免覆盖文字与双层底色。 */
 .rowActions {
   position: absolute;
   top: 50%;
   right: 4px;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding-left: 6px;
   transform: translateY(-50%);
-  border-radius: var(--radius-control);
-  background: var(--surface-hover);
+  background: transparent;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--motion-fast) var(--motion-ease);
 }
 .entryDragArea:hover > .rowActions,
 .entryDragArea:focus-within > .rowActions,
+.entryDragArea[data-hover-active] > .rowActions,
 .rowActions:has([aria-expanded='true']) {
   opacity: 1;
   pointer-events: auto;
@@ -471,10 +479,24 @@
 .folderRow small {
   transition: opacity var(--motion-fast) var(--motion-ease);
 }
-.entryDragArea:hover .folderRow small,
-.entryDragArea:focus-within .folderRow small,
-.entryDragArea:has([aria-expanded='true']) .folderRow small {
+.entryDragArea:has(> .rowActions):hover .folderRow small,
+.entryDragArea:has(> .rowActions):focus-within .folderRow small,
+.entryDragArea[data-hover-active]:has(> .rowActions) .folderRow small,
+.entryDragArea:has(> .rowActions):has([aria-expanded='true']) .folderRow small {
   opacity: 0;
+}
+.entryDragArea:has(> .rowActions):hover .folderRow > span,
+.entryDragArea:has(> .rowActions):focus-within .folderRow > span,
+.entryDragArea[data-hover-active]:has(> .rowActions) .folderRow > span,
+.entryDragArea:has(> .rowActions):has([aria-expanded='true']) .folderRow > span,
+.entryDragArea:has(> .rowActions):hover .documentRow > span,
+.entryDragArea:has(> .rowActions):focus-within .documentRow > span,
+.entryDragArea[data-hover-active]:has(> .rowActions) .documentRow > span,
+.entryDragArea:has(> .rowActions):has([aria-expanded='true']) .documentRow > span {
+  grid-column: 2 / -1;
+  text-overflow: clip;
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 74px), transparent calc(100% - 50px));
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 74px), transparent calc(100% - 50px));
 }
 .rowActions button {
   color: var(--ni-ink-3, var(--text-muted));
@@ -482,13 +504,167 @@
 .rowActions button:hover:not(:disabled) {
   color: var(--text-primary);
 }
+.rowActions button[data-favorite],
+.rowActions button[data-favorite]:hover:not(:disabled),
+.hoverCardFav[data-favorite],
+.hoverCardFav[data-favorite]:hover:not(:disabled) {
+  color: var(--ni-fav, #e7b02b);
+}
+.rowActions button[data-favorite] svg,
+.hoverCardFav[data-favorite] svg {
+  fill: currentColor;
+}
+
+/* 文件夹树悬停预览卡片 */
+.hoverCardPopover {
+  min-width: 272px;
+  max-width: 316px;
+  padding: 0;
+  overflow: visible;
+}
+.hoverCardPopover[data-exiting] {
+  pointer-events: none;
+}
+.hoverCardPopover[data-placement^='right']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: 12px;
+}
+.hoverCardPopover[data-placement^='left']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -12px;
+  bottom: 0;
+  width: 12px;
+}
+.hoverCard {
+  overflow: hidden;
+  border-radius: var(--radius-popover);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+.hoverCardSection {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+}
+.hoverCardDivider {
+  border-top: 1px solid var(--border-subtle);
+}
+.hoverCardHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+.hoverCardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 22px;
+  color: var(--text-secondary);
+}
+.hoverCardTitle {
+  display: -webkit-box;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.hoverCardFav {
+  color: var(--ni-ink-3, var(--text-muted));
+}
+.hoverCardFav:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+.hoverCardMetaList {
+  display: grid;
+  gap: 6px;
+}
+.hoverCardMetaRow {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+  line-height: 18px;
+}
+.hoverCardMetaRow > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+.hoverCardMetaRow > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hoverCardTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.hoverCardTagChip {
+  max-width: 112px;
+}
+.hoverCardTagMore {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 18px;
+}
+.hoverCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+}
+.hoverCardActions button {
+  gap: 5px;
+  font-weight: 500;
+}
+.hoverCardActions .hoverCardDangerAction {
+  color: var(--ink-danger);
+}
+.hoverCardActions .hoverCardDangerAction:hover:not(:disabled) {
+  background: var(--ink-danger-soft);
+  color: var(--ink-danger);
+}
+
 @media (hover: none), (pointer: coarse) {
   .rowActions {
     display: none;
   }
-  .entryDragArea:hover .folderRow small,
-  .entryDragArea:focus-within .folderRow small,
-  .entryDragArea:has([aria-expanded='true']) .folderRow small {
+  .entryDragArea:has(> .rowActions):hover .folderRow small,
+  .entryDragArea:has(> .rowActions):focus-within .folderRow small,
+  .entryDragArea[data-hover-active]:has(> .rowActions) .folderRow small,
+  .entryDragArea:has(> .rowActions):has([aria-expanded='true']) .folderRow small {
     opacity: 1;
+  }
+  .entryDragArea:has(> .rowActions):hover .folderRow > span,
+  .entryDragArea:has(> .rowActions):focus-within .folderRow > span,
+  .entryDragArea[data-hover-active]:has(> .rowActions) .folderRow > span,
+  .entryDragArea:has(> .rowActions):has([aria-expanded='true']) .folderRow > span,
+  .entryDragArea:has(> .rowActions):hover .documentRow > span,
+  .entryDragArea:has(> .rowActions):focus-within .documentRow > span,
+  .entryDragArea[data-hover-active]:has(> .rowActions) .documentRow > span,
+  .entryDragArea:has(> .rowActions):has([aria-expanded='true']) .documentRow > span {
+    grid-column: 2;
+    text-overflow: ellipsis;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }

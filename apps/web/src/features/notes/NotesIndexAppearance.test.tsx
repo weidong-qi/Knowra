@@ -30,12 +30,10 @@ describe('全局定稿外观', () => {
       theme: 'orange',
       shape: 'pill',
       overlayMaterial: 'glass',
-      buttonStyle: 'paper',
       dialogStyle: 'float',
       inspectorStyle: 'float',
       stageStyle: 'soft',
       accentColor: 'ink',
-      documentIconStyle: 'capsule',
       topbarColorLight: null,
       topbarColorDark: null,
       railColorLight: null,
@@ -56,14 +54,12 @@ describe('全局定稿外观', () => {
     expect(parseNotesIndexAppearance(null).overlayMaterial).toBe('glass');
     expect(parseNotesIndexAppearance({ overlayMaterial: 'unknown' }).overlayMaterial).toBe('glass');
     expect(parseNotesIndexAppearance({ overlayMaterial: 'acrylic' }).overlayMaterial).toBe('acrylic');
-    expect(parseNotesIndexAppearance(null).buttonStyle).toBe('paper');
-    expect(parseNotesIndexAppearance({ buttonStyle: 'unknown' }).buttonStyle).toBe('paper');
-    expect(parseNotesIndexAppearance({ buttonStyle: 'flow' }).buttonStyle).toBe('paper');
-    expect(parseNotesIndexAppearance({ buttonStyle: 'frost' }).buttonStyle).toBe('frost');
+    // 主按钮统一为纸感样式；旧版保存的“白玻璃”等按钮样式偏好会被忽略，不出现在解析结果里。
+    expect(parseNotesIndexAppearance({ buttonStyle: 'frost' })).not.toHaveProperty('buttonStyle');
     // 默认按钮只有细线一种样式；旧版保存的“无边软影”“乳白玻璃”会被忽略，不出现在解析结果里。
     expect(parseNotesIndexAppearance({ defaultButtonStyle: 'glass' })).not.toHaveProperty('defaultButtonStyle');
-    expect(parseNotesIndexAppearance({ documentIconStyle: 'layout' }).documentIconStyle).toBe('layout');
-    expect(parseNotesIndexAppearance({ documentIconStyle: 'unknown' }).documentIconStyle).toBe('capsule');
+    // 文档图标统一使用胶囊徽标；旧版保存的“学术版式”等风格偏好会被忽略，不出现在解析结果里。
+    expect(parseNotesIndexAppearance({ documentIconStyle: 'layout' })).not.toHaveProperty('documentIconStyle');
     expect(parseNotesIndexAppearance({ accentColor: 'orange' }).accentColor).toBe('orange');
     expect(parseNotesIndexAppearance({ accentColor: 'unknown' }).accentColor).toBe('ink');
     expect(parseNotesIndexAppearance(null).dialogStyle).toBe('float');
@@ -115,17 +111,16 @@ describe('全局定稿外观', () => {
     expect(surface).toHaveAttribute('data-ni-theme', 'orange');
     expect(surface).toHaveAttribute('data-ni-shape', 'pill');
     expect(surface).not.toHaveAttribute('data-ni-deco');
+    expect(surface).not.toHaveAttribute('data-button-style');
     expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toEqual({
       mode: 'dark',
       theme: 'orange',
       shape: 'pill',
       overlayMaterial: 'glass',
-      buttonStyle: 'paper',
       dialogStyle: 'float',
       inspectorStyle: 'float',
       stageStyle: 'soft',
       accentColor: 'ink',
-      documentIconStyle: 'capsule',
       topbarColorLight: null,
       topbarColorDark: null,
       railColorLight: null,
@@ -147,12 +142,10 @@ describe('全局定稿外观', () => {
       theme: 'orange',
       shape: 'pill',
       overlayMaterial: 'glass',
-      buttonStyle: 'paper',
       dialogStyle: 'float',
       inspectorStyle: 'float',
       stageStyle: 'soft',
       accentColor: 'ink',
-      documentIconStyle: 'capsule',
       topbarColorLight: null,
       topbarColorDark: null,
       railColorLight: null,

@@ -32,6 +32,79 @@ async function fixture(run) {
 }
 export const pdfMaterialsTests = [
   {
+    name: 'PDF 批注活动原子推进资料修改时间，幂等与失败保持日期不变',
+    run: () =>
+      fixture(async ({ pdf, input, store, root, context }) => {
+        const note = await pdf.importPdf(input, Readable.from([syntheticPdf()]));
+        const other = await pdf.importPdf({ ...input, operationId: 'activity-other' }, Readable.from([syntheticPdf()]));
+        const createdAt = store.state.notes.find(item => item.id === note.id).createdAt;
+        const date = () => store.state.notes.find(item => item.id === note.id).updatedAt;
+        // 即使资料时间领先本机时钟，每次真实变更仍须严格推进。
+        store.runTransaction(() => {
+          store.state.notes.find(item => item.id === note.id).updatedAt = new Date(Date.now() + 60000).toISOString();
+          store.flush();
+        });
+        const initial = date();
+        const create = {
+          operationId: 'activity-create',
+          expectedRevision: 0,
+          type: 'region',
+          segments: [{ pageIndex: 0, rect: [10, 10, 30, 30] }]
+        };
+        const mark = await pdf.mutate(note.id, 'activity', create);
+        assert.ok(date() > initial);
+        assert.equal(date(), mark.updatedAt);
+        assert.equal((await pdf.mutate(note.id, 'activity', create)).updatedAt, mark.updatedAt);
+        assert.equal(date(), mark.updatedAt);
+        await assert.rejects(pdf.mutate(note.id, 'activity', { ...create, operationId: 'stale' }), {
+          code: 'PDF_ANNOTATION_CONFLICT'
+        });
+        assert.equal(date(), mark.updatedAt);
+        const edit = await pdf.mutate(note.id, 'activity', {
+          operationId: 'activity-edit',
+          expectedRevision: 1,
+          comment: '修改批注'
+        });
+        assert.ok(date() > mark.updatedAt);
+        assert.equal(date(), edit.updatedAt);
+        const remove = { operationId: 'activity-remove', expectedRevision: 2 };
+        const deleted = await pdf.mutate(note.id, 'activity', remove, true);
+        assert.ok(date() > edit.updatedAt);
+        assert.equal(date(), deleted.updatedAt);
+        await pdf.mutate(note.id, 'activity', remove, true);
+        assert.equal(date(), deleted.updatedAt);
+        const flush = store.flush;
+        store.flush = () => {
+          throw new Error('模拟批注事务写入失败');
+        };
+        try {
+          await assert.rejects(
+            pdf.mutate(note.id, 'rollback-activity', { ...create, operationId: 'activity-rollback' }),
+            /事务写入失败/
+          );
+        } finally {
+          store.flush = flush;
+        }
+        assert.equal(date(), deleted.updatedAt);
+        assert.equal(
+          store.state.pdfAnnotations.some(item => item.id === 'rollback-activity'),
+          false
+        );
+        assert.equal(store.state.notes.find(item => item.id === note.id).createdAt, createdAt);
+        const ordered = await context.modules.knowledge.repositories.noteRepository.list({
+          spaceId: input.spaceId,
+          sortBy: 'updatedAt',
+          order: 'desc'
+        });
+        assert.deepEqual(
+          ordered.map(item => item.id),
+          [note.id, other.id]
+        );
+        const reopened = createFileDataStore(path.join(root, 'data.json'));
+        assert.equal(reopened.state.notes.find(item => item.id === note.id).updatedAt, deleted.updatedAt);
+      })
+  },
+  {
     name: 'PDF 空间迁移包含标注与墓碑：预览失效、同事务回滚与重启一致性',
     run: () =>
       fixture(async ({ pdf, input, context, store, root }) => {
