@@ -65,7 +65,7 @@ it('提及的两条知识明确显示为知识点，不显示为两个概念', (
   setup([item('测试知识', '测试正文'), item('勾股定理', '直角三角形关系')], true);
   expect(screen.getByRole('heading', { name: '关联知识点' })).toBeVisible();
   const group = screen.getByRole('region', { name: '概念类知识点' });
-  expect(within(group).getByRole('button', { name: '概念类知识点 2' })).toBeVisible();
+  expect(within(group).getByRole('button', { name: /^概念类知识点\s*2$/ })).toBeVisible();
   expect(within(group).getByRole('button', { name: '测试知识' })).toBeVisible();
   expect(within(group).getByRole('button', { name: '勾股定理' })).toBeVisible();
   expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('基础学科');
@@ -82,9 +82,11 @@ it('最早主体定义直接展示，其他定义默认收起，保留打开和�
   expect(definition).toHaveTextContent('研究数量与结构的学科。');
   expect(within(definition).queryByText('另一种数学解释')).not.toBeInTheDocument();
   expect(screen.queryByRole('region', { name: '概念类知识点' })).not.toBeInTheDocument();
-  await user.click(within(definition).getByRole('button', { name: '查看定义知识：最早定义' }));
+  const openDefinition = within(definition).getByRole('button', { name: '查看定义知识：最早定义' });
+  expect(openDefinition).toHaveAccessibleDescription('研究数量与结构的学科。');
+  await user.click(openDefinition);
   expect(onOpenItem).toHaveBeenCalledWith('最早定义');
-  await user.click(within(definition).getByRole('button', { name: '其他定义 1' }));
+  await user.click(within(definition).getByRole('button', { name: /^其他定义\s*1$/ }));
   expect(within(definition).getByText('另一种数学解释')).toBeVisible();
   await user.click(within(definition).getByRole('button', { name: '挂靠操作：最早定义' }));
   await user.click(screen.getByRole('menuitem', { name: '改为提及' }));
