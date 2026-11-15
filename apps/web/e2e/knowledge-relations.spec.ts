@@ -20,7 +20,7 @@ function capturePageErrors(page: Page) {
   return diagnostics;
 }
 
-test('真实 SQLite 闭环：条目投影确认、编辑关系、真实图、刷新和连带删除', async ({ page }) => {
+test('真实 SQLite 闭环：条目投影确认、编辑关系、真实图、刷新和连带删除', async ({ page }, info) => {
   test.setTimeout(90000);
   page.setDefaultTimeout(10000);
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-relations-browser-'));
@@ -67,6 +67,27 @@ test('真实 SQLite 闭环：条目投影确认、编辑关系、真实图、刷
     }
     const snapshot = async (): Promise<ConceptState> =>
       (await (await page.request.get(`${runtime.origin}/api/knowledge/concepts`)).json()).data;
+    for (const command of [
+      {
+        type: 'createConcept',
+        id: 'muted-extra',
+        name: '不关注的合成概念',
+        operationId: 'create-muted',
+        expectedRevision: 0
+      },
+      {
+        type: 'updateConcept',
+        id: 'muted-extra',
+        patch: { focus: 'muted' },
+        operationId: 'mute-extra',
+        expectedRevision: 1
+      }
+    ]) {
+      const response = await page.request.post(`${runtime.origin}/api/knowledge/concepts/commands`, {
+        data: { command }
+      });
+      expect(response.ok(), await response.text()).toBeTruthy();
+    }
     diagnostics.phase = '读取概念详情与投影';
     await page.goto(`${runtime.origin}/#/knowledge/concepts?concept=matrix`);
     await expect(page.getByRole('region', { name: '定义', exact: true })).toContainText('矩阵是张量的一种。');
@@ -78,8 +99,22 @@ test('真实 SQLite 闭环：条目投影确认、编辑关系、真实图、刷
     const graph = page.getByRole('main', { name: '概念图工作区' });
     await expect(graph.getByRole('status')).toContainText('0 条正式关系 · 1 条投影候选');
     await expect(graph.locator('canvas').first()).toBeVisible();
+    await graph.getByRole('checkbox', { name: '显示不关注概念' }).check();
+    await expect(page).toHaveURL(/muted=1/);
+    await expect(graph.getByRole('status')).toContainText('3 个概念');
+    await graph.getByRole('checkbox', { name: '显示不关注概念' }).uncheck();
+    await expect(graph.getByRole('status')).toContainText('2 个概念');
+    await graph
+      .getByRole('region', { name: '概念与关系的可访问列表' })
+      .getByRole('button', { name: /条目投影/ })
+      .click();
+    await expect(page).toHaveURL(/edge=projection/);
+    await expect(graph.getByRole('region', { name: '所选关系' })).toContainText('尚未保存');
+    await graph.locator('[data-renderer-state="ready"]').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath('real-graph-projection.png'), animations: 'disabled' });
+    expect((await snapshot()).relations).toHaveLength(0);
     diagnostics.phase = '从概念图返回详情';
-    await graph.getByRole('button', { name: '打开概念详情与关系' }).click();
+    await graph.getByRole('button', { name: '前往概念详情确认候选' }).click();
     diagnostics.phase = '打开投影确认弹窗并选择类型';
     await section.getByRole('button', { name: '选择类型并确认' }).click();
     let dialog = page.getByRole('dialog', { name: '确认条目投影的关系类型' });
@@ -106,11 +141,24 @@ test('真实 SQLite 闭环：条目投影确认、编辑关系、真实图、刷
     diagnostics.phase = '打开正式关系图并刷新';
     await page.getByRole('button', { name: '在概念图中查看' }).click();
     await expect(graph.getByRole('status')).toContainText('1 条正式关系 · 0 条投影候选');
+    await graph
+      .getByRole('region', { name: '概念与关系的可访问列表' })
+      .getByRole('button', { name: /合成矩阵.*相关/ })
+      .click();
+    await expect(page).toHaveURL(/edge=relation/);
+    await expect(graph.getByRole('region', { name: '所选关系' })).toContainText('相关');
+    await graph.locator('[data-renderer-state="ready"]').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath('real-graph-confirmed-relation.png'), animations: 'disabled' });
+    await graph.getByRole('button', { name: '查看依据知识点' }).click();
+    await expect(page.getByRole('article', { name: '知识详情' })).toContainText('矩阵是张量的一种');
+    await page.goBack();
+    await expect(page).toHaveURL(/edge=relation/);
+    await expect(graph.getByRole('region', { name: '所选关系' })).toContainText('相关');
     await page.reload();
     await expect(graph.getByRole('status')).toContainText('1 条正式关系 · 0 条投影候选');
-    await expect(graph.getByRole('region', { name: '所选概念' })).toContainText('未评估');
+    await expect(graph.getByRole('region', { name: '所选关系' })).toContainText('相关');
     diagnostics.phase = '返回详情并打开移出确认';
-    await graph.getByRole('button', { name: '打开概念详情与关系' }).click();
+    await graph.getByRole('button', { name: '前往概念详情管理关系' }).click();
     await page.getByRole('button', { name: '挂靠操作：合成关系依据' }).click();
     await page.getByRole('menuitem', { name: '移出', exact: true }).click();
     dialog = page.getByRole('dialog', { name: '移出知识点？' });
