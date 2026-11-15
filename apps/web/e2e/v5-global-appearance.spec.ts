@@ -131,12 +131,22 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
     await expect(shell).not.toHaveAttribute('data-ni-deco');
     await expect(shell).toHaveAttribute('data-ni-theme', 'orange');
     await expect(page.getByRole('button', { name: '切换浅色模式' })).toBeVisible();
-    await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
+    await expect(shell).toHaveAttribute('data-stage-style', 'soft');
+    await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(24, 25, 29)');
     const radius = await shell.evaluate(element =>
       getComputedStyle(element).getPropertyValue('--radius-control').trim()
     );
     expect(radius).toBe('6px');
   }
+  await page.getByRole('button', { name: '经典平面', exact: true }).click();
+  await expect(shell).toHaveAttribute('data-stage-style', 'flat');
+  await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
+  await page.reload();
+  await expect(shell).toHaveAttribute('data-stage-style', 'flat');
+  await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
+  await page.getByRole('button', { name: '纸面柔影', exact: true }).click();
+  await expect(shell).toHaveAttribute('data-stage-style', 'soft');
+  await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(24, 25, 29)');
   await page.getByRole('button', { name: '暖橙', exact: true }).click();
   await expect(shell).toHaveAttribute('data-accent-color', 'orange');
   expect(await shell.evaluate(element => getComputedStyle(element).getPropertyValue('--brand-base-dark').trim())).toBe(
@@ -177,7 +187,7 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
   await expect(create).toBeFocused();
   await page.getByRole('button', { name: '切换浅色模式' }).click();
   await expect(shell).toHaveAttribute('data-ni-mode', 'light');
-  await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(254, 254, 254)');
+  await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(251, 252, 253)');
   await page.screenshot({ path: info.outputPath('notes-light.png'), animations: 'disabled' });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole('button', { name: '切换深色模式' })).toBeVisible();

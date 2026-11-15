@@ -188,7 +188,13 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   const textMark = await page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]').boundingBox();
   assert(textMark);
   await page.mouse.click(textMark.x + textMark.width / 2, textMark.y + textMark.height / 2);
-  await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
+  const actions = page.getByRole('dialog', { name: 'PDF 标注操作' });
+  const picker = page.getByRole('menu', { name: '选择标注' });
+  await expect(actions.or(picker)).toBeVisible();
+  if (await picker.isVisible()) {
+    await picker.getByRole('menuitem', { name: /高亮：知境阅读与标注/ }).click();
+  }
+  await expect(actions).toBeVisible();
   await app.evaluate(async ({ clipboard, ClipboardItem }) => {
     globalThis.pdfTestClipboard = await Promise.all(
       (await clipboard.read()).map(
