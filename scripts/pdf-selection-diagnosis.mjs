@@ -19,7 +19,7 @@ const reference = {
 };
 const output = path.resolve('test-results/pdf-selection-diagnosis', process.platform);
 fs.mkdirSync(output, { recursive: true });
-const report = { sourceUrl, sourceHash, platform: process.platform, reference, cases: [] };
+const report = { sourceUrl, sourceHash, platform: process.platform, arch: process.arch, reference, cases: [] };
 const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-selection-probe-'));
 let runtime, browser;
 try {
@@ -33,6 +33,7 @@ try {
     syncOptions: { autoSync: false }
   });
   browser = await chromium.launch();
+  report.browser = browser.version();
   const seed = await browser.newPage();
   await seed.goto(runtime.launchUrl);
   const api = async (url, method = 'GET', data) => {
@@ -54,7 +55,8 @@ try {
     { id: 'zh-baseline', lang: 'zh-CN', inheritFix: false, metricFont: false },
     { id: 'en-baseline', lang: 'en', inheritFix: false, metricFont: false },
     { id: 'zh-inherit-fix', lang: 'zh-CN', inheritFix: true, metricFont: false },
-    { id: 'zh-metric-font', lang: 'zh-CN', inheritFix: false, metricFont: true }
+    { id: 'zh-metric-font', lang: 'zh-CN', inheritFix: false, metricFont: true },
+    { id: 'zh-inherit-and-metric', lang: 'zh-CN', inheritFix: true, metricFont: true }
   ];
   for (const mode of modes) {
     const context = await browser.newContext({
@@ -106,7 +108,14 @@ try {
         document.documentElement.lang = mode.lang;
         const diagnostics = window.__knowraPdfSelectionDiagnostics;
         if (mode.metricFont) {
-          diagnostics.pdfjs.TextLayer.fontFamilyMap.set('serif', '"Times New Roman", Times, "Liberation Serif", serif');
+          // 原 PDF 的 Nimbus Roman 字体仅标了 Symbolic，实际被分配到 sans-serif。
+          // 此项只验证该行的字体度量，不作为整份文档的正式字体替换方案。
+          for (const family of ['serif', 'sans-serif']) {
+            diagnostics.pdfjs.TextLayer.fontFamilyMap.set(
+              family,
+              '"Times New Roman", Times, "Liberation Serif", serif'
+            );
+          }
         }
         const setDocument = diagnostics.PDFViewer.prototype.setDocument;
         diagnostics.PDFViewer.prototype.setDocument = function (pdf) {
@@ -196,6 +205,7 @@ try {
         return {
           selectedText: selection.toString(),
           pageLang: document.documentElement.lang,
+          browserLang: navigator.language,
           scale: paper.width / reference.pageWidth,
           selection: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
           manualSelection: { left: expected.left, right: expected.right },
