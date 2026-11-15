@@ -65,6 +65,7 @@ test('PDF 新增、修改、删除批注后，无需刷新页面即可更新索�
     assert.equal(latest.createdAt, pdf.createdAt);
     previousDate = latest.updatedAt;
     await page.getByRole('button', { name: '返回资料库', exact: true }).click();
+    await page.getByRole('button', { name: '列表视图', exact: true }).click();
     const formatted = await page.evaluate(
       value =>
         new Intl.DateTimeFormat('zh-CN', {
@@ -109,6 +110,7 @@ test('PDF 新增、修改、删除批注后，无需刷新页面即可更新索�
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   await verifyIndex();
   await open();
+  await inspector.getByRole('button', { name: /定位标注/ }).click();
   await inspector.getByRole('button', { name: '删除标注', exact: true }).click();
   await expect(page.locator('[data-pdf-annotation-id]')).toHaveCount(0);
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
