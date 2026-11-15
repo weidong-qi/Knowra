@@ -78,7 +78,7 @@ const mark = (type: PdfAnnotation['type'], id = type) =>
     segments: [{ pageIndex: 0, rect: [0, 0, 10, 10] }]
   }) as PdfAnnotation;
 const dialog = (type: PdfAnnotation['type']) =>
-  screen.queryByRole('dialog', { name: type === 'note' ? '编辑 PDF 批注' : 'PDF 标注操作', exact: true });
+  screen.queryByRole('dialog', { name: type === 'note' ? '编辑 PDF 批注' : 'PDF 标注操作' });
 const card = () => screen.getByRole('complementary', { name: 'PDF 检查器' }).querySelector('section[data-selected]');
 
 beforeEach(() => {
@@ -169,7 +169,7 @@ it('目录展开时先切换到标注并定位，即使目标已经选中也不�
   const { page } = await mount([item]);
   const element = hit(page, item);
   click(element);
-  fireEvent.click(screen.getByRole('button', { name: '目录', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: '目录' }));
   click(element);
   expect(screen.getByRole('tab', { name: '标注 1' })).toHaveAttribute('aria-selected', 'true');
   expect(dialog('highlight')).not.toBeInTheDocument();
