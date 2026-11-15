@@ -93,6 +93,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+  Reflect.deleteProperty(document, 'elementFromPoint');
   vi.unstubAllGlobals();
 });
 
@@ -125,18 +126,46 @@ function click(element: Element, x = 20) {
   fireEvent.pointerDown(element, { button: 0, clientX: x, clientY: 20 });
   fireEvent.pointerUp(element, { button: 0, clientX: x, clientY: 20 });
 }
+function hover(element: Element, x = 20) {
+  Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => element });
+  fireEvent.pointerMove(element, { clientX: x, clientY: 20, buttons: 0 });
+}
 
 it.each(types)('标注栏展开时 %s 首次只定位，再次点击打开对应浮层', async type => {
   const item = mark(type);
   const { page } = await mount([item]);
   const element = hit(page, item);
+  hover(element);
+  await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent(item.comment));
   click(element);
   expect(card()).toHaveTextContent(type === 'region' ? '区域标注' : item.id);
   expect(mocks.scrollCard).toHaveBeenCalledWith({ block: 'nearest' });
   expect(dialog(type)).not.toBeInTheDocument();
+  hover(element);
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   click(element);
   expect(dialog(type)).toBeInTheDocument();
   if (type === 'note') expect(mocks.begin).toHaveBeenCalledTimes(2);
+});
+
+it('侧栏选中任意标注立即关闭已有预览，清除选择后恢复悬停', async () => {
+  const first = mark('highlight'),
+    second = mark('note');
+  const { page } = await mount([first, second]);
+  const firstHit = hit(page, first),
+    secondHit = hit(page, second, 60);
+  hover(firstHit);
+  await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent(first.comment));
+  // 不派发 pointerdown，确认仅选中状态变化就能关闭已经显示的预览。
+  fireEvent.click(screen.getByRole('button', { name: /定位标注.*note/ }));
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  hover(firstHit);
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  hover(secondHit, 70);
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  click(page, 100);
+  hover(secondHit, 70);
+  await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent(second.comment));
 });
 
 it.each(types)('标注栏收起时 %s 保持一次点击打开', async type => {

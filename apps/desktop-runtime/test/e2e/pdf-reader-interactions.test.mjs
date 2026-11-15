@@ -121,7 +121,12 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   assert.equal(marks[0].segments.length, 1, JSON.stringify(marks[0].segments));
   const mark = page.locator('[data-knowra-pdf-overlay] [data-type="highlight"]');
   await expect(mark).toHaveCount(1);
+  const reader = page.getByLabel('PDF 页面', { exact: true });
   const box = await mark.boundingBox();
+  // 新建标注仍被选中时不预览，取消选择后才恢复悬停。
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await reader.press('Escape');
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.getByRole('tooltip')).toContainText('悬停即可查看的批注');
   await page
@@ -130,7 +135,6 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   // 跨过标注与 portal 预览之间的空隙，悬停后滚动到底，不带动底下的 PDF。
   const tooltip = page.getByRole('tooltip');
   const previewBox = await tooltip.boundingBox();
-  const reader = page.getByLabel('PDF 页面', { exact: true });
   const readerScroll = await reader.evaluate(el => el.scrollTop);
   await page.mouse.move(previewBox.x + previewBox.width / 2, previewBox.y + 30, { steps: 8 });
   await expect.poll(() => tooltip.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
@@ -241,6 +245,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     .toBe('pitfall');
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   const pinkMark = await legacyMark.boundingBox();
+  await reader.press('Escape');
   await page.mouse.move(pinkMark.x + pinkMark.width / 2, pinkMark.y + pinkMark.height / 2);
   await expect(page.getByRole('tooltip')).toHaveAttribute('data-kind', 'pitfall');
   const pinkBorder = await page.getByRole('tooltip').evaluate(el => getComputedStyle(el).borderTopColor);
@@ -274,6 +279,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   const underlineHit = page.locator('[data-pdf-hit-area]');
   const lineBox = await underlineHit.boundingBox();
+  await reader.press('Escape');
   await page.mouse.move(lineBox.x + lineBox.width / 2, lineBox.y + lineBox.height / 2);
   await expect(page.getByRole('tooltip')).toHaveAttribute('data-kind', 'question');
   assert.notEqual(await page.getByRole('tooltip').evaluate(el => getComputedStyle(el).borderTopColor), pinkBorder);

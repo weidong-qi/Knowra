@@ -115,6 +115,8 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
     timeout: 30000
   });
   const savedRegion = page.locator('[data-knowra-pdf-overlay] [data-type="region"]');
+  // 侧栏定位已选中该标注，取消选择后才能预览批注。
+  await page.getByLabel('PDF 页面', { exact: true }).press('Escape');
   // 定位后的延迟布局可能改变阅读位置，用当前可见标注的坐标悬停。
   await expect
     .poll(async () => {

@@ -814,6 +814,7 @@ export function PdfReaderView({
             items={items}
             enabled={
               tool === 'text' &&
+              !items.some(item => item.id === selected) &&
               !pending &&
               !dictionary &&
               !translation &&

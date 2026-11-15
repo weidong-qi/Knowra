@@ -82,6 +82,11 @@ test('PDF 标注按侧栏状态先定位再打开，便签、目录和筛选保�
     assert(inReader, `${id} 的点击位置必须落在 PDF 阅读区内：${JSON.stringify(point)}`);
     await page.mouse.click(point.x, point.y);
   };
+  const hover = async id => {
+    const box = await overlay(id).boundingBox();
+    assert(box);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  };
   const blank = async () => {
     const box = await page.locator('.canvasWrapper').boundingBox();
     await page.mouse.click(box.x + box.width * 0.9, box.y + box.height * 0.4);
@@ -93,11 +98,16 @@ test('PDF 标注按侧栏状态先定位再打开，便签、目录和筛选保�
   for (const item of fixtures) {
     await blank();
     const top = await reader.evaluate(element => element.scrollTop);
+    await hover(item.id);
+    await expect(page.getByRole('tooltip')).toContainText(`${item.id} 批注`);
     await click(item.id);
     await noDialog();
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
     await expect(overlay(item.id)).toHaveAttribute('data-selected', '');
     await expect(inspector.getByRole('textbox', { name: '评论', exact: true })).toHaveValue(`${item.id} 批注`);
     assert.equal(await reader.evaluate(element => element.scrollTop), top);
+    await hover(fixtures.find(other => other.id !== item.id).id);
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
     await click(item.id);
     await expect(item.type === 'note' ? editor : actions).toBeVisible();
     await page.keyboard.press('Escape');
@@ -137,5 +147,15 @@ test('PDF 标注按侧栏状态先定位再打开，便签、目录和筛选保�
   await noDialog();
   await expect(inspector.getByLabel('当前选中标注')).toContainText('highlight 原文');
   await expect(search).toHaveValue('不匹配');
+  await blank();
+  await hover('highlight');
+  await expect(page.getByRole('tooltip')).toContainText('highlight 批注');
+  // 删除当前标注后也应恢复预览，不能被残留的选中 ID 一直禁用。
+  await click('highlight');
+  await inspector.getByLabel('当前选中标注').getByRole('button', { name: '删除标注', exact: true }).click();
+  await expect(overlay('highlight')).toHaveCount(0);
+  await hover('underline');
+  await expect(page.getByRole('tooltip')).toContainText('underline 批注');
+  await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   assert.deepEqual(errors, []);
 });
