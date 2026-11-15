@@ -3,8 +3,8 @@ import { notesIndexAppearanceProps } from '../../notes/NotesIndexAppearance';
 import { useNotesIndexAppearance } from '../../notes/notesIndexAppearanceModel';
 import indexStyles from '../KnowledgeIndex.module.css';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Button, Checkbox, PressableButton, SearchBox } from '../../../components/ui';
-import { KnowledgeIcon, SearchIcon } from '../../../components/icons/knowra';
+import { Button, Checkbox, IconButton, PressableButton, SearchBox } from '../../../components/ui';
+import { ChevronLeftIcon, KnowledgeIcon, SearchIcon } from '../../../components/icons/knowra';
 import { WorkspacePanel, WorkspacePanelBody, WorkspacePanelFooter } from '../../../components/workspace/WorkspacePanel';
 import { PathTrail } from '../../../shell/PathTrail';
 import { useNavigate } from '../../../app/router';
@@ -206,12 +206,14 @@ export function ConceptGraphView({
                 回到示例
               </Button>
             ) : null}
-            <Button size="workspace" onPress={() => navigate('/knowledge/graph')}>
-              返回真实概念图
-            </Button>
-            <Button size="workspace" onPress={() => navigate('/knowledge')}>
-              返回知识列表
-            </Button>
+            <IconButton
+              size={28}
+              aria-label="返回真实概念图"
+              title="返回真实概念图"
+              onPress={() => navigate('/knowledge/graph')}
+            >
+              <ChevronLeftIcon size={16} />
+            </IconButton>
             <input
               ref={fileInput}
               type="file"

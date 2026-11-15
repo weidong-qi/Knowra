@@ -99,10 +99,12 @@ test('真实 SQLite 闭环：条目投影确认、编辑关系、真实图、刷
     const graph = page.getByRole('main', { name: '概念图工作区' });
     await expect(graph.getByRole('status')).toContainText('0 条正式关系 · 1 条投影候选');
     await expect(graph.locator('canvas').first()).toBeVisible();
-    await graph.getByRole('checkbox', { name: '显示不关注概念' }).check();
+    await graph.getByText('显示不关注概念', { exact: true }).click();
+    await expect(graph.getByRole('checkbox', { name: '显示不关注概念' })).toBeChecked();
     await expect(page).toHaveURL(/muted=1/);
     await expect(graph.getByRole('status')).toContainText('3 个概念');
-    await graph.getByRole('checkbox', { name: '显示不关注概念' }).uncheck();
+    await graph.getByText('显示不关注概念', { exact: true }).click();
+    await expect(graph.getByRole('checkbox', { name: '显示不关注概念' })).not.toBeChecked();
     await expect(graph.getByRole('status')).toContainText('2 个概念');
     await graph
       .getByRole('region', { name: '概念与关系的可访问列表' })

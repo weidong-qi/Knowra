@@ -175,6 +175,7 @@ for (const width of [1440, 390])
         await expect(page.getByRole('dialog', { name: '增量确认演示（实验）' })).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(page.getByRole('heading', { name: '概念图（原型）', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: '返回真实概念图', exact: true })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
         expect(errors).toEqual([]);
       } catch (error) {

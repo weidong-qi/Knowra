@@ -87,6 +87,14 @@ export function createGraphRenderer(
   cy.on('tap', 'node', event => onSelect(event.target.data('conceptId')));
   cy.on('tap', 'edge', event => onEdge(event.target.id()));
   let topology = '';
+  const fit = () => {
+    cy.fit(undefined, 40);
+    // 单节点和小图不自动放到最大倍数；详情栏改变画布宽度后重新居中。
+    if (cy.zoom() > 1.25) {
+      cy.zoom(1.25);
+      cy.center();
+    }
+  };
   return {
     update(graph) {
       cy.style(themeStyles(container));
@@ -114,9 +122,10 @@ export function createGraphRenderer(
         // 不保留常驻力模拟；大图使用线性网格布局，标签/主题变化不重排。
         cy.layout(
           graph.nodes.length > 250
-            ? { name: 'grid', padding: 40 }
-            : { name: 'cose', animate: false, randomize: true, numIter: 180, padding: 40 }
+            ? { name: 'grid', fit: false, padding: 40 }
+            : { name: 'cose', fit: false, animate: false, randomize: true, numIter: 180, padding: 40 }
         ).run();
+        fit();
       }
     },
     select(id, edgeId = null) {
@@ -125,7 +134,7 @@ export function createGraphRenderer(
       else if (id) cy.getElementById(`concept:${id}`).select();
     },
     fit() {
-      cy.fit(undefined, 40);
+      fit();
     },
     zoom(factor) {
       cy.zoom({
@@ -135,6 +144,7 @@ export function createGraphRenderer(
     },
     resize() {
       cy.resize();
+      fit();
     },
     destroy() {
       cy.destroy();
