@@ -84,6 +84,13 @@ test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层�
     await menu.getByRole('menuitem', { name: new RegExp(label) }).click();
     await expect(menu).toHaveCount(0);
   };
+  const locateThenOpen = async (label, count = 6) => {
+    await pick(label);
+    await expect(actions).toHaveCount(0);
+    await expect(editor).toHaveCount(0);
+    await open(count);
+    await pick(label);
+  };
   const selected = id => page.locator(`[data-pdf-annotation-id="${id}"][data-selected]`).first();
 
   // 空批注区域和高亮不能挡住文字批注；空便签也不能挡住底层便签的正文。
@@ -104,7 +111,7 @@ test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层�
     fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
     await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-overlap-picker.png') });
   }
-  await pick('下划线：下划线原文');
+  await locateThenOpen('下划线：下划线原文');
   await expect(actions).toBeVisible();
   await expect(selected('underline')).toBeVisible();
   await actions.getByRole('button', { name: '改为重点', exact: true }).click();
@@ -113,7 +120,7 @@ test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层�
   assert.equal((await marks()).find(item => item.id === 'lower-highlight').kind, 'question');
 
   await open();
-  await pick('高亮：底层文字');
+  await locateThenOpen('高亮：底层文字');
   await expect(selected('lower-highlight')).toBeVisible();
   await expect(inspector.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('lower-highlight 的批注');
   await actions.getByRole('button', { name: '编辑批注', exact: true }).click();
@@ -123,7 +130,7 @@ test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层�
   assert.equal((await marks()).find(item => item.id === 'lower-highlight').comment, '修改底层文字批注');
 
   await open();
-  await pick('区域：区域标注');
+  await locateThenOpen('区域：区域标注');
   await expect(selected('region')).toBeVisible();
   await actions.getByRole('button', { name: '添加批注', exact: true }).click();
   await editor.getByRole('textbox', { name: '批注内容' }).fill('修改区域批注');
@@ -132,7 +139,7 @@ test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层�
   assert.equal((await marks()).find(item => item.id === 'region').comment, '修改区域批注');
 
   await open();
-  await pick('便签：底层便签');
+  await locateThenOpen('便签：底层便签');
   await expect(editor).toBeVisible();
   await expect(selected('lower-note')).toBeVisible();
   await editor.getByRole('textbox', { name: '批注内容' }).fill('修改底层便签');
@@ -141,6 +148,10 @@ test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层�
   assert.equal((await marks()).find(item => item.id === 'lower-note').comment, '修改底层便签');
 
   // 同一位置用键盘选择上层文字，再删除；底层文字及其他标注均保留。
+  await open();
+  await menu.getByRole('menuitem', { name: /高亮：上层文字/ }).focus();
+  await page.keyboard.press('Enter');
+  await expect(actions).toHaveCount(0);
   await open();
   await menu.getByRole('menuitem', { name: /高亮：上层文字/ }).focus();
   await page.keyboard.press('Enter');
@@ -196,7 +207,7 @@ test('PDF 重叠标注：悬停跳过空批注，四种类型均可选择底层�
   await page.getByRole('button', { name: '区域框选', exact: true }).click();
   await expect(menu).toHaveCount(0);
   await open(4);
-  await pick('高亮：底层文字');
+  await locateThenOpen('高亮：底层文字', 4);
   await expect(actions).toBeVisible();
   await page.getByRole('button', { name: '文字选择', exact: true }).click();
   // 旋转回原方向后，从重叠文字处拖选并双击查词，不弹重叠菜单。

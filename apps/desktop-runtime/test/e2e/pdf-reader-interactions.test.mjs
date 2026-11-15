@@ -219,8 +219,13 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await page.getByRole('button', { name: '适合宽度', exact: true }).click();
   await legacyMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
   const clickMark = async locator => {
+    const wasSelected = (await locator.getAttribute('data-selected')) !== null;
     const rect = await locator.boundingBox();
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    if (!wasSelected) {
+      await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toHaveCount(0);
+      await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    }
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toBeVisible();
   };
   await clickMark(legacyMark);
@@ -324,10 +329,15 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     await expect(picker.getByRole('menuitem')).toHaveCount(16);
     await picker.getByRole('menuitem', { name: /高亮：Scroll mark 14$/ }).click();
     await expect(picker).toHaveCount(0);
-    await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toBeVisible();
     await expect(finalMark).toHaveAttribute('data-selected', '');
     await expect(inspector.getByRole('button', { name: /定位标注.*Scroll mark 14/ })).toBeInViewport();
     assert.equal(await reader.evaluate(el => el.scrollTop), beforeClick);
+    if (attempt === 0) {
+      await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toHaveCount(0);
+      await page.mouse.click(point.x, point.y);
+      await picker.getByRole('menuitem', { name: /高亮：Scroll mark 14$/ }).click();
+    }
+    await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '改为易错', exact: true }).click();
   }
   assert.deepEqual(errors, []);

@@ -136,11 +136,17 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   const region = (await marks()).find(mark => mark.type === 'region');
   assert(region);
   const clickRegion = async () => {
-    const b = await page.locator(`[data-pdf-annotation-id="${region.id}"]`).boundingBox();
+    const mark = page.locator(`[data-pdf-annotation-id="${region.id}"]`);
+    const wasSelected = (await mark.getAttribute('data-selected')) !== null;
+    const b = await mark.boundingBox();
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+    if (!wasSelected) {
+      await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
+      await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+    }
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
   };
-  // 保持区域工具时，单击编辑已有区域，拖动仍创建新区域。
+  // 新建区域已选中，可直接打开；换目标时先定位，拖动仍创建新区域。
   await clickRegion();
   await page.getByRole('button', { name: '改为易错', exact: true }).click();
   await save();

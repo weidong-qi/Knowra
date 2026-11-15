@@ -156,8 +156,13 @@ test('PDF 紧密行距：新旧高亮不重叠、下划线贴合原行、点击�
   );
   const hit = page.locator('[data-pdf-hit-area]').first();
   const clickMark = async () => {
+    const wasSelected = (await lines.first().getAttribute('data-selected')) !== null;
     const box = await hit.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    if (!wasSelected) {
+      await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    }
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
     await expect(lines.first()).toHaveAttribute('data-selected', '');
     assert.equal(await lines.first().evaluate(el => getComputedStyle(el).stroke), 'none');

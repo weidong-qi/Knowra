@@ -65,9 +65,20 @@ export function PdfReaderView({
   const [selected, setSelected] = useState<string | null>(null);
   const [selectionRevision, setSelectionRevision] = useState(0);
   const [annotationAction, setAnnotationAction] = useState<{ id: string; x: number; y: number } | null>(null);
-  const [annotationPicker, setAnnotationPicker] = useState<{ ids: string[]; x: number; y: number } | null>(null);
+  const [annotationPicker, setAnnotationPicker] = useState<{
+    ids: string[];
+    x: number;
+    y: number;
+    selectedBefore: string | null;
+  } | null>(null);
   const [commentEditor, setCommentEditor] = useState<{ id: string; x: number; y: number } | null>(null);
-  const annotationPress = useRef<{ ids: string[]; pointerId: number; x: number; y: number } | null>(null);
+  const annotationPress = useRef<{
+    ids: string[];
+    pointerId: number;
+    x: number;
+    y: number;
+    selectedBefore: string | null;
+  } | null>(null);
   const skipTextMouseUp = useRef(false);
   const scrollPosition = useRef({ top: 0, left: 0 });
   const [pending, setPending] = useState<{ value: PdfSelection; anchor: PdfBarAnchor } | null>(null);
@@ -299,21 +310,26 @@ export function PdfReaderView({
     setSelectionRevision(value => value + 1);
     if (panel) setPanelTab('marks');
   }
-  function openAnnotation(id: string, point: { x: number; y: number }) {
+  function activateAnnotation(id: string, point: { x: number; y: number }, selectedBefore: string | null) {
     const item = session.values().find(value => value.id === id);
     setAnnotationPicker(null);
     if (!item) return;
+    const showActions = !panel || (panelTab === 'marks' && selectedBefore === id);
     selectFromPage(id);
+    setAnnotationAction(null);
+    setCommentEditor(null);
+    if (!showActions) return;
     if (item.type === 'note') setCommentEditor({ id, ...point });
     else setAnnotationAction({ id, ...point });
   }
-  function pickAnnotation(ids: string[], point: { x: number; y: number }) {
+  function pickAnnotation(ids: string[], point: { x: number; y: number }, selectedBefore: string | null) {
     const currentIds = new Set(session.values().map(item => item.id));
     const candidates = ids.filter(id => currentIds.has(id));
-    if (candidates.length === 1) openAnnotation(candidates[0], point);
+    if (candidates.length === 1) activateAnnotation(candidates[0], point, selectedBefore);
     else if (candidates.length > 1) {
-      setSelected(null);
-      setAnnotationPicker({ ids: candidates, ...point });
+      // 便签在按下时会先选中拖动目标；候选尚未确定时恢复本次点击前的选择。
+      setSelected(selectedBefore);
+      setAnnotationPicker({ ids: candidates, ...point, selectedBefore });
     }
   }
   function createMark(value: PdfSelection, kind: string, comment = '') {
@@ -405,7 +421,13 @@ export function PdfReaderView({
         iconItem ||
         (tool === 'region' && items.some(item => ids.includes(item.id) && item.type === 'region')))
     ) {
-      annotationPress.current = { ids, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+      annotationPress.current = {
+        ids,
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        selectedBefore: selected
+      };
     }
     if (iconItem) {
       setPending(null);
@@ -702,7 +724,7 @@ export function PdfReaderView({
                   setGhost(null);
                   syncScrollPosition(event.currentTarget);
                   setPending(null);
-                  pickAnnotation(ids, { x: event.clientX, y: event.clientY + 12 });
+                  pickAnnotation(ids, { x: event.clientX, y: event.clientY + 12 }, press.selectedBefore);
                   return;
                 }
               }
@@ -805,7 +827,7 @@ export function PdfReaderView({
             <PdfAnnotationPicker
               items={pickerItems}
               point={annotationPicker}
-              onPick={id => openAnnotation(id, annotationPicker)}
+              onPick={id => activateAnnotation(id, annotationPicker, annotationPicker.selectedBefore)}
               onClose={() => {
                 setAnnotationPicker(null);
                 viewer.containerRef.current?.focus({ preventScroll: true });
