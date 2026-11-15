@@ -297,6 +297,7 @@ test('文档与 PDF 图标统一使用胶囊徽标，设置页不再提供切换
     route => route.fulfill({ json: { data: notes } })
   );
   await page.goto('/#/settings');
+  await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
   await expect(page.getByRole('heading', { name: '文档图标风格' })).toHaveCount(0);
   await page.goto('/#/materials');
   const document = page.locator('[data-art-kind="document"]');
@@ -325,6 +326,7 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
     })
   );
   await page.goto('/#/settings');
+  await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
   const outer = page.getByRole('heading', { name: '外栏背景', exact: true }).locator('xpath=../..');
   const topbarSetting = page.getByRole('heading', { name: '顶部栏背景', exact: true }).locator('xpath=../..');
   const railSetting = page.getByRole('heading', { name: '左侧模块栏背景', exact: true }).locator('xpath=../..');
@@ -337,6 +339,7 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
   await page.getByRole('switch', { name: '四角圆角' }).locator('xpath=ancestor::label').click();
   await page.getByRole('switch', { name: '细边线' }).locator('xpath=ancestor::label').click();
   await page.reload();
+  await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
   await expect(page.getByRole('switch', { name: '四角圆角' })).toBeChecked();
   await expect(outer.getByRole('textbox', { name: '十六进制颜色' })).toHaveValue('#cdd9e6');
   await page.goto('/#/materials');

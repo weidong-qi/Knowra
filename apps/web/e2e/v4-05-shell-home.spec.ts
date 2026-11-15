@@ -258,9 +258,9 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await expect(page).toHaveURL(/#\/settings$/);
     await expect(page.getByRole('heading', { name: '设置', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: '设置分类' })).toBeVisible();
-    const selectedCategory = page
-      .getByRole('navigation', { name: '设置分类' })
-      .getByRole('button', { name: /全部设置/ });
+    const settingsNav = page.getByRole('navigation', { name: '设置分类' });
+    await expect(settingsNav.getByRole('button', { name: /全部设置/ })).toHaveCount(0);
+    const selectedCategory = settingsNav.getByRole('button', { name: /工作区/ });
     await expect(selectedCategory).toHaveAttribute('aria-pressed', 'true');
     expect(
       await selectedCategory.evaluate(element => {
@@ -289,23 +289,23 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     expect(selectionBackground.expected.image).toBe('none');
     expect(selectionBackground.expected.color).toBe('rgb(255, 255, 255)');
     expect(selectionBackground.actual).toEqual(selectionBackground.expected);
-    await expect(page.getByText('显示 10 / 10 项设置')).toBeVisible();
+    await settingsNav.getByRole('button', { name: /模型接入/ }).click();
     await expect(page.getByRole('heading', { name: '模型接入' })).toBeVisible();
     await expect(page.getByText('尚未配置')).toBeVisible();
     await page.getByLabel('API Key').fill('synthetic-no-save');
     await expect(page.getByRole('button', { name: '保存配置' })).toBeEnabled();
     await page.getByLabel('API Key').fill('');
+    await settingsNav.getByRole('button', { name: /阅读与编辑/ }).click();
     await page.getByRole('button', { name: '大（19 像素）' }).click();
-    await page
-      .getByRole('navigation', { name: '设置分类' })
-      .getByRole('button', { name: /辅助体验/ })
-      .click();
+    await settingsNav.getByRole('button', { name: /辅助体验/ }).click();
     await page.getByRole('checkbox', { name: '减少界面动效' }).locator('xpath=ancestor::label').click();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--note-font-size')))
       .toBe('19px');
     await page.reload();
+    await settingsNav.getByRole('button', { name: /阅读与编辑/ }).click();
     await expect(page.getByRole('button', { name: '大（19 像素）' })).toHaveAttribute('aria-pressed', 'true');
+    await settingsNav.getByRole('button', { name: /辅助体验/ }).click();
     await expect(page.getByRole('checkbox', { name: '减少界面动效' })).toBeChecked();
 
     await page.setViewportSize({ width: 390, height: 843 });

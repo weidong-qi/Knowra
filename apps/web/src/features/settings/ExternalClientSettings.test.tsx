@@ -273,21 +273,20 @@ it('桌面本地运行端的设置页多一项并在“模型接入”分类里�
     />
   );
   const desktop = render(view);
-  expect(screen.getByText('显示 10 / 10 项设置')).toBeInTheDocument();
+  const nav = screen.getByRole('navigation', { name: '设置分类' });
+  expect(within(nav).queryByRole('button', { name: /全部设置/ })).not.toBeInTheDocument();
+  expect(within(nav).getByRole('button', { name: /工作区\s*1/ })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.queryByRole('heading', { name: '迁移重点到正文' })).not.toBeInTheDocument();
   expect(screen.queryByText('资料库文件备份')).not.toBeInTheDocument();
-  fireEvent.click(within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', { name: /工作区/ }));
-  expect(screen.getByText('显示 1 / 10 项设置')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /模型接入/ }));
-  expect(screen.getByText('显示 5 / 10 项设置')).toBeInTheDocument();
+  fireEvent.click(within(nav).getByRole('button', { name: /模型接入\s*5/ }));
   expect(await screen.findByRole('heading', { name: '外部 AI 客户端' })).toBeInTheDocument();
   desktop.unmount();
   delete (globalThis as { knowraRuntime?: unknown }).knowraRuntime;
   render(view);
-  expect(screen.getByText('显示 10 / 10 项设置')).toBeInTheDocument();
+  const webNav = screen.getByRole('navigation', { name: '设置分类' });
+  expect(within(webNav).getByRole('button', { name: /工作区\s*2/ })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText('资料库文件备份')).toBeInTheDocument();
-  fireEvent.click(within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', { name: /工作区/ }));
-  expect(screen.getByText('显示 2 / 10 项设置')).toBeInTheDocument();
+  fireEvent.click(within(webNav).getByRole('button', { name: /模型接入\s*4/ }));
   expect(screen.queryByRole('heading', { name: '外部 AI 客户端' })).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: '迁移重点到正文' })).not.toBeInTheDocument();
 });

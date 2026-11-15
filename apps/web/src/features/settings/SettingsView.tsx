@@ -3,13 +3,7 @@ import { useRef, useState } from 'react';
 import { SideNavItem } from '../../components/ui';
 import { SegmentedButton, SegmentedControl } from '../../components/ui/button/SegmentedControl';
 import { Checkbox } from '../../components/ui/input/Checkbox';
-import {
-  WorkspacePanel,
-  WorkspacePanelBody,
-  WorkspacePanelFooter,
-  WorkspacePanelHeader
-} from '../../components/workspace/WorkspacePanel';
-import { PathTrail } from '../../shell/PathTrail';
+import { WorkspacePanel, WorkspacePanelBody } from '../../components/workspace/WorkspacePanel';
 import { SettingsIcon } from '../../components/icons/knowra';
 import type { AppPreferences, NoteFontSize } from './preferences';
 import { ModelConnectionSettings } from './ModelConnectionSettings';
@@ -29,11 +23,10 @@ interface SettingsViewProps {
   onSidebarOpenChange(open: boolean): void;
 }
 
-type SettingsCategory = 'all' | 'workspace' | 'appearance' | 'reading' | 'accessibility' | 'model' | 'about';
+type SettingsCategory = 'workspace' | 'appearance' | 'reading' | 'accessibility' | 'model' | 'about';
 
 /** 外部 AI 客户端只在桌面端出现；PDF 归档设置只在非桌面端出现。 */
 const buildCategories = (extra: number): { id: SettingsCategory; label: string; count: number }[] => [
-  { id: 'all', label: '全部设置', count: 10 },
   { id: 'workspace', label: '工作区', count: 2 - extra },
   { id: 'appearance', label: '外观', count: 1 },
   { id: 'reading', label: '阅读与编辑', count: 1 },
@@ -54,10 +47,9 @@ export function SettingsView({
   onPreferencesChange,
   onSidebarOpenChange
 }: SettingsViewProps) {
-  const [category, setCategory] = useState<SettingsCategory>('all');
+  const [category, setCategory] = useState<SettingsCategory>('workspace');
   const detailsRef = useRef<HTMLDivElement>(null);
   const categories = buildCategories(isDesktopRuntime() ? 1 : 0);
-  const selectedCategory = categories.find(item => item.id === category) ?? categories[0];
 
   function selectCategory(next: SettingsCategory) {
     setCategory(next);
@@ -66,31 +58,29 @@ export function SettingsView({
 
   return (
     <WorkspacePanel as="main" aria-labelledby="settings-title">
-      <WorkspacePanelHeader
-        title="设置"
-        code="PREF"
-        titleId="settings-title"
-        icon={<SettingsIcon size={14} />}
-        breadcrumb={<PathTrail path={[{ id: 'settings', label: '设置', current: true }]} variant="top" />}
-        actionsLabel="设置范围"
-        actions={<span className={styles.scope}>当前运行端</span>}
-      />
       <WorkspacePanelBody grid className={styles.body} aria-label="设置内容">
-        <nav className={styles.categoryNav} aria-label="设置分类">
-          {categories.map(item => (
-            <SideNavItem
-              key={item.id}
-              className={styles.categoryButton}
-              label={item.label}
-              count={item.count}
-              aria-pressed={category === item.id}
-              onPress={() => selectCategory(item.id)}
-            />
-          ))}
-        </nav>
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarHeader}>
+            <SettingsIcon size={14} />
+            <h1 id="settings-title">设置</h1>
+          </div>
+          <nav className={styles.categoryNav} aria-label="设置分类">
+            {categories.map(item => (
+              <SideNavItem
+                key={item.id}
+                className={styles.categoryButton}
+                label={item.label}
+                count={item.count}
+                aria-pressed={category === item.id}
+                onPress={() => selectCategory(item.id)}
+              />
+            ))}
+          </nav>
+          <p className={styles.sidebarNote}>个人偏好即时保存 · 模型配置手动保存</p>
+        </aside>
 
         <div ref={detailsRef} className={styles.details} aria-label="具体设置">
-          {category === 'all' || category === 'workspace' ? (
+          {category === 'workspace' ? (
             <section className={styles.group} aria-labelledby="settings-workspace-heading">
               <h3 id="settings-workspace-heading">工作区</h3>
               <div className={styles.settingList}>
@@ -114,9 +104,9 @@ export function SettingsView({
             </section>
           ) : null}
 
-          {category === 'all' || category === 'appearance' ? <OverlayMaterialSettings /> : null}
+          {category === 'appearance' ? <OverlayMaterialSettings /> : null}
 
-          {category === 'all' || category === 'reading' ? (
+          {category === 'reading' ? (
             <section className={styles.group} aria-labelledby="settings-reading-heading">
               <h3 id="settings-reading-heading">阅读与编辑</h3>
               <div className={styles.settingList}>
@@ -145,7 +135,7 @@ export function SettingsView({
             </section>
           ) : null}
 
-          {category === 'all' || category === 'accessibility' ? (
+          {category === 'accessibility' ? (
             <section className={styles.group} aria-labelledby="settings-accessibility-heading">
               <h3 id="settings-accessibility-heading">辅助体验</h3>
               <div className={styles.settingList}>
@@ -168,20 +158,18 @@ export function SettingsView({
             </section>
           ) : null}
 
-          {category === 'all' || category === 'model' ? <ModelConnectionSettings /> : null}
-          {category === 'all' || category === 'model' ? <UsageSettings /> : null}
-          {category === 'all' || category === 'model' ? <BudgetLimitsSettings /> : null}
-          {category === 'all' || category === 'model' ? <AiFeatureSettings /> : null}
-          {category === 'all' || category === 'model' ? <ExternalClientSettings /> : null}
-          {category === 'all' || category === 'about' ? <BuildInformation /> : null}
+          {category === 'model' ? (
+            <>
+              <ModelConnectionSettings />
+              <UsageSettings />
+              <BudgetLimitsSettings />
+              <AiFeatureSettings />
+              <ExternalClientSettings />
+            </>
+          ) : null}
+          {category === 'about' ? <BuildInformation /> : null}
         </div>
       </WorkspacePanelBody>
-      <WorkspacePanelFooter>
-        <span>
-          显示 {selectedCategory.count} / {categories[0].count} 项设置
-        </span>
-        <span>个人偏好即时保存 · 模型配置手动保存</span>
-      </WorkspacePanelFooter>
     </WorkspacePanel>
   );
 }
