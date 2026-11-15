@@ -48,6 +48,7 @@ try {
   });
   assert.equal(imported.status(), 201);
   const note = (await imported.json()).data;
+  const sessionCookies = await seed.context().cookies();
   await seed.close();
   const modes = [
     { id: 'zh-baseline', lang: 'zh-CN', inheritFix: false, metricFont: false },
@@ -61,8 +62,10 @@ try {
       deviceScaleFactor: 2,
       locale: 'zh-CN'
     });
+    await context.addCookies(sessionCookies);
     const page = await context.newPage();
     const errors = [];
+    (report.contexts ??= []).push({ mode, errors });
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(({ inheritFix }) => {
       window.__pdfMeasureSamples = [];
@@ -96,7 +99,7 @@ try {
         });
       }
     }, mode);
-    await page.goto(runtime.launchUrl);
+    await page.goto(runtime.origin);
     await page.waitForFunction(() => window.__knowraPdfSelectionDiagnostics);
     await page.evaluate(
       ({ mode, noteId }) => {
