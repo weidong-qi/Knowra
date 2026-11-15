@@ -8,6 +8,46 @@ import {
 import { createAppStore } from './createAppStore';
 
 describe('single V4 application store', () => {
+  it('updates PDF dates and index queries from saved annotations while preserving content and cache guards', async () => {
+    const api = createApi();
+    const storage = createStorage();
+    const store = createAppStore({
+      api,
+      storage,
+      cacheKey: 'pdf-activity',
+      mockSnapshot: createEmptyWorkspaceSnapshot()
+    });
+    await store.getState().loadWorkspace();
+    const original = store.getState().serverData.notes[0];
+    const pdf = {
+      ...original,
+      contentKind: 'pdf' as const,
+      contentLoaded: true,
+      rawMarkdown: '',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+      pdfSource: { attachmentId: 'pdf-file', sha256: 'a'.repeat(64), fileName: '活动.pdf', pageCount: 1 }
+    };
+    store.setState({ serverData: { ...store.getState().serverData, notes: [pdf] } });
+    const update = store.getState().recordPdfAnnotationActivity;
+    const stamp = '2026-11-15T08:00:00.000Z';
+    update(pdf.id, pdf.pdfSource.sha256, stamp);
+    expect(store.getState().serverData.notes[0]).toEqual({ ...pdf, updatedAt: stamp });
+    expect(store.getState().knowledgeGeneration).toBe(1);
+    expect(storage.getItem('pdf-activity')).toContain(stamp);
+    for (const [hash, date] of [
+      [pdf.pdfSource.sha256, stamp],
+      [pdf.pdfSource.sha256, pdf.updatedAt],
+      [pdf.pdfSource.sha256, 'invalid'],
+      ['other-source', '2026-11-16T00:00:00.000Z']
+    ])
+      update(pdf.id, hash, date);
+    expect(store.getState().knowledgeGeneration).toBe(1);
+    store.setState({ dataMode: 'cache' });
+    update(pdf.id, pdf.pdfSource.sha256, '2026-11-16T00:00:00.000Z');
+    expect(store.getState().serverData.notes[0].updatedAt).toBe(stamp);
+    expect(store.getState().knowledgeGeneration).toBe(1);
+  });
   for (const copyMode of ['duplicate', 'history'] as const) {
     it(`preserves private AI visibility when creating a ${copyMode} copy`, async () => {
       const api = createApi();
@@ -1033,15 +1073,13 @@ function createApi(): WorkspaceApi {
     listNoteAttachments: vi.fn().mockResolvedValue([]),
     uploadNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
     renameNoteAttachment: vi.fn().mockResolvedValue({ id: 'attachment-1' }),
-    inspectAttachmentDeletion: vi
-      .fn()
-      .mockResolvedValue({
-        asset: { type: 'attachment', id: 'attachment-1' },
-        decision: 'can-purge-no-history',
-        references: [],
-        reasonCodes: [],
-        coverage: { persistedCurrentAndHistory: true }
-      }),
+    inspectAttachmentDeletion: vi.fn().mockResolvedValue({
+      asset: { type: 'attachment', id: 'attachment-1' },
+      decision: 'can-purge-no-history',
+      references: [],
+      reasonCodes: [],
+      coverage: { persistedCurrentAndHistory: true }
+    }),
     verifyNoteAttachment: vi.fn(),
     restoreNoteAttachment: vi.fn(),
     listAttachmentCleanup: vi.fn().mockResolvedValue({ items: [], pending: 0 }),

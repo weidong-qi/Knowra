@@ -223,6 +223,17 @@ export function createWorkspaceSlice(
         throw error;
       }
     },
+    recordPdfAnnotationActivity(noteId, sha256, updatedAt) {
+      const state = get();
+      if (state.dataMode !== 'api') return;
+      const note = state.serverData.notes.find(item => item.id === noteId);
+      if (!note || note.deleted || note.contentKind !== 'pdf' || note.pdfSource?.sha256 !== sha256) return;
+      const timestamp = Date.parse(updatedAt);
+      if (!Number.isFinite(timestamp) || timestamp <= Date.parse(note.updatedAt ?? '')) return;
+      updateWorkspaceNoteInStore(set, get, dependencies, { ...note, updatedAt }, {});
+      // 文件夹、最近更新等分页索引须重查，根目录则直接使用已更新的资料快照。
+      set({ knowledgeGeneration: get().knowledgeGeneration + 1 });
+    },
     async saveNoteContent(noteId, rawMarkdown, expectedUpdatedAt, baseMarkdown) {
       const previousSave = noteSaveQueues.get(noteId) ?? Promise.resolve(undefined);
       const currentSave = previousSave

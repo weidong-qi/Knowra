@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知境 Knowra · 左侧功能导航栏图标选型</title>
+<style>
+:root {
+  color-scheme: light;
+  --chrome: #f1f2f5;
+  --sidebar: #fafafb;
+  --page: #fbfcfd;
+  --card: #ffffff;
+  --rail-sel-bg: #ffffff;
+  --rail-sel-shadow: 0 0 0 1px rgba(24, 30, 48, 0.08), 0 1px 2px rgba(24, 30, 48, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --hover: rgba(24, 30, 48, 0.055);
+  --pressed: rgba(24, 30, 48, 0.09);
+  --ink: #17181b;
+  --ink-2: #525864;
+  --ink-3: #747a86;
+  --icon-rest: #747a86;
+  --line: rgba(24, 30, 48, 0.09);
+  --line-2: rgba(24, 30, 48, 0.14);
+  --shadow-page:
+    0 0 0 1px rgba(24, 30, 48, 0.07),
+    0 1px 2px rgba(24, 30, 48, 0.05),
+    0 8px 20px -8px rgba(24, 30, 48, 0.10),
+    0 22px 48px -18px rgba(24, 30, 48, 0.14);
+  --shadow-side:
+    0 0 0 1px rgba(24, 30, 48, 0.07),
+    0 1px 2px rgba(24, 30, 48, 0.05);
+  --accent: #17181b;
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--card));
+  --accent-on-solid: #ffffff;
+  --ui: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+:root[data-mode='dark'] {
+  color-scheme: dark;
+  --chrome: #101114;
+  --sidebar: #181a1f;
+  --page: #1d1f24;
+  --card: #22252b;
+  --rail-sel-bg: linear-gradient(180deg, #2d2f36, #25272d);
+  --rail-sel-shadow: 0 0 0 1px rgba(255, 255, 255, 0.09), 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --hover: rgba(255, 255, 255, 0.07);
+  --pressed: rgba(255, 255, 255, 0.11);
+  --ink: #f2f3f6;
+  --ink-2: #b8bdc7;
+  --ink-3: #8b919d;
+  --icon-rest: #8f95a1;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.15);
+  --shadow-page:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    0 18px 42px -16px rgba(0, 0, 0, 0.65);
+  --shadow-side: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--chrome);
+  color: var(--ink);
+  font: 400 13px/1.6 var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.wrap {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+  display: grid;
+  gap: 20px;
+}
+
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px 24px;
+}
+
+.hero h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero p {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--ink-2);
+}
+
+.badge-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.badge-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* 顶部粘性控制栏 */
+.controls {
+  position: sticky;
+  top: 10px;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.2);
+}
+
+.ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--hover);
+  border: 1px solid var(--line);
+}
+
+.seg button {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--line);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(127, 127, 127, 0.25);
+}
+
+.custom-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+}
+
+.custom-color input[type='color'] {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.section-card {
+  background: var(--page);
+  border-radius: 14px;
+  padding: 20px 22px 24px;
+  box-shadow: var(--shadow-page);
+  display: grid;
+  gap: 16px;
+}
+
+.sec-hd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 14px;
+}
+
+.sec-hd h2 {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.sec-hd span {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* ==================== 真实应用外壳样机 ==================== */
+.shell-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .shell-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app-frame {
+  background: var(--chrome);
+  border-radius: 14px;
+  border: 1px solid var(--line-2);
+  padding: 8px 8px 8px 0;
+  display: grid;
+  grid-template-columns: 52px 212px minmax(0, 1fr);
+  grid-template-rows: 38px minmax(430px, auto);
+  gap: 0 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px -18px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 720px) {
+  .app-frame {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+  .mock-sidebar {
+    display: none !important;
+  }
+}
+
+.mock-topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 14px;
+}
+
+.traffic {
+  display: inline-flex;
+  gap: 6px;
+  margin-right: 10px;
+}
+
+.traffic i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line-2);
+}
+
+.mock-tab {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.mock-tab.on {
+  background: var(--rail-sel-bg);
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: var(--rail-sel-shadow);
+}
+
+/* 左侧 50px 功能导航栏（完全对齐 ModuleRail.module.css 结构） */
+.mock-rail {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0 8px;
+  gap: 4px;
+}
+
+.rail-group {
+  display: grid;
+  gap: 4px;
+}
+
+.rail-divider {
+  width: 22px;
+  height: 1px;
+  margin: 6px auto;
+  background: var(--line);
+}
+
+.rail-utility {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.rail-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--icon-rest);
+  display: grid;
+  place-items: center;
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.rail-btn:hover:not([aria-current='page']) {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.rail-btn:active {
+  transform: scale(0.95);
+}
+
+.rail-btn[aria-current='page'] {
+  background: var(--rail-sel-bg);
+  color: var(--accent);
+  box-shadow: var(--rail-sel-shadow);
+}
+
+/* 品牌入口按键 */
+.rail-btn.brand {
+  color: var(--accent);
+}
+
+.rail-btn.brand:hover {
+  background: var(--hover);
+}
+
+.rail-btn.brand[aria-current='page'] {
+  background: var(--rail-sel-bg);
+  box-shadow: var(--rail-sel-shadow);
+}
+
+.rail-btn svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+/* 侧栏与正文样机 */
+.mock-sidebar {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--sidebar);
+  border-radius: 12px;
+  box-shadow: var(--shadow-side);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sb-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sb-label {
+  padding: 6px 6px 2px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.sb-row {
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.sb-row.on {
+  background: var(--rail-sel-bg);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--rail-sel-shadow);
+}
+
+.sb-row em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.sb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+.sb-row.on .sb-dot {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.mock-stage {
+  grid-column: 3;
+  grid-row: 2;
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--shadow-side);
+  padding: 22px 26px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.stage-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.stage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-on-solid);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.stage-pill svg {
+  width: 15px;
+  height: 15px;
+}
+
+.stage-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stage-chip {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.stage-chip.active {
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.stage-chip svg {
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
+}
+
+.inspect-box {
+  background: var(--sidebar);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.inspect-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inspect-big {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: var(--rail-sel-bg);
+  box-shadow: var(--rail-sel-shadow);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.inspect-big svg {
+  width: 30px;
+  height: 30px;
+}
+
+.inspect-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.inspect-head code {
+  font: 500 11.5px var(--mono);
+  color: var(--ink-3);
+}
+
+.inspect-states {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.st-pill {
+  padding: 10px 6px;
+  border-radius: 10px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.st-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+
+.st-box.rest {
+  color: var(--icon-rest);
+}
+
+.st-box.hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.st-box.sel {
+  background: var(--rail-sel-bg);
+  box-shadow: var(--rail-sel-shadow);
+  color: var(--accent);
+}
+
+.st-box svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* 手机底栏同步预览 */
+.mobile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+}
+
+.mob-item {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 2px 5px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font-size: 10px;
+}
+
+.mob-item.on {
+  background: var(--card);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--line);
+}
+
+.mob-item svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* ==================== 逐枚图标全状态网格 ==================== */
+.icon-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(226px, 1fr));
+  gap: 12px;
+}
+
+.ic-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.ic-card:hover {
+  border-color: var(--line-2);
+  box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.14);
+}
+
+.ic-card-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ic-card-hd strong {
+  font-size: 13.5px;
+}
+
+.ic-card-hd code {
+  font: 400 11px var(--mono);
+  color: var(--ink-3);
+}
+
+.ic-samples {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+}
+
+.ic-cell {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.ic-cell small {
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+
+.ic-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+
+.ic-box.big {
+  width: 44px;
+  height: 44px;
+  color: var(--ink);
+}
+
+.ic-box.big svg {
+  width: 30px;
+  height: 30px;
+}
+
+.ic-box.rest {
+  color: var(--icon-rest);
+}
+
+.ic-box.rest svg,
+.ic-box.sel svg,
+.ic-box.old svg {
+  width: 21px;
+  height: 21px;
+}
+
+.ic-box.sel {
+  background: var(--rail-sel-bg);
+  box-shadow: var(--rail-sel-shadow);
+  color: var(--accent);
+}
+
+.ic-box.old {
+  color: var(--icon-rest);
+  opacity: 0.85;
+}
+
+body:not(.show-old) .old-col {
+  display: none;
+}
+
+.ic-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+/* 配色机制说明 */
+.token-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.token-box {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--sidebar);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+
+.token-box strong {
+  font-size: 12.5px;
+}
+
+.token-box p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.token-box code {
+  font: 500 11px var(--mono);
+  color: var(--ink);
+}
+
+/* 方案 B 主题点缀色：默认用 --accent；选中态白卡时自动同步为实色（半透明背层保留层次） */
+.scheme-a .accent-part {
+  color: currentColor;
+}
+
+.scheme-b .accent-part {
+  color: var(--accent);
+}
+
+.scheme-b .sel .accent-part,
+.scheme-b [aria-current='page'] .accent-part,
+.scheme-b .mob-item.on .accent-part,
+.scheme-b .inspect-big .accent-part {
+  color: currentColor;
+}
+
+.accent-dot {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.scheme-b .accent-dot {
+  opacity: 1;
+}
+
+.scheme-b .sel .accent-dot,
+.scheme-b [aria-current='page'] .accent-dot,
+.scheme-b .mob-item.on .accent-dot,
+.scheme-b .inspect-big .accent-dot {
+  opacity: 0.42;
+}
+</style>
+</head>
+<body class="scheme-a">
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1>左侧功能导航栏 · 图标重绘预览</h1>
+      <p>
+        对照参考图的「<strong>实体剪影 + 透明负形镂空 + 浅层叠（36% 透度）</strong>」视觉语言重绘 <code>ModuleRail</code> 全部 10 枚图标。
+        内部镂空均采用真实 SVG Mask 透明裁切，兼容浅色 / 深色模式与玻璃悬停；颜色完全消费 CSS 变量，随 Knowra 全局主题色实时切换。
+      </p>
+    </div>
+    <div class="badge-note">
+      <span class="badge-dot" aria-hidden="true"></span>
+      <span>当前主题：<strong id="accentName">墨黑（ink · #17181b）</strong></span>
+    </div>
+  </header>
+
+  <div class="controls" role="region" aria-label="预览控制">
+    <div class="ctl">
+      主题色
+      <div class="seg" id="accentSeg">
+        <button type="button" data-accent="ink" aria-pressed="true"><i class="swatch" style="background:#17181b"></i>墨黑 (ink)</button>
+        <button type="button" data-accent="orange" aria-pressed="false"><i class="swatch" style="background:#e56b25"></i>赤橙 (orange)</button>
+        <button type="button" data-accent="blue" aria-pressed="false"><i class="swatch" style="background:#2563eb"></i>靛蓝试色</button>
+        <label class="custom-color" title="自定义主题色验证">
+          <input type="color" id="customAccent" value="#187642" aria-label="自定义主题色">
+          <span>自选</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="ctl">
+      模式
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="light" aria-pressed="true">浅色</button>
+        <button type="button" data-mode="dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      细节配色
+      <div class="seg" id="schemeSeg">
+        <button type="button" data-scheme="a" aria-pressed="true">A · 纯净实心（贴近参考图）</button>
+        <button type="button" data-scheme="b" aria-pressed="false">B · 单点主题微印</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      顶标徽章
+      <div class="seg" id="brandSeg">
+        <button type="button" data-brand="crystal" aria-pressed="true">知境晶核</button>
+        <button type="button" data-brand="orange" aria-pressed="false">小橙方印</button>
+        <button type="button" data-brand="burst" aria-pressed="false">放射星印</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      知识图标
+      <div class="seg" id="knowledgeSeg">
+        <button type="button" data-knowledge="book" aria-pressed="true">摊开书卷</button>
+        <button type="button" data-knowledge="cube" aria-pressed="false">知识魔方</button>
+        <button type="button" data-knowledge="graph" aria-pressed="false">星团图谱</button>
+        <button type="button" data-knowledge="bulb" aria-pressed="false">洞察灯泡</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      对照
+      <div class="seg" id="cmpSeg">
+        <button type="button" data-cmp="off" aria-pressed="true">仅新版</button>
+        <button type="button" data-cmp="on" aria-pressed="false">对比现版 (rail.tsx)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. 真实左侧导航栏样机 -->
+  <section class="section-card">
+    <div class="sec-hd">
+      <h2>实际外壳与导航交互预览</h2>
+      <span>点击左侧轨道或底部手机栏中任意图标，切换 <code>aria-current="page"</code> 选中状态</span>
+    </div>
+
+    <div class="shell-grid">
+      <div class="app-frame">
+        <div class="mock-topbar">
+          <div class="traffic" aria-hidden="true"><i></i><i></i><i></i></div>
+          <span class="mock-tab on">笔记索引</span>
+          <span class="mock-tab">2023_ICLR_HowMuch...</span>
+        </div>
+
+        <nav class="mock-rail" aria-label="工作域导航样机" id="mockRail"></nav>
+
+        <aside class="mock-sidebar" aria-label="侧栏样机">
+          <div class="sb-title"><span id="sbTitle">资料</span></div>
+          <div class="sb-label">快速入口</div>
+          <div class="sb-row on"><span class="sb-dot"></span><span>全部笔记</span><em>22</em></div>
+          <div class="sb-row"><span class="sb-dot"></span><span>最近编辑</span><em>6</em></div>
+          <div class="sb-row"><span class="sb-dot"></span><span>收藏</span><em>3</em></div>
+          <div class="sb-label">文件夹</div>
+          <div class="sb-row"><span class="sb-dot"></span><span>论文精读</span><em>8</em></div>
+          <div class="sb-row"><span class="sb-dot"></span><span>本项目</span><em>4</em></div>
+        </aside>
+
+        <main class="mock-stage">
+          <div class="stage-top">
+            <div>
+              <strong style="font-size: 16px;" id="stageTitle">资料工作区</strong>
+              <div style="font-size: 12px; color: var(--ink-2);" id="stageDesc">Markdown 笔记的采集、编辑与整理。</div>
+            </div>
+            <span class="stage-pill" id="stagePill"></span>
+          </div>
+
+          <div class="stage-chips" id="stageChips"></div>
+
+          <p style="margin: 4px 0 0; color: var(--ink-2); font-size: 12.5px; max-width: 56ch;">
+            左轨处于静息态时呈柔和中性灰实体（<code>--icon-on-chrome</code>），视觉重心沉稳不抢正文；
+            点击进入某工作域后，微隆起的图标底座配合主题色 <code>--accent</code> 实体图标形成强焦点（参考图中的墨黑选中样式即对应 <code>accentColor: 'ink'</code>）。
+          </p>
+        </main>
+      </div>
+
+      <div class="inspect-box">
+        <div class="inspect-head">
+          <div class="inspect-big" id="inspectBig"></div>
+          <div>
+            <h3 id="inspectName">资料 · RailNoteIcon</h3>
+            <code id="inspectId">id: materials</code>
+          </div>
+        </div>
+
+        <div class="inspect-states" id="inspectStates"></div>
+
+        <div>
+          <div style="font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px;">移动端底栏同步效果（MobileTabs · 19px）</div>
+          <div class="mobile-bar" id="mobileBar"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 逐枚全状态矩阵 -->
+  <section class="section-card">
+    <div class="sec-hd">
+      <h2>全套 10 枚图标逐项检视（44px 细节 / 21px 真实默认 / 21px 选中）</h2>
+      <span>点击任意卡片可在上方样机中选中预览</span>
+    </div>
+    <div class="icon-matrix" id="iconMatrix"></div>
+  </section>
+
+  <!-- 3. 主题适配设计原则 -->
+  <section class="section-card">
+    <div class="sec-hd">
+      <h2>主题色与深浅色适配机制（可直接映射到 <code>rail.tsx</code>）</h2>
+      <span>零硬编码颜色，兼容现有双主题与未来自定义色</span>
+    </div>
+    <div class="token-grid">
+      <div class="token-box">
+        <strong>未选中静息态</strong>
+        <code>color: var(--icon-on-chrome)</code>
+        <p>采用中灰实心轮廓，多页面场景下保持冷静克制；辅助叠层统一使用 <code>opacity="0.36"</code> 表达前后景深。</p>
+      </div>
+      <div class="token-box">
+        <strong>悬停态（Hover）</strong>
+        <code>background: var(--surface-hover); color: var(--text-primary)</code>
+        <p>整体平滑提深至主墨色，配合透明负形遮罩，图标细节在任何悬停淡灰底色上都不起白边。</p>
+      </div>
+      <div class="token-box">
+        <strong>选中态（Active）</strong>
+        <code>background: var(--surface-rail-selected); color: var(--accent)</code>
+        <p>白色／高光底座微浮起，图标整枚切换为 <code>var(--accent)</code>。墨黑主题呈纯黑，赤橙主题呈暖橙，深色模式自动切亮。</p>
+      </div>
+      <div class="token-box">
+        <strong>顶部品牌方印（Home）</strong>
+        <code>fill: var(--accent) + mask cutout</code>
+        <p>还原参考图左上角深色方标压阵感；使用 <code>maskUnits="userSpaceOnUse"</code> 透明裁切知境标，深浅主题皆自动反白／反墨。</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+let maskSeq = 0;
+
+function mkIcon(renderFn, opts = {}) {
+  const id = `m-${++maskSeq}`;
+  const content = renderFn(id, opts);
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${content}</svg>`;
+}
+
+/* 顶部品牌方印的三种图形候选 */
+const BRAND_GLYPHS = {
+  crystal(id) {
+    /* 源自 Knowra-图形标志：双层方框 + 偏左上晶核 */
+    return `
+      <defs>
+        <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <rect x="6.4" y="6.4" width="11.2" height="11.2" rx="2.7" fill="#000"/>
+          <rect x="8.8" y="8.8" width="5.2" height="5.2" rx="1.4" fill="#fff"/>
+        </mask>
+      </defs>
+      <rect x="3" y="3" width="18" height="18" rx="5.5" fill="currentColor" stroke="none" mask="url(#${id})"/>
+    `;
+  },
+  orange(id) {
+    /* 延续 Knowra 现有 RailHomeIcon 小橙意象，改为参考图同款负形实心方印 */
+    return `
+      <defs>
+        <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <ellipse cx="11.6" cy="13.8" rx="5.4" ry="4.5" fill="#000"/>
+          <path d="M12.2 8.7c-.2-2.2 1.4-3.7 4.4-3.4.1 2.6-1.5 3.8-4.4 3.4Z" fill="#000"/>
+        </mask>
+      </defs>
+      <rect x="3" y="3" width="18" height="18" rx="5.5" fill="currentColor" stroke="none" mask="url(#${id})"/>
+    `;
+  },
+  burst(id) {
+    /* 参考图同款八角放射星印 */
+    return `
+      <defs>
+        <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <g stroke="#000" stroke-width="1.85" stroke-linecap="round">
+            <path d="M12 6.8v10.4M6.8 12h10.4M8.3 8.3l7.4 7.4M15.7 8.3l-7.4 7.4"/>
+          </g>
+        </mask>
+      </defs>
+      <rect x="3" y="3" width="18" height="18" rx="5.5" fill="currentColor" stroke="none" mask="url(#${id})"/>
+    `;
+  }
+};
+
+/* 知识图标的四种造型候选 */
+const KNOWLEDGE_GLYPHS = {
+  book(id) {
+    /* 摊开书卷：对称实心双页 + 1.7px 透明书脊缝 + 左页文脉 + 右页书签缺口 */
+    return `
+      <defs>
+        <mask id="${id}-l" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <rect x="5.6" y="9.0" width="3.5" height="1.5" rx="0.75" fill="#000"/>
+          <rect x="5.6" y="12.1" width="2.8" height="1.5" rx="0.75" fill="#000"/>
+        </mask>
+        <mask id="${id}-r" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <path d="M15.1 4.6V11.4L16.55 10.1L18.0 11.4V4.6Z" fill="#000"/>
+        </mask>
+      </defs>
+      <g stroke="none">
+        <path d="M3.5 6.9Q3.5 5.1 5.3 5.1C7.4 5.1 9.1 5.5 10.4 6.1Q11.2 6.25 11.2 7.1V17.9Q11.2 18.7 10.45 18.5C8.9 17.7 7.1 17.5 5.2 17.5Q3.5 17.5 3.5 15.8Z" fill="currentColor" mask="url(#${id}-l)"/>
+        <path d="M20.5 6.9Q20.5 5.1 18.7 5.1C16.6 5.1 14.9 5.5 13.6 6.1Q12.8 6.25 12.8 7.1V17.9Q12.8 18.7 13.55 18.5C15.1 17.7 16.9 17.5 18.8 17.5Q20.5 17.5 20.5 15.8Z" fill="currentColor" mask="url(#${id}-r)"/>
+        <path class="accent-part accent-dot" d="M15.6 5.2V10.15L16.55 9.25L17.5 10.15V5.2Z" fill="currentColor"/>
+      </g>
+    `;
+  },
+  cube(id) {
+    /* 知识魔方：圆角等距晶体 + 1.65px 透明 Y 型负形沟槽 + 三面微明暗层次 */
+    return `
+      <defs>
+        <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#000"/>
+          <path d="M10.7 4.42Q12 3.7 13.3 4.42L18.3 7.18Q19.6 7.9 19.6 9.4V14.6Q19.6 16.1 18.3 16.82L13.3 19.58Q12 20.3 10.7 19.58L5.7 16.82Q4.4 16.1 4.4 14.6V9.4Q4.4 7.9 5.7 7.18Z" fill="#fff"/>
+          <path d="M4.4 7.9L12 12L19.6 7.9M12 12V20.3" fill="none" stroke="#000" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>
+        </mask>
+      </defs>
+      <g stroke="none" mask="url(#${id})">
+        <polygon class="accent-part" points="0,0 24,0 24,5.4 12,12 0,5.4" fill="currentColor"/>
+        <polygon points="0,5.4 12,12 12,24 0,24" fill="currentColor" opacity="0.78"/>
+        <polygon points="24,5.4 24,24 12,24 12,12" fill="currentColor" opacity="0.52"/>
+      </g>
+    `;
+  },
+  graph(id) {
+    /* 星团图谱：承接 Knowra 图谱基因，放大实心节点并在连桥两端留出 0.95px 透明隔离缝 */
+    return `
+      <defs>
+        <mask id="${id}-links" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <circle cx="16.2" cy="7.2" r="4.65" fill="#000"/>
+          <circle cx="6.0" cy="11.2" r="3.8" fill="#000"/>
+          <circle cx="14.0" cy="17.8" r="3.9" fill="#000"/>
+        </mask>
+        <mask id="${id}-hero" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <circle cx="16.2" cy="7.2" r="1.45" fill="#000"/>
+        </mask>
+      </defs>
+      <path d="M6.0 11.2L16.2 7.2L14.0 17.8Z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.46" mask="url(#${id}-links)"/>
+      <g stroke="none">
+        <circle class="accent-part" cx="16.2" cy="7.2" r="3.7" fill="currentColor" mask="url(#${id}-hero)"/>
+        <circle cx="6.0" cy="11.2" r="2.85" fill="currentColor"/>
+        <circle cx="14.0" cy="17.8" r="2.95" fill="currentColor"/>
+      </g>
+    `;
+  },
+  bulb(id) {
+    /* 洞察灯泡：饱满实心灯罩 + 负形 Y 丝镂空 + 浅透胶囊灯座 */
+    return `
+      <defs>
+        <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+          <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+          <path d="M9.8 9.2Q12 11.2 14.2 9.2M12 10.7V14.8" fill="none" stroke="#000" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>
+        </mask>
+      </defs>
+      <g stroke="none">
+        <path d="M7.55 14.25A6.3 6.3 0 1 1 16.45 14.25C15.55 15.15 15.1 15.8 15.0 16.65A1.05 1.05 0 0 1 13.95 17.65H10.05A1.05 1.05 0 0 1 9.0 16.65C8.9 15.8 8.45 15.15 7.55 14.25Z" fill="currentColor" mask="url(#${id})"/>
+        <rect class="accent-part" x="9.6" y="19.05" width="4.8" height="2.05" rx="1.02" fill="currentColor" opacity="0.5"/>
+      </g>
+    `;
+  }
+};
+
+const KNOWLEDGE_NOTES = {
+  book: '摊开书卷：对称实心双页配合透明书脊中缝，左页短文脉 + 右页负形书签缺口，跟竖向「资料」文件页明确区分。',
+  cube: '知识魔方：圆角等距晶体以 1.65px Y 型负形沟槽分出三面，微明暗层级表现立体「知识境」感，贴近参考图纯块面风。',
+  graph: '星团图谱：承接现版知识网络意象，放大为厚实节点并在连桥两端裁出透明隔离呼吸缝，兼具重量感与清晰度。',
+  bulb: '洞察灯泡：全圆弧顶部轮廓与其他圆角矩形图标天然拉开差异，负形灯丝搭配浅透底座胶囊表达概念洞察。'
+};
+
+const ICONS = [
+  {
+    id: 'home',
+    domain: 'home',
+    name: '知境工作区',
+    comp: 'RailHomeIcon',
+    mobLabel: '首页',
+    note: '参考图左上角实心方标：方印底色跟随主题色 --accent，内部用 Mask 透明镂空保证深浅底自动对比。',
+    desc: '知境全局工作区与首页概览。',
+    oldSvg: '<ellipse cx="12" cy="13.6" rx="8.4" ry="7.5"/><path d="M12.1 6.2c-.3-2.9 1.9-4.6 5.4-4.3.2 3.4-2 5-5.4 4.3Z" fill="var(--accent)" stroke="none"/><path d="M7.6 12.4a4.6 4.6 0 0 1 3-3.4" opacity=".55"/>',
+    render(id, { brand = 'crystal' }) {
+      return (BRAND_GLYPHS[brand] || BRAND_GLYPHS.crystal)(id);
+    }
+  },
+  {
+    id: 'search',
+    domain: 'search',
+    name: '全局搜索',
+    comp: 'RailSearchIcon',
+    mobLabel: '搜索',
+    note: '实心厚框镜环 + 微透镜片底色（0.18）+ 圆润实心手柄；B 方案在镜片左上角加入主题高光弧。',
+    desc: '快速搜索笔记、知识点、试题与任务（Ctrl+K）。',
+    oldSvg: '<circle cx="10.5" cy="10.5" r="6.6"/><path d="m15.4 15.4 5 5"/><path d="M7.6 9.6a3.2 3.2 0 0 1 2.2-2.2" stroke="var(--accent)"/>',
+    render(id) {
+      return `
+        <defs>
+          <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <circle cx="10.4" cy="10.4" r="3.7" fill="#000"/>
+          </mask>
+        </defs>
+        <circle cx="10.4" cy="10.4" r="3.7" fill="currentColor" stroke="none" opacity="0.16"/>
+        <circle cx="10.4" cy="10.4" r="6.8" fill="currentColor" stroke="none" mask="url(#${id})"/>
+        <path d="M15.4 15.4 19.7 19.7" stroke="currentColor" stroke-width="2.9" stroke-linecap="round"/>
+        <path class="accent-part accent-dot" d="M8.1 9.5a2.8 2.8 0 0 1 2-2" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"/>
+      `;
+    }
+  },
+  {
+    id: 'materials',
+    domain: 'materials',
+    name: '资料',
+    comp: 'RailNoteIcon',
+    mobLabel: '资料',
+    note: '对齐参考图底部纸页造型并保留叠放层级：浅透后页被前页外扩裁出空气缝，前页带折角与两条镂空正文。',
+    desc: 'Markdown 笔记与 PDF 的采集、编辑与整理。',
+    oldSvg: '<path d="M9.2 3.4h6.2l4.2 4.2v5.6" opacity=".55"/><path d="M7 6.2h6.2l4.8 4.8v8.2a1.7 1.7 0 0 1-1.7 1.7H7a1.7 1.7 0 0 1-1.7-1.7V7.9A1.7 1.7 0 0 1 7 6.2Z"/><path d="M13.2 6.2V11H18"/><path d="M8.6 14.6h6.2"/><path d="M8.6 17.6h3.4" stroke="var(--accent)"/>',
+    render(id) {
+      return `
+        <defs>
+          <mask id="${id}-front" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <path d="M13.3 5.2v3.6a1.1 1.1 0 0 0 1.1 1.1h3.6" fill="none" stroke="#000" stroke-width="2.5"/>
+            <path d="M14.2 5.2l3.8 3.8v-4h-4Z" fill="#000"/>
+            <rect x="7.4" y="12.2" width="6.8" height="1.65" rx="0.82" fill="#000"/>
+            <rect x="7.4" y="15.6" width="4.5" height="1.65" rx="0.82" fill="#000"/>
+          </mask>
+          <mask id="${id}-back" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <rect x="3.5" y="4.3" width="14.9" height="17.6" rx="3.4" fill="#000"/>
+          </mask>
+        </defs>
+        <rect x="7.4" y="3.0" width="12.2" height="15.0" rx="2.6" fill="currentColor" stroke="none" opacity="0.36" mask="url(#${id}-back)"/>
+        <rect x="4.6" y="5.4" width="12.6" height="15.4" rx="2.8" fill="currentColor" stroke="none" mask="url(#${id}-front)"/>
+        <path class="accent-part" d="M13.7 5.55 17.05 8.9H14.5a.8.8 0 0 1-.8-.8V5.55Z" fill="currentColor" stroke="none" opacity="0.45"/>
+      `;
+    }
+  },
+  {
+    id: 'knowledge',
+    domain: 'knowledge',
+    name: '知识',
+    comp: 'RailKnowledgeIcon',
+    mobLabel: '知识',
+    note: () => KNOWLEDGE_NOTES[state.knowledge] || KNOWLEDGE_NOTES.book,
+    desc: '知识候选、人工确认与概念来源追溯。',
+    oldSvg: '<path d="M5.2 16.6 9.6 10.2 14.8 13.4" opacity=".55"/><path d="M14.8 13.4 18.8 5.6" stroke="var(--accent)"/><circle cx="5.2" cy="16.8" r="2"/><circle cx="9.6" cy="10" r="2.5"/><circle cx="14.8" cy="13.6" r="1.9"/><circle cx="18.8" cy="5.4" r="2.1" fill="var(--accent)" stroke="none"/><circle cx="6.2" cy="6.4" r="1.1" fill="currentColor" stroke="none"/><circle cx="19.6" cy="18.6" r="1" fill="currentColor" stroke="none"/>',
+    render(id, { knowledge = 'book' }) {
+      return (KNOWLEDGE_GLYPHS[knowledge] || KNOWLEDGE_GLYPHS.book)(id);
+    }
+  },
+  {
+    id: 'training',
+    domain: 'training',
+    name: '试题',
+    comp: 'RailQuestionIcon',
+    mobLabel: '试题',
+    note: '厚实圆角题卡主体内嵌清晰的负形问号；与带折角的「资料」、带夹扣的「任务」在轮廓上明确区分。',
+    desc: '题目库、专项练习与考试场景。',
+    oldSvg: '<rect x="4.4" y="3.4" width="15.2" height="17.2" rx="2.6"/><path d="M9.7 9.6a2.4 2.4 0 1 1 3.5 2.1c-.8.5-1.2 1-1.2 1.8"/><circle cx="12" cy="16.5" r="1.05" fill="var(--accent)" stroke="none"/>',
+    render(id) {
+      return `
+        <defs>
+          <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <path d="M9.55 9.15a2.55 2.55 0 1 1 3.75 2.2c-.85.5-1.3.95-1.3 1.8" fill="none" stroke="#000" stroke-width="2.1" stroke-linecap="round"/>
+            <circle cx="12" cy="16.6" r="1.25" fill="#000"/>
+          </mask>
+        </defs>
+        <rect x="4.8" y="3.4" width="14.4" height="17.2" rx="3.4" fill="currentColor" stroke="none" mask="url(#${id})"/>
+        <circle class="accent-part accent-dot" cx="12" cy="16.6" r="1.15" fill="currentColor" stroke="none"/>
+      `;
+    }
+  },
+  {
+    id: 'task-workspaces',
+    domain: 'task-workspaces',
+    name: '任务',
+    comp: 'RailTaskIcon',
+    mobLabel: '任务',
+    note: '呼应参考图第 7 枚剪贴板造型：顶夹周围留出 U 型透明卡槽，板内刻出完成勾选与任务条目，与待办区分。',
+    desc: '协作文档、任务执行与人工验收。',
+    oldSvg: '<rect x="4.4" y="4.4" width="6.2" height="6.2" rx="1.7"/><path d="m6.1 7.6 1.4 1.4 2-2.5" stroke="var(--accent)"/><path d="M13.6 7.5h6"/><rect x="4.4" y="13.4" width="6.2" height="6.2" rx="1.7"/><path d="M13.6 16.5h4.2"/>',
+    render(id) {
+      return `
+        <defs>
+          <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <rect x="7.5" y="1.8" width="9.0" height="5.5" rx="2.2" fill="#000"/>
+            <path d="m7.9 11.4 1.15 1.15 2.15-2.2" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="12.7" y="10.65" width="3.7" height="1.6" rx="0.8" fill="#000"/>
+            <rect x="7.8" y="15.0" width="8.4" height="1.6" rx="0.8" fill="#000"/>
+          </mask>
+        </defs>
+        <rect x="5.0" y="4.8" width="14.0" height="16.0" rx="3.1" fill="currentColor" stroke="none" mask="url(#${id})"/>
+        <rect class="accent-part" x="8.7" y="2.8" width="6.6" height="3.3" rx="1.35" fill="currentColor" stroke="none"/>
+      `;
+    }
+  },
+  {
+    id: 'learning',
+    domain: 'learning',
+    name: '待办',
+    comp: 'RailTodoIcon',
+    mobLabel: '待办',
+    note: '保留知境「日历对勾」语义：顶部双装订耳 + 浅透月历顶条，下半实体页身镂空一枚舒展对勾。',
+    desc: '主线、支线、今日安排与学习计划。',
+    oldSvg: '<rect x="4.2" y="5.4" width="15.6" height="14.4" rx="2.6"/><path d="M8.4 3.6v3.4M15.6 3.6v3.4M4.2 9.8h15.6"/><path d="m9.3 14.6 1.9 1.9 3.6-3.9" stroke="var(--accent)"/>',
+    render(id) {
+      return `
+        <defs>
+          <mask id="${id}-top" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <rect x="6.9" y="2.4" width="3.6" height="4.2" rx="1.5" fill="#000"/>
+            <rect x="13.5" y="2.4" width="3.6" height="4.2" rx="1.5" fill="#000"/>
+          </mask>
+          <mask id="${id}-body" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <path d="m8.7 15.0 2.15 2.15 4.45-4.5" fill="none" stroke="#000" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+          </mask>
+        </defs>
+        <g stroke="none">
+          <rect class="accent-part" x="7.6" y="3.0" width="2.2" height="3.1" rx="1.1" fill="currentColor"/>
+          <rect class="accent-part" x="14.2" y="3.0" width="2.2" height="3.1" rx="1.1" fill="currentColor"/>
+          <path class="accent-part" d="M4.4 7.8A2.8 2.8 0 0 1 7.2 5h9.6a2.8 2.8 0 0 1 2.8 2.8V9H4.4V7.8Z" fill="currentColor" opacity="0.44" mask="url(#${id}-top)"/>
+          <path d="M4.4 10.1h15.2v7.3a3.2 3.2 0 0 1-3.2 3.2H7.6a3.2 3.2 0 0 1-3.2-3.2v-7.3Z" fill="currentColor" mask="url(#${id}-body)"/>
+        </g>
+      `;
+    }
+  },
+  {
+    id: 'assistant',
+    domain: 'assistant',
+    name: 'AI 助手',
+    comp: 'RailAssistantIcon',
+    mobLabel: '助手',
+    note: '保留「带微笑的对话框」而不使用四角星：饱满圆润气泡主体配合透明负形眼睛与微笑弧线，亲和耐看。',
+    desc: '基于工作区上下文的 AI 问答与辅助整理。',
+    oldSvg: '<path d="M6 4.4h12a2.4 2.4 0 0 1 2.4 2.4v8.2a2.4 2.4 0 0 1-2.4 2.4h-6.6L7 21.2v-3.8H6A2.4 2.4 0 0 1 3.6 15V6.8A2.4 2.4 0 0 1 6 4.4Z"/><circle cx="9.2" cy="10" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.8" cy="10" r="1.05" fill="currentColor" stroke="none"/><path d="M10 12.9q2 1.7 4 0" stroke="var(--accent)"/>',
+    render(id) {
+      return `
+        <defs>
+          <mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+            <rect x="0" y="0" width="24" height="24" fill="#fff"/>
+            <circle cx="9.2" cy="9.9" r="1.2" fill="#000"/>
+            <circle cx="14.8" cy="9.9" r="1.2" fill="#000"/>
+            <path d="M9.2 13.0q2.8 2.4 5.6 0" fill="none" stroke="#000" stroke-width="1.95" stroke-linecap="round"/>
+          </mask>
+        </defs>
+        <path d="M7.2 4.3h9.6a3.9 3.9 0 0 1 3.9 3.9v6.2a3.9 3.9 0 0 1-3.9 3.9h-5.4l-3.7 2.75a.85.85 0 0 1-1.36-.68v-2.07H7.2a3.9 3.9 0 0 1-3.9-3.9V8.2a3.9 3.9 0 0 1 3.9-3.9Z" fill="currentColor" stroke="none" mask="url(#${id})"/>
+        <path class="accent-part accent-dot" d="M9.5 13.2q2.5 2.1 5 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      `;
+    }
+  },
+  {
+    id: 'notifications',
+    domain: 'notifications',
+    name: '通知',
+    comp: 'RailBellIcon',
+    mobLabel: '通知',
+    note: '补齐底栏通知的同系图标（此前复用线性 BellIcon）：圆润实心钟罩 + 1.2px 缝隙分隔的浅透钟锤。',
+    desc: '任务执行、同步与导入通知记录。',
+    oldSvg: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+    render() {
+      return `
+        <g stroke="none">
+          <circle cx="12" cy="3.9" r="1.2" fill="currentColor"/>
+          <path d="M12 4.7c-3.35 0-5.4 2.25-5.4 5.5v2.9c0 .75-.32 1.45-.86 1.95l-.84.78a1 1 0 0 0 .68 1.72h12.84a1 1 0 0 0 .68-1.72l-.84-.78a2.7 2.7 0 0 1-.86-1.95v-2.9c0-3.25-2.05-5.5-5.4-5.5Z" fill="currentColor"/>
+          <path class="accent-part" d="M9.6 18.8a2.55 2.55 0 0 0 4.8 0Z" fill="currentColor" opacity="0.48"/>
+        </g>
+      `;
+    }
+  },
+  {
+    id: 'settings',
+    domain: 'settings',
+    name: '账户与设置',
+    comp: 'RailUserIcon',
+    mobLabel: '我的',
+    note: '圆润实心头像与肩部胶囊组合，颈部留白清晰，与参考图左下角的紧凑实心权重保持一致。',
+    desc: '外观、快捷键与账户偏好设置。',
+    oldSvg: '<circle cx="12" cy="8.4" r="3.8"/><path d="M4.8 20.4c.7-3.6 3.5-5.7 7.2-5.7s6.5 2.1 7.2 5.7"/>',
+    render() {
+      return `
+        <g stroke="none">
+          <circle class="accent-part" cx="12" cy="7.9" r="3.75" fill="currentColor"/>
+          <path d="M4.9 19.6c.2-3.4 3.2-5.5 7.1-5.5s6.9 2.1 7.1 5.5a1.45 1.45 0 0 1-1.45 1.5H6.35A1.45 1.45 0 0 1 4.9 19.6Z" fill="currentColor"/>
+        </g>
+      `;
+    }
+  }
+];
+
+const ACCENT_PRESETS = {
+  ink: { label: '墨黑（ink）', light: '#17181b', dark: '#ececee' },
+  orange: { label: '赤橙（orange）', light: '#e56b25', dark: '#f08346' },
+  blue: { label: '靛蓝试色', light: '#2563eb', dark: '#60a5fa' },
+  custom: { label: '自定义', light: '#187642', dark: '#34d27b' }
+};
+
+const state = {
+  accentKey: 'ink',
+  customHex: '#187642',
+  mode: 'light',
+  scheme: 'a',
+  brand: 'crystal',
+  knowledge: 'book',
+  cmp: false,
+  selectedId: 'materials'
+};
+
+function currentAccentHex() {
+  if (state.accentKey === 'custom') {
+    return state.customHex;
+  }
+  const preset = ACCENT_PRESETS[state.accentKey] || ACCENT_PRESETS.ink;
+  return state.mode === 'dark' ? preset.dark : preset.light;
+}
+
+function contrastOnAccent(hex) {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.65 ? '#17181b' : '#ffffff';
+}
+
+function iconHtml(item, extraClass = '') {
+  return mkIcon(item.render, { brand: state.brand, knowledge: state.knowledge }).replace('<svg ', `<svg class="${extraClass}" `);
+}
+
+function oldIconHtml(item) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="translate(12 12) scale(1.12) translate(-12 -12)">${item.oldSvg}</g></svg>`;
+}
+
+function applyTheme() {
+  const root = document.documentElement;
+  root.setAttribute('data-mode', state.mode);
+  const accentHex = currentAccentHex();
+  root.style.setProperty('--accent', accentHex);
+  root.style.setProperty('--accent-on-solid', contrastOnAccent(accentHex));
+
+  document.body.classList.toggle('scheme-a', state.scheme === 'a');
+  document.body.classList.toggle('scheme-b', state.scheme === 'b');
+  document.body.classList.toggle('show-old', state.cmp);
+
+  const presetLabel = ACCENT_PRESETS[state.accentKey]?.label || '自定义';
+  document.getElementById('accentName').textContent = `${presetLabel} · ${accentHex}`;
+}
+
+function renderAll() {
+  applyTheme();
+
+  const byId = Object.fromEntries(ICONS.map(it => [it.id, it]));
+  const topIds = ['home', 'search'];
+  const midIds = ['materials', 'knowledge', 'training', 'task-workspaces', 'learning'];
+  const botIds = ['assistant', 'notifications', 'settings'];
+
+  const renderRailBtn = (item, isBrand = false) => {
+    const active = state.selectedId === item.id;
+    return `<button type="button" class="rail-btn ${isBrand ? 'brand' : ''}" data-select="${item.id}" title="${item.name}" aria-label="${item.name}" ${active ? 'aria-current="page"' : ''}>${iconHtml(item)}</button>`;
+  };
+
+  document.getElementById('mockRail').innerHTML = `
+    <div class="rail-group">${topIds.map(id => renderRailBtn(byId[id], id === 'home')).join('')}</div>
+    <span class="rail-divider" aria-hidden="true"></span>
+    <div class="rail-group">${midIds.map(id => renderRailBtn(byId[id])).join('')}</div>
+    <div class="rail-group rail-utility">${botIds.map(id => renderRailBtn(byId[id])).join('')}</div>
+  `;
+
+  const selected = byId[state.selectedId] || byId.materials;
+  document.getElementById('sbTitle').textContent = selected.name;
+  document.getElementById('stageTitle').textContent = `${selected.name}工作区`;
+  document.getElementById('stageDesc').textContent = selected.desc;
+  document.getElementById('stagePill').innerHTML = `${iconHtml(selected)}<span>当前选中 · ${selected.name}</span>`;
+
+  document.getElementById('stageChips').innerHTML = midIds
+    .map(id => {
+      const it = byId[id];
+      const on = it.id === state.selectedId;
+      return `<button type="button" class="stage-chip ${on ? 'active' : ''}" data-select="${it.id}">${iconHtml(it)}<span>${it.name}</span></button>`;
+    })
+    .join('');
+
+  document.getElementById('inspectBig').innerHTML = iconHtml(selected);
+  document.getElementById('inspectName').textContent = `${selected.name} · ${selected.comp}`;
+  document.getElementById('inspectId').textContent = `domain: ${selected.domain}`;
+  document.getElementById('inspectStates').innerHTML = `
+    <div class="st-pill"><div class="st-box rest">${iconHtml(selected)}</div><span>静息 21px</span></div>
+    <div class="st-pill"><div class="st-box hover">${iconHtml(selected)}</div><span>悬停 21px</span></div>
+    <div class="st-pill"><div class="st-box sel">${iconHtml(selected)}</div><span>选中 21px</span></div>
+  `;
+
+  const mobIds = ['materials', 'knowledge', 'training', 'learning', 'assistant', 'search'];
+  document.getElementById('mobileBar').innerHTML = mobIds
+    .map(id => {
+      const it = byId[id];
+      return `<button type="button" class="mob-item ${it.id === state.selectedId ? 'on' : ''}" data-select="${it.id}">${iconHtml(it)}<span>${it.mobLabel}</span></button>`;
+    })
+    .join('');
+
+  document.getElementById('iconMatrix').innerHTML = ICONS.map(item => `
+    <article class="ic-card" data-select="${item.id}" style="cursor: pointer; ${item.id === state.selectedId ? 'border-color: var(--accent);' : ''}">
+      <div class="ic-card-hd">
+        <strong>${item.name}</strong>
+        <code>${item.comp}</code>
+      </div>
+      <div class="ic-samples">
+        <div class="ic-cell"><div class="ic-box big">${iconHtml(item)}</div><small>44px 放大</small></div>
+        <div class="ic-cell"><div class="ic-box rest">${iconHtml(item)}</div><small>默认 21px</small></div>
+        <div class="ic-cell"><div class="ic-box sel">${iconHtml(item)}</div><small>选中 21px</small></div>
+        <div class="ic-cell old-col"><div class="ic-box old">${oldIconHtml(item)}</div><small>现版线性</small></div>
+      </div>
+      <p class="ic-desc">${typeof item.note === 'function' ? item.note() : item.note}</p>
+    </article>
+  `).join('');
+}
+
+function bindSegmented(id, key, onVal) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', event => {
+    const btn = event.target.closest('button');
+    if (!btn) return;
+    el.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    onVal(btn.dataset[key]);
+    renderAll();
+  });
+}
+
+bindSegmented('accentSeg', 'accent', v => {
+  state.accentKey = v;
+});
+bindSegmented('modeSeg', 'mode', v => {
+  state.mode = v;
+});
+bindSegmented('schemeSeg', 'scheme', v => {
+  state.scheme = v;
+});
+bindSegmented('brandSeg', 'brand', v => {
+  state.brand = v;
+});
+bindSegmented('knowledgeSeg', 'knowledge', v => {
+  state.knowledge = v;
+});
+bindSegmented('cmpSeg', 'cmp', v => {
+  state.cmp = v === 'on';
+});
+
+document.getElementById('customAccent').addEventListener('input', event => {
+  state.accentKey = 'custom';
+  state.customHex = event.target.value;
+  document.querySelectorAll('#accentSeg button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+  renderAll();
+});
+
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('[data-select]');
+  if (!trigger) return;
+  state.selectedId = trigger.dataset.select;
+  renderAll();
+});
+
+renderAll();
+</script>
+</body>
+</html>

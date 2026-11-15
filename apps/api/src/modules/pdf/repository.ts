@@ -15,6 +15,7 @@ import type {
 } from './contracts.ts';
 import { Note } from '../knowledge/domain/note.ts';
 import { pdfError } from './files.ts';
+import { recordPdfAnnotationActivity } from './annotation-activity.ts';
 
 function uniqueTitle(
   note: { title: string; folderId?: string | null },
@@ -147,19 +148,28 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
           const note = dataStore.state.notes.find(item => item.id === noteId);
           if (!note || note.deleted) throw pdfError('NOTE_NOT_FOUND', '资料不存在。', 404);
           const index = dataStore.state.pdfAnnotations.findIndex(item => item.id === id);
-          const next = update(index < 0 ? null : dataStore.state.pdfAnnotations[index]);
+          const previous = index < 0 ? null : dataStore.state.pdfAnnotations[index];
+          const next = update(previous);
           assertBound(note, next);
+          // 同一 operationId 的重试返回原回执，不重复推进资料日期。
+          if (previous?.revision === next.revision) return structuredClone(next);
+          recordPdfAnnotationActivity(note, next);
           if (index < 0) dataStore.state.pdfAnnotations.push(next);
           else dataStore.state.pdfAnnotations[index] = next;
           dataStore.flush();
           return structuredClone(next);
         });
       return db!.$transaction(async tx => {
+        // 先锁父资料，串行推进日期，避免不同批注并发保存时覆盖较新的时间。
+        await tx.$queryRaw`SELECT "id" FROM "Note" WHERE "id" = ${noteId} FOR UPDATE`;
         const note = await tx.note.findUnique({ where: { id: noteId } });
         if (!note || note.deletedAt) throw pdfError('NOTE_NOT_FOUND', '资料不存在。', 404);
         const row = await tx.pdfAnnotation.findUnique({ where: { id } });
         const next = update(row ? readAnnotation(row.payload) : null);
         assertBound(postgres!.mapNote(note)!, next);
+        if (row?.revision === next.revision) return next;
+        const activity = { updatedAt: note.updatedAt.toISOString() };
+        recordPdfAnnotationActivity(activity, next);
         if (!row)
           await tx.pdfAnnotation.create({
             data: {
@@ -179,6 +189,7 @@ export function createPdfRepository({ dataStore, db, knowledge, ownerId, postgre
           });
           if (result.count !== 1) throw pdfError('PDF_ANNOTATION_CONFLICT', '标注已在其他位置修改，请刷新核对。', 409);
         }
+        await tx.note.update({ where: { id: noteId }, data: { updatedAt: new Date(activity.updatedAt) } });
         return next;
       });
     },

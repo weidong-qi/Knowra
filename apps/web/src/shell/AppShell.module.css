@@ -234,7 +234,6 @@
   --surface-nav-selected: var(--ni-shell-card);
   --highlight-nav-selected: 0 0 transparent;
   --nav-selected-bg: var(--ni-shell-card);
-  --nav-selected-line: transparent;
   --nav-selected-ink: var(--ni-shell-ink);
   --nav-selected-shadow: 0 0 transparent;
 }

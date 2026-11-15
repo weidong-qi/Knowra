@@ -264,7 +264,7 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
   );
 });
 
-test('文档与 PDF 图标风格切换后在刷新及深色模式中保留', async ({ page }, info) => {
+test('文档与 PDF 图标统一使用胶囊徽标，设置页不再提供切换并在明暗模式中保留', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
   await page.route('**/api/ai/model-settings', route =>
     route.fulfill({
@@ -287,25 +287,17 @@ test('文档与 PDF 图标风格切换后在刷新及深色模式中保留', asy
     route => route.fulfill({ json: { data: notes } })
   );
   await page.goto('/#/settings');
-  await expect(page.getByRole('button', { name: '胶囊徽标' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('heading', { name: '文档图标风格' })).toHaveCount(0);
   await page.goto('/#/materials');
-  const document = page.locator('[data-art-kind="document"] svg[data-document-style]');
-  const pdf = page.locator('[data-art-kind="pdf"] svg[data-document-style]');
-  await expect(document).toHaveAttribute('data-document-style', 'capsule');
-  await expect(pdf).toHaveAttribute('data-document-style', 'capsule');
+  const document = page.locator('[data-art-kind="document"]');
+  const pdf = page.locator('[data-art-kind="pdf"]');
+  await expect(document).toContainText('NOTE');
+  await expect(pdf).toContainText('PDF');
   await page.screenshot({ path: info.outputPath('icons-capsule-light.png'), animations: 'disabled' });
-  await page.goto('/#/settings');
-  await page.getByRole('button', { name: '学术版式' }).click();
-  await page.reload();
-  await expect(page.getByRole('button', { name: '学术版式' })).toHaveAttribute('aria-pressed', 'true');
-  await page.goto('/#/materials');
-  await expect(document).toHaveAttribute('data-document-style', 'layout');
-  await expect(pdf).toHaveAttribute('data-document-style', 'layout');
-  await page.screenshot({ path: info.outputPath('icons-layout-light.png'), animations: 'disabled' });
   await page.getByRole('button', { name: '切换深色模式' }).click();
-  await expect(document).toHaveAttribute('data-document-style', 'layout');
-  await expect(pdf).toHaveAttribute('data-document-style', 'layout');
-  await page.screenshot({ path: info.outputPath('icons-layout-dark.png'), animations: 'disabled' });
+  await expect(document).toContainText('NOTE');
+  await expect(pdf).toContainText('PDF');
+  await page.screenshot({ path: info.outputPath('icons-capsule-dark.png'), animations: 'disabled' });
 });
 
 test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ page }, info) => {
@@ -485,46 +477,44 @@ test('强制色保留页签和表单焦点，错误字段继续报告校验错�
 });
 
 for (const mode of ['light', 'dark']) {
-  for (const buttonStyle of ['paper', 'frost']) {
-    test(`${mode} ${buttonStyle}：按钮材质不覆盖禁用反馈`, async ({ page }) => {
-      await mockEditorWorkspace(page, []);
-      await page.addInitScript(
-        appearance => {
-          localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify(appearance));
-        },
-        { mode, buttonStyle }
-      );
-      await page.goto('/#/showcase');
-      const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
-      await expect(shell).toHaveAttribute('data-button-style', buttonStyle);
-      for (const name of ['默认', '保存']) {
-        const button = page.getByRole('button', { name, exact: true, disabled: true });
-        await expect(button).toBeDisabled();
-        await expect(button).toHaveCSS('box-shadow', 'none');
-        await expect(button).toHaveCSS('opacity', '0.65');
-        await expect(button).toHaveCSS('cursor', 'not-allowed');
-        const colors = await button.evaluate(element => {
-          const computed = getComputedStyle(element);
-          const probe = document.createElement('span');
-          probe.style.cssText =
-            'color:var(--text-muted);background:var(--surface-hover);border:1px solid var(--border-subtle)';
-          element.append(probe);
-          const neutral = getComputedStyle(probe);
-          const result = {
-            actual: [computed.color, computed.backgroundColor, computed.borderTopColor],
-            expected: [neutral.color, neutral.backgroundColor, neutral.borderTopColor]
-          };
-          probe.remove();
-          return result;
-        });
-        expect(colors.actual).toEqual(colors.expected);
-      }
-      // 默认按钮是细线样式：透明底和 1px 描边，没有投影；主按钮仍保留材质投影，防止用全局移除样式掩盖问题。
-      const outline = page.getByRole('button', { name: '默认胶囊', exact: true });
-      await expect(outline).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-      await expect(outline).toHaveCSS('border-top-width', '1px');
-      await expect(outline).toHaveCSS('box-shadow', 'none');
-      await expect(page.getByRole('button', { name: '发布', exact: true })).not.toHaveCSS('box-shadow', 'none');
-    });
-  }
+  test(`${mode}：主按钮纸感样式不覆盖禁用反馈`, async ({ page }) => {
+    await mockEditorWorkspace(page, []);
+    await page.addInitScript(
+      appearance => {
+        localStorage.setItem('knowra:notes-index-appearance:v1', JSON.stringify(appearance));
+      },
+      { mode }
+    );
+    await page.goto('/#/showcase');
+    const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
+    await expect(shell).not.toHaveAttribute('data-button-style');
+    for (const name of ['默认', '保存']) {
+      const button = page.getByRole('button', { name, exact: true, disabled: true });
+      await expect(button).toBeDisabled();
+      await expect(button).toHaveCSS('box-shadow', 'none');
+      await expect(button).toHaveCSS('opacity', '0.65');
+      await expect(button).toHaveCSS('cursor', 'not-allowed');
+      const colors = await button.evaluate(element => {
+        const computed = getComputedStyle(element);
+        const probe = document.createElement('span');
+        probe.style.cssText =
+          'color:var(--text-muted);background:var(--surface-hover);border:1px solid var(--border-subtle)';
+        element.append(probe);
+        const neutral = getComputedStyle(probe);
+        const result = {
+          actual: [computed.color, computed.backgroundColor, computed.borderTopColor],
+          expected: [neutral.color, neutral.backgroundColor, neutral.borderTopColor]
+        };
+        probe.remove();
+        return result;
+      });
+      expect(colors.actual).toEqual(colors.expected);
+    }
+    // 默认按钮是细线样式：透明底和 1px 描边，没有投影；主按钮仍保留纸感投影，防止用全局移除样式掩盖问题。
+    const outline = page.getByRole('button', { name: '默认胶囊', exact: true });
+    await expect(outline).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(outline).toHaveCSS('border-top-width', '1px');
+    await expect(outline).toHaveCSS('box-shadow', 'none');
+    await expect(page.getByRole('button', { name: '发布', exact: true })).not.toHaveCSS('box-shadow', 'none');
+  });
 }

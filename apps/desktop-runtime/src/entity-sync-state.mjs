@@ -40,6 +40,7 @@ import {
 import { readMeta, writeMeta } from './sync-state.mjs';
 import { preserveLocalHistoryCopies } from './history-sync-retention.mjs';
 import { createEntityConflictCopy } from './entity-conflict-copy.mjs';
+import { mergePdfNoteActivity } from './pdf-note-activity.mjs';
 import {
   readKnowledgeLifecycleBoundaries,
   firstKnowledgeLifecycleBoundaries,
@@ -367,9 +368,18 @@ export function applyEntityRemote(store, entries, cursor, epoch, { reset = false
     const boundaries = readKnowledgeLifecycleBoundaries(db);
     const dirty = dirtyEntries(db, local, base, boundaries);
     const firstBoundaries = firstKnowledgeLifecycleBoundaries(boundaries);
+    const activityNotes = new Map();
     const conflicts = dirty.filter(entry => {
       const old = base.get(syncKey(entry.collection, entry.id));
       const next = remote.get(syncKey(entry.collection, entry.id));
+      const activity =
+        entry.collection === 'notes'
+          ? mergePdfNoteActivity(old?.value, next?.value, entry.value, { sameEpoch: previousEpoch === epoch })
+          : null;
+      if (activity) {
+        activityNotes.set(entry.id, activity);
+        return false;
+      }
       // 已收到自己的最早边界时，保留后继本地值并确认该权威基线。
       const boundary = firstBoundaries.get(syncKey(entry.collection, entry.id));
       if (!changedEpoch && boundary && sameEntity(entry.collection, boundary.value, next?.value)) return false;
@@ -396,7 +406,13 @@ export function applyEntityRemote(store, entries, cursor, epoch, { reset = false
       );
     });
     const merged = stateFromBase(remote);
-    for (const entry of dirty) replace(merged, entry);
+    for (const entry of dirty)
+      replace(
+        merged,
+        entry.collection === 'notes' && activityNotes.has(entry.id)
+          ? { ...entry, value: activityNotes.get(entry.id) }
+          : entry
+      );
     // 云端私密化立即隔离本地待合并正文；冲突审阅不自动恢复 AI 可读性。
     preserveRemoteNotePrivacy(merged, remote);
     preserveKnowledgeLifecycleInvalidations(merged, local, boundaries);

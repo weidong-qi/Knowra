@@ -5,8 +5,8 @@
 import { forwardRef, type ReactNode } from 'react';
 import { PressableButton } from '../components/ui/button/PressableButton';
 import {
-  BellIcon,
   RailAssistantIcon,
+  RailBellIcon,
   RailHomeIcon,
   RailKnowledgeIcon,
   RailNoteIcon,
@@ -113,7 +113,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
       <div className={styles.railGroup} role="group" aria-label="全局">
         <PressableButton
           type="button"
-          className={styles.railItem}
+          className={cx(styles.railItem, styles.railBrand)}
           aria-label="知境工作区"
           title="知境工作区"
           onPress={onReturnHome}
@@ -160,7 +160,7 @@ export const ModuleRail = forwardRef<HTMLElement, ModuleRailProps>(function Modu
           </span>
         </PressableButton>
         {onOpenNotifications ? (
-          <RailActionButton label="通知" title="通知" Icon={BellIcon} onClick={onOpenNotifications} />
+          <RailActionButton label="通知" title="通知" Icon={RailBellIcon} onClick={onOpenNotifications} />
         ) : null}
         {onOpenSettings ? (
           <MenuTrigger>

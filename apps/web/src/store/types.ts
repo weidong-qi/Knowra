@@ -73,6 +73,7 @@ export interface WorkspaceSlice {
   createFolder(parentId: string | null, name: string): Promise<string>;
   renameNote(noteId: string, title: string): Promise<void>;
   loadNoteContent(noteId: string): Promise<void>;
+  recordPdfAnnotationActivity(noteId: string, sha256: string, updatedAt: string): void;
   saveNoteContent(
     noteId: string,
     rawMarkdown: string,

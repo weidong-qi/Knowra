@@ -26,8 +26,7 @@
 .item[aria-current='page'] {
   background: var(--nav-selected-bg, var(--surface-raised));
   color: var(--nav-selected-ink, var(--text-primary));
-  border-color: var(--nav-selected-line, var(--border-subtle));
-  box-shadow: var(--nav-selected-shadow, var(--shadow-control));
+  box-shadow: var(--nav-selected-shadow, var(--shadow-control)), var(--highlight-nav-selected, 0 0 transparent);
   font-weight: 600;
 }
 .item[aria-pressed='true'] .icon,

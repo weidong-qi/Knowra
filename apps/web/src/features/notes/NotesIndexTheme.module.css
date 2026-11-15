@@ -34,7 +34,6 @@
     0 0 0 1px color-mix(in srgb, var(--ni-accent) 80%, #000), 0 1px 2px rgba(24, 30, 48, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 14px -6px color-mix(in srgb, var(--ni-accent) 55%, transparent);
   --nav-selected-bg: #fff;
-  --nav-selected-line: #cfd3dc;
   --nav-selected-ink: #0f1115;
   --nav-selected-shadow: 0 1px 2px rgba(24, 30, 48, 0.1);
   --ni-accent: var(--brand-base);
@@ -62,7 +61,6 @@
   --ni-gh-bg: #fafbfcf2;
   --ni-toast-bg: #262b3a;
   --ni-nv-sel: #fff;
-  --ni-nv-sel-line: #cfd3dc;
   --ni-nv-sel-ink: #0f1115;
   --ni-rail-sel: #fff;
   --ni-ring: rgba(24, 30, 48, 0.12);
@@ -198,7 +196,6 @@
   --ni-glow-dot: 0 0 8px color-mix(in srgb, var(--ni-accent) 60%, transparent);
   --shadow-accent: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
   --nav-selected-bg: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.055));
-  --nav-selected-line: rgba(255, 255, 255, 0.1);
   --nav-selected-ink: #f3f4f6;
   --nav-selected-shadow: 0 1px 2px #21273506, inset 0 1px rgba(255, 255, 255, 0.07);
   --ni-accent: var(--brand-base-dark);
@@ -226,7 +223,6 @@
   --ni-gh-bg: #202228f2;
   --ni-toast-bg: #3a3e46;
   --ni-nv-sel: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.055));
-  --ni-nv-sel-line: rgba(255, 255, 255, 0.1);
   --ni-nv-sel-ink: #f3f4f6;
   --ni-rail-sel: linear-gradient(180deg, #2d2f36, #25272d);
   --ni-ring: rgba(255, 255, 255, 0.09);

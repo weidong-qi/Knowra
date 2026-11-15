@@ -70,6 +70,13 @@
   color: var(--accent);
   box-shadow: var(--shadow-rail-selected);
 }
+.railBrand {
+  color: var(--accent);
+}
+.railBrand:hover:not(:disabled):not([aria-current='page']),
+.railBrand:active:not(:disabled):not([aria-current='page']) {
+  color: var(--accent);
+}
 .railItem:disabled {
   color: var(--text-muted);
   opacity: 0.5;

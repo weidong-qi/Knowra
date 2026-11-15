@@ -109,7 +109,8 @@ export function PdfReaderView({
   permission.current = canWrite;
   const sessionRef = useRef<PdfSession | null>(null);
   if (!sessionRef.current) {
-    const scope = `${readRuntimeConfig().cacheSuffix}:${note.spaceId ?? ''}`;
+    const cacheSuffix = readRuntimeConfig().cacheSuffix;
+    const scope = `${cacheSuffix}:${note.spaceId ?? ''}`;
     sessionRef.current = new PdfSession(
       note.id,
       source.sha256,
@@ -118,7 +119,11 @@ export function PdfReaderView({
         if (alive.current) render(value => value + 1);
       },
       () => permission.current && alive.current,
-      true
+      true,
+      saved => {
+        if (readRuntimeConfig().cacheSuffix === cacheSuffix)
+          store.recordPdfAnnotationActivity(note.id, source.sha256, saved.updatedAt);
+      }
     );
   }
   const session = sessionRef.current;

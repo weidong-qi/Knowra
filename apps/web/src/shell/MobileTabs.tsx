@@ -6,7 +6,7 @@
 import { forwardRef, type CSSProperties } from 'react';
 import { PressableButton } from '../components/ui/button/PressableButton';
 import { PRIMARY_DOMAINS, UTILITY_ITEMS, type RailItem } from './ModuleRail';
-import { RailAssistantIcon, RailSearchIcon, SettingsIcon } from '../components/icons/knowra';
+import { RailAssistantIcon, RailSearchIcon, RailSettingsIcon } from '../components/icons/knowra';
 import type { WorkDomain } from '../store/types';
 import styles from './MobileTabs.module.css';
 
@@ -27,8 +27,13 @@ export const MobileTabs = forwardRef<HTMLElement, MobileTabsProps>(function Mobi
   ref
 ) {
   return (
-    <nav ref={ref} className={styles.mobileTabs} style={{ '--mobile-tab-count': ALL_ITEMS.length + 3 } as CSSProperties} aria-label="移动端模块导航">
-      {ALL_ITEMS.map((item) => {
+    <nav
+      ref={ref}
+      className={styles.mobileTabs}
+      style={{ '--mobile-tab-count': ALL_ITEMS.length + 3 } as CSSProperties}
+      aria-label="移动端模块导航"
+    >
+      {ALL_ITEMS.map(item => {
         if (!item.available) {
           return (
             <PressableButton
@@ -61,9 +66,17 @@ export const MobileTabs = forwardRef<HTMLElement, MobileTabsProps>(function Mobi
           </PressableButton>
         );
       })}
-      <PressableButton type="button" className={styles.mobileTab} aria-label="AI 助手"
-        aria-current={isAssistantActive ? 'page' : undefined} onPress={onOpenAssistant} isDisabled={!onOpenAssistant}>
-        <span className={styles.mobileIcon}><RailAssistantIcon size={19} /></span>
+      <PressableButton
+        type="button"
+        className={styles.mobileTab}
+        aria-label="AI 助手"
+        aria-current={isAssistantActive ? 'page' : undefined}
+        onPress={onOpenAssistant}
+        isDisabled={!onOpenAssistant}
+      >
+        <span className={styles.mobileIcon}>
+          <RailAssistantIcon size={19} />
+        </span>
         <span className={styles.mobileLabel}>助手</span>
       </PressableButton>
       <PressableButton
@@ -74,7 +87,9 @@ export const MobileTabs = forwardRef<HTMLElement, MobileTabsProps>(function Mobi
         onPress={onOpenSettings}
         isDisabled={!onOpenSettings}
       >
-        <span className={styles.mobileIcon}><SettingsIcon size={19} /></span>
+        <span className={styles.mobileIcon}>
+          <RailSettingsIcon size={19} />
+        </span>
         <span className={styles.mobileLabel}>设置</span>
       </PressableButton>
       <PressableButton
