@@ -71,6 +71,9 @@ export async function exercisePdfBackgroundRendering(page) {
     assert(rect);
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
     const actions = page.getByRole('dialog', { name: 'PDF 标注操作', exact: true });
+    await expect(mark).toHaveAttribute('data-selected', '');
+    await expect(actions).toHaveCount(0);
+    await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
     await expect(actions).toBeVisible();
     if (mode === 'editor') {
       await actions.getByRole('button', { name: '添加批注', exact: true }).click();
