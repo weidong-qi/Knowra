@@ -78,26 +78,24 @@ it('写定义沿用草稿保护，保存失败保留输入，挂靠失败只重�
   const dialog = screen.getByRole('dialog', { name: '为“数学”写定义' });
   expect(within(dialog).getByRole('textbox', { name: '标题' })).toHaveValue('数学的定义');
   expect(within(dialog).getByRole('button', { name: /知识类型/ })).toBeDisabled();
-  await user.click(within(dialog).getByRole('button', { name: '保存', exact: true }));
+  await user.click(within(dialog).getByRole('button', { name: '保存' }));
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('请在核心陈述中填写定义正文');
   expect(create).not.toHaveBeenCalled();
   await user.type(within(dialog).getByRole('textbox', { name: '核心陈述' }), '研究数量与结构的学科。');
   expect(canNavigate()).toBe(false);
-  await user.click(within(dialog).getByRole('button', { name: '取消', exact: true }));
+  await user.click(within(dialog).getByRole('button', { name: '取消' }));
   await user.click(screen.getByRole('button', { name: '继续编辑' }));
-  await user.click(within(dialog).getByRole('button', { name: '保存', exact: true }));
+  await user.click(within(dialog).getByRole('button', { name: '保存' }));
   expect(await within(dialog).findByRole('alert')).toHaveTextContent('模拟保存失败');
   expect(within(dialog).getByRole('textbox', { name: '核心陈述' })).toHaveValue('研究数量与结构的学科。');
-  await user.click(within(dialog).getByRole('button', { name: '保存', exact: true }));
+  await user.click(within(dialog).getByRole('button', { name: '保存' }));
   await screen.findByRole('button', { name: '重试挂入' });
   expect(screen.queryByRole('dialog', { name: '为“数学”写定义' })).not.toBeInTheDocument();
   expect(items).toHaveLength(1);
   expect(canNavigate()).toBe(true);
   await user.click(screen.getByRole('button', { name: '重试挂入' }));
-  await waitFor(() =>
-    expect(screen.getByRole('region', { name: '定义', exact: true })).toHaveTextContent('研究数量与结构的学科。')
-  );
-  expect(screen.getByRole('region', { name: '定义', exact: true })).toHaveTextContent('候选');
+  await waitFor(() => expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('研究数量与结构的学科。'));
+  expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('候选');
   expect(create).toHaveBeenCalledTimes(2);
   expect(create.mock.calls[0]![0].id).toBe(create.mock.calls[1]![0].id);
   expect(linkAttempts).toBe(2);

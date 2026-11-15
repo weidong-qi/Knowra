@@ -66,9 +66,9 @@ it('提及的两条知识明确显示为知识点，不显示为两个概念', (
   expect(screen.getByRole('heading', { name: '关联知识点' })).toBeVisible();
   const group = screen.getByRole('region', { name: '概念类知识点' });
   expect(within(group).getByRole('button', { name: '概念类知识点 2' })).toBeVisible();
-  expect(within(group).getByRole('button', { name: '测试知识', exact: true })).toBeVisible();
-  expect(within(group).getByRole('button', { name: '勾股定理', exact: true })).toBeVisible();
-  expect(screen.getByRole('region', { name: '定义', exact: true })).toHaveTextContent('基础学科');
+  expect(within(group).getByRole('button', { name: '测试知识' })).toBeVisible();
+  expect(within(group).getByRole('button', { name: '勾股定理' })).toBeVisible();
+  expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('基础学科');
   expect(screen.getByRole('button', { name: '写定义' })).toBeVisible();
 });
 
@@ -78,7 +78,7 @@ it('最早主体定义直接展示，其他定义默认收起，保留打开和�
     [item('后写的定义', '另一种数学解释', '2026-11-02T00:00:00Z'), item('最早定义', '研究数量与结构的学科。')],
     false
   );
-  const definition = screen.getByRole('region', { name: '定义', exact: true });
+  const definition = screen.getByRole('region', { name: '定义' });
   expect(definition).toHaveTextContent('研究数量与结构的学科。');
   expect(within(definition).queryByText('另一种数学解释')).not.toBeInTheDocument();
   expect(screen.queryByRole('region', { name: '概念类知识点' })).not.toBeInTheDocument();
@@ -93,7 +93,7 @@ it('最早主体定义直接展示，其他定义默认收起，保留打开和�
 
 it('只读模式不提供写定义和挂靠操作', () => {
   setup([], false, false);
-  expect(screen.getByRole('region', { name: '定义', exact: true })).toHaveTextContent('基础学科');
+  expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('基础学科');
   expect(screen.queryByRole('button', { name: '写定义' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '挂入知识点' })).not.toBeInTheDocument();
 });
