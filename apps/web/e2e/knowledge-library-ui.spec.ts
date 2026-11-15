@@ -129,6 +129,8 @@ for (const width of [1440, 390])
         await list.getByRole('button', { name: /合成卷积知识/ }).click();
         await page.getByRole('button', { name: '卷积神经网络 · 主体', exact: true }).click();
         await expect(page.getByRole('article', { name: '概念详情' })).toContainText('主体 1');
+        await expect(page.getByRole('region', { name: '定义', exact: true })).toContainText('卷积操作用于提取局部特征');
+        await expect(page.getByRole('region', { name: '概念类知识点', exact: true })).toHaveCount(0);
         await expect(page.getByRole('region', { name: '概念列表内容', includeHidden: true })).toBeAttached();
         await page.screenshot({ path: info.outputPath(`concept-detail-${width}-${mode}.png`), animations: 'disabled' });
         await page.goBack();

@@ -78,6 +78,7 @@ function KnowledgeStageContent({ pathname, onOpenNote }: { pathname: string; onO
         onSelect={id => changeRoute({ id })}
         onOpenItem={id => navigate(`/knowledge?item=${encodeURIComponent(id)}`)}
         onListItems={listConceptItems}
+        onCreateItem={state.createKnowledgeCandidate}
       />
     );
   return (

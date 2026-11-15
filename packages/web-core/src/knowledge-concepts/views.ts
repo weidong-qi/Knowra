@@ -15,6 +15,21 @@ export function conceptCounts(state: ConceptState, items: readonly ConceptItem[]
     mentions: links.filter(row => row.role === 'mentions').length
   };
 }
+/** 定义仍是知识点：只从有效的主体挂靠取值，最早创建者优先，同一时间按 ID 稳定排序。 */
+export function conceptDefinitions<Item extends ConceptItem & { knowledgeType: string; createdAt: string }>(
+  state: ConceptState,
+  items: readonly Item[],
+  conceptId: string
+): Item[] {
+  const ids = new Set(
+    conceptItemLinks(state, items)
+      .filter(link => link.conceptId === conceptId && link.role === 'subject')
+      .map(link => link.knowledgeItemId)
+  );
+  return items
+    .filter(item => ids.has(item.id) && item.knowledgeType === 'concept')
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id));
+}
 export function groupItemsByConcept<Item extends ConceptItem>(
   state: ConceptState,
   items: readonly Item[]
