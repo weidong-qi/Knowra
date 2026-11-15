@@ -23,6 +23,7 @@ test('PDF 便签跨页拖动、边缘自动滚动、撤销重做与取消', { ti
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }),
     errors = [];
+  await page.clock.install();
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(runtime.launchUrl);
   const api = async (url, method = 'GET', data) => {
@@ -154,29 +155,31 @@ test('PDF 便签跨页拖动、边缘自动滚动、撤销重做与取消', { ti
     await page.mouse.move(b.x + b.width * 0.75, bottom ? b.y + b.height - 6 : b.y + 6, { steps: 10 });
   };
   const beforeAuto = await sticky();
-  await begin();
-  const beforeScroll = await readScroll();
-  await edge(true);
-  // 目标页可能已露在阅读区底部，不能把命中目标页当成动画已滚动的信号。
-  await expect
-    .poll(async () => ({ page: await previewPage(), scrolled: (await readScroll()) > beforeScroll + 40 }), {
-      timeout: 10000
-    })
-    .toEqual({ page: '2', scrolled: true });
-  await page.mouse.up();
+  const dragByScrolling = async (target, bottom) => {
+    await begin();
+    const before = await readScroll();
+    await page.clock.pauseAt(new Date((await page.evaluate(() => Date.now())) + 1000));
+    await edge(bottom);
+    let reached = false;
+    // 保持真实指针和自动滚动，逐帧检查瞬时落点，避免轮询间隔内跳过目标页后继续到第三页。
+    for (let frame = 0; frame < 625; frame++) {
+      await page.clock.runFor(16);
+      const top = await readScroll();
+      if ((await previewPage()) === target && (bottom ? top > before + 40 : top < before - 40)) {
+        reached = true;
+        break;
+      }
+    }
+    assert(reached, `自动滚动须抵达第 ${target} 页且产生实际滚动`);
+    await page.mouse.up();
+    await page.clock.resume();
+  };
+  await dragByScrolling('2', true);
   await savedOn(1);
   assert.equal((await sticky()).revision, beforeAuto.revision + 1);
   await stopped();
   await locate();
-  await begin();
-  const beforeUp = await readScroll();
-  await edge(false);
-  await expect
-    .poll(async () => ({ page: await previewPage(), scrolled: (await readScroll()) < beforeUp - 40 }), {
-      timeout: 10000
-    })
-    .toEqual({ page: '1', scrolled: true });
-  await page.mouse.up();
+  await dragByScrolling('1', false);
   await savedOn(0);
   await stopped();
 

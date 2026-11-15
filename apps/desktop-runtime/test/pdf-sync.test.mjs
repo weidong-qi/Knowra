@@ -317,6 +317,47 @@ async function runPdfSync(t, postgres = false) {
       2
     );
   }
+  // B 离线修改资料时，A 的批注新增、编辑和删除只推进父资料日期；B 应自动换用新基线。
+  let activity;
+  for (const action of ['create', 'edit', 'delete']) {
+    const title = `离线资料名称-${action}`;
+    b.context.modules.knowledge.noteService.updateNote(copy.id, { title, favorite: action !== 'edit' });
+    activity = await a.context.http.pdf.mutate(
+      copy.id,
+      'activity-with-rename',
+      {
+        operationId: `activity-${action}`,
+        expectedRevision: activity?.revision ?? 0,
+        ...(action === 'create' ? { type: 'region', segments: segments([30, 40, 50, 60]) } : {}),
+        comment: `批注-${action}`
+      },
+      action === 'delete'
+    );
+    await a.engine.sync();
+    assert.equal(a.engine.status().error, null);
+    await b.engine.sync();
+    assert.equal(b.engine.status().error, null);
+    assert.equal(b.engine.status().entityConflict, null, `${action} 批注不能阻塞离线重命名`);
+    await a.engine.sync();
+    const latest = await cloud.modules.knowledge.noteService.getNote(copy.id);
+    assert.equal(latest.title, title);
+    assert.equal(latest.favorite, action !== 'edit');
+    for (const device of [a, b]) {
+      const local = device.store.state.notes.find(item => item.id === copy.id);
+      assert.equal(local.title, title);
+      assert.equal(local.updatedAt, latest.updatedAt);
+      const mark = device.store.state.pdfAnnotations.find(item => item.id === activity.id);
+      assert.equal(mark.comment, activity.comment);
+      assert.equal(Boolean(mark.deletedAt), action === 'delete');
+    }
+  }
+  // 真正的双端资料修改依然保留核对流程，不能把远端标题变化也当成活动日期。
+  a.context.modules.knowledge.noteService.updateNote(copy.id, { title: 'A 的资料名称' });
+  b.context.modules.knowledge.noteService.updateNote(copy.id, { title: 'B 的资料名称' });
+  await a.engine.sync();
+  await b.engine.sync();
+  assert(b.engine.status().entityConflict, '两端标题同时变化仍应冲突');
+  assert.equal(b.store.state.notes.find(item => item.id === copy.id).title, 'B 的资料名称');
 }
 test('PDF 真实双 SQLite / HTTP：二进制文件、标注、重启、回收站、三种冲突与完整备份', { timeout: 60000 }, t =>
   runPdfSync(t)
