@@ -63,10 +63,24 @@ test('PDF 标注按侧栏状态先定位再打开，便签、目录和筛选保�
   const actions = page.getByRole('dialog', { name: 'PDF 标注操作', exact: true });
   const editor = page.getByRole('dialog', { name: '编辑 PDF 批注', exact: true });
   const overlay = id => page.locator(`[data-pdf-annotation-id="${id}"]`).first();
+  const settleLayout = () =>
+    page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const position = async id => {
+    // 侧栏开闭会按纸面宽度重新缩放；先完成布局，再把夹具放进可点击的阅读区。
+    await settleLayout();
+    await overlay(id).evaluate(element => element.scrollIntoView({ block: 'center', inline: 'center' }));
+    await settleLayout();
+  };
   const click = async id => {
     const box = await overlay(id).boundingBox();
     assert(box);
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const inReader = await reader.evaluate(
+      (element, point) => element.contains(document.elementFromPoint(point.x, point.y)),
+      point
+    );
+    assert(inReader, `${id} 的点击位置必须落在 PDF 阅读区内：${JSON.stringify(point)}`);
+    await page.mouse.click(point.x, point.y);
   };
   const blank = async () => {
     const box = await page.locator('.canvasWrapper').boundingBox();
@@ -106,7 +120,9 @@ test('PDF 标注按侧栏状态先定位再打开，便签、目录和筛选保�
 
   // 关闭侧栏后四类标注仍一次点击打开，不自动展开侧栏。
   await inspector.getByRole('button', { name: '关闭 PDF 检查器' }).click();
+  await expect(inspector).toHaveCount(0);
   for (const item of fixtures) {
+    await position(item.id);
     await click(item.id);
     await expect(item.type === 'note' ? editor : actions).toBeVisible();
     await expect(inspector).toHaveCount(0);
@@ -114,6 +130,7 @@ test('PDF 标注按侧栏状态先定位再打开，便签、目录和筛选保�
   }
 
   await page.getByRole('button', { name: '标注', exact: true }).click();
+  await position('highlight');
   const search = inspector.getByRole('searchbox', { name: '搜索标注和批注' });
   await search.fill('不匹配');
   await click('highlight');
