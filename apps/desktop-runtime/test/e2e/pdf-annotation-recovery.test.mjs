@@ -64,6 +64,7 @@ test('PDF 标注恢复：回执丢失后继续编辑、删除及重开后的并�
   await page.goto(`${noteUrl}?pdfAnnotation=${mark.id}`);
   await page.reload();
   const comment = page.getByRole('textbox', { name: '评论', exact: true });
+  await expect(page.getByRole('button', { name: '区域框选', exact: true })).toBeEnabled();
   await page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await expect(comment).toHaveValue('原评论');
   await expect(page.locator('.textLayer').first()).toBeVisible();
@@ -108,6 +109,7 @@ test('PDF 标注恢复：回执丢失后继续编辑、删除及重开后的并�
   const recovered = await createMark('recovered');
   await page.goto(`${noteUrl}?pdfAnnotation=${recovered.id}`);
   await page.reload();
+  await expect(page.getByRole('button', { name: '区域框选', exact: true })).toBeEnabled();
   await page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await expect(comment).toHaveValue('原评论');
   // 暂停浏览器时钟，确保关闭页面时草稿尚未进入自动保存请求。
