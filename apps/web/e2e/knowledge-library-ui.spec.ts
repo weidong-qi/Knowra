@@ -53,6 +53,7 @@ for (const width of [1440, 390])
             sourceMode: 'manual'
           });
         }
+        await post('/api/knowledge/items/ui-free/needs-revision', {});
         await post('/api/knowledge/concepts/commands', {
           command: {
             type: 'createConcept',
@@ -87,7 +88,7 @@ for (const width of [1440, 390])
         await expect(page.getByRole('list', { name: '知识卡片视图' }).first()).toBeVisible();
         const createControl = page
           .getByRole('toolbar', { name: '知识库工具栏' })
-          .getByRole('button', { name: '新建知识候选' });
+          .getByRole('button', { name: '新建知识点' });
         await expect(createControl).toBeVisible();
         const createBox = await createControl.boundingBox();
         expect(createBox).not.toBeNull();
@@ -125,7 +126,10 @@ for (const width of [1440, 390])
           animations: 'disabled'
         });
         await page.getByRole('button', { name: '关闭详情', exact: true }).click();
-        await (await openSidebar()).getByRole('button', { name: /^候选/ }).click();
+        const pendingNav = (await openSidebar()).getByRole('button', { name: /^待确认/ });
+        await expect(pendingNav).toContainText('2');
+        await pendingNav.click();
+        await expect(list.getByRole('button', { name: /合成长标题/ })).toBeVisible();
         await list.getByRole('button', { name: /合成卷积知识/ }).click();
         await page.getByRole('button', { name: '卷积神经网络 · 主体', exact: true }).click();
         await expect(page.getByRole('article', { name: '概念详情' })).toContainText('主体 1');

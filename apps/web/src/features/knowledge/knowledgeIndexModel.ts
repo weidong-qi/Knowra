@@ -1,7 +1,12 @@
 import { emptyConceptState, groupItemsByConcept, type ConceptState } from '@study-accelerator/web-core';
 import { useSyncExternalStore } from 'react';
 import type { KnowledgeItem } from '@study-accelerator/web-core';
-import { KNOWLEDGE_STATUS_LABELS, knowledgeStatusLabel, knowledgeTypeLabel } from './knowledgeViewModel';
+import {
+  KNOWLEDGE_STATUS_LABELS,
+  knowledgeReviewViewStatus,
+  knowledgeStatusLabel,
+  knowledgeTypeLabel
+} from './knowledgeViewModel';
 
 export type KnowledgeView = 'list' | 'card';
 export type KnowledgeGroup = 'status' | 'type' | 'updated' | 'concept' | 'none';
@@ -35,7 +40,7 @@ export const DEFAULT_KNOWLEDGE_DISPLAY: Readonly<KnowledgeDisplay> = {
 const VIEWS: readonly KnowledgeView[] = ['list', 'card'];
 const GROUPS: readonly KnowledgeGroup[] = ['status', 'type', 'updated', 'concept', 'none'];
 const SORTS: readonly KnowledgeSort[] = ['updated-desc', 'updated-asc', 'name-asc'];
-const STATUS_ORDER = ['candidate', 'needsRevision', 'confirmed', 'archived'] as const;
+const STATUS_ORDER = ['candidate', 'confirmed', 'archived'] as const;
 
 export function parseKnowledgeDisplay(value: unknown): KnowledgeDisplay {
   const input = value && typeof value === 'object' ? (value as Partial<KnowledgeDisplay>) : {};
@@ -145,7 +150,7 @@ export function groupKnowledge(
       label = '回收站';
       rank = 99;
     } else if (group === 'status') {
-      const status = item.reviewStatus ?? 'candidate';
+      const status = knowledgeReviewViewStatus(item.reviewStatus);
       id = status;
       label = knowledgeStatusLabel(status);
       rank = Math.max(0, (STATUS_ORDER as readonly string[]).indexOf(status));
@@ -171,6 +176,6 @@ export function groupKnowledge(
 export const KNOWLEDGE_FILTER_OPTIONS: readonly [string, string][] = [
   ['all', '全部未归档'],
   ['ungrouped', '未归入概念'],
-  ...Object.entries(KNOWLEDGE_STATUS_LABELS),
+  ...STATUS_ORDER.map(status => [status, KNOWLEDGE_STATUS_LABELS[status]] as [string, string]),
   ['trash', '回收站']
 ];

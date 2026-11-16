@@ -472,7 +472,7 @@ export function ConceptWorkspace({
           }}
         >
           <p className={styles.selectionCount}>
-            保存为知识候选后，将以主体挂入“{definitionConcept.name}”，显示为该概念的定义；核对后可在知识详情中确认。
+            保存为待确认知识后，将以主体挂入“{definitionConcept.name}”，显示为该概念的定义；核对后可在知识详情中确认。
           </p>
         </CreateKnowledgeCandidateDialog>
       ) : null}

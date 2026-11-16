@@ -186,8 +186,8 @@ export function KnowledgeIndexTools(props: KnowledgeIndexToolsProps) {
   const create = (
     <IconButton
       tone="floating"
-      aria-label="新建知识候选"
-      title="新建知识候选"
+      aria-label="新建知识点"
+      title="新建知识点"
       disabled={!props.canWrite || props.busy}
       onPress={props.onCreate}
     >

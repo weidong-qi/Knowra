@@ -110,7 +110,7 @@ test('概念定义：明确知识分组、最早主体定义、角色变更及�
     await dialog.getByRole('button', { name: '保存', exact: true }).click();
     await page.getByRole('button', { name: '重试挂入', exact: true }).click();
     await expect(definition).toContainText('能够感知环境并采取行动的实体。');
-    await expect(definition).toContainText('候选');
+    await expect(definition).toContainText('待确认');
     await page.reload();
     await expect(definition).toContainText('能够感知环境并采取行动的实体。');
     const allItems = (

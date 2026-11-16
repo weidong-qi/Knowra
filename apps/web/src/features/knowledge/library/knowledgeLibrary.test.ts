@@ -18,6 +18,9 @@ describe('知识库导航与共享数据', () => {
       id: 'k'
     });
     expect(parseKnowledgeLibraryRoute('/knowledge?scope=unknown').scope).toBe('all');
+    const legacy = parseKnowledgeLibraryRoute('/knowledge?scope=needsRevision&q=公式&item=k');
+    expect(legacy).toMatchObject({ scope: 'candidate', query: '公式', id: 'k' });
+    expect(knowledgeLibraryPath(legacy)).toContain('scope=candidate');
   });
   it('真实图的概念、关系和筛选深链接可恢复，切换选择不丢失过滤或焦点', () => {
     const route = parseKnowledgeLibraryRoute(

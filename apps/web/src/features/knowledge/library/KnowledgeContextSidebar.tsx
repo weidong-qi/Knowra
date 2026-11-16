@@ -3,6 +3,7 @@ import { groupItemsByConcept } from '@study-accelerator/web-core';
 import { useLocation, useNavigate } from '../../../app/router';
 import { ChevronRightIcon, KnowledgeIcon } from '../../../components/icons/knowra';
 import { SideNavItem, PressableButton } from '../../../components/ui';
+import { knowledgeReviewViewStatus } from '../knowledgeViewModel';
 import { useConceptState } from '../concepts/conceptStore';
 import { useKnowledgeLibraryCache } from './KnowledgeLibraryProvider';
 import {
@@ -33,7 +34,9 @@ export function KnowledgeContextSidebar() {
         : scope === 'ungrouped'
           ? ungrouped
           : active.filter(item =>
-              scope === 'all' ? item.reviewStatus !== 'archived' : (item.reviewStatus ?? 'candidate') === scope
+              scope === 'all'
+                ? item.reviewStatus !== 'archived'
+                : knowledgeReviewViewStatus(item.reviewStatus) === scope
             ).length
     ])
   );

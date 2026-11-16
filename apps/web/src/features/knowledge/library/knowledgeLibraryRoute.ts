@@ -1,7 +1,6 @@
 export const KNOWLEDGE_SCOPES = [
   ['all', '全部未归档'],
-  ['candidate', '候选'],
-  ['needsRevision', '待修订'],
+  ['candidate', '待确认'],
   ['confirmed', '已确认'],
   ['ungrouped', '未归入概念'],
   ['archived', '已归档'],
@@ -29,7 +28,9 @@ export function parseKnowledgeLibraryRoute(pathname: string): KnowledgeLibraryRo
   const page = path?.startsWith('/knowledge/graph') ? 'graph' : path === '/knowledge/concepts' ? 'concepts' : 'items';
   const params = new URLSearchParams(search);
   const options = page === 'concepts' ? CONCEPT_SCOPES : KNOWLEDGE_SCOPES;
-  const scope = options.find(([key]) => key === params.get('scope'))?.[0] ?? 'all';
+  const requestedScope =
+    page === 'items' && params.get('scope') === 'needsRevision' ? 'candidate' : params.get('scope');
+  const scope = options.find(([key]) => key === requestedScope)?.[0] ?? 'all';
   return {
     page,
     scope,
