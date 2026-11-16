@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import type { Note } from '@study-accelerator/web-core';
 import { PdfReaderView } from './PdfReaderView';
@@ -7,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   begin: vi.fn(),
   scrollCard: vi.fn(),
+  selection: vi.fn(),
+  lookup: vi.fn(),
   viewerRef: { current: { pagesCount: 0 } }
 }));
 
@@ -32,7 +35,12 @@ vi.mock('./pdfApi', async importOriginal => ({
 }));
 vi.mock('./pdfOverlay', async importOriginal => ({
   ...(await importOriginal<typeof import('./pdfOverlay')>()),
-  paintPdfAnnotations: () => undefined
+  paintPdfAnnotations: () => undefined,
+  readPdfSelection: mocks.selection
+}));
+vi.mock('../dictionary/localDictionary', async importOriginal => ({
+  ...(await importOriginal<typeof import('../dictionary/localDictionary')>()),
+  lookupDictionary: mocks.lookup
 }));
 vi.mock('./usePdfNoteDrag', () => ({
   usePdfNoteDrag: () => ({
@@ -93,12 +101,15 @@ beforeEach(() => {
   mocks.list.mockReset();
   mocks.begin.mockClear();
   mocks.scrollCard.mockClear();
+  mocks.selection.mockReset();
+  mocks.lookup.mockReset();
 });
 afterEach(() => {
   cleanup();
   delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
   Reflect.deleteProperty(document, 'elementFromPoint');
   vi.unstubAllGlobals();
+  window.getSelection()?.removeAllRanges();
 });
 
 async function mount(items: PdfAnnotation[], panelOpen = true) {
@@ -262,4 +273,42 @@ it('点击空白和滚动保留输入框与选中态，Esc 先收操作栏再关
   expect(editor()).toBeInTheDocument();
   fireEvent.keyDown(reader, { key: 'Escape' });
   expect(editor()).not.toBeInTheDocument();
+});
+
+it('查词卡内释义下拉优先处理 Esc，再关闭查词卡，保留正文批注窗口', async () => {
+  // 真实 Select 的焦点归还依赖异步 RAF，不能复用悬停测试的同步 RAF 替身。
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(0), 0));
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id));
+  const user = userEvent.setup();
+  const item = mark('highlight');
+  const { page } = await mount([item]);
+  fireEvent.click(screen.getByRole('button', { name: /定位标注.*highlight/ }));
+  mocks.selection.mockReturnValue({ ...item, quoteText: 'Gradients' });
+  mocks.lookup.mockResolvedValue({
+    query: 'Gradients',
+    word: 'gradient',
+    language: 'zh',
+    meanings: ['n. 梯度', 'a. 渐升的']
+  });
+  const layer = document.createElement('div');
+  layer.className = 'textLayer';
+  layer.textContent = 'Gradients';
+  page.append(layer);
+  const range = document.createRange();
+  range.selectNodeContents(layer);
+  Object.defineProperty(range, 'getClientRects', { value: () => [{ left: 40, right: 100, top: 40, bottom: 60 }] });
+  window.getSelection()!.addRange(range);
+  fireEvent.doubleClick(layer);
+  await screen.findByText('n. 梯度', { selector: 'p' });
+  const meaning = screen.getByRole('button', { name: /附带的释义/ });
+  await user.click(meaning);
+  expect(screen.getByRole('listbox')).toBeVisible();
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+  expect(screen.getByRole('dialog', { name: 'PDF 查词' })).toBeVisible();
+  await waitFor(() => expect(meaning).toHaveFocus());
+  expect(editor()).toBeInTheDocument();
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'PDF 查词' })).not.toBeInTheDocument());
+  expect(editor()).toBeInTheDocument();
 });

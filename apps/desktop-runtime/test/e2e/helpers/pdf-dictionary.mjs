@@ -79,6 +79,15 @@ export async function exercisePdfDictionary(page) {
   // 结果由点击触发，鼠标移开后仍能阅读、滚动和选择释义。
   await page.mouse.move(5, 5);
   await lookup.getByRole('button', { name: '附带的释义' }).click();
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(lookup).toBeVisible();
+  await expect(lookup.getByRole('button', { name: '附带的释义' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(lookup).toHaveCount(0);
+  await openWord('Gradients');
+  await lookup.getByRole('button', { name: '附带的释义' }).click();
   await page.getByRole('option', { name: /n\. 倾斜度, 梯度/ }).click();
   await expect(page.getByRole('listbox')).toHaveCount(0);
   if (process.env.KNOWRA_E2E_OUTPUT) {

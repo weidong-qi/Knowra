@@ -585,6 +585,8 @@ export function PdfReaderView({
       }}
       onKeyDownCapture={event => {
         if (event.key !== 'Escape' || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+        // Portal 中的浮层与嵌套下拉先处理自身按键，避免越过内层关闭查词卡片。
+        if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
         // 临时浮层优先，避免在常驻窗口或侧栏输入中按 Esc 时越级关闭。
         if (dictionary) setDictionary(null);
         else if (translation) setTranslation(null);
