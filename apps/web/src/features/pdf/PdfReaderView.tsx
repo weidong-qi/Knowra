@@ -331,12 +331,7 @@ export function PdfReaderView({
       }),
     []
   );
-  function activateAnnotation(
-    id: string,
-    point: { x: number; y: number },
-    _selectedBefore: string | null,
-    intent: 'actions' | 'edit' = 'actions'
-  ) {
+  function activateAnnotation(id: string, point: { x: number; y: number }, intent: 'actions' | 'edit' = 'actions') {
     if (!session.values().some(item => item.id === id)) return;
     if (panel) setPanelTab('marks');
     if (intent === 'edit') openComment(id, true, point.x || point.y ? point : undefined);
@@ -350,10 +345,10 @@ export function PdfReaderView({
   ) {
     const currentIds = new Set(session.values().map(item => item.id));
     const candidates = ids.filter(id => currentIds.has(id));
-    if (candidates.length === 1) activateAnnotation(candidates[0], point, selectedBefore, intent);
+    if (candidates.length === 1) activateAnnotation(candidates[0], point, intent);
     else if (candidates.length > 1) {
       setSelected(selectedBefore);
-      setAnnotationPicker({ ids: candidates, ...point, selectedBefore, intent });
+      setAnnotationPicker({ ids: candidates, ...point, intent });
     }
   }
   function selectFromSidebar(item: PdfAnnotation) {
@@ -867,9 +862,7 @@ export function PdfReaderView({
             <PdfAnnotationPicker
               items={pickerItems}
               point={annotationPicker}
-              onPick={id =>
-                activateAnnotation(id, annotationPicker, annotationPicker.selectedBefore, annotationPicker.intent)
-              }
+              onPick={id => activateAnnotation(id, annotationPicker, annotationPicker.intent)}
               onClose={() => {
                 setAnnotationPicker(null);
                 viewer.containerRef.current?.focus({ preventScroll: true });

@@ -5,7 +5,6 @@ import { initialCommentPoint } from './pdfAnnotationGeometry';
 export type AnnotationPoint = FloatingPoint & { id: string };
 export type AnnotationPicker = FloatingPoint & {
   ids: string[];
-  selectedBefore: string | null;
   intent: 'actions' | 'edit';
 };
 
