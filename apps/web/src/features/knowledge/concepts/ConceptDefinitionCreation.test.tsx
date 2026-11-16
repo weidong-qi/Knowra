@@ -87,7 +87,7 @@ it('重新挂载后可从概念页恢复定义，写定义复用原候选 ID 与
   mount();
   await user.click(await screen.findByRole('button', { name: '写定义' }));
   expect(screen.getByRole('status')).toHaveTextContent('已恢复未保存的知识草稿');
-  await user.click(screen.getByRole('button', { name: '保存', exact: true }));
+  await user.click(screen.getByRole('button', { name: '保存' }));
   await waitFor(() => expect(state.links).toHaveLength(1));
   expect(create).toHaveBeenCalledOnce();
   expect(create.mock.calls[0]![0]).toMatchObject({
