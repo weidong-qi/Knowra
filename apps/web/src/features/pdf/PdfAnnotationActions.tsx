@@ -9,6 +9,7 @@ export function PdfAnnotationActions({
   item,
   point,
   canWrite,
+  boundaryElement,
   onClose,
   onCopy,
   onEdit,
@@ -18,6 +19,7 @@ export function PdfAnnotationActions({
   item: PdfAnnotation;
   point: { x: number; y: number };
   canWrite: boolean;
+  boundaryElement?: Element;
   onClose(): void;
   onCopy(): void;
   onEdit(): void;
@@ -28,6 +30,8 @@ export function PdfAnnotationActions({
     <PointMenu
       surface="popover"
       isNonModal
+      boundaryElement={boundaryElement}
+      shouldCloseOnInteractOutside={element => !boundaryElement?.contains(element)}
       point={point}
       onOpenChange={open => {
         if (!open) onClose();
@@ -45,7 +49,7 @@ export function PdfAnnotationActions({
           >
             {item.comment ? '编辑批注' : '添加批注'}
           </Button>
-          {item.type !== 'region' ? (
+          {item.type !== 'region' && item.quoteText ? (
             <Button variant="ghost" size="mini" shape="square" icon={<CopyIcon size={16} />} onPress={onCopy}>
               复制
             </Button>

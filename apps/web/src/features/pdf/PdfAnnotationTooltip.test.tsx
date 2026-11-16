@@ -45,6 +45,11 @@ afterEach(() => {
 });
 
 function setup() {
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+    callback(0);
+    return 1;
+  });
+  vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
   const container = document.createElement('div');
   container.dataset.testPage = '';
   container.innerHTML = '<div class="page"><span>正文</span><svg><rect data-pdf-annotation-id="a1" /></svg></div>';

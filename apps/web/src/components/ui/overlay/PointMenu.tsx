@@ -28,6 +28,7 @@ export interface PointMenuProps {
   surface?: 'menu' | 'popover';
   /** 阅读区操作面板可保持正文指针可用，允许继续选择或双击查词。 */
   isNonModal?: boolean;
+  shouldCloseOnInteractOutside?(element: Element): boolean;
   children: ReactNode;
 }
 
@@ -43,6 +44,7 @@ export function PointMenu({
   maxHeight,
   surface = 'menu',
   isNonModal,
+  shouldCloseOnInteractOutside,
   children
 }: PointMenuProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -63,6 +65,7 @@ export function PointMenu({
         triggerRef={anchorRef}
         isOpen={Boolean(point)}
         isNonModal={isNonModal}
+        shouldCloseOnInteractOutside={shouldCloseOnInteractOutside}
         onOpenChange={onOpenChange}
         offset={0}
         placement="bottom start"

@@ -88,6 +88,7 @@ it('正文选择与重复定位会滚动对应条目，编辑正文时不抢焦�
     expect(scroll).not.toHaveBeenCalled();
     view.rerender(<PdfAnnotationsList {...props} items={[note]} selected="n" selectionRevision={1} />);
     expect(scroll).toHaveBeenCalledOnce();
+    fireEvent.doubleClick(screen.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }));
     const field = screen.getByRole('textbox', { name: '评论' });
     act(() => field.focus());
     view.rerender(
@@ -102,4 +103,32 @@ it('正文选择与重复定位会滚动对应条目，编辑正文时不抢焦�
     if (previous) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', previous);
     else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
   }
+});
+
+it('卡片空白与批注区域单击只选中，未选中的卡片也可双击评论编辑', () => {
+  const select = vi.fn(),
+    change = vi.fn();
+  const view = render(
+    <PdfAnnotationsList {...props} items={[{ ...note, comment: '原有评论' }]} onSelect={select} onChange={change} />
+  );
+  const preview = screen.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' });
+  fireEvent.click(preview.closest('section')!);
+  fireEvent.click(preview);
+  expect(select).toHaveBeenCalledWith(expect.objectContaining({ id: 'n' }));
+  expect(screen.queryByRole('textbox', { name: '评论' })).toBeNull();
+  fireEvent.doubleClick(preview);
+  const input = screen.getByRole('textbox', { name: '评论' });
+  expect(input).toHaveFocus();
+  fireEvent.change(input, { target: { value: '同步评论' } });
+  expect(change).toHaveBeenLastCalledWith('n', { comment: '同步评论' });
+  view.rerender(
+    <PdfAnnotationsList {...props} items={[{ ...note, comment: '同步评论' }]} onSelect={select} onChange={change} />
+  );
+  fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+  expect(screen.getByRole('textbox', { name: '评论' })).toBe(input);
+  fireEvent.keyDown(input, { key: 'Escape', keyCode: 229 });
+  expect(screen.getByRole('textbox', { name: '评论' })).toBe(input);
+  fireEvent.keyDown(input, { key: 'Escape' });
+  expect(screen.queryByRole('textbox', { name: '评论' })).toBeNull();
+  expect(screen.getByText('同步评论')).toBeVisible();
 });
