@@ -14,6 +14,7 @@ import styles from './KnowledgeWorkspaceView.module.css';
 export interface CreateKnowledgeCandidateDialogProps {
   source?: Annotation;
   recoveryDraft?: KnowledgeDraft;
+  definitionTarget?: KnowledgeDraft['definitionTarget'];
   canWrite: boolean;
   readOnlyReason?: string;
   title?: string;
@@ -28,6 +29,7 @@ export interface CreateKnowledgeCandidateDialogProps {
 export function CreateKnowledgeCandidateDialog({
   source,
   recoveryDraft,
+  definitionTarget,
   canWrite,
   readOnlyReason,
   title,
@@ -55,6 +57,7 @@ export function CreateKnowledgeCandidateDialog({
       candidateId: `knowledge-${crypto.randomUUID()}`,
       initialValue,
       value: initialValue,
+      ...(definitionTarget ? { definitionTarget } : {}),
       ...(source ? { source: knowledgeDraftSource(source) } : {})
     };
   });

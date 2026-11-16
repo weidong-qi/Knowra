@@ -4,6 +4,37 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startLocalRuntime } from '../../desktop-runtime/src/runtime-server.mjs';
+import {
+  prepareDefinitionDraft,
+  recoverDefinitionDraft
+} from '../../desktop-runtime/test/e2e/helpers/concept-definition-recovery.mjs';
+
+for (const entry of ['write', 'items']) {
+  test(`定义草稿刷新恢复：${entry === 'write' ? '再次写定义' : '知识库恢复入口'}保留目标与原候选`, async ({ page }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width: entry === 'items' ? 390 : 1440, height: 1000 });
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-definition-refresh-'));
+    const runtime = await startLocalRuntime({
+      dataDirectory: root,
+      distRoot: fileURLToPath(new URL('../dist/', import.meta.url)),
+      syncOptions: { autoSync: false }
+    });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('dialog', dialog => dialog.accept());
+    try {
+      await page.goto(runtime.launchUrl);
+      const draft = await prepareDefinitionDraft(page);
+      await page.reload();
+      await recoverDefinitionDraft(page, draft, entry);
+      expect(errors).toEqual([]);
+    } finally {
+      await page.close();
+      await runtime.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
 
 test('概念定义：明确知识分组、最早主体定义、角色变更及保存后重试挂靠', async ({ page }, info) => {
   test.setTimeout(90000);

@@ -96,6 +96,10 @@ function KnowledgeStageContent({ pathname, onOpenNote }: { pathname: string; onO
     return (
       <ConceptWorkspace
         selectedId={route.id}
+        recoveryDraftId={route.definitionDraftId ?? null}
+        onRecoveryDraftClosed={() => {
+          if (route.definitionDraftId) changeRoute({ definitionDraftId: null }, true);
+        }}
         scope={route.scope}
         query={route.query}
         onScopeChange={scope => changeRoute({ scope, id: null })}

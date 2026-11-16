@@ -20,6 +20,7 @@ export interface KnowledgeLibraryRoute {
   query: string;
   id: string | null;
   edgeId?: string | null;
+  definitionDraftId?: string | null;
   includeMuted?: boolean;
   includeProjections?: boolean;
 }
@@ -36,6 +37,7 @@ export function parseKnowledgeLibraryRoute(pathname: string): KnowledgeLibraryRo
     scope,
     query: params.get('q') ?? '',
     id: params.get(page === 'items' ? 'item' : 'concept'),
+    ...(page === 'concepts' && params.get('draft') ? { definitionDraftId: params.get('draft') } : {}),
     ...(page === 'graph'
       ? {
           edgeId: params.get('edge'),
@@ -52,6 +54,7 @@ export function knowledgeLibraryPath(route: KnowledgeLibraryRoute): string {
   if (route.scope !== 'all') params.set('scope', route.scope);
   if (route.query) params.set('q', route.query);
   if (route.id) params.set(route.page === 'items' ? 'item' : 'concept', route.id);
+  if (route.page === 'concepts' && route.definitionDraftId) params.set('draft', route.definitionDraftId);
   if (route.page === 'graph') {
     if (route.edgeId) params.set('edge', route.edgeId);
     if (route.includeMuted) params.set('muted', '1');
@@ -65,7 +68,7 @@ export function knowledgeLibraryNavigationKey(pathname: string) {
   if (!pathname.startsWith('/knowledge')) return pathname;
   const [path, query] = pathname.split('?');
   const params = new URLSearchParams(query);
-  for (const key of ['q', 'item', 'concept', 'edge']) params.delete(key);
+  for (const key of ['q', 'item', 'concept', 'edge', 'draft']) params.delete(key);
   if (path?.startsWith('/knowledge/graph')) {
     params.delete('muted');
     params.delete('projections');
