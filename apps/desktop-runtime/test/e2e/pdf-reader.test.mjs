@@ -174,6 +174,14 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
   await page.getByRole('spinbutton', { name: '页码', exact: true }).fill('2');
   await page.getByRole('spinbutton', { name: '页码', exact: true }).press('Enter');
   await expect(page.locator('.page').nth(1).locator('canvas')).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const key = Object.keys(localStorage).find(value => value.startsWith('knowra:pdf-view:v1:'));
+        return key ? JSON.parse(localStorage.getItem(key)).page : null;
+      })
+    )
+    .toBe(2);
   await page.reload();
   await expect(page.getByRole('spinbutton', { name: '页码', exact: true })).toHaveValue('2');
   async function openSynthetic(id, fileName, bytes) {

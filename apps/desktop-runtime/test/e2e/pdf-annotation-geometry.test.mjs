@@ -8,7 +8,7 @@ import { chromium, expect } from '@playwright/test';
 import { jsPDF } from 'jspdf';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 
-test('PDF 紧密行距：新旧高亮不重叠、下划线贴合原行、点击其他位置取消选中', { timeout: 90000 }, async t => {
+test('PDF 紧密行距：新旧高亮不重叠、下划线贴合原行、空白点击保留选中和批注窗口', { timeout: 90000 }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-pdf-geometry-'));
   const runtime = await startLocalRuntime({
     dataDirectory: root,
