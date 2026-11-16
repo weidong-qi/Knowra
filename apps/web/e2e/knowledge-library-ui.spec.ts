@@ -53,7 +53,16 @@ for (const width of [1440, 390])
             sourceMode: 'manual'
           });
         }
-        await post('/api/knowledge/items/ui-free/needs-revision', {});
+        // 桌面通过已确认知识的正文修改进入待修订，沿用真实编辑与版本校验路径。
+        const confirmed = await post('/api/knowledge/items/ui-free/confirm', {});
+        const revision = await page.request.patch(`${runtime.origin}/api/knowledge/items/ui-free`, {
+          data: {
+            expectedUpdatedAt: confirmed.updatedAt,
+            canonicalStatement: '合成核心陈述：修订后的卷积操作用于提取局部特征。'
+          }
+        });
+        expect(revision.ok(), await revision.text()).toBeTruthy();
+        expect((await revision.json()).data.reviewStatus).toBe('needsRevision');
         await post('/api/knowledge/concepts/commands', {
           command: {
             type: 'createConcept',
