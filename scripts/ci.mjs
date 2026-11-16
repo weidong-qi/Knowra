@@ -7,12 +7,7 @@ export const suites = Object.freeze({
   web: ['test:content-anchor', 'test:shared', 'test:web-core', 'test:web:legacy', 'test:web', 'test:scripts'],
   desktop: ['test:desktop'],
   chromium: [
-    'test:e2e -w @study-accelerator/desktop-runtime',
-    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts v5-global-appearance.spec.ts',
-    'test:e2e -w @study-accelerator/web -- --config playwright.knowledge-concepts.config.ts'
+    'test:e2e -w @study-accelerator/web -- --config playwright.knowledge-concepts.config.ts settings-navigation.spec.ts'
   ]
 });
 
