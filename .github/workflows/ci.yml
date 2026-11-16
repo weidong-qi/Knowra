@@ -186,6 +186,22 @@ jobs:
           npx playwright install --with-deps chromium
           google-chrome --version
 
+      - name: Run PDF annotation acceptance
+        if: matrix.suite == 'chromium'
+        working-directory: apps/desktop-runtime
+        env:
+          KNOWRA_E2E_OUTPUT: ${{ github.workspace }}/test-results/pdf-annotation-acceptance
+        run: node --test --test-concurrency=1 test/e2e/pdf*.test.mjs
+
+      - name: Save PDF annotation acceptance evidence
+        if: always() && matrix.suite == 'chromium'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-annotation-acceptance-${{ github.sha }}
+          path: test-results/pdf-annotation-acceptance/*.png
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Run isolated test suite
         env:
           CI_SUITE: ${{ matrix.suite }}

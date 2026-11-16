@@ -130,7 +130,11 @@ export function PdfAnnotationTooltip({
       if (!(event.target instanceof Node) || !tooltipRef.current?.contains(event.target)) clear();
     };
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') clear();
+      if (event.key !== 'Escape' || event.isComposing || event.keyCode === 229) return;
+      if (!tooltipRef.current?.textContent?.trim()) return;
+      clear();
+      event.preventDefault();
+      event.stopPropagation();
     };
     container.addEventListener('pointermove', move);
     container.addEventListener('pointerleave', leave);

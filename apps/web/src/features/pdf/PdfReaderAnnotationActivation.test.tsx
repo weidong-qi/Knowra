@@ -193,6 +193,12 @@ it('已打开输入框的标注不重复预览，其他标注仍可悬停', asyn
   fireEvent.click(screen.getByRole('button', { name: /定位标注.*note/ }));
   hover(firstHit);
   await waitFor(() => expect(screen.getByRole('tooltip')).toHaveTextContent(first.comment));
+  const reader = screen.getByLabelText('PDF 页面', { exact: true });
+  fireEvent.keyDown(reader, { key: 'Escape', isComposing: true });
+  expect(screen.getByRole('tooltip')).toBeInTheDocument();
+  fireEvent.keyDown(reader, { key: 'Escape' });
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  expect(editor()).toBeInTheDocument();
   hover(secondHit, 70);
   expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   expect(editor()).toBeInTheDocument();

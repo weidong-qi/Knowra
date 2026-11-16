@@ -160,6 +160,9 @@ test('PDF 标注单击操作、双击评论、常驻窗口、拖动连线与共�
   const underlineBox = await overlay('underline').boundingBox();
   await page.mouse.move(underlineBox.x + underlineBox.width / 2 + 24, underlineBox.y + underlineBox.height / 2);
   await expect.poll(async () => (await at(page.getByRole('tooltip'))).x).toBeGreaterThan(tooltipBefore.x + 10);
+  await reader.press('Escape');
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await expect(editor).toBeVisible();
   await click('underline');
   await expect(actions).toBeVisible();
   await expect(input).toHaveValue('highlight 批注');
@@ -269,10 +272,13 @@ test('PDF 标注单击操作、双击评论、常驻窗口、拖动连线与共�
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   await search.clear();
   // 重新打开 PDF 会重置会话位置，内容由真实 SQLite 恢复。
+  await inspector.getByRole('button', { name: /定位标注.*underline 原文/ }).click();
+  await moveWindow();
+  const underlinePosition = await at(editor);
   await page.reload();
   await expect(page.locator('.textLayer')).toContainText('Gradients', { timeout: 25000 });
   await inspector.getByRole('button', { name: /定位标注.*underline 原文/ }).click();
   await expect(input).toHaveValue('正文修改后侧栏同步');
-  assert.notDeepEqual(await at(editor), moved);
+  assert.notDeepEqual(await at(editor), underlinePosition);
   assert.deepEqual(errors, []);
 });
