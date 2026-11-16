@@ -4,7 +4,7 @@ import { expect } from '@playwright/test';
 export function knowledgeCreateButton(page) {
   return page
     .getByRole('toolbar', { name: '知识库工具栏', exact: true })
-    .getByRole('button', { name: '新建知识候选', exact: true });
+    .getByRole('button', { name: '新建知识点', exact: true });
 }
 
 /** 状态已迁入筛选弹层；核对选中态并关闭弹层后才能操作背景列表。 */

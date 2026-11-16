@@ -236,6 +236,7 @@ export function validateBackupDrafts(record, { maxBytes = 8 * 1024 * 1024 } = {}
           value.knowledgeType
         );
       const source = value?.source;
+      const target = value?.definitionTarget;
       if (
         !value ||
         value.version !== 1 ||
@@ -243,6 +244,16 @@ export function validateBackupDrafts(record, { maxBytes = 8 * 1024 * 1024 } = {}
         value.candidateId !== parts[1] ||
         !form(value.initialValue) ||
         !form(value.value) ||
+        (target !== undefined &&
+          (!target ||
+            value.kind !== 'create' ||
+            source ||
+            typeof target.conceptId !== 'string' ||
+            !target.conceptId.trim() ||
+            typeof target.conceptName !== 'string' ||
+            !target.conceptName.trim() ||
+            value.initialValue.knowledgeType !== 'concept' ||
+            value.value.knowledgeType !== 'concept')) ||
         (value.kind === 'edit' && (typeof value.expectedUpdatedAt !== 'string' || !value.expectedUpdatedAt)) ||
         (source &&
           (value.kind !== 'create' ||

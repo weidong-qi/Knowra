@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Annotation, KnowledgeEvidence, KnowledgeItem } from '@study-accelerator/web-core';
 import { canNavigate } from '../../app/navigationGuard';
+import { RouterProvider } from '../../app/router';
 import { flushBeforeWorkspaceBackup, flushBeforeWorkspaceRestore } from '../../app/desktopLifecycle';
 import { CreateKnowledgeCandidateDialog } from './CreateKnowledgeCandidateDialog';
 import { KnowledgeWorkspaceView, type KnowledgeWorkspaceViewProps } from './KnowledgeWorkspaceView';
@@ -88,17 +89,46 @@ async function clickDetailAction(name: string) {
 }
 
 describe('KnowledgeWorkspaceView', () => {
+  it('知识库恢复定义草稿时跳转原概念，不按普通候选保存', async () => {
+    const user = userEvent.setup();
+    const value = {
+      title: '数学的定义',
+      canonicalStatement: '恢复正文',
+      userExplanation: '',
+      knowledgeType: 'concept' as const
+    };
+    knowledgeDraftRecovery.write(getKnowledgeDraftScope(), {
+      version: 1,
+      kind: 'create',
+      candidateId: 'definition-123',
+      initialValue: value,
+      value,
+      definitionTarget: { conceptId: 'math', conceptName: '数学' }
+    });
+    await knowledgeDraftRecovery.flush();
+    const input = props();
+    const navigate = vi.fn();
+    render(
+      <RouterProvider location={{ pathname: '/knowledge', navigate }}>
+        <KnowledgeWorkspaceView {...input} />
+      </RouterProvider>
+    );
+    await user.click(await screen.findByRole('button', { name: '恢复草稿：数学的定义' }));
+    expect(navigate).toHaveBeenCalledWith('/knowledge/concepts?concept=math&draft=definition-123');
+    expect(screen.queryByRole('dialog', { name: '新建知识点' })).not.toBeInTheDocument();
+    expect(input.onCreate).not.toHaveBeenCalled();
+  });
   it('空库加载完成后，按工具栏范围唯一定位同名新建入口并打开候选对话框', async () => {
     const user = userEvent.setup();
     const input = props({ selectedItemId: null, onList: vi.fn().mockResolvedValue([]) });
     render(<KnowledgeWorkspaceView {...input} />);
     const list = screen.getByRole('region', { name: '知识列表内容' });
     await within(list).findByText('还没有知识');
-    expect(screen.getAllByRole('button', { name: '新建知识候选' })).toHaveLength(2);
-    expect(within(list).getByRole('button', { name: '新建知识候选' })).toBeEnabled();
+    expect(screen.getAllByRole('button', { name: '新建知识点' })).toHaveLength(2);
+    expect(within(list).getByRole('button', { name: '新建知识点' })).toBeEnabled();
     const toolbar = screen.getByRole('toolbar', { name: '知识库工具栏' });
-    await user.click(within(toolbar).getByRole('button', { name: '新建知识候选' }));
-    expect(screen.getByRole('dialog', { name: '新建知识候选' })).toBeVisible();
+    await user.click(within(toolbar).getByRole('button', { name: '新建知识点' }));
+    expect(screen.getByRole('dialog', { name: '新建知识点' })).toBeVisible();
     expect(screen.getByRole('textbox', { name: '标题' })).toHaveValue('');
     expect(input.onCreate).not.toHaveBeenCalled();
   });
@@ -168,10 +198,10 @@ describe('KnowledgeWorkspaceView', () => {
     await waitFor(() => expect(screen.queryByRole('menu', { name: '知识操作' })).not.toBeInTheDocument());
     await user.click(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '查看详情' }));
     expect(input.onSelectItem).toHaveBeenCalledWith(archived.id);
-    await user.click(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '恢复为候选' }));
+    await user.click(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '恢复为待确认' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('恢复失败');
-    await user.click(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '恢复为候选' }));
-    expect(await screen.findByText('已恢复为候选，请重新核对后确认。')).toBeInTheDocument();
+    await user.click(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '恢复为待确认' }));
+    expect(await screen.findByText('已恢复为待确认，请重新核对后确认。')).toBeInTheDocument();
     await chooseStatus(user, /全部未归档/);
     expect(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '归档' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
@@ -186,7 +216,7 @@ describe('KnowledgeWorkspaceView', () => {
       expect(within(menu).getByRole('menuitem', { name })).toHaveAttribute('aria-disabled', 'true');
     await user.keyboard('{Escape}');
     await chooseStatus(user, /已归档/);
-    expect(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '恢复为候选' })).toHaveAttribute(
+    expect(within(await openRowMenu(archived.title)).getByRole('menuitem', { name: '恢复为待确认' })).toHaveAttribute(
       'aria-disabled',
       'true'
     );
@@ -423,7 +453,7 @@ describe('KnowledgeWorkspaceView', () => {
     expect(input.onOpenNote).toHaveBeenCalledWith('n1');
   });
 
-  it('确认和编辑都携带读取时的版本，显式保存后显示待修订', async () => {
+  it('确认和编辑都携带读取时的版本，显式保存后显示待确认', async () => {
     const user = userEvent.setup();
     const input = props({
       onUpdate: vi
@@ -475,10 +505,10 @@ describe('KnowledgeWorkspaceView', () => {
     await clickDetailAction('归档');
     expect(input.onArchive).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: '确认归档' }));
-    await clickDetailAction('恢复为候选');
+    await clickDetailAction('恢复为待确认');
     expect(input.onArchive).toHaveBeenCalledWith('k1', { expectedUpdatedAt: candidate.updatedAt });
     expect(input.onRestore).toHaveBeenCalledWith('k1', { expectedUpdatedAt: candidate.updatedAt });
-    expect(await screen.findByText('已恢复为候选，请重新核对后确认。')).toBeInTheDocument();
+    expect(await screen.findByText('已恢复为待确认，请重新核对后确认。')).toBeInTheDocument();
   });
 
   it('知识进入回收站后可按原身份恢复并继续查看历史来源', async () => {
@@ -515,7 +545,7 @@ describe('KnowledgeWorkspaceView', () => {
     );
     expect(screen.getByText('桌面端知识写入与同步尚未开放。')).toBeInTheDocument();
     expect(
-      within(screen.getByRole('toolbar', { name: '知识库工具栏' })).getByRole('button', { name: '新建知识候选' })
+      within(screen.getByRole('toolbar', { name: '知识库工具栏' })).getByRole('button', { name: '新建知识点' })
     ).toBeDisabled();
     expect(await screen.findByRole('button', { name: '确认知识' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '编辑' })).toBeDisabled();
@@ -534,7 +564,7 @@ describe('KnowledgeWorkspaceView', () => {
     render(<KnowledgeWorkspaceView {...input} />);
     expect(await screen.findByRole('button', { name: '确认知识' })).toBeDisabled();
     expect(
-      screen.getByText('当前没有可用来源，暂不能确认。请在来源笔记中核对标注，再从有效标注建立候选。')
+      screen.getByText('当前没有可用来源，暂不能确认。请在来源笔记中核对标注，再从有效标注建立知识点。')
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '编辑' }));
     await user.type(screen.getByRole('textbox', { name: '我的解释' }), '新补充');

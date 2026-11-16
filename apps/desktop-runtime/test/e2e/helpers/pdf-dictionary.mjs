@@ -56,6 +56,8 @@ export async function exercisePdfDictionary(page) {
   await page.reload();
   await page.goto(`${origin}/#/materials/notes/${note.id}`);
   await expect(page.locator('.textLayer')).toContainText('Gradients', { timeout: 25000 });
+  await expect(page.getByText('标注已保存', { exact: true })).toBeAttached();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
   const wordPoint = word =>
     page.locator('.textLayer').evaluate((layer, word) => {
       const span = [...layer.querySelectorAll('span')].find(el => el.textContent.includes(word));
@@ -67,9 +69,18 @@ export async function exercisePdfDictionary(page) {
       return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     }, word);
   const openWord = async word => {
+    const text = page.locator('.textLayer span').filter({ hasText: word }).first();
+    // 坐标鼠标 API 不等文字层布局；先等待元素稳定，再在目标单词的相对位置真实双击。
+    await text.dblclick({ trial: true });
     const point = await wordPoint(word);
-    await page.mouse.dblclick(point.x, point.y, { delay: 70 });
-    await expect(page.getByRole('dialog', { name: 'PDF 查词' })).toBeVisible();
+    const box = await text.boundingBox();
+    assert(box, `查词目标不可见：${word}`);
+    await text.dblclick({ position: { x: point.x - box.x, y: point.y - box.y }, delay: 70 });
+    const selection = await page.evaluate(() => window.getSelection()?.toString());
+    await expect(
+      page.getByRole('dialog', { name: 'PDF 查词' }),
+      `双击查词现场：${JSON.stringify({ word, point, box, selection })}`
+    ).toBeVisible();
   };
   const lookup = page.getByRole('dialog', { name: 'PDF 查词' });
   await openWord('Gradients');
@@ -78,6 +89,15 @@ export async function exercisePdfDictionary(page) {
   assert.equal((await marks()).length, 0, '查询不会自动创建标注');
   // 结果由点击触发，鼠标移开后仍能阅读、滚动和选择释义。
   await page.mouse.move(5, 5);
+  await lookup.getByRole('button', { name: '附带的释义' }).click();
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(lookup).toBeVisible();
+  await expect(lookup.getByRole('button', { name: '附带的释义' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(lookup).toHaveCount(0);
+  await openWord('Gradients');
   await lookup.getByRole('button', { name: '附带的释义' }).click();
   await page.getByRole('option', { name: /n\. 倾斜度, 梯度/ }).click();
   await expect(page.getByRole('listbox')).toHaveCount(0);

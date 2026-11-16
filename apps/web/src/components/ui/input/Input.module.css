@@ -235,6 +235,8 @@
 
 /* Checkbox：选中和不确定状态共用橙色，焦点只围绕复选框。 */
 .checkbox {
+  /* 隐藏输入框跟随控件定位，避免聚焦时滚动外层工作区。 */
+  position: relative;
   display: inline-flex;
   align-items: flex-start;
   gap: 8px;

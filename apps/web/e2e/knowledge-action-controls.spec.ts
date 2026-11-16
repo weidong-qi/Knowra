@@ -19,6 +19,7 @@ const first: KnowledgeItem = {
 const second: KnowledgeItem = {
   ...first,
   id: 'synthetic-second',
+  reviewStatus: 'needsRevision',
   title: '合成知识乙',
   updatedAt: '2026-10-01T00:00:00Z'
 };
@@ -72,7 +73,7 @@ for (const mode of ['light', 'dark'] as const) {
           );
           await page.reload();
           const list = page.getByRole('region', { name: '知识列表内容', exact: true });
-          const group = list.getByRole('button', { name: /^候选\s*2$/ });
+          const group = list.getByRole('button', { name: /^待确认\s*2$/ });
           await tabTo(page, group);
           await expect(group).toHaveCSS('outline-style', 'solid');
           await page.screenshot({ path: info.outputPath(`${view}-group-focus.png`), animations: 'disabled' });
@@ -143,7 +144,7 @@ for (const mode of ['light', 'dark'] as const) {
 }
 
 async function graphTarget(page: Page, kind: 'item-list' | 'neighbors' | 'concept-links') {
-  await page.goto('/#/knowledge/graph');
+  await page.goto('/#/knowledge/graph/experiment');
   await page.reload();
   await page.getByRole('button', { name: /^向量，/ }).click();
   const panel = page.getByRole('region', { name: '详情', exact: true });

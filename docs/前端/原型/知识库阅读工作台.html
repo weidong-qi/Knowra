@@ -1,0 +1,1861 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>知境 · 知识库阅读工作台</title>
+    <style>
+      /* 独立展示原型。视觉依据：tokens.css、NotesIndexTheme、NotesIndexView、
+         NoteEditorView、PdfReader 与共享 Button；不依赖生产应用，不请求后端。 */
+      :root {
+        color-scheme: light;
+        --chrome: #f1f2f5;
+        --paper: #fbfcfd;
+        --sidebar: #fafafb;
+        --raised: #fff;
+        --ink: #17181b;
+        --body: #353a43;
+        --muted: #6c727c;
+        --line: rgba(24, 30, 48, 0.1);
+        --hover: rgba(24, 30, 48, 0.045);
+        --selected: #eceef2;
+        --accent: #17181b;
+        --on: #fff;
+        --green: #30745a;
+        --green-bg: #edf5f0;
+        --amber: #91631e;
+        --amber-bg: #faf2df;
+        --shadow:
+          0 0 0 1px rgba(24, 30, 48, 0.07), 0 1px 2px rgba(24, 30, 48, 0.05), 0 6px 18px -6px rgba(24, 30, 48, 0.1),
+          0 22px 48px -18px rgba(24, 30, 48, 0.14);
+        font:
+          13px/1.6 Inter,
+          'PingFang SC',
+          'Microsoft YaHei',
+          system-ui,
+          sans-serif;
+      }
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+        --chrome: #191b1f;
+        --paper: #23252a;
+        --sidebar: #202227;
+        --raised: #2c2f35;
+        --ink: #ececee;
+        --body: #d0d3da;
+        --muted: #a4aab4;
+        --line: rgba(220, 225, 235, 0.12);
+        --hover: rgba(220, 225, 235, 0.05);
+        --selected: #353940;
+        --accent: #ececee;
+        --on: #202227;
+        --green: #a3d1b7;
+        --green-bg: #293d33;
+        --amber: #e4c789;
+        --amber-bg: #40382a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--chrome);
+        color: var(--ink);
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+        color: inherit;
+      }
+      button:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        outline-offset: 3px;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible,
+      select:focus-visible {
+        outline: 2px solid var(--muted);
+      }
+      button {
+        border: 0;
+        background: none;
+      }
+      a {
+        color: inherit;
+      }
+      svg.icon {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex-shrink: 0;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      h1 {
+        font-size: 34px;
+        line-height: 1.25;
+        font-weight: 620;
+        letter-spacing: -1px;
+      }
+      h2 {
+        font-size: 17px;
+        font-weight: 600;
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 580;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .small {
+        font-size: 11px;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .wrap {
+        flex-wrap: wrap;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      .app {
+        height: 100dvh;
+        display: grid;
+        grid-template-columns: 50px minmax(0, 1fr);
+        grid-template-rows: 42px minmax(0, 1fr);
+        padding: 0 8px 8px 0;
+      }
+      .titlebar {
+        grid-column: 1/-1;
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        gap: 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .brand {
+        font-size: 13px;
+        font-weight: 650;
+        color: var(--ink);
+        letter-spacing: 0.8px;
+      }
+      .title-tab {
+        height: 29px;
+        background: var(--raised);
+        border-radius: 6px;
+        box-shadow: 0 1px 2px #0001;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 15px;
+        color: var(--ink);
+      }
+      .title-tab svg {
+        width: 14px;
+        height: 14px;
+      }
+      .demo {
+        margin-left: auto;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+        padding: 1px 9px;
+        font-size: 10px;
+      }
+      .rail {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        gap: 12px;
+        padding: 13px 0;
+      }
+      .rail-mark {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        background: var(--ink);
+        color: var(--paper);
+        display: grid;
+        place-items: center;
+        font:
+          600 17px Georgia,
+          serif;
+        margin-bottom: 10px;
+      }
+      .rail .icon-btn {
+        width: 34px;
+        height: 34px;
+        color: var(--muted);
+      }
+      .rail .active {
+        background: var(--raised);
+        box-shadow: 0 1px 3px #0002;
+        color: var(--ink);
+      }
+      .rail-spacer {
+        flex: 1;
+      }
+      .workspace {
+        display: flex;
+        min-width: 0;
+        overflow: hidden;
+        border-radius: 12px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+      .sidebar {
+        width: 212px;
+        flex: none;
+        background: var(--sidebar);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .side-title {
+        height: 45px;
+        padding: 0 18px;
+        display: flex;
+        align-items: center;
+        font-weight: 600;
+        border-bottom: 1px solid var(--line);
+      }
+      .side-scroll {
+        padding: 16px 10px;
+        overflow: auto;
+        flex: 1;
+      }
+      .nav-label {
+        font-size: 11px;
+        color: var(--muted);
+        padding: 15px 10px 7px;
+      }
+      .nav-label:first-child {
+        padding-top: 0;
+      }
+      .nav {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 35px;
+        padding: 7px 10px;
+        border-radius: 6px;
+        text-align: left;
+        color: var(--body);
+        font-size: 12px;
+      }
+      .nav .icon {
+        width: 16px;
+        height: 16px;
+        color: var(--muted);
+      }
+      .nav span.count {
+        margin-left: auto;
+        color: var(--muted);
+        font:
+          11px ui-monospace,
+          monospace;
+      }
+      .nav:hover {
+        background: var(--hover);
+      }
+      .nav.active {
+        background: var(--raised);
+        box-shadow: 0 1px 3px #0001;
+        color: var(--ink);
+        font-weight: 550;
+      }
+      .side-bottom {
+        padding: 13px 20px;
+        border-top: 1px solid var(--line);
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .side-note {
+        padding: 14px 10px 0;
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.9;
+      }
+      .star {
+        color: #a98333;
+      }
+      .main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .top {
+        height: 45px;
+        flex: none;
+        border-bottom: 1px solid var(--line);
+        padding: 0 17px;
+        gap: 9px;
+        display: flex;
+        align-items: center;
+      }
+      .crumb {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .crumb b {
+        font-weight: 500;
+        color: var(--ink);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        white-space: nowrap;
+        min-height: 29px;
+        border-radius: 99px;
+        padding: 4px 12px;
+        border: 1px solid var(--line);
+        background: var(--raised);
+        font-size: 12px;
+        box-shadow: 0 1px 2px #00000008;
+      }
+      .btn .icon {
+        width: 14px;
+        height: 14px;
+      }
+      .btn:hover {
+        background: var(--selected);
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: var(--on);
+        border-color: var(--accent);
+      }
+      .btn.ghost {
+        background: transparent;
+        border-color: transparent;
+        box-shadow: none;
+        color: var(--muted);
+      }
+      .btn.ghost:hover {
+        background: var(--hover);
+        color: var(--ink);
+      }
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+      }
+      .icon-btn:hover {
+        background: var(--hover);
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 99px;
+        padding: 3px 10px;
+        background: var(--raised);
+        width: 205px;
+        color: var(--muted);
+      }
+      .search .icon {
+        width: 14px;
+        height: 14px;
+      }
+      .search input {
+        border: 0;
+        background: transparent;
+        width: 100%;
+        min-width: 0;
+        color: var(--ink);
+        font-size: 11px;
+        outline: none;
+      }
+      .search:focus-within {
+        box-shadow: 0 0 0 3px var(--selected);
+      }
+      kbd {
+        font:
+          10px ui-monospace,
+          monospace;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 0 4px;
+        color: var(--muted);
+      }
+      .stage {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        position: relative;
+      }
+      .scroll {
+        overflow: auto;
+        flex: 1;
+        min-width: 0;
+        scroll-behavior: smooth;
+      }
+      .reading {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 43px clamp(24px, 5vw, 70px) 60px;
+      }
+      .eyebrow {
+        font-size: 10px;
+        letter-spacing: 1.7px;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .intro {
+        margin: 12px 0 21px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .meta {
+        font-size: 11px;
+        color: var(--muted);
+        display: flex;
+        gap: 13px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .hero {
+        padding-bottom: 26px;
+        border-bottom: 1px solid var(--line);
+      }
+      .hero-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .tabs {
+        display: flex;
+        gap: 20px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 27px;
+      }
+      .tab {
+        padding: 13px 0 11px;
+        color: var(--muted);
+        font-size: 12px;
+        border-bottom: 2px solid transparent;
+      }
+      .tab.active {
+        color: var(--ink);
+        border-color: var(--ink);
+      }
+      .tab small {
+        margin-left: 5px;
+        color: var(--muted);
+      }
+      .section {
+        margin-top: 28px;
+      }
+      .section-head {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 14px;
+      }
+      .section-head h2 {
+        font-size: 14px;
+      }
+      .section-number {
+        font:
+          11px ui-monospace,
+          monospace;
+        color: var(--muted);
+      }
+      .section-head .right {
+        margin-left: auto;
+      }
+      .definition {
+        padding: 21px 24px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--raised);
+      }
+      .definition p {
+        font-size: 14px;
+        line-height: 1.95;
+        color: var(--body);
+      }
+      .definition .meta {
+        margin-top: 15px;
+        padding-top: 13px;
+        border-top: 1px solid var(--line);
+      }
+      .badge {
+        font-size: 10px;
+        line-height: 1.4;
+        border-radius: 4px;
+        padding: 3px 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--selected);
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .badge.ok {
+        color: var(--green);
+        background: var(--green-bg);
+      }
+      .badge.warn {
+        color: var(--amber);
+        background: var(--amber-bg);
+      }
+      .link {
+        font-size: 11px;
+        color: var(--muted);
+        padding: 0;
+        text-align: left;
+      }
+      .link:hover {
+        color: var(--ink);
+        text-decoration: underline;
+      }
+      .knowledge-row {
+        display: flex;
+        gap: 14px;
+        padding: 17px 3px;
+        width: 100%;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        align-items: flex-start;
+      }
+      .knowledge-row:hover {
+        background: var(--hover);
+      }
+      .row-icon {
+        display: grid;
+        place-items: center;
+        width: 29px;
+        height: 29px;
+        border-radius: 7px;
+        background: var(--selected);
+        color: var(--muted);
+        font:
+          14px Georgia,
+          serif;
+        flex: none;
+      }
+      .row-title {
+        font-size: 13px;
+        font-weight: 550;
+        margin-bottom: 5px;
+      }
+      .row-copy {
+        font-size: 12px;
+        line-height: 1.8;
+        color: var(--muted);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .row-meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 10px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .row-arrow {
+        margin-left: auto;
+        color: var(--muted);
+        padding-top: 7px;
+      }
+      .row-arrow .icon {
+        width: 14px;
+        height: 14px;
+      }
+      .formula {
+        font:
+          italic 19px/1.8 Georgia,
+          'Times New Roman',
+          serif;
+        text-align: center;
+        padding: 18px 12px;
+        background: var(--hover);
+        border-radius: 6px;
+        margin: 15px 0;
+        color: var(--ink);
+      }
+      .mention {
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        padding: 0 14px;
+      }
+      .mention .knowledge-row:last-child {
+        border: 0;
+      }
+      .foot {
+        height: 28px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 18px;
+        font-size: 10px;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        background: var(--hover);
+      }
+      .dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        background: var(--green);
+        border-radius: 50%;
+        margin-right: 5px;
+      }
+      .inspector {
+        width: 348px;
+        flex: none;
+        margin: 8px 8px 8px 0;
+        background: var(--sidebar);
+        border: 1px solid var(--line);
+        box-shadow: 0 6px 20px -12px #0003;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .inspector-head {
+        height: 43px;
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        border-bottom: 1px solid var(--line);
+        gap: 8px;
+        font-size: 12px;
+      }
+      .inspector-body {
+        overflow: auto;
+        padding: 23px 20px;
+        flex: 1;
+      }
+      .inspector h2 {
+        font-size: 19px;
+        line-height: 1.5;
+        margin: 10px 0 16px;
+      }
+      .inspector p {
+        font-size: 12px;
+        line-height: 1.95;
+        color: var(--body);
+      }
+      .inspector h3 {
+        font-size: 11px;
+        margin: 25px 0 9px;
+        color: var(--muted);
+      }
+      .inspector-actions {
+        padding: 12px 16px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        gap: 8px;
+      }
+      .quote {
+        padding: 15px;
+        border: 1px solid var(--line);
+        background: var(--raised);
+        border-radius: 7px;
+        font-size: 12px;
+        line-height: 1.9;
+        color: var(--body);
+      }
+      .quote mark {
+        color: inherit;
+        background: var(--amber-bg);
+      }
+      .context-link {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .inspector .pills {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .inspector .pills .btn {
+        font-size: 11px;
+      }
+      .inspector-note {
+        background: var(--amber-bg);
+        color: var(--amber);
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 11px;
+        margin-top: 15px;
+      }
+      .catalog {
+        max-width: 1100px;
+        margin: auto;
+        padding: 35px 38px 50px;
+      }
+      .catalog h1 {
+        font-size: 27px;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin: 25px 0 15px;
+        flex-wrap: wrap;
+      }
+      .segmented {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        background: var(--hover);
+        padding: 3px;
+        border-radius: 99px;
+        gap: 2px;
+      }
+      .segmented button {
+        padding: 3px 12px;
+        border-radius: 99px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .segmented button.active {
+        background: var(--raised);
+        color: var(--ink);
+        box-shadow: 0 1px 3px #0001;
+      }
+      .concept-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 13px;
+      }
+      .concept-card {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--raised);
+        text-align: left;
+        transition:
+          box-shadow 0.15s,
+          transform 0.15s;
+      }
+      .concept-card:hover {
+        box-shadow: 0 7px 20px -12px #0005;
+        transform: translateY(-2px);
+      }
+      .concept-card .row-icon {
+        margin-bottom: 18px;
+      }
+      .concept-card h2 {
+        font-size: 17px;
+        margin-bottom: 7px;
+      }
+      .concept-card p {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.8;
+        min-height: 44px;
+      }
+      .concept-card .meta {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+        margin-top: 17px;
+        font-size: 10px;
+      }
+      .list-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 4px;
+        color: var(--muted);
+        font-size: 11px;
+        border-bottom: 1px solid var(--line);
+      }
+      .empty {
+        text-align: center;
+        padding: 70px 20px;
+        color: var(--muted);
+      }
+      .empty h2 {
+        color: var(--ink);
+        margin-bottom: 8px;
+      }
+      .review-note {
+        padding: 13px 16px;
+        border-radius: 8px;
+        background: var(--hover);
+        font-size: 12px;
+        color: var(--muted);
+        margin: 18px 0;
+      }
+      .relation {
+        display: flex;
+        align-items: center;
+        padding: 14px 0;
+        gap: 12px;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .relation .grow {
+        font-weight: 550;
+      }
+      .relation-label {
+        font-size: 11px;
+        color: var(--muted);
+        width: 67px;
+      }
+      .graph {
+        width: 100%;
+        height: auto;
+        min-height: 280px;
+        background: radial-gradient(var(--line) 1px, transparent 1px);
+        background-size: 18px 18px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin: 16px 0;
+      }
+      .graph text {
+        fill: var(--ink);
+        font:
+          12px system-ui,
+          sans-serif;
+      }
+      .graph line {
+        stroke: var(--muted);
+        stroke-width: 1;
+      }
+      .graph rect {
+        fill: var(--raised);
+        stroke: var(--line);
+      }
+      .graph .center rect {
+        fill: var(--accent);
+      }
+      .graph .center text {
+        fill: var(--on);
+      }
+      .graph .edge-label {
+        font-size: 10px;
+        fill: var(--muted);
+      }
+      .graph .node {
+        cursor: pointer;
+      }
+      .graph .node:hover rect {
+        stroke: var(--muted);
+        stroke-width: 2;
+      }
+      .graph .node:focus {
+        outline: none;
+      }
+      .graph .node:focus-visible rect {
+        stroke: var(--amber);
+        stroke-width: 3;
+      }
+      .graph-hint {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      dialog {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--paper);
+        color: var(--ink);
+        padding: 0;
+        width: min(520px, calc(100vw - 28px));
+        box-shadow: 0 24px 80px #0003;
+      }
+      dialog::backdrop {
+        background: #15192255;
+        backdrop-filter: blur(3px);
+      }
+      .dialog-head {
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+      }
+      .dialog-body {
+        padding: 22px 24px;
+      }
+      .dialog-foot {
+        padding: 15px 24px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      label.field {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 16px;
+      }
+      label.field input,
+      label.field textarea,
+      label.field select {
+        display: block;
+        width: 100%;
+        margin-top: 7px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 8px 10px;
+        color: var(--ink);
+        background: var(--raised);
+      }
+      label.field textarea {
+        resize: vertical;
+        min-height: 120px;
+      }
+      .toast {
+        position: fixed;
+        bottom: 48px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--ink);
+        color: var(--paper);
+        border-radius: 99px;
+        box-shadow: 0 5px 25px #0002;
+        padding: 9px 19px;
+        z-index: 30;
+        font-size: 12px;
+        max-width: 90vw;
+      }
+      .focus-mode .sidebar,
+      .focus-mode .rail {
+        display: none;
+      }
+      .focus-mode.app {
+        grid-template-columns: minmax(0, 1fr);
+        padding-left: 8px;
+      }
+      .mobile-menu {
+        display: none;
+      }
+      .source-paper {
+        padding: 20px 17px;
+        background: var(--raised);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        margin: 12px 0;
+        box-shadow: 0 2px 5px #00000005;
+      }
+      .source-paper h3 {
+        margin: 0 0 15px;
+        color: var(--ink);
+        font-size: 14px;
+      }
+      .source-paper p {
+        font-family: Georgia, 'PingFang SC', serif;
+        line-height: 2;
+        font-size: 13px;
+      }
+      .source-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        background: var(--raised);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px 8px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      @media (min-width: 1600px) {
+        .sidebar {
+          width: 240px;
+        }
+        .reading {
+          padding-top: 53px;
+        }
+        .inspector {
+          width: 380px;
+        }
+      }
+      @media (max-width: 1150px) {
+        .sidebar {
+          width: 180px;
+        }
+        .reading {
+          padding: 30px 27px;
+        }
+        .inspector {
+          width: 310px;
+        }
+        .search {
+          width: 160px;
+        }
+        .catalog {
+          padding: 28px;
+        }
+        .top {
+          padding: 0 11px;
+        }
+        .top .new-label {
+          display: none;
+        }
+      }
+      @media (max-width: 900px) {
+        .inspector {
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          z-index: 8;
+          width: min(350px, calc(100% - 14px));
+          margin: 7px;
+          box-shadow: 0 10px 45px #0003;
+        }
+        .search {
+          width: 150px;
+        }
+        .concept-grid {
+          grid-template-columns: 1fr;
+        }
+        .top > .crumb {
+          max-width: 120px;
+        }
+        .brand {
+          display: none;
+        }
+      }
+      @media (max-width: 650px) {
+        .app {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 0 6px 6px;
+        }
+        .rail {
+          display: none;
+        }
+        .sidebar {
+          display: none;
+        }
+        .mobile-menu {
+          display: inline-flex;
+        }
+        .workspace {
+          position: relative;
+        }
+        .sidebar.mobile-open {
+          display: flex;
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          z-index: 12;
+          width: 220px;
+          box-shadow: 12px 0 40px #0002;
+        }
+        .titlebar {
+          padding: 0 8px;
+          gap: 8px;
+        }
+        .demo {
+          font-size: 9px;
+        }
+        .titlebar > .muted {
+          display: none;
+        }
+        .reading {
+          padding: 26px 20px;
+        }
+        .catalog {
+          padding: 25px 20px;
+        }
+        .top > .crumb {
+          display: none;
+        }
+        .search {
+          width: 100%;
+          max-width: 210px;
+        }
+        .top {
+          gap: 5px;
+        }
+        .foot .key-hint {
+          display: none;
+        }
+        h1 {
+          font-size: 29px;
+        }
+        .hero-title {
+          align-items: flex-start;
+        }
+        .definition {
+          padding: 17px;
+        }
+        .tabs {
+          gap: 17px;
+        }
+        .tab {
+          font-size: 11px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-book" viewBox="0 0 24 24">
+          <path d="M12 5c-3-2-7-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-2-1-6-1-9 1v15" />
+        </symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="2" />
+          <rect x="14" y="3" width="7" height="7" rx="2" />
+          <rect x="3" y="14" width="7" height="7" rx="2" />
+          <rect x="14" y="14" width="7" height="7" rx="2" />
+        </symbol>
+        <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8zM14 3v6h5M8 13h8M8 17h6" /></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24">
+          <circle cx="10" cy="10" r="6.5" />
+          <path d="m15 15 6 6" />
+        </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" /></symbol>
+        <symbol id="i-back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7" /></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6" /></symbol>
+        <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" /></symbol>
+        <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 14 6 4h12l3 10v6H3zM3 14h5l2 3h4l2-3h5" /></symbol>
+        <symbol id="i-graph" viewBox="0 0 24 24">
+          <circle cx="5" cy="12" r="3" />
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <path d="m8 10 7-4M8 14l7 4" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></symbol>
+        <symbol id="i-theme" viewBox="0 0 24 24"><path d="M20 15a9 9 0 0 1-11-11 9 9 0 1 0 11 11Z" /></symbol>
+        <symbol id="i-focus" viewBox="0 0 24 24"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6" /></symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></symbol>
+        <symbol id="i-link" viewBox="0 0 24 24">
+          <path d="m10 8 3-3a4 4 0 0 1 6 6l-3 3M14 16l-3 3a4 4 0 0 1-6-6l3-3M8 16l8-8" />
+        </symbol>
+        <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></symbol>
+      </defs>
+    </svg>
+    <div class="app" id="app">
+      <header class="titlebar">
+        <span class="brand">知境 · Knowra</span><span class="muted small">个人知识空间</span>
+        <div class="title-tab">
+          <svg class="icon"><use href="#i-book" /></svg>知识库
+        </div>
+        <span class="demo">交互原型 · 示例数据</span
+        ><button class="icon-btn" id="theme" title="切换明暗主题" aria-label="切换明暗主题">
+          <svg class="icon"><use href="#i-theme" /></svg>
+        </button>
+      </header>
+      <nav class="rail" aria-label="工作区">
+        <div class="rail-mark" aria-label="Knowra">K</div>
+        <button class="icon-btn active" data-nav="concepts" title="知识库" aria-label="知识库">
+          <svg class="icon"><use href="#i-book" /></svg></button
+        ><button class="icon-btn" data-nav="items" title="知识点" aria-label="知识点">
+          <svg class="icon"><use href="#i-note" /></svg></button
+        ><button class="icon-btn" data-nav="review" title="待整理" aria-label="待整理">
+          <svg class="icon"><use href="#i-inbox" /></svg>
+        </button>
+        <div class="rail-spacer"></div>
+        <button class="icon-btn" id="reset" title="重置演示数据" aria-label="重置演示数据">
+          <svg class="icon"><use href="#i-reset" /></svg>
+        </button>
+      </nav>
+      <div class="workspace">
+        <aside class="sidebar" id="sidebar"></aside>
+        <main class="main">
+          <header class="top">
+            <button class="icon-btn mobile-menu" id="menu" aria-label="展开导航">
+              <svg class="icon"><use href="#i-menu" /></svg></button
+            ><button class="icon-btn" id="back" aria-label="返回上一页" title="返回上一页">
+              <svg class="icon"><use href="#i-back" /></svg>
+            </button>
+            <div class="crumb" id="crumb"></div>
+            <div class="grow"></div>
+            <label class="search"
+              ><svg class="icon"><use href="#i-search" /></svg
+              ><input id="search" placeholder="搜索概念与知识点" aria-label="搜索概念与知识点" /><kbd>/</kbd></label
+            ><button class="icon-btn" id="focus" aria-label="切换专注阅读" title="切换专注阅读">
+              <svg class="icon"><use href="#i-focus" /></svg></button
+            ><button class="btn primary" id="create">
+              <svg class="icon"><use href="#i-plus" /></svg><span class="new-label">新建知识</span>
+            </button>
+          </header>
+          <div class="stage">
+            <div class="scroll" id="content"></div>
+            <aside class="inspector hidden" id="inspector" aria-label="知识详情与来源"></aside>
+          </div>
+          <footer class="foot">
+            <span><i class="dot"></i>本地演示</span><span id="foot-count"></span><span class="grow"></span
+            ><span class="key-hint"><kbd>/</kbd> 搜索　<kbd>Esc</kbd> 关闭详情</span>
+          </footer>
+        </main>
+      </div>
+    </div>
+    <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+    <div id="toast" class="toast hidden" role="status"></div>
+    <script>
+      'use strict';
+      const $ = selector => document.querySelector(selector);
+      const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+      const esc = value =>
+        String(value ?? '').replace(
+          /[&<>"']/g,
+          char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]
+        );
+      const seed = {
+        concepts: [
+          {
+            id: 'cutmix',
+            name: 'CutMix',
+            sense: '计算机视觉 · 区域替换式混合增强',
+            aliases: 'Cut and Mix',
+            focus: true,
+            definition: 'cutmix-def'
+          },
+          {
+            id: 'mixup',
+            name: 'Mixup',
+            sense: '计算机视觉 · 样本线性插值增强',
+            aliases: '混合插值',
+            focus: true,
+            definition: 'mixup-def'
+          },
+          {
+            id: 'keep',
+            name: 'KeepAugment',
+            sense: '计算机视觉 · 信息保留的数据增强',
+            aliases: '信息保留增强',
+            focus: true,
+            definition: 'keep-def'
+          },
+          {
+            id: 'regularization',
+            name: '正则化',
+            sense: '机器学习 · 控制模型过拟合的方法',
+            aliases: 'Regularization',
+            focus: false,
+            definition: 'reg-def'
+          },
+          {
+            id: 'saliency',
+            name: '显著性',
+            sense: '计算机视觉 · 对预测重要的输入信息',
+            aliases: 'Saliency',
+            focus: false,
+            definition: 'sal-def'
+          },
+          {
+            id: 'augmentation',
+            name: '数据增强',
+            sense: '机器学习 · 构造训练样本的变换',
+            aliases: 'Data Augmentation',
+            focus: true,
+            definition: 'aug-def'
+          }
+        ],
+        items: [
+          {
+            id: 'cutmix-def',
+            title: 'CutMix 的定义',
+            type: '定义',
+            text: 'CutMix 将一张图像的局部区域替换为另一张图像的区域，并按混合后两张图像所占的面积比例组合标签，得到新的训练样本。',
+            subject: ['cutmix'],
+            mentions: ['augmentation'],
+            status: 'confirmed',
+            source: 'CutMix · 论文阅读笔记',
+            quote: '方法同时混合图像内容与标签：区域替换决定新的图像，实际面积比例决定标签权重。',
+            understanding: '图像在空间上拼接，标签按面积组合。它保留的是局部图像内容。'
+          },
+          {
+            id: 'area',
+            title: '标签权重由实际替换面积决定',
+            type: '公式',
+            text: '裁剪框经过图像边界截断后，应使用实际替换区域的面积重新计算混合系数，而不是直接沿用采样得到的系数。',
+            subject: ['cutmix'],
+            mentions: [],
+            status: 'confirmed',
+            source: 'CutMix · 论文阅读笔记',
+            quote: '设图像宽高为 W、H，实际替换区域面积为 A，则原图像标签权重为 1 − A / (W × H)。',
+            formula: 'λ = 1 − A / (W × H)',
+            understanding: '假设替换掉图像的 30%，原图标签权重就是 0.7，另一张图像是 0.3。'
+          },
+          {
+            id: 'process',
+            title: '先进行基础变换，再构造混合样本',
+            type: '流程',
+            text: '在这个示例训练流程中，先分别裁剪、翻转两张源图像，再进行区域替换，并同步更新软标签。',
+            subject: ['cutmix'],
+            mentions: ['augmentation'],
+            status: 'confirmed',
+            source: '数据增强 · 实验流程笔记',
+            quote: '本实验流水线：读取图像 → 随机裁剪与翻转 → 批内配对 → CutMix → 网络前向。',
+            understanding: '这是当前实验采用的顺序，并不意味着所有任务都必须采用同样的顺序。'
+          },
+          {
+            id: 'compare',
+            title: 'CutMix 与 Mixup：空间拼接和线性插值',
+            type: '比较',
+            text: 'CutMix 使用空间掩码组合局部区域；Mixup 对两张图像逐像素线性插值。两者都组合标签，但构造新图像的方式不同。',
+            subject: ['cutmix', 'mixup'],
+            mentions: [],
+            status: 'confirmed',
+            source: '混合增强 · 方法对比笔记',
+            quote: 'Mixup：整图插值。CutMix：区域替换。两者的标签组合均与各自混合比例对应。',
+            understanding: '不能只凭“都混合了两张图像”，就认为两种方法的训练效果相同。'
+          },
+          {
+            id: 'tradeoff',
+            title: '信息保留与遮挡正则化之间的取舍',
+            type: '原理',
+            text: '保留显著区域可能降低语义信息被破坏的风险，但是否削弱遮挡带来的正则化收益，需要在具体任务和增强强度下进行验证。',
+            subject: ['keep'],
+            mentions: ['cutmix', 'regularization', 'saliency'],
+            status: 'candidate',
+            source: 'KeepAugment · 阅读疑问',
+            quote: '阅读思考：保护关键区域是否会改变模型对其他区域的学习？这一判断仍需要对照实验。',
+            understanding: '这是研究假设，不是论文已经证明的结论。'
+          },
+          {
+            id: 'mixup-def',
+            title: 'Mixup 的定义',
+            type: '定义',
+            text: 'Mixup 通过对两个样本及其标签做线性插值来构造训练数据。混合系数控制两个样本的贡献。',
+            subject: ['mixup'],
+            mentions: ['augmentation'],
+            status: 'confirmed',
+            source: 'Mixup · 论文阅读笔记',
+            quote: '输入和标签使用同一个混合系数进行凸组合。',
+            formula: 'x̃ = λxᵢ + (1 − λ)xⱼ',
+            understanding: '一个混合样本同时带有两张源图像的信息。'
+          },
+          {
+            id: 'keep-def',
+            title: 'KeepAugment 的定义',
+            type: '定义',
+            text: 'KeepAugment 利用显著性信息，在执行数据增强时尽量保留对识别重要的图像区域。',
+            subject: ['keep'],
+            mentions: ['saliency', 'augmentation'],
+            status: 'confirmed',
+            source: 'KeepAugment · 论文阅读笔记',
+            quote: '增强过程中关注重要信息的保留。',
+            understanding: '关键在于决定哪些区域应当保留，以及如何控制保留程度。'
+          },
+          {
+            id: 'reg-def',
+            title: '正则化的定义',
+            type: '定义',
+            text: '正则化通过对模型或训练过程施加约束，控制过拟合并改善泛化。',
+            subject: ['regularization'],
+            mentions: [],
+            status: 'confirmed',
+            source: '机器学习 · 基础笔记',
+            quote: '显式惩罚项和训练过程中的隐式约束都可能产生正则化作用。',
+            understanding: '训练误差更低，不一定意味着测试表现更好。'
+          },
+          {
+            id: 'sal-def',
+            title: '显著性的工作定义',
+            type: '定义',
+            text: '这里的显著性用于描述输入区域对当前模型预测或损失的敏感程度；具体含义取决于计算方法。',
+            subject: ['saliency'],
+            mentions: [],
+            status: 'confirmed',
+            source: 'KeepAugment · 论文阅读笔记',
+            quote: '显著性不是图像永恒不变的属性，需要结合模型和计算方式理解。',
+            understanding: '不同模型、不同训练阶段，显著性可能不同。'
+          },
+          {
+            id: 'aug-def',
+            title: '数据增强的定义',
+            type: '定义',
+            text: '数据增强通过对训练样本进行变换或组合，构造额外的训练输入。标签是否以及如何变化，由增强方法决定。',
+            subject: ['augmentation'],
+            mentions: [],
+            status: 'confirmed',
+            source: '数据增强 · 综述笔记',
+            quote: '增强应同时考虑输入变换与监督信号的对应关系。',
+            understanding: '增强图像时，要同时检查标签是否仍合理。'
+          },
+          {
+            id: 'hypothesis',
+            title: '不同训练阶段是否应采用不同增强强度',
+            type: '原理',
+            text: '将增强强度随训练阶段调整，可能改变优化难度与正则化效果。需要与固定强度基线进行公平比较。',
+            subject: [],
+            mentions: [],
+            status: 'candidate',
+            source: '研究想法 · 待整理',
+            quote: '初步想法：在相同训练预算下比较静态增强与阶段性增强。',
+            understanding: '先定义实验变量，再决定如何调整阶段。'
+          },
+          {
+            id: 'blanket',
+            title: '强增强是否总能带来更好的泛化',
+            type: '原理',
+            text: '增强强度与泛化效果的关系依赖于数据、模型和训练配置，不能直接假设强度越大越好。',
+            subject: ['augmentation'],
+            mentions: ['regularization'],
+            status: 'needsRevision',
+            source: '数据增强 · 早期笔记',
+            quote: '旧笔记中“越强越好”的表述过于绝对，需结合实验结果重写。',
+            understanding: '需要补上具体实验范围与对照条件。'
+          }
+        ]
+      };
+      const storageKey = 'knowra-knowledge-reading-demo-v1';
+      let data = structuredClone(seed);
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey));
+        if (saved?.version === 1 && Array.isArray(saved.data?.items) && Array.isArray(saved.data?.concepts))
+          data = saved.data;
+      } catch {
+        /* 文件预览可能禁用存储。 */
+      }
+      let page = 'detail',
+        current = 'cutmix',
+        tab = 'knowledge',
+        filter = 'all',
+        query = '',
+        selected = null,
+        sourceMode = false,
+        historyStack = [],
+        toastTimer;
+      const save = () => {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({ version: 1, data }));
+        } catch {
+          notify('当前浏览器不允许保存，操作仅在本次打开期间保留');
+        }
+      };
+      const concept = id => data.concepts.find(c => c.id === id);
+      const item = id => data.items.find(i => i.id === id);
+      const label = status =>
+        ({ confirmed: '已确认', candidate: '待确认', needsRevision: '待修订' })[status] || '待确认';
+      const statusBadge = i =>
+        `<span class="badge ${i.status === 'confirmed' ? 'ok' : 'warn'}">${i.status === 'confirmed' ? '✓ ' : ''}${label(i.status)}</span>`;
+      const symbol = type => ({ 定义: 'Aa', 公式: 'ƒ', 流程: '↳', 比较: '⇄', 原理: '∴', 应用: '↗' })[type] || '·';
+      const related = id => data.items.filter(i => i.subject.includes(id) || i.mentions.includes(id));
+      const notify = text => {
+        clearTimeout(toastTimer);
+        $('#toast').textContent = text;
+        $('#toast').classList.remove('hidden');
+        toastTimer = setTimeout(() => $('#toast').classList.add('hidden'), 2800);
+      };
+      function navButton(id, text, name, count) {
+        return `<button class="nav ${page === id ? 'active' : ''}" data-nav="${id}" ${page === id ? 'aria-current="page"' : ''}>${icon(name)}${text}${count !== undefined ? `<span class="count">${count}</span>` : ''}</button>`;
+      }
+      function renderSidebar() {
+        $('#sidebar').innerHTML =
+          `<div class="side-title">知识库<span class="grow"></span>${icon('book')}</div><div class="side-scroll"><div class="nav-label">我的知识</div>${navButton('concepts', '概念', 'grid', data.concepts.length)}${navButton('items', '全部知识点', 'note', data.items.length)}${navButton('review', '待整理', 'inbox', data.items.filter(i => i.status !== 'confirmed' || !i.subject.length).length)}<div class="nav-label">关注的概念</div>${data.concepts
+            .filter(c => c.focus)
+            .map(
+              c =>
+                `<button class="nav ${page === 'detail' && current === c.id ? 'active' : ''}" data-concept="${c.id}" ${page === 'detail' && current === c.id ? 'aria-current="page"' : ''}><span class="star">✧</span>${esc(c.name)}<span class="count">${related(c.id).length}</span></button>`
+            )
+            .join(
+              ''
+            )}<div class="nav-label">探索</div>${navButton('graph', '概念关系', 'graph')}<div class="side-note">从一个概念出发，<br>把零散的知识连接起来。</div></div><div class="side-bottom">示例内容 · 修改仅保存在此浏览器</div>`;
+        $('#foot-count').textContent = `${data.concepts.length} 个概念 · ${data.items.length} 条知识`;
+      }
+      function snapshot() {
+        return { page, current, tab, filter, query, scroll: $('#content').scrollTop };
+      }
+      function go(next, id) {
+        historyStack.push(snapshot());
+        page = next;
+        if (id) current = id;
+        tab = 'knowledge';
+        filter = 'all';
+        query = '';
+        $('#search').value = '';
+        selected = null;
+        sourceMode = false;
+        $('#sidebar').classList.remove('mobile-open');
+        render();
+        $('#content').scrollTop = 0;
+      }
+      function render() {
+        renderSidebar();
+        $('#crumb').innerHTML =
+          `知识库 <span class="muted">/</span> <b>${query ? '搜索结果' : page === 'detail' ? esc(concept(current)?.name || '概念') : { concepts: '概念', items: '全部知识点', review: '待整理', graph: '概念关系' }[page]}</b>`;
+        $('#back').disabled = !historyStack.length;
+        $('#content').innerHTML = query
+          ? searchView()
+          : page === 'detail'
+            ? detailView()
+            : page === 'concepts'
+              ? conceptView()
+              : page === 'graph'
+                ? graphView()
+                : itemsView();
+        renderInspector();
+      }
+      function row(i) {
+        return `<button class="knowledge-row" data-item="${esc(i.id)}"><span class="row-icon">${symbol(i.type)}</span><span class="grow"><span class="row-title" style="display:block">${esc(i.title)}</span><span class="row-copy">${esc(i.text)}</span><span class="row-meta"><span>${esc(i.type)}</span><span>·</span><span>${esc(i.source)}</span>${i.status !== 'confirmed' ? statusBadge(i) : ''}</span></span><span class="row-arrow">${icon('arrow')}</span></button>`;
+      }
+      function detailView() {
+        const c = concept(current);
+        if (!c) return '<div class="empty">概念不存在</div>';
+        const def = item(c.definition),
+          own = data.items.filter(i => i.subject.includes(c.id) && i.id !== c.definition),
+          mentions = data.items.filter(i => i.mentions.includes(c.id));
+        return `<article class="reading"><header class="hero"><div class="eyebrow">Concept / 概念</div><div class="hero-title"><h1>${esc(c.name)}</h1><button class="btn" data-action="follow">${icon('star')}${c.focus ? '已关注' : '关注概念'}</button></div><p class="intro">${esc(c.sense)}</p><div class="meta"><span>别名　${esc(c.aliases || '暂无')}</span><span>·</span><span>${related(c.id).length} 条关联知识</span><button class="link" data-action="attach">${icon('plus').replace('class="icon"', 'class="icon" style="width:11px;height:11px;vertical-align:middle"')} 关联知识点</button></div></header><div class="tabs" role="tablist" aria-label="概念内容"><button class="tab ${tab === 'knowledge' ? 'active' : ''}" role="tab" aria-selected="${tab === 'knowledge'}" data-tab="knowledge">知识内容 <small>${related(c.id).length}</small></button><button class="tab ${tab === 'relations' ? 'active' : ''}" role="tab" aria-selected="${tab === 'relations'}" data-tab="relations">相关概念</button><button class="tab ${tab === 'sources' ? 'active' : ''}" role="tab" aria-selected="${tab === 'sources'}" data-tab="sources">来源汇集</button></div><div role="tabpanel">${tab === 'relations' ? relations(c.id) : tab === 'sources' ? sources(c.id) : `<section><div class="section-head"><h2>定义</h2><span class="grow"></span><span class="small muted">从知识点中呈现</span></div>${def ? `<div class="definition"><p>${esc(def.text)}</p><div class="meta">${statusBadge(def)}<span>${esc(def.source)}</span><span class="grow"></span><button class="link" data-item="${def.id}" data-source="true">查看依据 ↗</button></div></div>` : `<div class="definition"><p class="muted">还没有定义。可以先写下你对这个概念的理解。</p><button class="btn" data-action="write-definition">写定义</button></div>`}</section><section class="section"><div class="section-head"><h2>关于它的知识</h2><span class="section-number">${own.length.toString().padStart(2, '0')}</span><button class="link right" data-action="create">＋ 添加知识</button></div>${own.length ? own.map(row).join('') : '<p class="muted">还没有其他知识，添加一条开始整理。</p>'}</section><section class="section"><div class="section-head"><h2>在其他知识中被提及</h2><span class="section-number">${mentions.length.toString().padStart(2, '0')}</span></div>${mentions.length ? `<div class="mention">${mentions.map(row).join('')}</div>` : '<p class="muted small">暂未在其他知识中被提及。</p>'}</section>`}</div></article>`;
+      }
+      function card(c) {
+        return `<button class="concept-card" data-concept="${esc(c.id)}"><div class="inline"><span class="row-icon">${icon('book')}</span><span class="grow"></span>${c.focus ? '<span class="star">✧</span>' : ''}</div><h2>${esc(c.name)}</h2><p>${esc(c.sense)}</p><div class="meta"><span>${related(c.id).length} 条知识</span><span class="grow"></span><span>${item(c.definition) ? '已有定义' : '待补充定义'}　↗</span></div></button>`;
+      }
+      function conceptView() {
+        const rows = data.concepts.filter(c => filter !== 'focused' || c.focus);
+        return `<section class="catalog"><div class="eyebrow">Your knowledge, connected</div><div class="inline"><h1>概念</h1><span class="grow"></span><button class="btn" data-action="create-concept">${icon('plus')}新建概念</button></div><p class="intro">以概念为线索，阅读、连接与积累你的知识。</p><div class="toolbar"><div class="segmented" aria-label="概念筛选"><button data-filter="all" class="${filter === 'all' ? 'active' : ''}">全部概念</button><button data-filter="focused" class="${filter === 'focused' ? 'active' : ''}">我关注的</button></div><span class="grow"></span><span class="muted small">${rows.length} 个概念</span></div><div class="concept-grid">${rows.map(card).join('')}</div></section>`;
+      }
+      function itemsView() {
+        const review = page === 'review';
+        let rows = data.items.filter(i => !review || i.status !== 'confirmed' || !i.subject.length);
+        if (filter === 'candidate' || filter === 'needsRevision' || filter === 'confirmed')
+          rows = rows.filter(i => i.status === filter);
+        if (filter === 'ungrouped') rows = rows.filter(i => !i.subject.length);
+        return `<section class="catalog"><div class="eyebrow">${review ? 'A little order, a clearer mind' : 'Knowledge collection'}</div><h1>${review ? '待整理' : '全部知识点'}</h1><p class="intro">${review ? '核对一条陈述，补全一处关联，让知识更可靠。' : '每一条陈述，都保留内容、理解和来源。'}</p>${review ? '<div class="review-note">候选内容需要核对后确认；“未关联概念”只表示尚未组织，不代表内容有误。</div>' : ''}<div class="toolbar"><div class="segmented" aria-label="知识筛选">${[['all', '全部'], ['candidate', '待确认'], ['needsRevision', '待修订'], ['ungrouped', '未关联'], ...(!review ? [['confirmed', '已确认']] : [])].map(([id, title]) => `<button data-filter="${id}" class="${filter === id ? 'active' : ''}">${title}</button>`).join('')}</div></div><div class="list-head"><span class="grow">知识内容</span><span>${rows.length} 条</span></div>${rows.length ? rows.map(row).join('') : '<div class="empty"><h2>这里已经整理好了</h2><p>可以切换筛选，继续查看其他知识。</p></div>'}</section>`;
+      }
+      function searchView() {
+        const q = query.toLocaleLowerCase();
+        const cs = data.concepts.filter(c => [c.name, c.sense, c.aliases].join(' ').toLocaleLowerCase().includes(q));
+        const its = data.items.filter(i =>
+          [i.title, i.text, i.understanding].join(' ').toLocaleLowerCase().includes(q)
+        );
+        return `<section class="catalog"><div class="eyebrow">Search your knowledge</div><h1>搜索结果</h1><p class="intro">“${esc(query)}” · ${cs.length} 个概念，${its.length} 条知识</p>${cs.length ? `<div class="section-head"><h2>概念</h2></div><div class="concept-grid">${cs.map(card).join('')}</div>` : ''}${its.length ? `<section class="section"><div class="section-head"><h2>知识点</h2></div>${its.map(row).join('')}</section>` : ''}${!cs.length && !its.length ? '<div class="empty"><h2>没有找到匹配内容</h2><p>试试 CutMix、标签、显著性或正则化。</p></div>' : ''}</section>`;
+      }
+      function relations(id) {
+        const comparisons = data.items.filter(i => i.type === '比较' && i.subject.includes(id));
+        return `<p class="muted" style="font-size:12px;margin-bottom:18px">关系需要明确的语义。共同出现在一条知识中，只作为待核对线索。</p>${
+          comparisons
+            .map(i =>
+              i.subject
+                .filter(other => other !== id)
+                .map(
+                  other =>
+                    `<div class="relation"><span class="relation-label">对比</span><button class="grow" style="text-align:left" data-concept="${other}">${esc(concept(other)?.name)}</button><span class="badge ok">示例关系</span><button class="link" data-item="${i.id}">查看依据 ↗</button></div>`
+                )
+                .join('')
+            )
+            .join('') || '<p class="muted small">尚无已整理的关系。</p>'
+        }<section class="section"><div class="section-head"><h2>关联线索</h2><span class="badge">待核对</span></div>${
+          [...new Set(related(id).flatMap(i => [...i.subject, ...i.mentions]))]
+            .filter(other => other !== id)
+            .map(
+              other =>
+                `<div class="relation"><span class="relation-label">共同出现</span><button class="grow" style="text-align:left" data-concept="${other}">${esc(concept(other)?.name)}</button><span class="muted small">尚未指定关系类型</span></div>`
+            )
+            .join('') || '<p class="muted small">暂无线索。</p>'
+        }</section>`;
+      }
+      function sources(id) {
+        const list = related(id);
+        return `<p class="muted" style="font-size:12px;margin-bottom:12px">以下为关联知识的来源汇集，点击可对照摘录。</p>${list.map(i => `<button class="knowledge-row" data-item="${i.id}" data-source="true"><span class="row-icon">${icon('note')}</span><span class="grow"><span class="row-title">${esc(i.source)}</span><span class="row-copy">用于：${esc(i.title)}</span></span>${icon('arrow')}</button>`).join('')}`;
+      }
+      function graphView() {
+        return `<section class="catalog"><div class="eyebrow">Explore connections</div><h1>从 CutMix 出发</h1><p class="intro">先看身边的一层关系，再沿着问题继续阅读。</p><div class="inline"><span class="badge">演示关系</span><span class="small muted">实线：对比关系　虚线：待核对线索</span></div><svg class="graph" viewBox="0 0 740 390" role="img" aria-label="CutMix 的局部概念关系图"><line x1="370" y1="195" x2="148" y2="110"/><line x1="370" y1="195" x2="575" y2="100" stroke-dasharray="5 5"/><line x1="370" y1="195" x2="560" y2="300" stroke-dasharray="5 5"/><line x1="370" y1="195" x2="145" y2="300" stroke-dasharray="5 5"/><text class="edge-label" x="242" y="135">对比</text><text class="edge-label" x="475" y="133">共同出现</text><text class="edge-label" x="465" y="272">共同出现</text><text class="edge-label" x="212" y="265">共同出现</text>${[
+          ['cutmix', 370, 195, 'center'],
+          ['mixup', 148, 110, ''],
+          ['keep', 575, 100, ''],
+          ['regularization', 560, 300, ''],
+          ['augmentation', 145, 300, '']
+        ]
+          .map(
+            ([id, x, y, cls]) =>
+              `<g class="node ${cls}" data-concept="${id}" role="button" tabindex="0" aria-label="打开 ${esc(concept(id).name)}"><rect x="${x - 65}" y="${y - 23}" width="130" height="46" rx="8"/><text x="${x}" y="${y + 4}" text-anchor="middle">${esc(concept(id).name)}</text></g>`
+          )
+          .join(
+            ''
+          )}</svg><p class="graph-hint">点击概念进入阅读页。虚线不代表已确认的因果、从属或前置关系。</p><section class="section"><div class="section-head"><h2>关系的依据</h2></div>${row(item('compare'))}</section></section>`;
+      }
+      function renderInspector() {
+        const panel = $('#inspector');
+        const i = item(selected);
+        panel.classList.toggle('hidden', !i);
+        if (!i) {
+          panel.innerHTML = '';
+          return;
+        }
+        panel.innerHTML = `<div class="inspector-head">${icon(sourceMode ? 'note' : 'book')}<strong>${sourceMode ? '来源对照' : '知识详情'}</strong><span class="grow"></span><button class="icon-btn" data-action="close-inspector" aria-label="关闭详情">${icon('close')}</button></div><div class="inspector-body"><div class="inline wrap"><span class="badge">${esc(i.type)}</span>${statusBadge(i)}</div><h2>${esc(i.title)}</h2>${sourceMode ? `<div class="source-toolbar">${icon('note')}<span>${esc(i.source)}</span><span class="badge">示例摘录</span></div><div class="source-paper"><h3>原文摘录 / 笔记片段</h3><p><mark style="background:var(--amber-bg);color:inherit">${esc(i.quote || '手动整理，暂无外部来源。')}</mark></p></div><h3>对应的知识陈述</h3><p>${esc(i.text)}</p><div class="inspector-note">此处为原型示例，不连接真实论文或笔记文件。</div><button class="btn" style="margin-top:16px" data-action="toggle-source">返回知识详情</button>` : `<h3>核心陈述</h3><p>${esc(i.text)}</p>${i.formula ? `<div class="formula">${esc(i.formula)}</div>` : ''}<h3>我的理解</h3><p>${esc(i.understanding || '还没有记录个人理解。')}</p><h3>关于这些概念</h3><div class="pills">${i.subject.length ? i.subject.map(id => `<button class="btn" data-concept="${id}">${esc(concept(id)?.name)}</button>`).join('') : '<span class="muted small">尚未关联概念</span>'}<button class="btn ghost" data-action="link-item">＋ 关联</button></div>${i.mentions.length ? `<h3>同时提到</h3><div class="pills">${i.mentions.map(id => `<button class="btn" data-concept="${id}">${esc(concept(id)?.name)}</button>`).join('')}</div>` : ''}<h3>来源依据</h3><div class="quote">${esc(i.quote || '手动整理，暂无摘录。')}<div class="context-link">${icon('note')}${esc(i.source)}</div></div><button class="btn" style="margin-top:12px" data-action="toggle-source">${icon('link')}对照来源</button>${i.status !== 'confirmed' ? '<div class="inspector-note">请核对内容和来源后再确认。确认仅代表内容经过审阅，不代表已经掌握。</div>' : ''}<h3>学习目标</h3><p class="muted">尚未关联学习目标。掌握状态：未评估。</p>`}</div><div class="inspector-actions"><button class="btn" data-action="edit">编辑内容</button><span class="grow"></span>${i.status !== 'confirmed' ? '<button class="btn primary" data-action="confirm">确认知识</button>' : '<span class="badge ok">✓ 内容已确认</span>'}</div>`;
+      }
+      function openDialog(title, body, submitLabel, onSubmit) {
+        const dialog = $('#dialog');
+        dialog.innerHTML = `<form id="dialog-form"><div class="dialog-head"><h2 id="dialog-title">${title}</h2><span class="grow"></span><button type="button" class="icon-btn" data-action="close-dialog" aria-label="关闭弹窗">${icon('close')}</button></div><div class="dialog-body">${body}</div><div class="dialog-foot"><button type="button" class="btn" data-action="close-dialog">取消</button><button type="submit" class="btn primary">${submitLabel}</button></div></form>`;
+        $('#dialog-form').addEventListener('submit', event => {
+          event.preventDefault();
+          if (onSubmit(new FormData(event.target)) !== false) dialog.close();
+        });
+        dialog.showModal();
+      }
+      function editDialog(edit = false, definition = false) {
+        const existing = edit ? item(selected) : null;
+        openDialog(
+          edit ? '编辑知识' : '新建知识',
+          `<label class="field">标题<input name="title" required maxlength="100" value="${esc(existing?.title || (definition ? concept(current).name + ' 的定义' : ''))}" placeholder="这条知识讲什么？"/></label><label class="field">类型<select name="type">${['定义', '原理', '公式', '流程', '比较', '应用'].map(t => `<option ${t === (existing?.type || (definition ? '定义' : '原理')) ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label class="field">核心陈述<textarea name="text" required maxlength="4000" placeholder="写下完整、清楚的一条知识">${esc(existing?.text || '')}</textarea></label><label class="field">我的理解<textarea name="understanding" style="min-height:70px" maxlength="4000" placeholder="你的解释、例子或疑问">${esc(existing?.understanding || '')}</textarea></label><p class="muted small">${edit ? '修改后重新进入待确认状态。' : '保存为待确认知识。'}${page === 'detail' ? '将关联到 ' + esc(concept(current).name) + '。' : ''}仅保存于本地演示。</p>`,
+          '保存',
+          form => {
+            const title = String(form.get('title')).trim(),
+              text = String(form.get('text')).trim();
+            if (!title || !text) {
+              notify('标题与陈述不能只包含空格');
+              return false;
+            }
+            const record = existing || {
+              id: 'demo-' + Date.now(),
+              subject: page === 'detail' ? [current] : [],
+              mentions: [],
+              source: '手动整理 · 演示',
+              quote: ''
+            };
+            Object.assign(record, {
+              title,
+              text,
+              type: String(form.get('type')),
+              understanding: String(form.get('understanding')).trim(),
+              status: 'candidate'
+            });
+            if (!existing) data.items.push(record);
+            if (definition) concept(current).definition = record.id;
+            selected = record.id;
+            save();
+            render();
+            notify('已保存为待确认知识');
+          }
+        );
+      }
+      function attachDialog(single = false) {
+        const i = item(selected);
+        openDialog(
+          single ? '关联到概念' : '关联已有知识',
+          single
+            ? `<p class="muted small" style="margin-bottom:16px">选择这条知识主要讲述的概念。</p><label class="field">概念<select name="concept">${data.concepts.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>`
+            : `<label class="field">选择知识点<select name="item">${data.items
+                .filter(it => !it.subject.includes(current))
+                .map(it => `<option value="${it.id}">${esc(it.title)}</option>`)
+                .join(
+                  ''
+                )}</select></label><p class="muted small">将作为“关于它的知识”出现在 ${esc(concept(current).name)} 页面中。同一条知识可关联多个概念。</p>`,
+          '关联',
+          form => {
+            const target = single ? i : item(String(form.get('item'))),
+              cid = single ? String(form.get('concept')) : current;
+            if (!target || !concept(cid)) {
+              notify('没有可关联的知识');
+              return false;
+            }
+            if (!target.subject.includes(cid)) target.subject.push(cid);
+            target.mentions = target.mentions.filter(id => id !== cid);
+            save();
+            render();
+            notify('已关联，知识正文保持为同一份');
+          }
+        );
+      }
+      const actions = {
+        follow() {
+          const c = concept(current);
+          c.focus = !c.focus;
+          save();
+          render();
+        },
+        create() {
+          editDialog();
+        },
+        'write-definition'() {
+          editDialog(false, true);
+        },
+        'create-concept'() {
+          openDialog(
+            '新建概念',
+            '<label class="field">名称<input name="name" required maxlength="80" placeholder="例如：逆矩阵"/></label><label class="field">区分说明<input name="sense" required maxlength="80" placeholder="例如：线性代数 · 矩阵乘法的逆"/></label><label class="field">别名<input name="aliases" maxlength="100" placeholder="可选，方便搜索"/></label>',
+            '创建',
+            form => {
+              const name = String(form.get('name')).trim(),
+                sense = String(form.get('sense')).trim();
+              if (!name || !sense) {
+                notify('请填写名称与区分说明');
+                return false;
+              }
+              if (data.concepts.some(c => c.name.toLowerCase() === name.toLowerCase() && c.sense === sense)) {
+                notify('已有相同名称和说明的概念');
+                return false;
+              }
+              const c = {
+                id: 'concept-' + Date.now(),
+                name,
+                sense,
+                aliases: String(form.get('aliases')).trim(),
+                focus: true,
+                definition: null
+              };
+              data.concepts.push(c);
+              save();
+              go('detail', c.id);
+              notify('已创建概念，可以开始补充定义');
+            }
+          );
+        },
+        attach() {
+          attachDialog();
+        },
+        'link-item'() {
+          attachDialog(true);
+        },
+        'close-inspector'() {
+          selected = null;
+          renderInspector();
+        },
+        'toggle-source'() {
+          sourceMode = !sourceMode;
+          renderInspector();
+        },
+        edit() {
+          editDialog(true);
+        },
+        confirm() {
+          item(selected).status = 'confirmed';
+          save();
+          render();
+          notify('已确认内容，掌握状态仍为未评估');
+        },
+        'close-dialog'() {
+          $('#dialog').close();
+        }
+      };
+      document.addEventListener('click', event => {
+        const target = event.target.closest(
+          '[data-nav],[data-concept],[data-item],[data-action],[data-tab],[data-filter]'
+        );
+        if (!target) return;
+        if (target.dataset.nav) go(target.dataset.nav);
+        else if (target.dataset.concept) go('detail', target.dataset.concept);
+        else if (target.dataset.item) {
+          selected = target.dataset.item;
+          sourceMode = target.dataset.source === 'true';
+          renderInspector();
+        } else if (target.dataset.action) actions[target.dataset.action]?.();
+        else if (target.dataset.tab) {
+          tab = target.dataset.tab;
+          render();
+        } else if (target.dataset.filter) {
+          filter = target.dataset.filter;
+          render();
+        }
+      });
+      $('#search').addEventListener('input', event => {
+        query = event.target.value.trim();
+        selected = null;
+        render();
+      });
+      $('#back').addEventListener('click', () => {
+        const previous = historyStack.pop();
+        if (!previous) return;
+        ({ page, current, tab, filter, query } = previous);
+        selected = null;
+        $('#search').value = query;
+        render();
+        $('#content').scrollTop = previous.scroll;
+      });
+      $('#create').addEventListener('click', () => editDialog());
+      $('#theme').addEventListener('click', () => {
+        document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      });
+      $('#focus').addEventListener('click', () => {
+        $('#app').classList.toggle('focus-mode');
+        $('#focus').setAttribute('aria-pressed', $('#app').classList.contains('focus-mode'));
+      });
+      $('#menu').addEventListener('click', () => $('#sidebar').classList.toggle('mobile-open'));
+      $('#reset').addEventListener('click', () =>
+        openDialog(
+          '重置演示数据',
+          '<p>将清除你在此原型中新建、编辑、关联和确认的内容，恢复初始示例。</p><p class="muted small" style="margin-top:12px">不会影响 Knowra 的真实数据。</p>',
+          '重置',
+          () => {
+            data = structuredClone(seed);
+            save();
+            historyStack = [];
+            page = 'detail';
+            current = 'cutmix';
+            tab = 'knowledge';
+            filter = 'all';
+            query = '';
+            selected = null;
+            $('#search').value = '';
+            render();
+            notify('已恢复初始示例');
+          }
+        )
+      );
+      document.addEventListener('keydown', event => {
+        if (event.target.closest('input,textarea,select') || $('#dialog').open) return;
+        if (event.key === '/') {
+          event.preventDefault();
+          $('#search').focus();
+        }
+        if (event.key === 'Escape') {
+          selected = null;
+          $('#sidebar').classList.remove('mobile-open');
+          renderInspector();
+        }
+        if ((event.key === 'Enter' || event.key === ' ') && event.target.matches('.node')) {
+          event.preventDefault();
+          go('detail', event.target.dataset.concept);
+        }
+      });
+      render();
+    </script>
+  </body>
+</html>

@@ -10,7 +10,10 @@ async function expectMaterial(menu: Locator, material: 'glass' | 'acrylic', mode
   await expect(scope).toHaveAttribute('data-overlay-material', material);
   await expect(scope).toHaveAttribute('data-ni-mode', mode);
   // 验证实际绘制层，不能仅凭 portal 上的数据属性认定材质生效。
-  await expect(menu).toHaveCSS('backdrop-filter', material === 'glass' ? 'blur(14px) saturate(1.45)' : 'blur(28px) saturate(1.65)');
+  await expect(menu).toHaveCSS(
+    'backdrop-filter',
+    material === 'glass' ? 'blur(14px) saturate(1.45)' : 'blur(28px) saturate(1.65)'
+  );
   await expect(menu).toHaveCSS('background-image', /linear-gradient/);
   expect(await menu.evaluate(element => Boolean(element.closest('#feature-stage')))).toBe(false);
   const box = await menu.boundingBox();
@@ -22,29 +25,51 @@ for (const width of [1440, 390]) {
   test(`${width}px：材质切换、明暗、刷新和菜单子菜单焦点回归`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await mockEditorWorkspace(page, []);
-    await page.route('**/api/ai/model-settings', route => route.fulfill({ json: { data: { configured: false, modelId: 'deepseek-flash', modelSupported: true, supportedModelIds: ['deepseek-flash'] } } }));
+    await page.route('**/api/ai/model-settings', route =>
+      route.fulfill({
+        json: {
+          data: {
+            configured: false,
+            modelId: 'deepseek-flash',
+            modelSupported: true,
+            supportedModelIds: ['deepseek-flash']
+          }
+        }
+      })
+    );
     await page.addInitScript(key => {
-      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ mode: 'light', overlayMaterial: 'glass' }));
+      if (!localStorage.getItem(key))
+        localStorage.setItem(key, JSON.stringify({ mode: 'light', overlayMaterial: 'glass' }));
     }, appearanceKey);
     await page.goto('/#/settings');
+    await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
     const trigger = page.getByRole('button', { name: '预览菜单', exact: true });
     const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
     const backgrounds = new Map<string, string>();
     for (const mode of ['light', 'dark'] as const) {
       if (mode === 'dark') await page.getByRole('button', { name: '切换深色模式' }).click();
       for (const material of ['acrylic', 'glass'] as const) {
-        const choice = page.getByRole('group', { name: '浮层材质' }).getByRole('button', { name: material === 'glass' ? '通透玻璃' : '磨砂亚克力', exact: true });
+        const choice = page
+          .getByRole('group', { name: '浮层材质' })
+          .getByRole('button', { name: material === 'glass' ? '通透玻璃' : '磨砂亚克力', exact: true });
         await choice.click();
         await expect(choice).toHaveAttribute('aria-pressed', 'true');
         await expect(shell).toHaveAttribute('data-overlay-material', material);
-        expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), appearanceKey)).toMatchObject({ mode, overlayMaterial: material });
+        expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), appearanceKey)).toMatchObject({
+          mode,
+          overlayMaterial: material
+        });
         await page.reload();
+        await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
         await expect(choice).toHaveAttribute('aria-pressed', 'true');
         await expect(shell).toHaveAttribute('data-ni-mode', mode);
         await trigger.click();
         const menu = page.getByRole('menu', { name: '预览菜单', exact: true });
         await expectMaterial(menu, material, mode, width);
-        backgrounds.set(`${mode}-${material}`, await menu.evaluate(element => getComputedStyle(element).backgroundImage));
+        backgrounds.set(
+          `${mode}-${material}`,
+          await menu.evaluate(element => getComputedStyle(element).backgroundImage)
+        );
         await expect(menu.getByRole('menuitem', { name: '不可用选项' })).toHaveAttribute('aria-disabled', 'true');
         const status = menu.getByRole('menuitem', { name: '状态', exact: true });
         await status.click();

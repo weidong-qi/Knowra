@@ -10,6 +10,7 @@ import { chromium, expect } from '@playwright/test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
+import { selectModelSettings } from './helpers/settings.mjs';
 
 const adapter = fileURLToPath(new URL('../../src/mcp/adapter.mjs', import.meta.url));
 const distRoot = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
@@ -213,6 +214,7 @@ test(
       rawMarkdown: privateText
     });
     await page.getByRole('button', { name: '外部 Agent 授权', exact: true }).click();
+    await selectModelSettings(page);
     await page.getByRole('button', { name: '添加外部客户端', exact: true }).click();
     await page
       .getByRole('dialog', { name: '选择客户端', exact: true })

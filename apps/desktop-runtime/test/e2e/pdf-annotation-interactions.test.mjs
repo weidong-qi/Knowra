@@ -99,6 +99,10 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   assert.equal(sticky.title, '我的待验证猜想');
   const icon = page.locator(`[data-note-id="${sticky.id}"]`);
   await icon.click();
+  await page
+    .getByRole('dialog', { name: 'PDF 标注操作' })
+    .getByRole('button', { name: '编辑批注', exact: true })
+    .click();
   await expect(noteEditor.getByRole('textbox', { name: '便签标题' })).toHaveCount(0);
   await expect(noteEditor.getByRole('textbox', { name: '批注内容' })).toHaveValue('只创建一条便签');
   await noteEditor.getByRole('button', { name: '完成', exact: true }).click();
@@ -137,16 +141,11 @@ test('PDF 便签单次创建、区域页面编辑和双击查词同时标注', {
   assert(region);
   const clickRegion = async () => {
     const mark = page.locator(`[data-pdf-annotation-id="${region.id}"]`);
-    const wasSelected = (await mark.getAttribute('data-selected')) !== null;
     const b = await mark.boundingBox();
     await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
-    if (!wasSelected) {
-      await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
-      await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
-    }
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
   };
-  // 新建区域已选中，可直接打开；换目标时先定位，拖动仍创建新区域。
+  // 区域单击打开操作栏；拖动仍创建新区域。
   await clickRegion();
   await page.getByRole('button', { name: '改为易错', exact: true }).click();
   await save();

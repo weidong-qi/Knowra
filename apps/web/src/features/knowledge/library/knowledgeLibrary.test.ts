@@ -8,6 +8,13 @@ import {
 } from './knowledgeLibraryRoute';
 const item = { id: 'k', title: '当前知识' } as KnowledgeItem;
 describe('知识库导航与共享数据', () => {
+  it('定义草稿恢复深链接保留目标与草稿 ID，恢复操作不重挂工作区', () => {
+    const route = parseKnowledgeLibraryRoute('/knowledge/concepts?concept=math&draft=knowledge-123');
+    expect(route).toMatchObject({ id: 'math', definitionDraftId: 'knowledge-123' });
+    expect(parseKnowledgeLibraryRoute(knowledgeLibraryPath(route))).toEqual(route);
+    expect(knowledgeLibraryNavigationKey(knowledgeLibraryPath(route))).toBe('/knowledge/concepts');
+    expect(knowledgeLibraryPath({ ...route, definitionDraftId: null })).toBe('/knowledge/concepts?concept=math');
+  });
   it('保留旧深链接和中文搜索，序列化后可恢复范围与选择', () => {
     const route = parseKnowledgeLibraryRoute('/knowledge/concepts?scope=muted&q=卷积&concept=a');
     expect(parseKnowledgeLibraryRoute(knowledgeLibraryPath(route))).toEqual(route);
@@ -18,6 +25,24 @@ describe('知识库导航与共享数据', () => {
       id: 'k'
     });
     expect(parseKnowledgeLibraryRoute('/knowledge?scope=unknown').scope).toBe('all');
+    const legacy = parseKnowledgeLibraryRoute('/knowledge?scope=needsRevision&q=公式&item=k');
+    expect(legacy).toMatchObject({ scope: 'candidate', query: '公式', id: 'k' });
+    expect(knowledgeLibraryPath(legacy)).toContain('scope=candidate');
+  });
+  it('真实图的概念、关系和筛选深链接可恢复，切换选择不丢失过滤或焦点', () => {
+    const route = parseKnowledgeLibraryRoute(
+      '/knowledge/graph?q=卷积&concept=a&edge=relation%3Ar&muted=1&projections=0'
+    );
+    expect(route).toMatchObject({
+      page: 'graph',
+      id: 'a',
+      edgeId: 'relation:r',
+      includeMuted: true,
+      includeProjections: false
+    });
+    expect(parseKnowledgeLibraryRoute(knowledgeLibraryPath(route))).toEqual(route);
+    expect(knowledgeLibraryNavigationKey(knowledgeLibraryPath(route))).toBe('/knowledge/graph');
+    expect(parseKnowledgeLibraryRoute('/knowledge/graph/experiment').page).toBe('graph');
   });
   it('连续搜索和选择条目保持工作区焦点，切换范围仍产生导航边界', () => {
     expect(knowledgeLibraryNavigationKey('/knowledge?scope=candidate&q=卷积&item=k')).toBe(

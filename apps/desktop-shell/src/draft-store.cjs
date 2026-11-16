@@ -35,12 +35,23 @@ function validateDraft(key, draft) {
       value.knowledgeType
     );
   const source = draft.source;
+  const target = draft.definitionTarget;
   if (
     draft.version !== 1 ||
     !['create', 'edit'].includes(draft.kind) ||
     draft.candidateId !== parts[1] ||
     !form(draft.initialValue) ||
     !form(draft.value) ||
+    (target !== undefined &&
+      (!target ||
+        draft.kind !== 'create' ||
+        source ||
+        typeof target.conceptId !== 'string' ||
+        !target.conceptId.trim() ||
+        typeof target.conceptName !== 'string' ||
+        !target.conceptName.trim() ||
+        draft.initialValue.knowledgeType !== 'concept' ||
+        draft.value.knowledgeType !== 'concept')) ||
     (draft.kind === 'edit' && (typeof draft.expectedUpdatedAt !== 'string' || !draft.expectedUpdatedAt)) ||
     (source &&
       (draft.kind !== 'create' ||

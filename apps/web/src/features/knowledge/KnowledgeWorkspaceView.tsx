@@ -36,7 +36,8 @@ import { KnowledgeSourceDialog } from './KnowledgeSourceDialog';
 import { KnowledgeItemDialog } from './KnowledgeItemDialog';
 import { knowledgeFormValue } from './KnowledgeItemForm';
 import { getKnowledgeDraftScope, knowledgeDraftRecovery, type KnowledgeDraft } from './knowledgeDraftRecovery';
-import { filterKnowledgeItems, knowledgeError } from './knowledgeViewModel';
+import { knowledgeLibraryPath } from './library/knowledgeLibraryRoute';
+import { filterKnowledgeItems, knowledgeError, knowledgeReviewViewStatus } from './knowledgeViewModel';
 import { groupKnowledge, sortKnowledge, useKnowledgeDisplay } from './knowledgeIndexModel';
 import { KnowledgeIndexSections, handleKnowledgeListKeys } from './KnowledgeIndexItems';
 import { KnowledgeIndexTools } from './KnowledgeIndexTools';
@@ -308,7 +309,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
     () =>
       activeItems.reduce(
         (result, item) => {
-          const key = item.reviewStatus ?? 'candidate';
+          const key = knowledgeReviewViewStatus(item.reviewStatus);
           result[key] = (result[key] ?? 0) + 1;
           return result;
         },
@@ -519,7 +520,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
     else if (key === 'archive') {
       setMutationFeedback(null);
       setArchiveItem(item);
-    } else if (key === 'restore') void mutate(item, props.onRestore, '已恢复为候选，请重新核对后确认。');
+    } else if (key === 'restore') void mutate(item, props.onRestore, '已恢复为待确认，请重新核对后确认。');
     else if (key === 'trash') {
       setMutationFeedback(null);
       setTrashItem(item);
@@ -559,7 +560,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
         setMutationFeedback(null);
         setArchiveItem(detail.item);
       }}
-      onRestore={() => void mutate(detail.item, props.onRestore, '已恢复为候选，请重新核对后确认。')}
+      onRestore={() => void mutate(detail.item, props.onRestore, '已恢复为待确认，请重新核对后确认。')}
       onOpenNote={props.onOpenNote}
       onTrash={() => {
         setMutationFeedback(null);
@@ -663,6 +664,18 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                       key={draft.candidateId}
                       variant="ghost"
                       onPress={() => {
+                        if (draft.definitionTarget) {
+                          navigate(
+                            knowledgeLibraryPath({
+                              page: 'concepts',
+                              scope: 'all',
+                              query: '',
+                              id: draft.definitionTarget.conceptId,
+                              definitionDraftId: draft.candidateId
+                            })
+                          );
+                          return;
+                        }
                         setRecoveryDraft(draft);
                         if (draft.kind === 'create') setCreateOpen(true);
                         else setEditDraft(draft);
@@ -715,7 +728,9 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                     <EmptyArt variant={items.length === 0 ? 'knowledge' : 'search'} />
                     <strong>{items.length === 0 ? '还没有知识' : '没有符合条件的知识。'}</strong>
                     <p>
-                      {items.length === 0 ? '可从笔记标注创建候选，或手动新建。' : '试试换个关键词，或者清除筛选条件。'}
+                      {items.length === 0
+                        ? '可从笔记标注创建知识点，或手动新建。'
+                        : '试试换个关键词，或者清除筛选条件。'}
                     </p>
                     {items.length === 0 ? (
                       canWrite ? (
@@ -728,7 +743,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                           }}
                         >
                           <PlusIcon size={16} />
-                          新建知识候选
+                          新建知识点
                         </Button>
                       ) : null
                     ) : (
@@ -830,8 +845,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
               '保留至手动清理；不会自动到期删除'
             ) : (
               <>
-                候选 {counts.candidate ?? 0} · 已确认 {counts.confirmed ?? 0} · 待修订 {counts.needsRevision ?? 0} ·
-                已归档 {counts.archived ?? 0}
+                待确认 {counts.candidate ?? 0} · 已确认 {counts.confirmed ?? 0} · 已归档 {counts.archived ?? 0}
               </>
             )}
           </span>
@@ -861,7 +875,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                 </MenuItem>
                 {menuItem?.reviewStatus === 'archived' ? (
                   <MenuItem key="restore" id="restore" isDisabled={menuDisabled}>
-                    恢复为候选
+                    恢复为待确认
                   </MenuItem>
                 ) : (
                   <MenuItem key="archive" id="archive" isDisabled={menuDisabled}>
@@ -916,7 +930,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
         {archiveItem ? (
           <Dialog
             title="归档这条知识？"
-            description={`“${archiveItem.title || '未命名知识'}”将移入已归档，来源仍保留。恢复后会成为待核对的候选。`}
+            description={`“${archiveItem.title || '未命名知识'}”将移入已归档，来源仍保留。恢复后会成为待确认知识。`}
             isOpen
             isPending={pending}
             onOpenChange={open => {
@@ -1075,7 +1089,7 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
         {retireEvidence ? (
           <Dialog
             title="撤回这条来源的适用性？"
-            description="来源的技术健康状态与历史摘录会保留；若这是已确认知识的最后一个适用来源，知识会转为待修订。"
+            description="来源的技术健康状态与历史摘录会保留；若这是已确认知识的最后一个适用来源，知识会转为待确认。"
             isOpen
             isPending={pending}
             onOpenChange={open => {

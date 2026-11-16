@@ -121,7 +121,7 @@ export function KnowledgeDetail({
                   <>
                     {archived ? (
                       <MenuItem key="restore" id="restore" isDisabled={!canWrite || pending}>
-                        恢复为候选
+                        恢复为待确认
                       </MenuItem>
                     ) : (
                       <MenuItem key="archive" id="archive" isDisabled={!canWrite || pending}>
@@ -141,10 +141,12 @@ export function KnowledgeDetail({
           <p className={styles.notice}>正文或来源已变化，请重新核对后确认。</p>
         ) : null}
         {item.reviewStatus === 'candidate' ? (
-          <p className={styles.hint}>这是待核对的候选。确认前请补齐标题、核心陈述，并检查下方来源。</p>
+          <p className={styles.hint}>这条知识待确认。确认前请补齐标题、核心陈述，并检查下方来源。</p>
         ) : null}
         {!sourceReady && !archived ? (
-          <p className={styles.notice}>当前没有可用来源，暂不能确认。请在来源笔记中核对标注，再从有效标注建立候选。</p>
+          <p className={styles.notice}>
+            当前没有可用来源，暂不能确认。请在来源笔记中核对标注，再从有效标注建立知识点。
+          </p>
         ) : null}
       </header>
       {evidence.some(record => record.status !== 'valid' && record.applicabilityStatus !== 'withdrawn') ? (

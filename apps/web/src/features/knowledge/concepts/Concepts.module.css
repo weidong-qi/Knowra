@@ -195,3 +195,47 @@
   font-size: 12px;
   line-height: 1.6;
 }
+
+.sectionHeading {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+}
+.definition {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.definitionEmpty {
+  padding: 0 var(--space-4) var(--space-4);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.definitionEmpty p {
+  margin: 0 0 var(--space-3);
+}
+.linkRow[data-definition] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+}
+.definitionText {
+  grid-column: 1 / -1;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+.definitionStatus {
+  margin-right: auto;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.linkRow[data-definition][data-batch] {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+.linkRow[data-definition][data-batch] .definitionText {
+  grid-column: 2 / -1;
+}
+.linkRow[data-definition][data-batch] .definitionStatus {
+  grid-column: 2;
+}

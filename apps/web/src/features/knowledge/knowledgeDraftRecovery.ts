@@ -18,26 +18,66 @@ export interface KnowledgeDraft {
   value: KnowledgeFormValue;
   expectedUpdatedAt?: string;
   source?: KnowledgeDraftSource;
+  definitionTarget?: { conceptId: string; conceptName: string };
 }
 
 /** 知识没有历史草稿兼容包袱：始终按资料库版本隔离，包括首次安装。 */
 export function getKnowledgeDraftScope(runtime = readRuntimeConfig()) {
-  return JSON.stringify([runtime.persistenceMode, runtime.persistenceMode === 'desktop-local' ? runtime.datasetId ?? 'unknown-desktop-dataset' : window.location.origin]);
+  return JSON.stringify([
+    runtime.persistenceMode,
+    runtime.persistenceMode === 'desktop-local'
+      ? (runtime.datasetId ?? 'unknown-desktop-dataset')
+      : window.location.origin
+  ]);
 }
 export function knowledgeDraftSource(annotation: Annotation): KnowledgeDraftSource {
-  return { annotationId: annotation.id, ...(annotation.noteVersionId ? { noteVersionId: annotation.noteVersionId } : {}),
-    ...(annotation.revision !== undefined ? { expectedAnnotationRevision: annotation.revision } : {}), quoteText: annotation.quoteText, headingPath: [...annotation.headingPath] };
+  return {
+    annotationId: annotation.id,
+    ...(annotation.noteVersionId ? { noteVersionId: annotation.noteVersionId } : {}),
+    ...(annotation.revision !== undefined ? { expectedAnnotationRevision: annotation.revision } : {}),
+    quoteText: annotation.quoteText,
+    headingPath: [...annotation.headingPath]
+  };
 }
 export function isKnowledgeDraft(value: unknown): value is KnowledgeDraft {
   const draft = value as KnowledgeDraft | null;
-  const form = (input: KnowledgeFormValue | undefined) => input && ['title', 'canonicalStatement', 'userExplanation'].every(key => typeof input[key as keyof KnowledgeFormValue] === 'string')
-    && ['concept', 'fact', 'principle', 'process', 'algorithm', 'formula', 'comparison', 'application'].includes(input.knowledgeType);
-  return Boolean(draft && draft.version === 1 && ['create', 'edit'].includes(draft.kind) && typeof draft.candidateId === 'string' && draft.candidateId
-    && form(draft.initialValue) && form(draft.value) && (draft.kind !== 'edit' || (typeof draft.expectedUpdatedAt === 'string' && draft.expectedUpdatedAt))
-    && (!draft.source || (draft.kind === 'create' && typeof draft.source.annotationId === 'string' && draft.source.annotationId
-      && typeof draft.source.quoteText === 'string' && Array.isArray(draft.source.headingPath) && draft.source.headingPath.every(part => typeof part === 'string')
-      && (draft.source.noteVersionId === undefined || typeof draft.source.noteVersionId === 'string')
-      && (draft.source.expectedAnnotationRevision === undefined || (Number.isInteger(draft.source.expectedAnnotationRevision) && draft.source.expectedAnnotationRevision > 0)))));
+  const form = (input: KnowledgeFormValue | undefined) =>
+    input &&
+    ['title', 'canonicalStatement', 'userExplanation'].every(
+      key => typeof input[key as keyof KnowledgeFormValue] === 'string'
+    ) &&
+    ['concept', 'fact', 'principle', 'process', 'algorithm', 'formula', 'comparison', 'application'].includes(
+      input.knowledgeType
+    );
+  return Boolean(
+    draft &&
+    draft.version === 1 &&
+    ['create', 'edit'].includes(draft.kind) &&
+    typeof draft.candidateId === 'string' &&
+    draft.candidateId &&
+    form(draft.initialValue) &&
+    form(draft.value) &&
+    (draft.kind !== 'edit' || (typeof draft.expectedUpdatedAt === 'string' && draft.expectedUpdatedAt)) &&
+    (draft.definitionTarget === undefined ||
+      (draft.kind === 'create' &&
+        !draft.source &&
+        typeof draft.definitionTarget?.conceptId === 'string' &&
+        Boolean(draft.definitionTarget.conceptId.trim()) &&
+        typeof draft.definitionTarget.conceptName === 'string' &&
+        Boolean(draft.definitionTarget.conceptName.trim()) &&
+        draft.initialValue.knowledgeType === 'concept' &&
+        draft.value.knowledgeType === 'concept')) &&
+    (!draft.source ||
+      (draft.kind === 'create' &&
+        typeof draft.source.annotationId === 'string' &&
+        draft.source.annotationId &&
+        typeof draft.source.quoteText === 'string' &&
+        Array.isArray(draft.source.headingPath) &&
+        draft.source.headingPath.every(part => typeof part === 'string') &&
+        (draft.source.noteVersionId === undefined || typeof draft.source.noteVersionId === 'string') &&
+        (draft.source.expectedAnnotationRevision === undefined ||
+          (Number.isInteger(draft.source.expectedAnnotationRevision) && draft.source.expectedAnnotationRevision > 0))))
+  );
 }
 
 /** 复用桌面原子草稿文件；逐键串行写入，flush 必须收到落盘确认。 */
@@ -66,21 +106,28 @@ export function createKnowledgeDraftRecovery() {
     list(scope: string): KnowledgeDraft[] {
       const native = window.knowraDesktop?.readRecoveryDrafts;
       const records: Record<string, unknown> = native ? { ...native() } : {};
-      if (!native) for (let index = 0; index < sessionStorage.length; index++) {
-        const key = sessionStorage.key(index);
-        if (key?.startsWith(KNOWLEDGE_DRAFT_PREFIX)) records[key] = JSON.parse(sessionStorage.getItem(key) ?? 'null');
+      if (!native)
+        for (let index = 0; index < sessionStorage.length; index++) {
+          const key = sessionStorage.key(index);
+          if (key?.startsWith(KNOWLEDGE_DRAFT_PREFIX)) records[key] = JSON.parse(sessionStorage.getItem(key) ?? 'null');
+        }
+      for (const [key, draft] of dirty) {
+        if (draft === null) delete records[key];
+        else records[key] = draft;
       }
-      for (const [key, draft] of dirty) { if (draft === null) delete records[key]; else records[key] = draft; }
       const result: KnowledgeDraft[] = [];
       for (const [key, draft] of Object.entries(records)) {
         if (!key.startsWith(KNOWLEDGE_DRAFT_PREFIX)) continue;
         const parts: unknown = JSON.parse(key.slice(KNOWLEDGE_DRAFT_PREFIX.length));
-        if (!Array.isArray(parts) || parts.length !== 2 || !isKnowledgeDraft(draft) || draft.candidateId !== parts[1]) throw new Error('知识恢复草稿格式无效，请保留恢复文件。');
+        if (!Array.isArray(parts) || parts.length !== 2 || !isKnowledgeDraft(draft) || draft.candidateId !== parts[1])
+          throw new Error('知识恢复草稿格式无效，请保留恢复文件。');
         if (parts[0] === scope) result.push(draft);
       }
       return result;
     },
-    write(scope: string, draft: KnowledgeDraft) { persist(keyFor(scope, draft.candidateId), draft); },
+    write(scope: string, draft: KnowledgeDraft) {
+      persist(keyFor(scope, draft.candidateId), draft);
+    },
     remove(scope: string, draft: KnowledgeDraft) {
       const key = keyFor(scope, draft.candidateId);
       if (dirty.has(key) && dirty.get(key) !== draft) return;

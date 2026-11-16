@@ -205,6 +205,10 @@ export async function exercisePdfAnnotationWorkflow(page) {
   // 用真实逐键输入验证筛选命中变化：编辑器不得卸载，只保存首字符或丢失焦点。
   await choose('批注状态', '无批注');
   await page.getByRole('button', { name: /定位标注.*filter-two/ }).click();
+  await page
+    .locator('[data-knowra-pdf] section[data-selected]')
+    .getByRole('group', { name: '批注内容，双击或按 Enter 编辑' })
+    .dblclick();
   const sidebarField = page
     .getByRole('complementary', { name: 'PDF 检查器' })
     .getByRole('textbox', { name: '评论', exact: true });
@@ -234,6 +238,7 @@ export async function exercisePdfAnnotationWorkflow(page) {
   }
   // 点击过滤结果仍可定位；浮层最后一次输入在退出/重开验收中检查。
   await page.getByRole('button', { name: /定位标注.*First selected text/ }).click();
+  await page.getByRole('button', { name: '关闭批注输入框', exact: true }).click();
   await clickMark();
   await page.getByRole('button', { name: '编辑批注', exact: true }).click();
   if (process.env.KNOWRA_E2E_OUTPUT)

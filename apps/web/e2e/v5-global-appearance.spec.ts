@@ -138,12 +138,15 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
     );
     expect(radius).toBe('6px');
   }
+  const appearance = page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ });
+  await appearance.click();
   await page.getByRole('button', { name: '经典平面', exact: true }).click();
   await expect(shell).toHaveAttribute('data-stage-style', 'flat');
   await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
   await page.reload();
   await expect(shell).toHaveAttribute('data-stage-style', 'flat');
   await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
+  await appearance.click();
   await page.getByRole('button', { name: '纸面柔影', exact: true }).click();
   await expect(shell).toHaveAttribute('data-stage-style', 'soft');
   await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(24, 25, 29)');
@@ -154,6 +157,7 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
   );
   await page.reload();
   await expect(shell).toHaveAttribute('data-ni-mode', 'dark');
+  await appearance.click();
   await expect(page.getByRole('button', { name: '暖橙', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: '预览对话框', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '新建文件夹', exact: true });
@@ -297,6 +301,7 @@ test('文档与 PDF 图标统一使用胶囊徽标，设置页不再提供切换
     route => route.fulfill({ json: { data: notes } })
   );
   await page.goto('/#/settings');
+  await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
   await expect(page.getByRole('heading', { name: '文档图标风格' })).toHaveCount(0);
   await page.goto('/#/materials');
   const document = page.locator('[data-art-kind="document"]');
@@ -325,6 +330,7 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
     })
   );
   await page.goto('/#/settings');
+  await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
   const outer = page.getByRole('heading', { name: '外栏背景', exact: true }).locator('xpath=../..');
   const topbarSetting = page.getByRole('heading', { name: '顶部栏背景', exact: true }).locator('xpath=../..');
   const railSetting = page.getByRole('heading', { name: '左侧模块栏背景', exact: true }).locator('xpath=../..');
@@ -337,6 +343,7 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
   await page.getByRole('switch', { name: '四角圆角' }).locator('xpath=ancestor::label').click();
   await page.getByRole('switch', { name: '细边线' }).locator('xpath=ancestor::label').click();
   await page.reload();
+  await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
   await expect(page.getByRole('switch', { name: '四角圆角' })).toBeChecked();
   await expect(outer.getByRole('textbox', { name: '十六进制颜色' })).toHaveValue('#cdd9e6');
   await page.goto('/#/materials');

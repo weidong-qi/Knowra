@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { Tooltip, TooltipTrigger } from '../../components/ui';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
@@ -12,26 +12,63 @@ export function PdfAnnotationTooltip({
   containerRef,
   items,
   enabled,
-  revision
+  revision,
+  excludedIds = []
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   items: PdfAnnotation[];
   enabled: boolean;
   revision: number;
+  excludedIds?: readonly string[];
 }) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const overAnnotation = useRef(false);
   const overTooltip = useRef(false);
   const closeTimer = useRef<number | undefined>(undefined);
+  const moveFrame = useRef(0);
+  const [size, setSize] = useState({ width: 300, height: 120 });
   const [hover, setHover] = useState<{ id: string; left: number; top: number } | null>(null);
-  const item = enabled ? items.find(value => value.id === hover?.id && value.comment?.trim()) : undefined;
+  const item =
+    enabled && !excludedIds.includes(hover?.id ?? '')
+      ? items.find(value => value.id === hover?.id && value.comment?.trim())
+      : undefined;
+  const bounds = containerRef.current?.getBoundingClientRect();
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current;
+    if (!tooltip || !item) return;
+    const measure = () => {
+      const rect = tooltip.getBoundingClientRect();
+      if (rect.width && rect.height)
+        setSize(current =>
+          current.width === rect.width && current.height === rect.height
+            ? current
+            : { width: rect.width, height: rect.height }
+        );
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(tooltip);
+    return () => observer?.disconnect();
+  }, [item]);
+  const left = Math.max(
+    (bounds?.left ?? 0) + 12,
+    Math.min((hover?.left ?? 0) + 12, Math.min(bounds?.right || window.innerWidth, window.innerWidth) - size.width - 12)
+  );
+  const top = Math.max(
+    (bounds?.top ?? 0) + 12,
+    Math.min(
+      (hover?.top ?? 0) + 12,
+      Math.min(bounds?.bottom || window.innerHeight, window.innerHeight) - size.height - 12
+    )
+  );
   const cancelClose = useCallback(() => {
     window.clearTimeout(closeTimer.current);
     closeTimer.current = undefined;
   }, []);
   const clear = useCallback(() => {
     cancelClose();
+    cancelAnimationFrame(moveFrame.current);
     overAnnotation.current = false;
     overTooltip.current = false;
     setHover(null);
@@ -40,7 +77,13 @@ export function PdfAnnotationTooltip({
     if (overAnnotation.current || overTooltip.current || closeTimer.current !== undefined) return;
     closeTimer.current = window.setTimeout(clear, CLOSE_DELAY);
   }, [clear]);
-  useEffect(() => cancelClose, [cancelClose]);
+  useEffect(
+    () => () => {
+      cancelClose();
+      cancelAnimationFrame(moveFrame.current);
+    },
+    [cancelClose]
+  );
   useEffect(() => {
     if (!item) clear();
   }, [item, clear]);
@@ -79,14 +122,19 @@ export function PdfAnnotationTooltip({
       }
       cancelClose();
       overAnnotation.current = true;
-      setHover({ id, left: event.clientX, top: event.clientY });
+      cancelAnimationFrame(moveFrame.current);
+      moveFrame.current = requestAnimationFrame(() => setHover({ id, left: event.clientX, top: event.clientY }));
     };
     const pointerdown = (event: PointerEvent) => {
       // 预览框通过 portal 渲染；拖动滚动条或选择批注文字时仍应保持打开。
       if (!(event.target instanceof Node) || !tooltipRef.current?.contains(event.target)) clear();
     };
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') clear();
+      if (event.key !== 'Escape' || event.isComposing || event.keyCode === 229) return;
+      if (!tooltipRef.current?.textContent?.trim()) return;
+      clear();
+      event.preventDefault();
+      event.stopPropagation();
     };
     container.addEventListener('pointermove', move);
     container.addEventListener('pointerleave', leave);
@@ -121,6 +169,14 @@ export function PdfAnnotationTooltip({
         offset={12}
         containerPadding={12}
         className={`${styles.annotationTone} ${styles.commentTooltip}`}
+        style={{
+          position: 'fixed',
+          left,
+          top,
+          transform: 'none',
+          maxWidth: Math.max(1, Math.min(300, (bounds?.width || window.innerWidth) - 24)),
+          maxHeight: Math.max(1, Math.min(360, window.innerHeight * 0.6, (bounds?.height || window.innerHeight) - 24))
+        }}
         data-kind={item?.kind}
         onPointerEnter={() => {
           overTooltip.current = true;

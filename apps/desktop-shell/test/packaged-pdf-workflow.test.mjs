@@ -42,7 +42,15 @@ test('Mac PDF：原生撤销快捷键、直接编辑退出保存、组合筛选�
   await page.goto(new URL(new URL(result.url).hash, page.url()).href);
   await expect(page.locator('.textLayer').first()).toContainText('First selected text', { timeout: 30000 });
   await page.getByRole('button', { name: /定位标注.*First selected text/ }).click();
-  await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue(result.comment);
+  await expect(
+    page
+      .locator('[data-knowra-pdf] section[data-selected]')
+      .getByRole('group', { name: '批注内容，双击或按 Enter 编辑' })
+  ).toContainText(result.comment);
+  await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole('dialog', { name: '编辑 PDF 批注' }).getByRole('textbox', { name: '批注内容' })
+  ).toHaveValue(result.comment);
   await expect(page.getByRole('button', { name: '撤销标注操作', exact: true })).toBeDisabled();
   completed = true;
 });
