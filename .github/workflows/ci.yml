@@ -27,6 +27,9 @@ jobs:
       - run: NODE_ENV=production npm run build:web
       - run: npm run check:boundaries -w @study-accelerator/web
       - run: google-chrome --version
+      - run: npx playwright install --with-deps chromium
+      - name: 运行真实双击查词与 Esc 回归
+        run: node --test --test-concurrency=1 apps/desktop-runtime/test/e2e/pdf-dictionary.test.mjs
       - name: 运行真实 SQLite 知识库页面验收
         run: npm run test:e2e -w @study-accelerator/web -- --config playwright.knowledge-concepts.config.ts
       - name: 保存合成验收截图
