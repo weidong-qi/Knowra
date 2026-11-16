@@ -480,3 +480,17 @@ test('桌面概念命令通过真实 HTTP 白名单，拒绝直接删除概念�
   const deleted = await call('/api/knowledge/concepts/concept-a', 'DELETE');
   assert.equal(deleted.status, 409);
 });
+
+test('桌面个人待办命令通过真实 HTTP 白名单，拒绝直接删除待办实体', async t => {
+  const { call } = await localRequests(t);
+  const created = await call('/api/todos/commands', 'POST', {
+    command: { type: 'create', id: 'todo-a', parentId: null, title: '开发APP', plannedDate: '2026-11-15' }
+  });
+  assert.equal(created.status, 200);
+  assert.equal(created.data.changed[0].title, '开发APP');
+  assert.equal(created.data.changed[0].parentId, null);
+  const listed = await call('/api/todos');
+  assert.equal(listed.data.todos.length, 1);
+  const deleted = await call('/api/todos/todo-a', 'DELETE');
+  assert.equal(deleted.status, 409);
+});

@@ -136,7 +136,7 @@ export function KnowledgeItemDialog({
             lockKnowledgeType={lockKnowledgeType}
             onChange={updateValue}
           />
-          <p className={styles.hint}>先保存为候选，核对核心陈述与来源后再确认。修改已确认的正文会转为待修订。</p>
+          <p className={styles.hint}>先保存为待确认，核对核心陈述与来源后再确认。修改已确认的正文会重新变为待确认。</p>
           {error ? (
             <p role="alert" className={styles.error}>
               {error}

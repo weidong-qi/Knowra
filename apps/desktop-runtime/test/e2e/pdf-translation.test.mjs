@@ -9,7 +9,7 @@ import { createOptionalAiRuntime } from '../../../api/src/modules/ai/runtime.ts'
 import { syntheticPdf } from '../../../../scripts/test-support/pdf-fixtures.mjs';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 
-test('PDF 选区翻译经桌面接口返回译文，并保存为可重开的标注', { timeout: 60000 }, async t => {
+test('PDF 翻译选色与切换样式不创建标注，显式保存后可重开', { timeout: 60000 }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-pdf-translation-e2e-'));
   const requests = [],
     errors = [];
@@ -75,14 +75,17 @@ test('PDF 选区翻译经桌面接口返回译文，并保存为可重开的标�
   await page.goto(`${runtime.origin}/#/materials/notes/${note.id}`);
   const textLayer = page.locator('.textLayer').first();
   await expect(textLayer).toContainText('Attention is all you need.', { timeout: 25000 });
-  await textLayer.evaluate(layer => {
-    const range = document.createRange();
-    range.selectNodeContents(layer.querySelector('span'));
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-    layer.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-  });
+  const marks = () => api(`/api/pdf/${note.id}/annotations`);
+  const selectText = () =>
+    textLayer.evaluate(layer => {
+      const range = document.createRange();
+      range.selectNodeContents(layer.querySelector('span'));
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      layer.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    });
+  await selectText();
   await expect(page.getByRole('button', { name: '翻译', exact: true })).toBeVisible();
   assert.equal(requests.length, 0, '选择文字时不调用模型');
   await page.getByRole('button', { name: '翻译', exact: true }).click();
@@ -93,16 +96,36 @@ test('PDF 选区翻译经桌面接口返回译文，并保存为可重开的标�
   assert.deepEqual(requests[0].tools, []);
   await dialog.getByRole('button', { name: '查看原文', exact: true }).click();
   await expect(dialog).toContainText('Attention is all you need.');
+  await expect(dialog.getByRole('button', { name: '选择分类：补充' })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('button', { name: '标注样式：下划线' }).click();
+  await dialog.getByRole('button', { name: '选择分类：疑问' }).click();
+  await expect(dialog.getByRole('button', { name: '选择分类：疑问' })).toHaveAttribute('aria-pressed', 'true');
+  assert.equal((await marks()).length, 0, '切换样式与选色只更新待提交设置');
+  await expect(page.getByRole('button', { name: '撤销标注操作' })).toBeDisabled();
+  await dialog.getByRole('button', { name: '关闭', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  assert.equal((await marks()).length, 0, '关闭翻译卡片不创建标注');
+  await selectText();
+  await page.getByRole('button', { name: '翻译', exact: true }).click();
+  await expect(dialog).toContainText('注意力就是你所需要的一切。');
+  assert.equal(requests.length, 2, '再次点击翻译才发起新请求');
+  await expect(dialog.getByRole('button', { name: '选择分类：疑问' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByRole('button', { name: '标注样式：下划线' })).toHaveAttribute('aria-pressed', 'true');
+  await dialog.getByRole('button', { name: '选择分类：重点' }).click();
+  assert.equal((await marks()).length, 0, '保存前再次选色仍不创建标注');
   await dialog.getByRole('button', { name: '保存为标注', exact: true }).click();
-  const marks = () => api(`/api/pdf/${note.id}/annotations`);
+  await expect(dialog).toHaveCount(0);
   await expect.poll(async () => (await marks()).length).toBe(1);
   const saved = (await marks())[0];
-  assert.equal(saved.kind, 'supplement');
+  assert.equal(saved.kind, 'important');
+  assert.equal(saved.type, 'underline');
   assert.equal(saved.quoteText, 'Attention is all you need.');
   assert.equal(saved.comment, '翻译 · deepseek-flash\n注意力就是你所需要的一切。');
   await page.reload();
   await expect(page.locator('.textLayer').first()).toContainText('Attention is all you need.');
   assert.equal((await marks())[0].comment, saved.comment);
-  assert.equal(requests.length, 1, '重新打开资料不自动翻译');
+  assert.equal((await marks())[0].kind, 'important');
+  assert.equal((await marks())[0].type, 'underline');
+  assert.equal(requests.length, 2, '重新打开资料不自动翻译');
   assert.deepEqual(errors, []);
 });

@@ -53,6 +53,16 @@ for (const width of [1440, 390])
             sourceMode: 'manual'
           });
         }
+        // 桌面通过已确认知识的正文修改进入待修订，沿用真实编辑与版本校验路径。
+        const confirmed = await post('/api/knowledge/items/ui-free/confirm', {});
+        const revision = await page.request.patch(`${runtime.origin}/api/knowledge/items/ui-free`, {
+          data: {
+            expectedUpdatedAt: confirmed.updatedAt,
+            canonicalStatement: '合成核心陈述：修订后的卷积操作用于提取局部特征。'
+          }
+        });
+        expect(revision.ok(), await revision.text()).toBeTruthy();
+        expect((await revision.json()).data.reviewStatus).toBe('needsRevision');
         await post('/api/knowledge/concepts/commands', {
           command: {
             type: 'createConcept',
@@ -87,7 +97,7 @@ for (const width of [1440, 390])
         await expect(page.getByRole('list', { name: '知识卡片视图' }).first()).toBeVisible();
         const createControl = page
           .getByRole('toolbar', { name: '知识库工具栏' })
-          .getByRole('button', { name: '新建知识候选' });
+          .getByRole('button', { name: '新建知识点' });
         await expect(createControl).toBeVisible();
         const createBox = await createControl.boundingBox();
         expect(createBox).not.toBeNull();
@@ -125,7 +135,10 @@ for (const width of [1440, 390])
           animations: 'disabled'
         });
         await page.getByRole('button', { name: '关闭详情', exact: true }).click();
-        await (await openSidebar()).getByRole('button', { name: /^候选/ }).click();
+        const pendingNav = (await openSidebar()).getByRole('button', { name: /^待确认/ });
+        await expect(pendingNav).toContainText('2');
+        await pendingNav.click();
+        await expect(list.getByRole('button', { name: /合成长标题/ })).toBeVisible();
         await list.getByRole('button', { name: /合成卷积知识/ }).click();
         await page.getByRole('button', { name: '卷积神经网络 · 主体', exact: true }).click();
         await expect(page.getByRole('article', { name: '概念详情' })).toContainText('主体 1');
@@ -154,18 +167,28 @@ for (const width of [1440, 390])
         await expect(editor).toHaveCount(0);
         await expect(page.getByRole('article', { name: '概念详情' })).toContainText('未保存的合成概念');
         await page.getByRole('button', { name: '关闭详情', exact: true }).click();
-        await (await openSidebar()).getByRole('button', { name: '概念图（原型）', exact: true }).click();
-        await expect(page.getByRole('heading', { name: '概念图（原型）', exact: true })).toBeVisible();
+        await (await openSidebar()).getByRole('button', { name: '概念图', exact: true }).click();
+        await expect(page.getByRole('heading', { name: '概念图', exact: true })).toBeVisible();
+        await expect(page.locator('[data-renderer-state="ready"] canvas').first()).toBeVisible();
         const graphSearch = page.getByRole('searchbox', { name: '搜索图中概念' });
-        await graphSearch.locator('..').click();
-        await graphSearch.fill('张量');
+        await graphSearch.fill('CNN');
         await expect(page).toHaveURL(/knowledge\/graph\?q=/);
-        await page
-          .getByRole('region', { name: '图中概念搜索结果' })
-          .getByRole('button', { name: '张量', exact: true })
-          .click();
-        await expect(page.getByRole('region', { name: '详情', exact: true })).toContainText('张量');
-        await expect(page.getByRole('button', { name: '增量确认演示（实验）' })).toBeVisible();
+        const graphList = page.getByRole('region', { name: '概念与关系的可访问列表' });
+        await graphList.getByRole('button', { name: /卷积神经网络.*未评估/ }).focus();
+        await page.keyboard.press('Enter');
+        await expect(page.getByRole('region', { name: '所选概念' })).toContainText('卷积神经网络');
+        await expect(page.getByRole('region', { name: '所选概念' })).toContainText('合成卷积知识');
+        await page.screenshot({
+          path: info.outputPath(`real-concept-graph-${width}-${mode}.png`),
+          animations: 'disabled'
+        });
+        await page.getByRole('button', { name: '关闭详情', exact: true }).click();
+        await page.getByRole('button', { name: '实验', exact: true }).click();
+        await page.getByRole('menuitem', { name: '增量确认演示', exact: true }).click();
+        await expect(page.getByRole('dialog', { name: '增量确认演示（实验）' })).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('heading', { name: '概念图（原型）', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: '返回真实概念图', exact: true })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
         expect(errors).toEqual([]);
       } catch (error) {

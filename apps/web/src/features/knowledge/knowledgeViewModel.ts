@@ -1,17 +1,29 @@
 import type { KnowledgeItem, KnowledgeReviewStatus } from '@study-accelerator/web-core';
 
 export const KNOWLEDGE_STATUS_LABELS: Record<KnowledgeReviewStatus, string> = {
-  candidate: '候选', confirmed: '已确认', needsRevision: '待修订', archived: '已归档'
+  candidate: '待确认',
+  confirmed: '已确认',
+  needsRevision: '待确认',
+  archived: '已归档'
 };
 export const KNOWLEDGE_TYPE_OPTIONS = [
-  { id: 'concept', label: '概念' }, { id: 'fact', label: '事实' },
-  { id: 'principle', label: '原理' }, { id: 'process', label: '流程' },
-  { id: 'algorithm', label: '算法' }, { id: 'formula', label: '公式' },
-  { id: 'comparison', label: '比较' }, { id: 'application', label: '应用' }
+  { id: 'concept', label: '概念' },
+  { id: 'fact', label: '事实' },
+  { id: 'principle', label: '原理' },
+  { id: 'process', label: '流程' },
+  { id: 'algorithm', label: '算法' },
+  { id: 'formula', label: '公式' },
+  { id: 'comparison', label: '比较' },
+  { id: 'application', label: '应用' }
 ] as const;
 
+/** 仅合并展示状态，不改变后端审阅状态与确认规则。 */
+export function knowledgeReviewViewStatus(status?: string) {
+  return !status || status === 'needsRevision' ? 'candidate' : status;
+}
+
 export function knowledgeStatusLabel(status?: string) {
-  return KNOWLEDGE_STATUS_LABELS[status as KnowledgeReviewStatus] ?? '候选';
+  return KNOWLEDGE_STATUS_LABELS[status as KnowledgeReviewStatus] ?? '待确认';
 }
 
 export function knowledgeTypeLabel(type: string) {
@@ -20,21 +32,35 @@ export function knowledgeTypeLabel(type: string) {
 
 export function filterKnowledgeItems(items: KnowledgeItem[], status: string, query: string) {
   const search = query.trim().toLocaleLowerCase();
-  return items.filter(item => !item.deletedAt)
-    .filter(item => status === 'all' ? item.reviewStatus !== 'archived' : (item.reviewStatus ?? 'candidate') === status)
-    .filter(item => !search || [item.title, item.canonicalStatement, item.userExplanation].some(text => text.toLocaleLowerCase().includes(search)))
+  return items
+    .filter(item => !item.deletedAt)
+    .filter(item =>
+      status === 'all'
+        ? item.reviewStatus !== 'archived'
+        : knowledgeReviewViewStatus(item.reviewStatus) === knowledgeReviewViewStatus(status)
+    )
+    .filter(
+      item =>
+        !search ||
+        [item.title, item.canonicalStatement, item.userExplanation].some(text =>
+          text.toLocaleLowerCase().includes(search)
+        )
+    )
     .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '') || a.title.localeCompare(b.title, 'zh-CN'));
 }
 
 export function knowledgeError(error: unknown, fallback = '操作失败，请重试。') {
   if (error && typeof error === 'object' && 'code' in error) {
     const messages: Record<string, string> = {
-      KNOWLEDGE_ITEM_UPDATE_CONFLICT: '这条知识已被其他操作更新。本次输入已保留，请先复制需要保留的文字，再取消并重新加载。',
+      KNOWLEDGE_ITEM_UPDATE_CONFLICT:
+        '这条知识已被其他操作更新。本次输入已保留，请先复制需要保留的文字，再取消并重新加载。',
       KNOWLEDGE_ITEM_CONTENT_REQUIRED: '确认前请填写标题和核心陈述。',
       KNOWLEDGE_ITEM_SOURCE_REQUIRED: '来源目前不可用，请重新核对来源标注后再确认。',
-      KNOWLEDGE_EVIDENCE_VERSION_REQUIRED: '这条标注尚未关联已保存的笔记版本。请先保存笔记，再重新打开候选创建面板。',
-      KNOWLEDGE_EVIDENCE_VERSION_MISMATCH: '来源版本已经变化。本次输入已保留，请先复制需要保留的文字，再重新打开候选创建面板。',
-      KNOWLEDGE_EVIDENCE_REVISION_CONFLICT: '来源标注已经变化。本次输入已保留，请先复制需要保留的文字，再重新打开候选创建面板。'
+      KNOWLEDGE_EVIDENCE_VERSION_REQUIRED: '这条标注尚未关联已保存的笔记版本。请先保存笔记，再重新打开知识创建面板。',
+      KNOWLEDGE_EVIDENCE_VERSION_MISMATCH:
+        '来源版本已经变化。本次输入已保留，请先复制需要保留的文字，再重新打开知识创建面板。',
+      KNOWLEDGE_EVIDENCE_REVISION_CONFLICT:
+        '来源标注已经变化。本次输入已保留，请先复制需要保留的文字，再重新打开知识创建面板。'
     };
     const message = messages[String(error.code)];
     if (message) return message;

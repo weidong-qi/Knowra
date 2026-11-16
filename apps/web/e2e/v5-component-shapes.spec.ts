@@ -85,7 +85,7 @@ for (const mode of ['light', 'dark'] as const) {
       await expect(knowledge).toHaveCSS('border-radius', '8px');
       await knowledge.focus();
       await expect(knowledge).toBeFocused();
-      await expect(page.getByRole('button', { name: '新建知识候选' })).toHaveCSS('border-radius', '999px');
+      await expect(page.getByRole('button', { name: '新建知识点' })).toHaveCSS('border-radius', '999px');
       await page.screenshot({ path: info.outputPath('knowledge-shapes.png'), animations: 'disabled' });
 
       await page.goto('/#/showcase');

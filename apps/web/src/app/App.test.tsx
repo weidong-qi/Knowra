@@ -417,26 +417,25 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       </RouterProvider>
     );
     expect(screen.getByRole('heading', { name: '设置' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: '设置分类' })).toBeInTheDocument();
+    const settingsNav = screen.getByRole('navigation', { name: '设置分类' });
+    expect(settingsNav).toBeInTheDocument();
     expect(screen.queryByText('个人偏好')).not.toBeInTheDocument();
     expect(screen.queryByText('分类 / CATEGORIES')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '全部设置' })).not.toBeInTheDocument();
-    expect(screen.getByText('显示 10 / 10 项设置')).toBeInTheDocument();
+    expect(within(settingsNav).queryByRole('button', { name: /全部设置/ })).not.toBeInTheDocument();
+    expect(within(settingsNav).getByRole('button', { name: /工作区/ })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('checkbox', { name: '显示笔记目录栏' }));
+    expect(localStorage.getItem('knowra:notes-sidebar-open')).toBe('false');
+    fireEvent.click(within(settingsNav).getByRole('button', { name: /阅读与编辑/ }));
     fireEvent.click(screen.getByRole('button', { name: '大（19 像素）' }));
     expect(document.documentElement.style.getPropertyValue('--note-font-size')).toBe('19px');
+    fireEvent.click(within(settingsNav).getByRole('button', { name: /辅助体验/ }));
+    expect(screen.queryByRole('heading', { name: '笔记正文字号' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('checkbox', { name: '减少界面动效' }));
     expect(document.documentElement.dataset.reduceMotion).toBe('true');
     expect(JSON.parse(localStorage.getItem('knowra:preferences:v1') ?? '{}')).toEqual({
       noteFontSize: 19,
       reduceMotion: true
     });
-    fireEvent.click(screen.getByRole('checkbox', { name: '显示笔记目录栏' }));
-    expect(localStorage.getItem('knowra:notes-sidebar-open')).toBe('false');
-    fireEvent.click(
-      within(screen.getByRole('navigation', { name: '设置分类' })).getByRole('button', { name: /辅助体验/ })
-    );
-    expect(screen.queryByRole('heading', { name: '笔记正文字号' })).not.toBeInTheDocument();
-    expect(screen.getByText('显示 1 / 10 项设置')).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 

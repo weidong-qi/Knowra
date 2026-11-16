@@ -374,16 +374,28 @@
   max-width: calc(100vw - 24px);
   border-color: color-mix(in srgb, var(--pdf-annotation-color) 65%, var(--border-subtle));
 }
-.commentEditorHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 2px 4px;
-  font-size: var(--font-size-meta);
+.commentConnector {
+  position: fixed;
+  z-index: 149;
+  pointer-events: none;
+  overflow: hidden;
+  color: var(--text-muted);
 }
-.commentEditorHead strong {
-  flex: 1;
+.commentConnector line {
+  stroke: currentColor;
+  stroke-width: 1;
+}
+.commentPreview {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--surface-hover);
+  cursor: text;
+  white-space: pre-wrap;
+}
+.commentPreview:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
 }
 .commentQuote {
   max-height: 80px;

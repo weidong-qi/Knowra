@@ -1,7 +1,23 @@
 export { Dialog, DialogTrigger, DialogBody, DialogFooter, DialogClose, useDialogClose } from './Dialog';
 export type { DialogProps, DialogTriggerProps, DialogCloseProps } from './Dialog';
-export { Menu, MenuTrigger, SubmenuTrigger, MenuItem, MenuHeader, MenuSection, MenuSeparator, MenuPopover } from './Menu';
-export type { MenuProps, MenuItemProps, MenuTriggerProps, SubmenuTriggerProps, MenuHeaderProps, MenuSectionProps } from './Menu';
+export {
+  Menu,
+  MenuTrigger,
+  SubmenuTrigger,
+  MenuItem,
+  MenuHeader,
+  MenuSection,
+  MenuSeparator,
+  MenuPopover
+} from './Menu';
+export type {
+  MenuProps,
+  MenuItemProps,
+  MenuTriggerProps,
+  SubmenuTriggerProps,
+  MenuHeaderProps,
+  MenuSectionProps
+} from './Menu';
 export { PointMenu } from './PointMenu';
 export type { PointMenuProps } from './PointMenu';
 export { Popover, PopoverTrigger, PopoverDialog } from './Popover';
@@ -10,3 +26,5 @@ export { Tooltip, TooltipTrigger } from './Tooltip';
 export type { TooltipProps, TooltipTriggerProps } from './Tooltip';
 export { ScopedAppearanceProvider, useScopedAppearance } from './ScopedAppearance';
 export type { ScopedAppearance } from './ScopedAppearance';
+export { FloatingPanel } from './FloatingPanel';
+export type { FloatingPanelProps } from './FloatingPanel';

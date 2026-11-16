@@ -18,6 +18,24 @@ describe('知识库导航与共享数据', () => {
       id: 'k'
     });
     expect(parseKnowledgeLibraryRoute('/knowledge?scope=unknown').scope).toBe('all');
+    const legacy = parseKnowledgeLibraryRoute('/knowledge?scope=needsRevision&q=公式&item=k');
+    expect(legacy).toMatchObject({ scope: 'candidate', query: '公式', id: 'k' });
+    expect(knowledgeLibraryPath(legacy)).toContain('scope=candidate');
+  });
+  it('真实图的概念、关系和筛选深链接可恢复，切换选择不丢失过滤或焦点', () => {
+    const route = parseKnowledgeLibraryRoute(
+      '/knowledge/graph?q=卷积&concept=a&edge=relation%3Ar&muted=1&projections=0'
+    );
+    expect(route).toMatchObject({
+      page: 'graph',
+      id: 'a',
+      edgeId: 'relation:r',
+      includeMuted: true,
+      includeProjections: false
+    });
+    expect(parseKnowledgeLibraryRoute(knowledgeLibraryPath(route))).toEqual(route);
+    expect(knowledgeLibraryNavigationKey(knowledgeLibraryPath(route))).toBe('/knowledge/graph');
+    expect(parseKnowledgeLibraryRoute('/knowledge/graph/experiment').page).toBe('graph');
   });
   it('连续搜索和选择条目保持工作区焦点，切换范围仍产生导航边界', () => {
     expect(knowledgeLibraryNavigationKey('/knowledge?scope=candidate&q=卷积&item=k')).toBe(

@@ -106,6 +106,7 @@ test('PDF 新增、修改、删除批注后，无需刷新页面即可更新索�
   await open();
   const inspector = page.getByRole('complementary', { name: 'PDF 检查器' });
   await inspector.getByRole('button', { name: /定位标注/ }).click();
+  await inspector.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await inspector.getByRole('textbox', { name: '评论', exact: true }).fill('修改后也推进 PDF 时间');
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   await verifyIndex();

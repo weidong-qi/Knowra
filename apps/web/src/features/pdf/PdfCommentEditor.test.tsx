@@ -30,7 +30,7 @@ it('只读便签的正文不可编辑，文字标注保留原有输入框', () =
   const props = { point: { x: 100, y: 100 }, canWrite: false, onChange: () => {}, onClose: () => {} };
   const view = render(<PdfCommentEditor {...props} item={{ ...note, title: '只读标题' }} />);
   expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
-  expect(screen.getByRole('textbox', { name: '批注内容' })).toBeDisabled();
+  expect(screen.getByRole('textbox', { name: '批注内容' })).toHaveAttribute('readonly');
   view.rerender(<PdfCommentEditor {...props} item={{ ...note, type: 'highlight', quoteText: '原文' }} />);
   expect(screen.queryByRole('textbox', { name: '便签标题' })).toBeNull();
   expect(screen.getByText('原文')).toBeVisible();

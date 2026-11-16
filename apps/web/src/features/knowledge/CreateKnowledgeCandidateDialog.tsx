@@ -61,7 +61,7 @@ export function CreateKnowledgeCandidateDialog({
   const origin = draft.source;
   return (
     <KnowledgeItemDialog
-      title={title ?? (origin ? '从标注创建知识候选' : '新建知识候选')}
+      title={title ?? (origin ? '从标注创建知识点' : '新建知识点')}
       draft={draft}
       recovered={Boolean(recoveryDraft)}
       lockKnowledgeType={lockKnowledgeType}
@@ -102,7 +102,7 @@ export function CreateKnowledgeCandidateDialog({
           <blockquote>
             <MathText text={origin.quoteText} />
           </blockquote>
-          <p className={styles.hint}>保存后保留来源快照。候选陈述可以重新组织，来源摘录保持原文。</p>
+          <p className={styles.hint}>保存后保留来源快照。知识陈述可以重新组织，来源摘录保持原文。</p>
         </section>
       ) : null}
     </KnowledgeItemDialog>

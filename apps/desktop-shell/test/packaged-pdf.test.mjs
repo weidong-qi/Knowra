@@ -97,6 +97,7 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   assert(markLabel);
   t.diagnostic(`本次区域标注：${markLabel}`);
   const comment = page.getByRole('textbox', { name: '评论', exact: true });
+  await page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await comment.fill('退出前的本机评论');
   // 在 450ms 防抖结束前退出，必须由现有退出握手提交。
   await closeTestApplication(app);
@@ -111,12 +112,15 @@ test('打包 APP 离线 PDF：本地字体、区域标注、原生下载及退�
   assert.equal(page.url(), expectedUrl, '重启后 PDF 文字层就绪时必须仍在目标笔记。');
   navigation.checkpoint({ phase: 'text-layer-ready', url: page.url(), expectedUrl });
   await page.getByRole('button', { name: markLabel, exact: true }).click();
-  await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('退出前的本机评论', {
+  await expect(
+    page.getByRole('dialog', { name: '编辑 PDF 批注' }).getByRole('textbox', { name: '批注内容' })
+  ).toHaveValue('退出前的本机评论', {
     timeout: 30000
   });
   const savedRegion = page.locator('[data-knowra-pdf-overlay] [data-type="region"]');
-  // 侧栏定位已选中该标注，取消选择后才能预览批注。
+  // 关闭正文批注窗口后恢复同一条标注的悬停预览，保留选中态。
   await page.getByLabel('PDF 页面', { exact: true }).press('Escape');
+  await expect(page.getByRole('dialog', { name: '编辑 PDF 批注' })).toHaveCount(0);
   // 定位后的延迟布局可能改变阅读位置，用当前可见标注的坐标悬停。
   await expect
     .poll(async () => {

@@ -95,7 +95,7 @@ it('写定义沿用草稿保护，保存失败保留输入，挂靠失败只重�
   expect(canNavigate()).toBe(true);
   await user.click(screen.getByRole('button', { name: '重试挂入' }));
   await waitFor(() => expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('研究数量与结构的学科。'));
-  expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('候选');
+  expect(screen.getByRole('region', { name: '定义' })).toHaveTextContent('待确认');
   expect(create).toHaveBeenCalledTimes(2);
   expect(create.mock.calls[0]![0].id).toBe(create.mock.calls[1]![0].id);
   expect(linkAttempts).toBe(2);
