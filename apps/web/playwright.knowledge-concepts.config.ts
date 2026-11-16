@@ -6,6 +6,7 @@ export default defineConfig({
     'knowledge-concepts.spec.ts',
     'knowledge-library-ui.spec.ts',
     'concept-definitions.spec.ts',
+    'settings-navigation.spec.ts',
     'knowledge-relations.spec.ts'
   ],
   workers: 1,
