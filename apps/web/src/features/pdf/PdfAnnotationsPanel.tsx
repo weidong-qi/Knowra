@@ -1,18 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { DeleteIcon } from '../../components/icons/knowra';
-import {
-  IconButton,
-  Popover,
-  PopoverDialog,
-  PopoverTrigger,
-  PressableButton,
-  TextAreaField,
-  TextField
-} from '../../components/ui';
+import { IconButton, Popover, PopoverDialog, PopoverTrigger, PressableButton, TextField } from '../../components/ui';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
 import { sortPdfAnnotations } from './pdfGeometry';
 import styles from './PdfReader.module.css';
+import { PdfAnnotationComment } from './PdfAnnotationComment';
 
 export function PdfAnnotationsList({
   items,
@@ -54,6 +47,9 @@ export function PdfAnnotationsList({
           data-selected={selected === item.id || undefined}
           data-kind={item.kind}
           aria-label={filteredOutId === item.id ? '当前选中标注' : undefined}
+          onClick={event => {
+            if (!(event.target as Element).closest('button, input, textarea, [role="button"]')) onSelect(item);
+          }}
         >
           {filteredOutId === item.id ? (
             <p className={styles.panelEmpty}>当前选中标注不符合筛选，仍可继续编辑。</p>
@@ -93,22 +89,12 @@ export function PdfAnnotationsList({
               </span>
             </div>
           </div>
-          {selected === item.id ? (
-            <>
-              <TextAreaField
-                label="评论"
-                presentation="composer"
-                className={styles.commentField}
-                placeholder="添加评论…"
-                value={item.comment}
-                maxLength={2000}
-                isDisabled={!canWrite}
-                onChange={comment => onChange(item.id, { comment })}
-              />
-            </>
-          ) : item.comment ? (
-            <p>{item.comment}</p>
-          ) : null}
+          <PdfAnnotationComment
+            value={item.comment}
+            canWrite={canWrite}
+            onSelect={() => onSelect(item)}
+            onChange={comment => onChange(item.id, { comment })}
+          />
         </section>
       ))}
     </>

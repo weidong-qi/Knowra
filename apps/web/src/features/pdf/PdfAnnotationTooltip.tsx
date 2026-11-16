@@ -12,26 +12,49 @@ export function PdfAnnotationTooltip({
   containerRef,
   items,
   enabled,
-  revision
+  revision,
+  excludedIds = []
 }: {
   containerRef: RefObject<HTMLDivElement | null>;
   items: PdfAnnotation[];
   enabled: boolean;
   revision: number;
+  excludedIds?: readonly string[];
 }) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const overAnnotation = useRef(false);
   const overTooltip = useRef(false);
   const closeTimer = useRef<number | undefined>(undefined);
+  const moveFrame = useRef(0);
   const [hover, setHover] = useState<{ id: string; left: number; top: number } | null>(null);
-  const item = enabled ? items.find(value => value.id === hover?.id && value.comment?.trim()) : undefined;
+  const item =
+    enabled && !excludedIds.includes(hover?.id ?? '')
+      ? items.find(value => value.id === hover?.id && value.comment?.trim())
+      : undefined;
+  const bounds = containerRef.current?.getBoundingClientRect();
+  const tooltipBounds = tooltipRef.current?.getBoundingClientRect();
+  const left = Math.max(
+    (bounds?.left ?? 0) + 12,
+    Math.min(
+      (hover?.left ?? 0) + 12,
+      Math.min(bounds?.right || window.innerWidth, window.innerWidth) - (tooltipBounds?.width || 300) - 12
+    )
+  );
+  const top = Math.max(
+    (bounds?.top ?? 0) + 12,
+    Math.min(
+      (hover?.top ?? 0) + 12,
+      Math.min(bounds?.bottom || window.innerHeight, window.innerHeight) - (tooltipBounds?.height || 120) - 12
+    )
+  );
   const cancelClose = useCallback(() => {
     window.clearTimeout(closeTimer.current);
     closeTimer.current = undefined;
   }, []);
   const clear = useCallback(() => {
     cancelClose();
+    cancelAnimationFrame(moveFrame.current);
     overAnnotation.current = false;
     overTooltip.current = false;
     setHover(null);
@@ -40,7 +63,13 @@ export function PdfAnnotationTooltip({
     if (overAnnotation.current || overTooltip.current || closeTimer.current !== undefined) return;
     closeTimer.current = window.setTimeout(clear, CLOSE_DELAY);
   }, [clear]);
-  useEffect(() => cancelClose, [cancelClose]);
+  useEffect(
+    () => () => {
+      cancelClose();
+      cancelAnimationFrame(moveFrame.current);
+    },
+    [cancelClose]
+  );
   useEffect(() => {
     if (!item) clear();
   }, [item, clear]);
@@ -79,7 +108,8 @@ export function PdfAnnotationTooltip({
       }
       cancelClose();
       overAnnotation.current = true;
-      setHover({ id, left: event.clientX, top: event.clientY });
+      cancelAnimationFrame(moveFrame.current);
+      moveFrame.current = requestAnimationFrame(() => setHover({ id, left: event.clientX, top: event.clientY }));
     };
     const pointerdown = (event: PointerEvent) => {
       // 预览框通过 portal 渲染；拖动滚动条或选择批注文字时仍应保持打开。
@@ -121,6 +151,7 @@ export function PdfAnnotationTooltip({
         offset={12}
         containerPadding={12}
         className={`${styles.annotationTone} ${styles.commentTooltip}`}
+        style={{ position: 'fixed', left, top, transform: 'none' }}
         data-kind={item?.kind}
         onPointerEnter={() => {
           overTooltip.current = true;

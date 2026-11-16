@@ -148,6 +148,7 @@ it('无批注筛选下连续输入与清空评论，保留同一个编辑器和�
   const user = userEvent.setup();
   const changed = renderEditablePanel();
   await chooseFilter(user, '批注状态', '无批注');
+  await user.dblClick(screen.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }));
   const field = screen.getByRole('textbox', { name: '评论' });
   await user.click(field);
   await user.keyboard('h');
@@ -172,6 +173,7 @@ it.each(['有批注', '关键词'])('%s筛选中修改评论至不匹配再恢�
   } else {
     await chooseFilter(user, '批注状态', '有批注');
   }
+  await user.dblClick(screen.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }));
   const field = screen.getByRole('textbox', { name: '评论' }) as HTMLTextAreaElement;
   await user.click(field);
   field.setSelectionRange(0, field.value.length);

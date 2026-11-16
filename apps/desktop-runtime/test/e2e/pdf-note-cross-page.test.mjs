@@ -129,7 +129,10 @@ test('PDF 便签跨页拖动、边缘自动滚动、撤销重做与取消', { ti
   await page.mouse.up();
   await savedOn(0);
   await page.getByRole('button', { name: '适合宽度', exact: true }).click();
-  const locate = () => page.getByRole('button', { name: /定位标注 第 \d+ 页 跨页保留标题/ }).click();
+  const locate = async () => {
+    await page.getByRole('button', { name: /定位标注 第 \d+ 页 跨页保留标题/ }).click();
+    await page.getByRole('button', { name: '关闭批注输入框', exact: true }).click();
+  };
   await locate();
   const readScroll = () => reader.evaluate(element => element.scrollTop);
   const waitFrames = () =>

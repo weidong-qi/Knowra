@@ -115,7 +115,10 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     '悬停即可查看的批注',
     ...Array.from({ length: 45 }, (_, i) => `第 ${i + 1} 行：长批注可以在预览框中滚动查看。`)
   ].join('\n');
+  await inspector.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await inspector.getByRole('textbox', { name: '评论', exact: true }).fill(longComment);
+  await inspector.getByRole('textbox', { name: '评论', exact: true }).press('Escape');
+  await page.getByRole('button', { name: '关闭批注输入框', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   let marks = (await (await context.request.get(`${runtime.origin}/api/pdf/${note.id}/annotations`)).json()).data;
   assert.equal(marks[0].segments.length, 1, JSON.stringify(marks[0].segments));
@@ -123,10 +126,7 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await expect(mark).toHaveCount(1);
   const reader = page.getByLabel('PDF 页面', { exact: true });
   const box = await mark.boundingBox();
-  // 新建标注仍被选中时不预览，取消选择后才恢复悬停。
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await expect(page.getByRole('tooltip')).toHaveCount(0);
-  await reader.press('Escape');
+  // 单纯选中不影响悬停预览。
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.getByRole('tooltip')).toContainText('悬停即可查看的批注');
   await page
@@ -223,13 +223,8 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await page.getByRole('button', { name: '适合宽度', exact: true }).click();
   await legacyMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
   const clickMark = async locator => {
-    const wasSelected = (await locator.getAttribute('data-selected')) !== null;
     const rect = await locator.boundingBox();
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
-    if (!wasSelected) {
-      await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toHaveCount(0);
-      await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
-    }
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toBeVisible();
   };
   await clickMark(legacyMark);
@@ -275,7 +270,13 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   });
   await page.getByRole('button', { name: '标注样式：下划线', exact: true }).click();
   await page.getByRole('button', { name: '标注为疑问', exact: true }).click();
+  await inspector
+    .getByRole('group', { name: '批注内容，双击或按 Enter 编辑' })
+    .filter({ hasText: '双击添加批注' })
+    .dblclick();
   await inspector.getByRole('textbox', { name: '评论', exact: true }).fill('蓝色下划线批注');
+  await inspector.getByRole('textbox', { name: '评论', exact: true }).press('Escape');
+  await page.getByRole('button', { name: '关闭批注输入框', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   const underlineHit = page.locator('[data-pdf-hit-area]');
   const lineBox = await underlineHit.boundingBox();
@@ -338,11 +339,6 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
     await expect(finalMark).toHaveAttribute('data-selected', '');
     await expect(inspector.getByRole('button', { name: /定位标注.*Scroll mark 14/ })).toBeInViewport();
     assert.equal(await reader.evaluate(el => el.scrollTop), beforeClick);
-    if (attempt === 0) {
-      await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toHaveCount(0);
-      await page.mouse.click(point.x, point.y);
-      await picker.getByRole('menuitem', { name: /高亮：Scroll mark 14$/ }).click();
-    }
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '改为易错', exact: true }).click();
   }

@@ -374,6 +374,29 @@
   max-width: calc(100vw - 24px);
   border-color: color-mix(in srgb, var(--pdf-annotation-color) 65%, var(--border-subtle));
 }
+.commentConnector {
+  position: fixed;
+  z-index: 149;
+  pointer-events: none;
+  overflow: hidden;
+  color: var(--text-muted);
+}
+.commentConnector line {
+  stroke: currentColor;
+  stroke-width: 1;
+}
+.commentPreview {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--surface-hover);
+  cursor: text;
+  white-space: pre-wrap;
+}
+.commentPreview:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
 .commentEditorHead {
   display: flex;
   align-items: center;

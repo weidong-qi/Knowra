@@ -156,13 +156,8 @@ test('PDF 紧密行距：新旧高亮不重叠、下划线贴合原行、点击�
   );
   const hit = page.locator('[data-pdf-hit-area]').first();
   const clickMark = async () => {
-    const wasSelected = (await lines.first().getAttribute('data-selected')) !== null;
     const box = await hit.boundingBox();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    if (!wasSelected) {
-      await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    }
     await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toBeVisible();
     await expect(lines.first()).toHaveAttribute('data-selected', '');
     assert.equal(await lines.first().evaluate(el => getComputedStyle(el).stroke), 'none');
@@ -174,33 +169,34 @@ test('PDF 紧密行距：新旧高亮不重叠、下划线贴合原行、点击�
     .screenshot({ path: path.join(screenshotRoot, 'pdf-tight-lines-selected.png') });
   const blank = await layer.boundingBox();
   await page.mouse.click(blank.x + blank.width - 20, blank.y + 220);
-  await expect(page.locator('[data-knowra-pdf-overlay] [data-selected]')).toHaveCount(0);
+  await expect(lines.first()).toHaveAttribute('data-selected', '');
   await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
   await clickMark();
   const unmarked = await layer.getByText('Unmarked text for deselection', { exact: true }).boundingBox();
   await page.mouse.click(unmarked.x + 10, unmarked.y + unmarked.height / 2);
-  await expect(page.locator('[data-knowra-pdf-overlay] [data-selected]')).toHaveCount(0);
-  // 操作面板已经收起时，点击页面仍应清除保留的选中状态。
+  await expect(lines.first()).toHaveAttribute('data-selected', '');
+  // 收起操作栏和点击页面均保留选中状态。
   await clickMark();
   await page.getByRole('button', { name: '改为重点', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'PDF 标注操作' })).toHaveCount(0);
   await expect(lines.first()).toHaveAttribute('data-selected', '');
   await page.mouse.click(unmarked.x + 10, unmarked.y + unmarked.height / 2);
-  await expect(page.locator('[data-knowra-pdf-overlay] [data-selected]')).toHaveCount(0);
-  // 批注编辑浮层的外侧点击也必须同时取消选中，输入内容按既有队列保存。
+  await expect(lines.first()).toHaveAttribute('data-selected', '');
+  // 输入窗口不因外侧点击关闭，输入内容按既有队列保存。
   await clickMark();
   await page.getByRole('button', { name: '添加批注', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '编辑 PDF 批注' });
-  await editor.getByRole('textbox', { name: '批注内容' }).fill('点击其他位置结束编辑');
+  await editor.getByRole('textbox', { name: '批注内容' }).fill('点击其他位置仍保留窗口');
   await page.mouse.click(blank.x + blank.width - 20, blank.y + 220);
-  await expect(editor).toHaveCount(0);
-  await expect(page.locator('[data-knowra-pdf-overlay] [data-selected]')).toHaveCount(0);
+  await expect(editor).toBeVisible();
+  await expect(lines.first()).toHaveAttribute('data-selected', '');
   await expect
     .poll(async () => (await marks()).find(item => item.type === 'underline').comment)
-    .toBe('点击其他位置结束编辑');
+    .toBe('点击其他位置仍保留窗口');
+  await editor.getByRole('button', { name: '完成', exact: true }).click();
   await clickMark();
   await page.getByLabel('PDF 页面', { exact: true }).press('Escape');
-  await expect(page.locator('[data-knowra-pdf-overlay] [data-selected]')).toHaveCount(0);
+  await expect(lines.first()).toHaveAttribute('data-selected', '');
   // 细线随页面旋转，不能在 90/270 度时仍横着画在整个文字框底部。
   for (let turn = 1; turn <= 4; turn++) {
     await page.getByRole('button', { name: '旋转', exact: true }).click();

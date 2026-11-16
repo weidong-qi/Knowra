@@ -189,6 +189,7 @@ jobs:
       - name: Run isolated test suite
         env:
           CI_SUITE: ${{ matrix.suite }}
+          KNOWRA_E2E_OUTPUT: ${{ github.workspace }}/test-results/task-workspace-journey
         run: node scripts/ci.mjs suite "$CI_SUITE"
 
       - name: Save synthetic task workspace screenshots

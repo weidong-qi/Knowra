@@ -64,6 +64,7 @@ test('PDF 标注恢复：回执丢失后继续编辑、删除及重开后的并�
   await page.goto(`${noteUrl}?pdfAnnotation=${mark.id}`);
   await page.reload();
   const comment = page.getByRole('textbox', { name: '评论', exact: true });
+  await page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await expect(comment).toHaveValue('原评论');
   await expect(page.locator('.textLayer').first()).toBeVisible();
   const requests = [];
@@ -107,6 +108,7 @@ test('PDF 标注恢复：回执丢失后继续编辑、删除及重开后的并�
   const recovered = await createMark('recovered');
   await page.goto(`${noteUrl}?pdfAnnotation=${recovered.id}`);
   await page.reload();
+  await page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await expect(comment).toHaveValue('原评论');
   // 暂停浏览器时钟，确保关闭页面时草稿尚未进入自动保存请求。
   await context.clock.pauseAt(new Date('2026-11-04T01:00:00Z'));
@@ -126,7 +128,9 @@ test('PDF 标注恢复：回执丢失后继续编辑、删除及重开后的并�
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${noteUrl}?pdfAnnotation=${recovered.id}`);
   await expect(page.getByRole('alert')).toContainText('已恢复未保存');
-  await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('重开后仍要保留的本机评论');
+  await expect(page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' })).toContainText(
+    '重开后仍要保留的本机评论'
+  );
   const conflict = page.waitForResponse(
     response => response.url() === `${annotationsUrl}/${recovered.id}` && response.request().method() === 'PUT'
   );

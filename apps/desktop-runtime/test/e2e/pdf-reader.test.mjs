@@ -72,8 +72,11 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
       element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     });
   await page.getByRole('button', { name: '标注为重点', exact: true }).click();
+  await page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).dblclick();
   await expect(page.getByRole('textbox', { name: '评论', exact: true })).toBeVisible();
   await page.getByRole('textbox', { name: '评论', exact: true }).fill('PDF 评论持久保存');
+  await page.getByRole('textbox', { name: '评论', exact: true }).press('Escape');
+  await page.getByRole('button', { name: '关闭批注输入框', exact: true }).click();
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
   let marks = (await (await context.request.get(`${runtime.origin}/api/pdf/${note.id}/annotations`)).json()).data;
   assert.equal(marks.length, 1);
@@ -123,7 +126,9 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
   await page.goto(
     `${runtime.origin}/#/materials/notes/${note.id}?pdfAnnotation=${marks.find(mark => mark.type === 'highlight').id}`
   );
-  await expect(page.getByRole('textbox', { name: '评论', exact: true })).toHaveValue('PDF 评论持久保存');
+  await expect(
+    page.getByRole('group', { name: '批注内容，双击或按 Enter 编辑' }).filter({ hasText: 'PDF 评论持久保存' })
+  ).toBeVisible();
   // Search and cross-page selection use the real PDF.js text layers.
   await page.getByRole('button', { name: '搜索', exact: true }).click();
   await page.getByRole('searchbox', { name: '在 PDF 中搜索', exact: true }).fill('Knowra');
@@ -151,6 +156,10 @@ test('PDF 真实页面：导入、选择高亮、区域、评论、旋转、重�
     data: { expectedRevision: edited.revision, operationId: 'remote-edit', comment: '另一窗口的评论' }
   });
   assert.equal(changedRemote.status(), 200);
+  await page
+    .locator('[data-knowra-pdf] section[data-selected]')
+    .getByRole('group', { name: '批注内容，双击或按 Enter 编辑' })
+    .dblclick();
   await page.getByRole('textbox', { name: '评论', exact: true }).fill('用户核对后的本机评论');
   await page.getByRole('button', { name: '核对最新标注', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '核对标注修改' })).toContainText('另一窗口的评论');
