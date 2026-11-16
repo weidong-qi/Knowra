@@ -138,12 +138,15 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
     );
     expect(radius).toBe('6px');
   }
+  const appearance = page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ });
+  await appearance.click();
   await page.getByRole('button', { name: '经典平面', exact: true }).click();
   await expect(shell).toHaveAttribute('data-stage-style', 'flat');
   await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
   await page.reload();
   await expect(shell).toHaveAttribute('data-stage-style', 'flat');
   await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(26, 28, 32)');
+  await appearance.click();
   await page.getByRole('button', { name: '纸面柔影', exact: true }).click();
   await expect(shell).toHaveAttribute('data-stage-style', 'soft');
   await expect(page.locator('#feature-stage')).toHaveCSS('background-color', 'rgb(24, 25, 29)');
@@ -154,6 +157,7 @@ test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保�
   );
   await page.reload();
   await expect(shell).toHaveAttribute('data-ni-mode', 'dark');
+  await appearance.click();
   await expect(page.getByRole('button', { name: '暖橙', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: '预览对话框', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '新建文件夹', exact: true });
