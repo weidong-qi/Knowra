@@ -29,7 +29,7 @@ async function withSettingsRuntime(
     await run(runtime.origin);
     expect(errors).toEqual([]);
   } catch (error) {
-    await page.screenshot({ path: info.outputPath('settings-failure.png'), animations: 'disabled' });
+    await page.screenshot({ path: info.outputPath('settings-failure.png'), animations: 'disabled' }).catch(() => {});
     await info.attach('settings-layout', {
       contentType: 'application/json',
       body: JSON.stringify(
@@ -93,7 +93,7 @@ for (const width of [1440, 390]) {
           await settingsNav.getByRole('button', { name: /模型接入/ }).click();
           const checkbox = page.getByRole('checkbox', { name: 'AI 提炼知识点', includeHidden: true });
           await expect(checkbox).toBeEnabled();
-          const control = checkbox.locator('..');
+          const control = checkbox.locator('xpath=ancestor::label');
           await control.scrollIntoViewIfNeeded();
           await control.click();
           const dialog = page.getByRole('dialog', { name: '开启“AI 提炼知识点”？' });
