@@ -215,7 +215,7 @@ function AppContent() {
   const isHome = routePathname === '/';
   const isNotesIndex = routePathname === '/materials';
   const isTagManager = routePathname === '/materials/tags';
-  const isKnowledgeWorkspace = routeDomain === 'knowledge';
+  const isKnowledgeWorkspace = routePathname === '/knowledge' || routePathname.startsWith('/knowledge/');
   const editorNoteId = getEditorNoteId(location.pathname);
   const isNoteEditor = editorNoteId !== null;
   const effectiveEditorView = useMemo(() => getEffectiveEditorViewState(editorView), [editorView]);
