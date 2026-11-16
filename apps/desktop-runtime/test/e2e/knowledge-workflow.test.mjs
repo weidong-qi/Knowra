@@ -63,7 +63,7 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   await page.getByRole('tab', { name: '标注', exact: true }).click();
   await page.getByRole('button', { name: '重点 1 更多操作' }).click();
   await page.getByRole('menuitem', { name: '创建知识候选' }).click();
-  const dialog = page.getByRole('dialog', { name: '从标注创建知识候选' });
+  const dialog = page.getByRole('dialog', { name: '从标注创建知识点' });
   await dialog.getByLabel('标题', { exact: true }).fill('注意力加权');
   await dialog.getByLabel('核心陈述').fill('注意力机制依据相关程度为信息分配权重。');
   await dialog.getByRole('button', { name: '保存', exact: true }).click();
@@ -100,7 +100,7 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   await clickKnowledgeAction(page, '归档');
   await page.getByRole('button', { name: '确认归档', exact: true }).click();
   await expect.poll(() => dataStore.state.knowledgeItems[0].reviewStatus).toBe('archived');
-  await clickKnowledgeAction(page, '恢复为候选');
+  await clickKnowledgeAction(page, '恢复为待确认');
   await expect.poll(() => dataStore.state.knowledgeItems[0].reviewStatus).toBe('candidate');
   await expect(page.getByRole('button', { name: '确认知识', exact: true })).toBeEnabled();
   if (process.env.KNOWRA_E2E_OUTPUT) {
@@ -113,7 +113,7 @@ test('真实页面：标注来源审核与过期保护；桌面离线新建、�
   await page.goto(`${runtime.launchUrl}`);
   await page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: /知识/ }).click();
   await knowledgeCreateButton(page).click();
-  const localDialog = page.getByRole('dialog', { name: '新建知识候选', exact: true });
+  const localDialog = page.getByRole('dialog', { name: '新建知识点', exact: true });
   await localDialog.getByLabel('标题', { exact: true }).fill('离线知识');
   await localDialog.getByLabel('核心陈述').fill('没有云端连接也能保存知识候选。');
   await localDialog.getByRole('button', { name: '保存', exact: true }).click();

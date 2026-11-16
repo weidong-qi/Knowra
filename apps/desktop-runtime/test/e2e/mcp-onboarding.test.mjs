@@ -56,6 +56,11 @@ async function setup(t) {
     aiVisibility: 'private'
   });
   await page.goto(`${runtime.origin}/#/settings`);
+  await page
+    .getByRole('navigation', { name: '设置分类' })
+    .getByRole('button', { name: /^模型接入/ })
+    .click();
+  await expect(page.getByRole('heading', { name: '模型接入', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '添加外部客户端', exact: true })).toBeEnabled();
   const connect = async pairing => {
     const transport = new StdioClientTransport({
