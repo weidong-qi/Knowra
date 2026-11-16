@@ -13,6 +13,7 @@ export function PdfCommentEditor({
   boundaryRef,
   focusRequest = 1,
   revision,
+  initialPointer,
   onPositionChange = () => {},
   canWrite,
   onChange,
@@ -24,6 +25,7 @@ export function PdfCommentEditor({
   boundaryRef?: RefObject<HTMLDivElement | null>;
   focusRequest?: number;
   revision?: number;
+  initialPointer?: { x: number; y: number };
   onPositionChange?(point: { x: number; y: number }): void;
   canWrite: boolean;
   onChange(comment: string): void;
@@ -71,7 +73,13 @@ export function PdfCommentEditor({
         />
       </FloatingPanel>
       {boundaryRef ? (
-        <PdfCommentConnector id={item.id} containerRef={boundaryRef} editorRef={editorRef} revision={revision} />
+        <PdfCommentConnector
+          id={item.id}
+          containerRef={boundaryRef}
+          editorRef={editorRef}
+          initialPointer={initialPointer}
+          revision={revision}
+        />
       ) : null}
     </>
   );

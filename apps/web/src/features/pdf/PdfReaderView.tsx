@@ -63,6 +63,7 @@ export function PdfReaderView({
   const [, render] = useState(0);
   const [loaded, setLoaded] = useState(false),
     [error, setError] = useState('');
+  const pointerPosition = useRef<{ x: number; y: number } | undefined>(undefined);
   const {
     selected,
     setSelected,
@@ -573,6 +574,15 @@ export function PdfReaderView({
       className={styles.reader}
       data-knowra-pdf
       aria-label="PDF 阅读与标注"
+      onPointerMoveCapture={event => {
+        pointerPosition.current = { x: event.clientX, y: event.clientY };
+      }}
+      onPointerDownCapture={event => {
+        pointerPosition.current = { x: event.clientX, y: event.clientY };
+      }}
+      onPointerLeave={() => {
+        pointerPosition.current = undefined;
+      }}
       onKeyDownCapture={event => {
         if (event.key !== 'Escape' || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
         // 临时浮层优先，避免在常驻窗口或侧栏输入中按 Esc 时越级关闭。
@@ -906,6 +916,7 @@ export function PdfReaderView({
               boundaryRef={viewer.containerRef}
               focusRequest={commentEditor.focusRequest}
               revision={viewer.revision}
+              initialPointer={pointerPosition.current}
               onPositionChange={moveComment}
               canWrite={editable}
               onChange={comment => change(editingItem.id, { comment })}

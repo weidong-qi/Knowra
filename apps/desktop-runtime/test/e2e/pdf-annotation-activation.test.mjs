@@ -133,6 +133,16 @@ test('PDF 标注单击操作、双击评论、常驻窗口、拖动连线与共�
     await expect(overlay(item.id)).toHaveAttribute('data-selected', '');
   }
 
+  // 首次右键打开时指针仍停在标注上，无需再移动鼠标即可出现连线。
+  await position('highlight');
+  const firstContext = await overlay('highlight').boundingBox();
+  await page.mouse.click(firstContext.x + firstContext.width / 2, firstContext.y + firstContext.height - 2, {
+    button: 'right'
+  });
+  await expect(input).toBeFocused();
+  await expect(connector).toHaveCount(1);
+  await close();
+
   // 灰色评论区单击定位并显示正文窗口，不抢焦点；拖窗口不移动标注。
   await preview('highlight').click();
   await expect(input).toHaveValue('highlight 批注');

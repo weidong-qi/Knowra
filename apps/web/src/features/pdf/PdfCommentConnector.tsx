@@ -8,14 +8,16 @@ export function PdfCommentConnector({
   id,
   containerRef,
   editorRef,
+  initialPointer,
   revision
 }: {
   id: string;
   containerRef: RefObject<HTMLDivElement | null>;
   editorRef: RefObject<HTMLDivElement | null>;
+  initialPointer?: { x: number; y: number };
   revision?: number;
 }) {
-  const pointer = useRef<{ x: number; y: number; target: Element | null } | null>(null);
+  const pointer = useRef<{ x: number; y: number; target?: Element | null } | null>(initialPointer ?? null);
   const [line, setLine] = useState<ReturnType<typeof commentConnector>>(null);
   const [bounds, setBounds] = useState({ left: 0, top: 0, width: 0, height: 0 });
   useLayoutEffect(() => {
