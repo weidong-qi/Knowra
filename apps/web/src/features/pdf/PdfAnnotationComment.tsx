@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { TextAreaField } from '../../components/ui';
 import styles from './PdfReader.module.css';
 
@@ -16,6 +16,10 @@ export function PdfAnnotationComment({
 }) {
   const [editing, setEditing] = useState(false);
   const preview = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (editing && canWrite) field.current?.querySelector('textarea')?.focus({ preventScroll: true });
+  }, [editing, canWrite]);
   const begin = () => {
     onSelect();
     if (canWrite) setEditing(true);
@@ -26,7 +30,7 @@ export function PdfAnnotationComment({
   };
   return editing && canWrite ? (
     <TextAreaField
-      autoFocus
+      ref={field}
       label="评论"
       presentation="composer"
       className={styles.commentField}

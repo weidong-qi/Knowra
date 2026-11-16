@@ -72,8 +72,6 @@ export async function exercisePdfBackgroundRendering(page) {
     await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
     const actions = page.getByRole('dialog', { name: 'PDF 标注操作', exact: true });
     await expect(mark).toHaveAttribute('data-selected', '');
-    await expect(actions).toHaveCount(0);
-    await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
     await expect(actions).toBeVisible();
     if (mode === 'editor') {
       await actions.getByRole('button', { name: '添加批注', exact: true }).click();
@@ -105,7 +103,8 @@ export async function exercisePdfBackgroundRendering(page) {
         return el.scrollTop !== before;
       });
       assert(moved, '夹具应有可滚动的阅读区');
-      await expect(editor).toHaveCount(0);
+      await expect(editor).toBeVisible();
+      await expect(field).toHaveValue('hello');
     } else {
       await page.evaluate(() => window.releasePdfBackgroundText());
       await expect(page.locator('.textLayer').nth(1)).toContainText('Second page loaded later');

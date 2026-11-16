@@ -397,17 +397,6 @@
   outline: 2px solid var(--accent-text);
   outline-offset: 2px;
 }
-.commentEditorHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 2px 4px;
-  font-size: var(--font-size-meta);
-}
-.commentEditorHead strong {
-  flex: 1;
-}
 .commentQuote {
   max-height: 80px;
   overflow-y: auto;

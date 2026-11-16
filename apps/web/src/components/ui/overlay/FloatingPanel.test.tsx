@@ -59,7 +59,7 @@ it('标题栏拖动与键盘移动只改变窗口位置，取消拖动恢复起�
     );
   }
   render(<Harness />);
-  const handle = screen.getByRole('group', { name: '移动批注窗口' }),
+  const handle = screen.getByRole('group', { name: '移动窗口' }),
     header = handle.parentElement!,
     panel = screen.getByRole('dialog');
   fireEvent.pointerDown(header, { button: 0, clientX: 50, clientY: 50, pointerId: 1 });

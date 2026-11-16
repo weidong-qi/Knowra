@@ -41,6 +41,8 @@ export function PdfCommentEditor({
         onPositionChange={onPositionChange}
         onClose={onClose}
         aria-label="编辑 PDF 批注"
+        moveLabel="移动批注窗口"
+        closeLabel="关闭批注输入框"
         title={`${KIND_OPTIONS.find(option => option.id === item.kind)?.label} · 批注`}
         className={`${styles.annotationTone} ${styles.commentEditor}`}
         data-kind={item.kind}

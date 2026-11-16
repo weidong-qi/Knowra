@@ -38,7 +38,8 @@ export function commentConnector(rects: Rect[], panel: Rect, bounds: FloatingBou
     x1 = clamp(x2, rect.left, rect.right);
     y1 = clamp(y2, rect.top, rect.bottom);
     const distance = Math.hypot(x2 - x1, y2 - y1);
-    if (distance > 1 && (!best || distance < best.distance))
+    if (distance <= 1) return null;
+    if (!best || distance < best.distance)
       best = { x1: x1 - bounds.left, y1: y1 - bounds.top, x2: x2 - bounds.left, y2: y2 - bounds.top, distance };
   }
   return best;

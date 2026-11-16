@@ -13,7 +13,10 @@ it('连接最近的可见片段与窗口边缘，不穿过输入框', () => {
   expect(line).toMatchObject({ x1: 190, y1: 100, x2: 240, y2: 110 });
   expect(
     commentConnector(
-      [{ left: 250, right: 300, top: 150, bottom: 170 }],
+      [
+        { left: 20, right: 100, top: 50, bottom: 70 },
+        { left: 250, right: 300, top: 150, bottom: 170 }
+      ],
       { left: 240, right: 570, top: 130, bottom: 350 },
       bounds
     )

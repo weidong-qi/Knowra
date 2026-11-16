@@ -20,6 +20,8 @@ import styles from './FloatingPanel.module.css';
 
 export interface FloatingPanelProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   title: ReactNode;
+  moveLabel?: string;
+  closeLabel?: string;
   point: FloatingPoint;
   boundaryRef?: RefObject<HTMLElement | null>;
   /** 递增时才聚焦内容；普通显示不改变当前焦点。 */
@@ -33,6 +35,8 @@ export interface FloatingPanelProps extends Omit<HTMLAttributes<HTMLDivElement>,
 export const FloatingPanel = forwardRef<HTMLDivElement, FloatingPanelProps>(function FloatingPanel(
   {
     title,
+    moveLabel = '移动窗口',
+    closeLabel = '关闭窗口',
     point,
     boundaryRef,
     focusRequest = 0,
@@ -192,7 +196,7 @@ export const FloatingPanel = forwardRef<HTMLDivElement, FloatingPanelProps>(func
           className={styles.handle}
           role="group"
           tabIndex={0}
-          aria-label="移动批注窗口"
+          aria-label={moveLabel}
           onKeyDown={event => {
             const deltas: Record<string, number[]> = {
               ArrowLeft: [-1, 0],
@@ -213,7 +217,7 @@ export const FloatingPanel = forwardRef<HTMLDivElement, FloatingPanelProps>(func
           {title}
         </div>
         {headerActions}
-        <IconButton size={24} aria-label="关闭批注输入框" title="关闭批注输入框" onPress={onClose}>
+        <IconButton size={24} aria-label={closeLabel} title={closeLabel} onPress={onClose}>
           <CloseIcon size={14} />
         </IconButton>
       </div>

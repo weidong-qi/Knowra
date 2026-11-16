@@ -339,7 +339,7 @@ export function PdfReaderView({
   ) {
     if (!session.values().some(item => item.id === id)) return;
     if (panel) setPanelTab('marks');
-    if (intent === 'edit') openComment(id, true, point);
+    if (intent === 'edit') openComment(id, true, point.x || point.y ? point : undefined);
     else toggleActions(id, point);
   }
   function pickAnnotation(
@@ -595,15 +595,8 @@ export function PdfReaderView({
       onKeyDown={event => {
         if (event.defaultPrevented || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
         if (event.key === 'Escape') {
-          if (dictionary) setDictionary(null);
-          else if (translation) setTranslation(null);
-          else if (annotationPicker) setAnnotationPicker(null);
-          else if (annotationAction) setAnnotationAction(null);
-          else if (pending) {
-            setPending(null);
-            setGhost(null);
-          } else if (commentEditor) setCommentEditor(null);
-          else return;
+          if (!commentEditor) return;
+          setCommentEditor(null);
           event.preventDefault();
           event.stopPropagation();
           return;

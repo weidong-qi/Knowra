@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { Tooltip, TooltipTrigger } from '../../components/ui';
 import { KIND_OPTIONS } from '../editor/inspector/annotationOptions';
@@ -27,25 +27,39 @@ export function PdfAnnotationTooltip({
   const overTooltip = useRef(false);
   const closeTimer = useRef<number | undefined>(undefined);
   const moveFrame = useRef(0);
+  const [size, setSize] = useState({ width: 300, height: 120 });
   const [hover, setHover] = useState<{ id: string; left: number; top: number } | null>(null);
   const item =
     enabled && !excludedIds.includes(hover?.id ?? '')
       ? items.find(value => value.id === hover?.id && value.comment?.trim())
       : undefined;
   const bounds = containerRef.current?.getBoundingClientRect();
-  const tooltipBounds = tooltipRef.current?.getBoundingClientRect();
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current;
+    if (!tooltip || !item) return;
+    const measure = () => {
+      const rect = tooltip.getBoundingClientRect();
+      if (rect.width && rect.height)
+        setSize(current =>
+          current.width === rect.width && current.height === rect.height
+            ? current
+            : { width: rect.width, height: rect.height }
+        );
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(tooltip);
+    return () => observer?.disconnect();
+  }, [item]);
   const left = Math.max(
     (bounds?.left ?? 0) + 12,
-    Math.min(
-      (hover?.left ?? 0) + 12,
-      Math.min(bounds?.right || window.innerWidth, window.innerWidth) - (tooltipBounds?.width || 300) - 12
-    )
+    Math.min((hover?.left ?? 0) + 12, Math.min(bounds?.right || window.innerWidth, window.innerWidth) - size.width - 12)
   );
   const top = Math.max(
     (bounds?.top ?? 0) + 12,
     Math.min(
       (hover?.top ?? 0) + 12,
-      Math.min(bounds?.bottom || window.innerHeight, window.innerHeight) - (tooltipBounds?.height || 120) - 12
+      Math.min(bounds?.bottom || window.innerHeight, window.innerHeight) - size.height - 12
     )
   );
   const cancelClose = useCallback(() => {
@@ -151,7 +165,14 @@ export function PdfAnnotationTooltip({
         offset={12}
         containerPadding={12}
         className={`${styles.annotationTone} ${styles.commentTooltip}`}
-        style={{ position: 'fixed', left, top, transform: 'none' }}
+        style={{
+          position: 'fixed',
+          left,
+          top,
+          transform: 'none',
+          maxWidth: Math.max(1, Math.min(300, (bounds?.width || window.innerWidth) - 24)),
+          maxHeight: Math.max(1, Math.min(360, window.innerHeight * 0.6, (bounds?.height || window.innerHeight) - 24))
+        }}
         data-kind={item?.kind}
         onPointerEnter={() => {
           overTooltip.current = true;

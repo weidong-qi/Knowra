@@ -3,7 +3,7 @@ import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { PdfAnnotationActions } from './PdfAnnotationActions';
 
 afterEach(cleanup);
-const item = { id: 'a', kind: 'question' } as PdfAnnotation;
+const item = { id: 'a', type: 'highlight', kind: 'question', quoteText: '原文' } as PdfAnnotation;
 
 it('只读时仍可复制，但不能修改分类或删除', () => {
   const copy = vi.fn(),

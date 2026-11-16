@@ -16,12 +16,16 @@ test('PDF 标注单击操作、双击评论、常驻窗口、拖动连线与共�
     syncOptions: { autoSync: false }
   });
   const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   t.after(async () => {
+    if (process.env.KNOWRA_E2E_OUTPUT && !page.isClosed()) {
+      fs.mkdirSync(process.env.KNOWRA_E2E_OUTPUT, { recursive: true });
+      await page.screenshot({ path: path.join(process.env.KNOWRA_E2E_OUTPUT, 'pdf-comment-window-final.png') });
+    }
     await browser.close();
     await runtime.close();
     fs.rmSync(root, { recursive: true, force: true });
   });
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const api = async (url, method = 'GET', data) => {
