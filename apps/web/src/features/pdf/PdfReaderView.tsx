@@ -102,7 +102,7 @@ export function PdfReaderView({
   const [review, setReview] = useState<PdfConflictReview | null>(null);
   const drag = useRef<{ index: number; x: number; y: number } | null>(null);
   const [textMode, setTextMode] = useState<PdfTextMode>('highlight');
-  const [dictionaryKind, setDictionaryKind] = useState('supplement');
+  const [annotationKind, setAnnotationKind] = useState('supplement');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
   const permission = useRef(canWrite);
@@ -344,7 +344,7 @@ export function PdfReaderView({
       return;
     }
     const id = randomId();
-    setDictionaryKind(kind);
+    setAnnotationKind(kind);
     change(id, { ...value, kind, comment, ...(value.type === 'note' ? { title: '' } : {}) });
     selectFromPage(id);
     if (value.type === 'note') {
@@ -905,13 +905,13 @@ export function PdfReaderView({
                     anchor={dictionary.anchor}
                     mode={textMode}
                     onMode={setTextMode}
-                    selectedKind={dictionaryKind}
-                    onPick={setDictionaryKind}
+                    selectedKind={annotationKind}
+                    onPick={setAnnotationKind}
                   />
                 ) : undefined
               }
-              onSave={comment => saveSelectionComment(dictionary, comment, dictionaryKind)}
-              onAnnotate={() => saveSelectionComment(dictionary, '', dictionaryKind)}
+              onSave={comment => saveSelectionComment(dictionary, comment, annotationKind)}
+              onAnnotate={() => saveSelectionComment(dictionary, '', annotationKind)}
               onClose={() => setDictionary(null)}
             />
           ) : null}
@@ -927,11 +927,12 @@ export function PdfReaderView({
                     anchor={translation.anchor}
                     mode={textMode}
                     onMode={setTextMode}
-                    onPick={kind => createMark({ ...translation.value, type: textMode }, kind)}
+                    selectedKind={annotationKind}
+                    onPick={setAnnotationKind}
                   />
                 ) : undefined
               }
-              onSave={comment => saveSelectionComment(translation, comment)}
+              onSave={comment => saveSelectionComment(translation, comment, annotationKind)}
               onClose={() => setTranslation(null)}
             />
           ) : null}
