@@ -9,6 +9,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { withPageFailureDiagnostics } from '../fixtures/page-failure-diagnostics.mjs';
+import { selectModelSettings } from './helpers/settings.mjs';
 
 // Real built UI, authenticated runtime, pairing files, Unix socket and stdio adapter.
 // No route interception or synthetic audit injection: a successful call must cross the adapter.
@@ -56,11 +57,7 @@ async function setup(t) {
     aiVisibility: 'private'
   });
   await page.goto(`${runtime.origin}/#/settings`);
-  await page
-    .getByRole('navigation', { name: '设置分类' })
-    .getByRole('button', { name: /^模型接入/ })
-    .click();
-  await expect(page.getByRole('heading', { name: '模型接入', exact: true })).toBeVisible();
+  await selectModelSettings(page);
   await expect(page.getByRole('button', { name: '添加外部客户端', exact: true })).toBeEnabled();
   const connect = async pairing => {
     const transport = new StdioClientTransport({
@@ -212,6 +209,7 @@ test('MCP 真实桌面向导：Codex 单一配置、未调用检查、刷新与�
     await expect(dialog.getByRole('status', { name: '连接检查结果' })).toContainText('最近记录中尚无成功工具调用');
     await dialog.getByRole('button', { name: '完成', exact: true }).click();
     await page.reload();
+    await selectModelSettings(page);
     await page.getByRole('button', { name: '查看连接方式：Codex', exact: true }).click();
     await expect(dialog.locator('pre[aria-label="codex 配置"]')).toBeVisible();
     await expect(dialog.locator('pre')).toHaveCount(1);
