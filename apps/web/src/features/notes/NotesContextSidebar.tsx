@@ -48,14 +48,15 @@ import { NotesTrashDecoration, NotesLibraryDecoration } from './NotesSidebarDeco
 interface NavEntry {
   scope: Exclude<NotesIndexScope, 'root' | 'trash'>;
   label: string;
+  description: string;
   Icon: typeof NoteIcon;
 }
 
 const QUICK_ENTRIES: readonly NavEntry[] = [
-  { scope: 'all', label: '全部资料', Icon: NoteIcon },
-  { scope: 'recent', label: '最近编辑', Icon: ClockIcon },
-  { scope: 'favorites', label: '收藏', Icon: StarIcon },
-  { scope: 'unfiled', label: '未整理', Icon: InboxIcon }
+  { scope: 'all', label: '全部资料', description: '查看当前空间各文件夹中的笔记和 PDF', Icon: NoteIcon },
+  { scope: 'recent', label: '最近编辑', description: '查看最近更新的 6 份资料', Icon: ClockIcon },
+  { scope: 'favorites', label: '收藏', description: '查看各文件夹中已收藏的资料', Icon: StarIcon },
+  { scope: 'unfiled', label: '未整理', description: '查看尚未放入文件夹的资料', Icon: InboxIcon }
 ];
 
 export function NotesContextSidebar({
@@ -203,6 +204,7 @@ export function NotesContextSidebar({
                   density="compact"
                   icon={<entry.Icon size={18} />}
                   label={entry.label}
+                  title={entry.description}
                   count={getScopeCount(entry.scope, serverData.notes)}
                   aria-current={current ? 'page' : undefined}
                   onPress={() => {
@@ -242,6 +244,7 @@ export function NotesContextSidebar({
                   density="compact"
                   icon={<NotesLibraryDecoration />}
                   label="根目录"
+                  title="浏览顶层文件夹和尚未放入文件夹的资料"
                   count={rootCount}
                   data-drop-active={rootDrop.isOver || undefined}
                   aria-current={notesIndex.scope === 'root' ? 'page' : undefined}

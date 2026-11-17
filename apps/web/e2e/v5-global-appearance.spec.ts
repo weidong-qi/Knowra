@@ -231,7 +231,7 @@ test('默认图标布局与卡片文件夹按原型展示，类型筛选收进�
     route => route.fulfill({ json: { data: notes } })
   );
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/#/materials');
+  await page.goto('/#/materials?scope=root');
   const index = page.getByRole('article', { name: '笔记索引' });
   const toolbar = index.getByRole('toolbar', { name: '笔记索引工具栏' });
   await expect(toolbar.getByRole('button', { name: '图标视图' })).toHaveAttribute('aria-pressed', 'true');
