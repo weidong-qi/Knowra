@@ -69,8 +69,8 @@ for (const mode of ['light', 'dark'] as const) {
       mode
     );
     await page.goto('/#/materials');
-    const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
-    const allNotes = sidebar.getByRole('button', { name: /全部笔记/ });
+    const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
+    const allNotes = sidebar.getByRole('button', { name: /全部资料/ });
     await allNotes.click();
     await expect(allNotes).toHaveAttribute('aria-current', 'page');
     const folder = sidebar.locator('[data-folder-id="folder-1"]');
@@ -348,7 +348,7 @@ test('外栏和侧栏颜色及外形可独立调整并持久保存', async ({ pa
   await expect(outer.getByRole('textbox', { name: '十六进制颜色' })).toHaveValue('#cdd9e6');
   await page.goto('/#/materials');
   const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
-  const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+  const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
   const stage = page.locator('#feature-stage');
   await expect(shell).toHaveAttribute('data-sidebar-card', 'true');
   await expect(page.getByRole('banner', { name: '全局顶栏' })).toHaveCSS('background-color', 'rgb(221, 238, 255)');
@@ -389,7 +389,7 @@ test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完�
   );
   await page.setViewportSize({ width: 1440, height: 700 });
   await page.goto('/#/materials');
-  const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+  const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
   const lastFolder = sidebar.getByRole('treeitem').last();
   const scroll = sidebar.locator('[class*="scrollBody"]');
   const trash = sidebar.getByRole('button', { name: /回收站/ });

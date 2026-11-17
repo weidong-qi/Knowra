@@ -107,7 +107,9 @@ export function NotesIndexDisplayMenu({
               <Field
                 label="类型"
                 value={c.typeFilter}
-                options={TYPES.map(([key, text]) => [key, `${text} ${c.data.counts[key]}`] as [TypeFilter, string])}
+                options={TYPES.filter(([key]) => key !== 'folder' || c.data.showsFolders).map(
+                  ([key, text]) => [key, `${text} ${c.data.counts[key]}`] as [TypeFilter, string]
+                )}
                 onChange={value => c.setTypeFilter(value)}
               />
             ) : null}

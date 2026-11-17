@@ -105,6 +105,36 @@ describe('笔记索引新版真实交互', () => {
   });
   afterEach(() => vi.useRealTimers());
 
+  it.each([false, true])('全部资料平铺跨目录笔记和 PDF，切换目录时清理不适用的类型筛选（缓存：%s）', async readOnly => {
+    const { store, user } = await setup({
+      readOnly,
+      notes: [
+        createNote('root-note'),
+        createNote('folder-note', { folderId: 'folder-1' }),
+        createNote('folder-pdf', { folderId: 'folder-1', contentKind: 'pdf' }),
+        createNote('deleted-note', { deleted: true })
+      ]
+    });
+    const content = screen.getByTestId('notes-index-scroll');
+    expect(content.querySelectorAll('[data-entry-item][data-kind="folder"]')).toHaveLength(0);
+    expect(content.querySelectorAll('[data-entry-item][data-kind="note"]')).toHaveLength(3);
+    expect(within(content).queryByText('deleted-note')).not.toBeInTheDocument();
+    act(() => store.getState().selectNotesScope('root'));
+    expect(content.querySelectorAll('[data-entry-item][data-kind="folder"]')).toHaveLength(1);
+    expect(within(content).getByText('root-note')).toBeInTheDocument();
+    expect(within(content).queryByText('folder-note')).not.toBeInTheDocument();
+    await chooseType(user, '文件夹');
+    act(() => store.getState().selectNotesScope('all'));
+    await vi.waitFor(() => expect(content.querySelectorAll('[data-entry-item][data-kind="note"]')).toHaveLength(3));
+    await user.click(screen.getByRole('button', { name: /^显示选项/ }));
+    const types = within(screen.getByRole('dialog', { name: '索引显示选项' })).getByRole('group', { name: '类型' });
+    expect(within(types).queryByRole('button', { name: /^文件夹/ })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    act(() => store.getState().selectNotesFolder('folder-1'));
+    await vi.waitFor(() => expect(content.querySelectorAll('[data-entry-item][data-kind="note"]')).toHaveLength(2));
+    expect(within(content).queryByText('root-note')).not.toBeInTheDocument();
+  });
+
   it('三种视图读取同一数据并保留笔记打开行为', async () => {
     const { user, onOpenNote } = await setup({ view: 'grid' });
     expect(screen.getByRole('button', { name: '图标视图' })).toHaveAttribute('aria-pressed', 'true');
@@ -423,15 +453,13 @@ function createApi(): WorkspaceApi {
     listNoteAttachments: vi.fn().mockResolvedValue([]),
     uploadNoteAttachment: vi.fn(),
     renameNoteAttachment: vi.fn(),
-    inspectAttachmentDeletion: vi
-      .fn()
-      .mockResolvedValue({
-        asset: { type: 'attachment', id: 'attachment-1' },
-        decision: 'can-purge-no-history',
-        references: [],
-        reasonCodes: [],
-        coverage: { persistedCurrentAndHistory: true }
-      }),
+    inspectAttachmentDeletion: vi.fn().mockResolvedValue({
+      asset: { type: 'attachment', id: 'attachment-1' },
+      decision: 'can-purge-no-history',
+      references: [],
+      reasonCodes: [],
+      coverage: { persistedCurrentAndHistory: true }
+    }),
     verifyNoteAttachment: vi.fn(),
     restoreNoteAttachment: vi.fn(),
     listAttachmentCleanup: vi.fn().mockResolvedValue({ items: [], pending: 0 }),

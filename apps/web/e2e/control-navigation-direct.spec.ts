@@ -30,7 +30,7 @@ for (const mode of ['light', 'dark'] as const) {
           if (mobile) await trigger.tap();
           else await trigger.click();
           const status = page.getByRole('dialog', { name: '工作区状态', exact: true });
-          const parent = status.getByRole('button', { name: '跳转到「笔记库」', exact: true });
+          const parent = status.getByRole('button', { name: '跳转到「根目录」', exact: true });
           await expect(status.locator('[aria-current="location"]')).toHaveText('工作');
           await tabTo(page, parent);
           await expect(parent).toHaveCSS('outline-style', 'solid');
@@ -48,7 +48,7 @@ for (const mode of ['light', 'dark'] as const) {
           await page.getByRole('button', { name: '工作区状态', exact: true }).tap();
           await page
             .getByRole('dialog', { name: '工作区状态', exact: true })
-            .getByRole('button', { name: '跳转到「笔记库」', exact: true })
+            .getByRole('button', { name: '跳转到「根目录」', exact: true })
             .tap();
           await expect(page).toHaveURL(/#\/materials\?scope=root$/);
         }

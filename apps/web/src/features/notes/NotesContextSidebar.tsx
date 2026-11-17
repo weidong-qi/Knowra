@@ -52,7 +52,7 @@ interface NavEntry {
 }
 
 const QUICK_ENTRIES: readonly NavEntry[] = [
-  { scope: 'all', label: '全部笔记', Icon: NoteIcon },
+  { scope: 'all', label: '全部资料', Icon: NoteIcon },
   { scope: 'recent', label: '最近编辑', Icon: ClockIcon },
   { scope: 'favorites', label: '收藏', Icon: StarIcon },
   { scope: 'unfiled', label: '未整理', Icon: InboxIcon }
@@ -142,14 +142,14 @@ export function NotesContextSidebar({
         data-index-appearance
       >
         <header className={styles.header}>
-          <span className={styles.title}>笔记</span>
+          <span className={styles.title}>资料</span>
           <MenuTrigger>
-            <IconButton aria-label="笔记更多操作" title="更多操作">
+            <IconButton aria-label="资料更多操作" title="更多操作">
               <MoreHorizontalIcon size={18} />
             </IconButton>
             <MenuPopover>
               <Menu
-                ariaLabel="笔记目录操作"
+                ariaLabel="资料目录操作"
                 onAction={key => {
                   if (key === 'new-folder') treeOperations.openCreate('folder', selectedFolderId);
                   if (key === 'refresh') void retryWorkspace();
@@ -177,7 +177,7 @@ export function NotesContextSidebar({
               </Menu>
             </MenuPopover>
           </MenuTrigger>
-          <IconButton aria-label="搜索笔记" title="搜索笔记" onPress={onOpenSearch} disabled={!onOpenSearch}>
+          <IconButton aria-label="搜索资料" title="搜索资料" onPress={onOpenSearch} disabled={!onOpenSearch}>
             <SearchIcon size={18} />
           </IconButton>
           <CreateEntryMenu canWrite={canWrite} onCreate={mode => treeOperations.openCreate(mode, selectedFolderId)}>
@@ -194,7 +194,7 @@ export function NotesContextSidebar({
             if (entryDragDrop?.isInternal(event)) scrollEntryContainer(event);
           }}
         >
-          <SidebarSection id="quick" title="快速入口">
+          <SidebarSection id="quick" title="快速访问">
             {QUICK_ENTRIES.map(entry => {
               const current = notesIndex.scope === entry.scope && !selectedFolderId && !notesIndex.selectedTagId;
               return (
@@ -241,7 +241,7 @@ export function NotesContextSidebar({
                   className={styles.libraryRow}
                   density="compact"
                   icon={<NotesLibraryDecoration />}
-                  label="笔记库"
+                  label="根目录"
                   count={rootCount}
                   data-drop-active={rootDrop.isOver || undefined}
                   aria-current={notesIndex.scope === 'root' ? 'page' : undefined}

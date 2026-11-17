@@ -570,7 +570,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     // 笔记索引页包含独立的索引区域与侧栏。
     expect(await screen.findByRole('article', { name: '笔记索引' })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: '笔记上下文导航' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: '资料上下文导航' })).toBeInTheDocument();
 
     const rail = screen.getByRole('navigation', { name: '工作域导航' });
     // 笔记索引页才是"资料"工作域的着陆页：左轨"资料"按钮 aria-current='page'。
@@ -595,16 +595,16 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(await screen.findByRole('article', { name: '笔记索引' })).toBeInTheDocument();
     const toggle = within(screen.getByRole('banner', { name: '全局顶栏' })).getByRole('button', { name: '切换侧栏' });
     expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('complementary', { name: '笔记上下文导航' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: '资料上下文导航' })).toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.queryByRole('complementary', { name: '笔记上下文导航' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: '资料上下文导航' })).not.toBeInTheDocument();
     expect(screen.getByRole('article', { name: '笔记索引' })).toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('complementary', { name: '笔记上下文导航' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: '资料上下文导航' })).toBeInTheDocument();
   });
 
   it('remembers a collapsed notes sidebar after the app remounts', async () => {
@@ -649,7 +649,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       renderIndex();
       expect(await screen.findByRole('article', { name: '笔记索引' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '切换侧栏' })).toHaveAttribute('aria-pressed', 'false');
-      expect(screen.queryByRole('complementary', { name: '笔记上下文导航' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('complementary', { name: '资料上下文导航' })).not.toBeInTheDocument();
     } finally {
       vi.unstubAllGlobals();
     }
@@ -674,7 +674,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(await screen.findByRole('heading', { name: 'Note', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('tablist', { name: '打开的笔记' })).toBeInTheDocument();
     expect(screen.getByRole('toolbar', { name: '笔记格式工具栏' })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: '笔记上下文导航' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: '资料上下文导航' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '工作区状态' }));
     expect(within(await screen.findByLabelText('工作区位置')).getByText('Note')).toHaveAttribute(
       'aria-current',
@@ -815,7 +815,7 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(within(breadcrumb).queryByRole('button', { name: '跳转到「主页」' })).not.toBeInTheDocument();
   });
 
-  it('shares the module-local "笔记库 / 全部笔记" path with the notes header', async () => {
+  it('shares the module-local "根目录 / 全部资料" path with the notes header', async () => {
     const api = createWorkspaceApiStub({ notes: [] });
     const store = createAppStore({
       api,
@@ -835,17 +835,17 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '工作区状态' }));
     const breadcrumb = await screen.findByLabelText('工作区位置');
-    // 笔记库模块内不重复显示全局主页层级。
+    // 根目录模块内不重复显示全局主页层级。
     expect(within(breadcrumb).queryByText('主页')).not.toBeInTheDocument();
-    expect(within(breadcrumb).getByRole('button', { name: '跳转到「笔记库」' })).toBeInTheDocument();
-    expect(within(breadcrumb).getByText('全部笔记')).toHaveAttribute('aria-current', 'location');
+    expect(within(breadcrumb).getByRole('button', { name: '跳转到「根目录」' })).toBeInTheDocument();
+    expect(within(breadcrumb).getByText('全部资料')).toHaveAttribute('aria-current', 'location');
 
     fireEvent.keyDown(screen.getByRole('dialog', { name: '工作区状态' }), { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '工作区状态' })).not.toBeInTheDocument());
     const topLocation = screen.getByRole('navigation', { name: '当前位置' });
     expect(topLocation).not.toHaveTextContent('主页');
-    expect(within(topLocation).getByRole('button', { name: '跳转到「笔记库」' })).toBeInTheDocument();
-    expect(within(topLocation).getByText('全部笔记')).toHaveAttribute('aria-current', 'page');
+    expect(within(topLocation).getByRole('button', { name: '跳转到「根目录」' })).toBeInTheDocument();
+    expect(within(topLocation).getByText('全部资料')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('article', { name: '笔记索引' })).toBeInTheDocument();
   });
 
@@ -878,14 +878,14 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     const separators = within(breadcrumb).getAllByText('/', { exact: true });
     expect(separators).toHaveLength(1);
     expect(within(breadcrumb).queryByText('主页')).not.toBeInTheDocument();
-    expect(within(breadcrumb).getByText('全部笔记')).toHaveAttribute('aria-current', 'location');
+    expect(within(breadcrumb).getByText('全部资料')).toHaveAttribute('aria-current', 'location');
     expect(within(breadcrumb).queryByText('Note')).not.toBeInTheDocument();
     expect(within(breadcrumb).queryByText('M4-02')).not.toBeInTheDocument();
 
     fireEvent.keyDown(screen.getByRole('dialog', { name: '工作区状态' }), { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '工作区状态' })).not.toBeInTheDocument());
     const topLocation = screen.getByRole('navigation', { name: '当前位置' });
-    expect(within(topLocation).getByText('全部笔记')).toHaveAttribute('aria-current', 'page');
+    expect(within(topLocation).getByText('全部资料')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('article', { name: '笔记索引' })).toBeInTheDocument();
     expect(within(topLocation).queryByText('Note')).not.toBeInTheDocument();
   });

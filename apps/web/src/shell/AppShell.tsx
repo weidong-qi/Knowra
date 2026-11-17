@@ -66,7 +66,7 @@ export function AppShell({
   toolbarAccessories,
   contextSidebar,
   contextSidebarOpen = true,
-  contextSidebarLabel = '笔记导航',
+  contextSidebarLabel = '资料导航',
   navigationKey,
   activeDomain,
   onSelectDomain,
@@ -270,7 +270,7 @@ export function AppShell({
           <aside
             className={styles.contextSidebar}
             hidden={!sidebarVisible}
-            aria-label={contextSidebarLabel === '笔记导航' ? '笔记上下文导航' : contextSidebarLabel}
+            aria-label={contextSidebarLabel === '资料导航' ? '资料上下文导航' : contextSidebarLabel}
             data-compact={compact || undefined}
             data-open={sidebarVisible || undefined}
           >

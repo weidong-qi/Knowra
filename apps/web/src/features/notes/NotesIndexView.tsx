@@ -62,6 +62,7 @@ export function NotesIndexView({ onOpenNote }: { path: PathSegment[]; onOpenNote
         <NotesIndexHeader
           path={c.indexPath}
           count={c.data.counts.all}
+          folderCount={c.data.counts.folder}
           canWrite={c.canWrite}
           isRecycleView={c.isRecycleView}
           onOpenSpaces={() => c.navigate('/materials/spaces')}
