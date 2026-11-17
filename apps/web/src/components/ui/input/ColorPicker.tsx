@@ -41,7 +41,20 @@ export function ColorPicker({
             isDisabled={isDisabled}
             onPress={() => onChange(item.value)}
           >
-            <span aria-hidden="true" />
+            <span aria-hidden="true">
+              {value === item.value ? (
+                <svg
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M2.2 6.3 4.8 8.9 9.8 3.4" />
+                </svg>
+              ) : null}
+            </span>
           </PressableButton>
         ))}
       </div>

@@ -4,6 +4,7 @@ import { Button, IconButton, SearchBox, Select, TextField } from '../../componen
 import { DeleteIcon, EditIcon, PlusIcon, SearchIcon } from '../../components/icons/knowra';
 import { TagChip } from './TagChip';
 import { TagColorPicker } from './TagColorPicker';
+import { normalizeTagColor, tagColorStyle } from './tagColor';
 import styles from './TagPickerDialog.module.css';
 const REMOVE_WITHOUT_MERGE = '__remove_without_merge__';
 
@@ -38,77 +39,123 @@ export function SelectTagsView({
   const canCreateFromQuery = canWrite && Boolean(trimmed) && !exactMatch;
   return (
     <>
-      <SearchBox
-        label="搜索已有标签"
-        size="field"
-        icon={<SearchIcon size={16} />}
-        name="tag-search"
-        autoComplete="off"
-        placeholder="搜索标签，或输入名称新建"
-        value={query}
-        onChange={event => onQueryChange(event.target.value)}
-        onClear={query ? () => onQueryChange('') : undefined}
-        onKeyDown={event => {
-          if (event.key === 'Enter' && canCreateFromQuery && visibleGroups.length === 0) {
-            event.preventDefault();
-            onCreateFromQuery();
-          }
-        }}
-      />
-      {canCreateFromQuery ? (
-        <Button variant="ghost" className={styles.createRow} icon={<PlusIcon size={16} />} onPress={onCreateFromQuery}>
-          新建标签“{trimmed}”
-        </Button>
-      ) : canWrite && !trimmed ? (
-        <Button variant="ghost" className={styles.createRow} icon={<PlusIcon size={16} />} onPress={onCreate}>
-          新建标签
-        </Button>
+      {selectedTags.length > 0 || (canWrite && !trimmed) ? (
+        <div className={styles.topPillsBar}>
+          {selectedTags.length > 0 ? (
+            <section className={styles.selected} aria-label="已选择标签">
+              <div className={styles.chips}>
+                {selectedTags.map(tag => (
+                  <TagChip
+                    key={tag.id}
+                    tag={tag}
+                    selected
+                    removable={canWrite}
+                    aria-label={`移除标签 ${tag.name}`}
+                    onClick={() => onToggle(tag)}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {canWrite && !trimmed ? (
+            <Button
+              variant="default"
+              size="compact"
+              className={styles.createPill}
+              icon={<PlusIcon size={14} />}
+              onPress={onCreate}
+            >
+              新建标签
+            </Button>
+          ) : null}
+        </div>
       ) : null}
-      {selectedTags.length > 0 ? (
-        <section className={styles.selected} aria-label="已选择标签">
-          <h3>已选择</h3>
-          <div className={styles.chips}>
-            {selectedTags.map(tag => (
-              <TagChip
-                key={tag.id}
-                tag={tag}
-                selected
-                removable={canWrite}
-                aria-label={`移除标签 ${tag.name}`}
-                onClick={() => onToggle(tag)}
-              />
-            ))}
+      <div className={styles.cardSurface}>
+        <div className={styles.searchHeader}>
+          <SearchBox
+            label="搜索已有标签"
+            size="field"
+            icon={<SearchIcon size={15} />}
+            name="tag-search"
+            autoComplete="off"
+            placeholder="搜索标签，或输入名称新建"
+            value={query}
+            onChange={event => onQueryChange(event.target.value)}
+            onClear={query ? () => onQueryChange('') : undefined}
+            onKeyDown={event => {
+              if (event.key === 'Enter' && canCreateFromQuery && visibleGroups.length === 0) {
+                event.preventDefault();
+                onCreateFromQuery();
+              }
+            }}
+          />
+        </div>
+        <div className={styles.listRegion}>
+          {visibleGroups.map(({ group, tags }) => (
+            <section className={styles.group} key={group.id}>
+              <div className={styles.groupHeader}>
+                <strong>{group.name}</strong>
+                <span>
+                  {group.selectionMode === 'single' ? '单选' : '多选'}
+                  {group.isSystem ? ' · 内置' : ''}
+                </span>
+              </div>
+              <div className={styles.optionList}>
+                {tags.map(tag => {
+                  const isSelected = selected.has(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={styles.optionRow}
+                      style={tagColorStyle(tag.color)}
+                      data-color={normalizeTagColor(tag.color)}
+                      data-selected={isSelected || undefined}
+                      aria-pressed={isSelected}
+                      onClick={() => onToggle(tag)}
+                    >
+                      <span className={styles.optionCheck} data-checked={isSelected || undefined} aria-hidden="true">
+                        {isSelected ? (
+                          <svg
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M2.2 6.3 4.8 8.9 9.8 3.4" />
+                          </svg>
+                        ) : null}
+                      </span>
+                      <span className={styles.optionDot} aria-hidden="true" />
+                      <span className={styles.optionName}>{tag.name || '未命名标签'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+          {visibleGroups.length === 0 && !trimmed ? <p className={styles.empty}>还没有标签，先新建一个吧。</p> : null}
+          {visibleGroups.length === 0 && trimmed ? (
+            <p className={styles.empty}>
+              没有找到“{trimmed}”{canCreateFromQuery ? '，按回车可新建。' : ''}
+            </p>
+          ) : null}
+        </div>
+        {canCreateFromQuery ? (
+          <div className={styles.createActionBar}>
+            <Button
+              variant="ghost"
+              className={styles.createRow}
+              icon={<PlusIcon size={14} />}
+              onPress={onCreateFromQuery}
+            >
+              新建标签“{trimmed}”
+            </Button>
           </div>
-        </section>
-      ) : null}
-      {visibleGroups.map(({ group, tags }) => (
-        <section className={styles.group} key={group.id}>
-          <div className={styles.groupHeader}>
-            <strong>{group.name}</strong>
-            <span>
-              {group.selectionMode === 'single' ? '单选' : '多选'}
-              {group.isSystem ? ' · 内置' : ''}
-            </span>
-          </div>
-          <div className={styles.chips}>
-            {tags.map(tag => (
-              <TagChip
-                key={tag.id}
-                tag={tag}
-                selected={selected.has(tag.id)}
-                aria-pressed={selected.has(tag.id)}
-                onClick={() => onToggle(tag)}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-      {visibleGroups.length === 0 && !trimmed ? <p className={styles.empty}>还没有标签，先新建一个吧。</p> : null}
-      {visibleGroups.length === 0 && trimmed ? (
-        <p className={styles.empty}>
-          没有找到“{trimmed}”{canCreateFromQuery ? '，按回车可新建。' : ''}
-        </p>
-      ) : null}
+        ) : null}
+      </div>
       <Feedback notice={notice} error={error} />
     </>
   );
