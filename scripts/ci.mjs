@@ -1,19 +1,20 @@
 import { spawnSync } from 'node:child_process';
 import { isDirectExecution } from './cli-entry.mjs';
 
-// 整套迁移到独立 runner；保留原测试入口，并串行补跑合成编辑器恢复回归。
+// 每个套件使用独立 runner；桌面 E2E 按文件分为两片，片内和 Playwright 组内仍串行。
 export const suites = Object.freeze({
   api: ['test:api'],
   web: ['test:content-anchor', 'test:shared', 'test:web-core', 'test:web:legacy', 'test:web', 'test:scripts'],
   desktop: ['test:desktop'],
   chromium: [
-    'test:e2e -w @study-accelerator/desktop-runtime',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-draft-recovery.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts editor-knowra-marks.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.sync-recovery.config.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.mobile-evidence.config.ts v5-global-appearance.spec.ts',
     'test:e2e -w @study-accelerator/web -- --config playwright.knowledge-concepts.config.ts'
-  ]
+  ],
+  'desktop-e2e-1': ['test:e2e:shard-1 -w @study-accelerator/desktop-runtime'],
+  'desktop-e2e-2': ['test:e2e:shard-2 -w @study-accelerator/desktop-runtime']
 });
 
 export function requireSuccessfulJobs(needs) {

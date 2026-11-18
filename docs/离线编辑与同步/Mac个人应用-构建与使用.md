@@ -1,6 +1,15 @@
 # Mac 个人应用：构建与使用
 
-> 2026-10-09。面向 Apple Silicon Mac。当前构建仍是 ad-hoc 个人候选包，未配置 Developer ID / Apple 公证。支持手动检查稳定发布，不自动下载、安装或退出。验收使用隔离资料库；构建、CI 产物、正式 Release 和已经安装是不同状态。
+> 2026-11-14。面向 Apple Silicon Mac。当前构建仍是 ad-hoc 个人候选包，未配置 Developer ID / Apple 公证。支持手动检查稳定发布，不自动下载、安装或退出。验收使用隔离资料库；构建、CI 产物、正式 Release 和已经安装是不同状态。
+
+## 推荐流程：GitHub 构建，本机只验收安装
+
+1. PR 经审查和 CI 通过后合并到 main。合并会自动触发 **Actions → Mac 候选构建（不发布）**；已有 main 提交需要重建时才手动 Run workflow，不重复手工打包。
+2. 等待该次 Mac 工作流全部成功。在作业汇总中核对版本、完整提交 SHA、分发 ZIP SHA-256 和签名状态，使用汇总里的 artifact 下载链接（保留 14 天，可能需要登录）。PR 候选包对应测试合并提交，不能代替合并后 main 的候选包。
+3. 解开 GitHub artifact 的外层 ZIP，保留内部 `知境·Knowra-Mac-arm64.zip` 和同名 `.build-info.json`。核对目标 SHA、版本和分发 ZIP 哈希；不要使用失败运行的包或只凭文件名判断来源。
+4. 确认安装来源与信任状态后，在应用中创建、检查并导出完整备份，正常退出旧 APP，保留旧程序再安装新版。不要删除或覆盖 `Knowra/offline` 和 `Knowra/shell`。候选包仍是 ad-hoc、未公证；macOS 若阻止打开，停止并等待受信任的签名/公证交付，不绕过系统保护。
+
+此流程不要求在个人 Mac 安装开发依赖或运行重型构建、E2E、隔离验收；这些由 GitHub Actions 完成。候选包不是稳定 Release，应用内“检查更新”仍只读取正式稳定发布。
 
 ## 打开应用
 
@@ -28,18 +37,21 @@
 
 个人版本采用本地 ad-hoc 签名，不是 Apple Developer ID 分发签名。若 macOS 阻止运行，停止安装并核实来源或等待经 Developer ID 签名和公证的包。不要关闭 Gatekeeper、移除 quarantine 或将 ad-hoc 校验当作身份认证。该构建未作其他 Mac、Intel 架构或所有 macOS 版本的兼容承诺。
 
-## 构建
+## 工程附录：CI 构建入口
+
+以下命令用于 GitHub macOS runner，不是本机操作步骤。个人 Mac 只做阅读、差异检查和本次改动的轻量格式/静态检查；不要为了等待 CI 而改在本机运行构建或隔离验收。
 
 ```bash
-npm install
+npm ci --ignore-scripts
+npm run prisma:generate
 npm run build:mac
-npm run verify:mac
+# 核对打包内的原生图像运行时之后，再执行：
 npm run test:mac
-# 以下是可选且明确改变 /Applications 的安装操作：
-npm run install:mac
 ```
 
-输出：`dist/mac/知境·Knowra-darwin-arm64/知境·Knowra.app`、`dist/mac/知境·Knowra-Mac-arm64.zip` 及其构建身份清单。构建不操作 `/Applications` 或用户资料。可通过 `KNOWRA_ELECTRON_ZIP_DIR` 指向已下载的 Electron ZIP 缓存目录，避免重复下载。版本锁定在 lockfile；应用内置 Electron 运行环境，SQLite 在独立 utility process 中运行。
+`test:mac` 已包含 ZIP 解包后的身份、哈希、签名、架构核验以及隔离测试，不需要在它前面再执行一遍 `verify:mac`。`verify:mac` 保留为只做产物核验的独立入口。工作流另外保留构建期间的原生依赖核验与最终 APP 的 PNG/JPEG/WebP 解码检查，不能用元数据检查替代。
+
+输出：`dist/mac/知境·Knowra-darwin-arm64/知境·Knowra.app`、`dist/mac/知境·Knowra-Mac-arm64.zip` 及其构建身份清单。构建不操作 `/Applications` 或用户资料；安装是单独、显式改变本机程序的操作。可通过 `KNOWRA_ELECTRON_ZIP_DIR` 指向已下载的 Electron ZIP 缓存目录。版本锁定在 lockfile；应用内置 Electron 运行环境，SQLite 在独立 utility process 中运行。
 
 ## 核对构建与隔离验收
 
@@ -47,16 +59,7 @@ npm run install:mac
 
 APP 的 `Contents/Resources/app/build-info.json` 和 `web/build-info.json` 必须完全一致。`Contents/Info.plist` 也记录提交与状态。ZIP 旁的 `知境·Knowra-Mac-arm64.zip.build-info.json` 记录同一身份与 ZIP 的 SHA-256；分发时一起保留。正式安装校验当前工作树的版本/HEAD 和产物，未知/脏树、缺少标识或同版本旧 SHA 都会停止。
 
-只生成隔离产物、不安装或清理用户 APP：
-
-```bash
-npm run build:web
-npm run build -w @study-accelerator/desktop-shell
-# 可复制生成的 APP 到临时目录，并用此变量指定验收副本。
-KNOWRA_DESKTOP_TEST_APP=/tmp/knowra-验收/知境·Knowra.app node --test apps/desktop-shell/test/packaged-build-info.test.mjs
-```
-
-桌面打包测试自行创建 `KNOWRA_DESKTOP_SMOKE_DIR` 合成资料目录，不自动回退到 `/Applications`。`test:mac` 串行执行全部桌面壳测试，包括会写系统剪贴板的 `packaged-list.test.mjs`；CI 在一次性 runner 中运行，本机主动运行前请保存剪贴板内容。`npm run build:mac` 是纯构建入口；`npm run install:mac` 才执行安装，且不运行无关副本清理。
+桌面打包测试在 GitHub 一次性 runner 中自行创建 `KNOWRA_DESKTOP_SMOKE_DIR` 合成资料目录，不自动回退到 `/Applications`。`test:mac` 串行执行全部桌面壳测试，包括会写系统剪贴板的 `packaged-list.test.mjs`；不在个人 Mac 重跑。`npm run build:mac` 是纯构建入口；`npm run install:mac` 才执行安装，且不运行无关副本清理。
 
 没有 `.git` 的源码导出或容器构建，默认记录未知 SHA/状态。可在进程环境显式提供 `KNOWRA_BUILD_COMMIT=<40位小写SHA>`；不提供 `KNOWRA_BUILD_STATE` 时仍为 `unknown`。受控构建者确认来源后才可显式提供 `clean` 或 `dirty`，信息来源显示为 `external`，不宣称是本地 Git 核验。隔离 Dockerfile 支持同名 `--build-arg`。Git 工作树中，显式输入必须与实际 HEAD/状态相同。发布身份不读取开发 `.env`；正式安装和 Linux 发布均要求完整 SHA 与 `clean`。
 
@@ -94,7 +97,7 @@ Mac 工作流在 GitHub macOS ARM runner 上构建、解包核验并用合成目
 
 ### 正式发布者检查清单（本阶段尚未执行）
 
-1. 每次面向用户的新二进制递增 SemVer，同时更新四处版本清单和 lockfile。不得以相同版本号替换已发布包。审查、CI 通过且合并后，以合并提交构建。
+1. 每次面向用户的新二进制递增 SemVer，同步更新三处正式版本清单（根目录、`apps/api`、`apps/web` 的 `package.json`）和 lockfile，具体一致性由 `scripts/build-info.mjs` 检查。不得以相同版本号替换已发布包。审查、CI 通过且合并后，以合并提交构建。
 2. 确认 Apple Developer Program、Developer ID 证书、签名及公证授权和安全凭据配置。现有 `@electron/packager` 支持 `osxSign` / `osxNotarize`，无需另换重型打包工具。签名公证后重新生成 ZIP/哈希并核验；现有 ad-hoc 候选包不能宣称已完成这些步骤。
 3. 在 macOS 核验签名身份、Apple 公证/评估结果、ZIP 解包后的版本/完整 SHA/clean 状态、启动和保存重开；以合成旧资料副本验证本次升级及备份恢复。当前 CI 不替代每次资料格式变化的升级矩阵。
 4. 经批准创建对应 `vX.Y.Z` tag 与稳定 GitHub Release。上传该提交的 ZIP 和同名 `.build-info.json`，记录完整 SHA、Apple 签名身份、公证状态、最低系统/架构要求、变更与安装/恢复步骤。不把 CI artifact 地址当永久更新地址。本阶段不自动发布。
