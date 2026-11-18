@@ -1,135 +1,124 @@
-.commandBody {
-  min-height: 0;
-}
-.commandPanel {
+.searchLine {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  gap: 12px;
-}
-.toolbar {
-  display: flex;
+  flex: 1 1 auto;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 12px;
+  min-width: 0;
 }
-.count,
-.shortcuts,
-.hitHint {
-  color: var(--text-secondary);
-  font: 400 var(--font-size-meta)/1.4 var(--font-ui);
+.searchLine > .scope {
+  flex: 0 0 auto;
+  min-width: 0;
 }
-.count {
-  font-variant-numeric: tabular-nums;
-}
+
 .hitList {
-  height: clamp(128px, 37dvh, 320px);
-  min-height: 0;
+  max-height: min(48dvh, 400px);
   overflow: auto;
   overscroll-behavior: contain;
-  border-block: 1px solid var(--border-subtle);
-  padding-block: 6px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
 }
 .resultList {
-  margin: 0;
-  padding: 0;
   list-style: none;
+  padding: 0;
+  margin: 0;
 }
-.hit {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  align-items: center;
+.sectionLabel {
+  padding: 12px 10px 4px;
+  font: 500 var(--font-size-meta)/1.4 var(--font-ui);
+  color: var(--text-muted);
+}
+.resultList .hit {
+  min-height: 36px;
   gap: 10px;
-  min-height: 48px;
-  padding: 8px 10px;
-  border-radius: var(--radius-control);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-.hit + .hit {
-  margin-top: 2px;
-}
-.hitActive {
-  background: var(--surface-selected);
 }
 .hitIcon {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-control);
-  background: var(--surface-hover);
   color: var(--text-secondary);
-}
-.hitActive .hitIcon {
-  background: var(--surface-page);
-  color: var(--accent-text);
+  display: inline-flex;
+  flex: none;
 }
 .hitBody {
-  display: grid;
-  gap: 3px;
+  flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
 }
 .hitPrimary {
+  font-weight: 550;
   overflow: hidden;
-  color: var(--text-primary);
-  font-size: var(--font-size-ui);
-  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .hitSecondary {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
   color: var(--text-secondary);
-  font-size: var(--font-size-meta);
-  line-height: 1.5;
+  font: 400 var(--font-size-meta)/1.55 var(--font-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.withSnippet {
+  display: grid;
+  gap: 3px;
+}
+.withSnippet .hitSecondary {
+  margin: 0;
+  overflow: visible;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 .match {
+  color: var(--text-primary);
+  font-weight: 700;
   background: var(--accent-soft);
-  color: var(--accent-on-tint);
-  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-color: var(--accent-border);
+  text-underline-offset: 2px;
 }
-.shortcuts,
-.shortcuts span {
+.returnKey {
+  color: var(--text-secondary);
+  font: 500 14px/1 var(--font-ui);
+}
+.footer,
+.shortcuts {
   display: flex;
   align-items: center;
+}
+.footer {
+  width: 100%;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font: 400 var(--font-size-meta)/1.4 var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }
 .shortcuts {
   gap: 16px;
 }
-.shortcuts span {
-  gap: 4px;
-}
-.shortcuts kbd {
-  min-width: 18px;
-  padding: 1px 4px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  color: var(--text-secondary);
-  background: var(--surface-page);
-  font: 500 11px/1.4 var(--font-ui);
-  text-align: center;
-}
 @media (max-width: 480px) {
-  .hit {
-    grid-template-columns: 26px minmax(0, 1fr) auto;
+  .searchLine {
+    gap: 6px;
+  }
+  .resultList .hit {
+    min-height: 44px;
+  }
+  .hitBody {
     gap: 8px;
-    padding-inline: 4px;
   }
-  .hitIcon {
-    width: 26px;
-    height: 26px;
+  .hitSecondary {
+    max-width: 38%;
   }
-}
-@media (hover: none) and (pointer: coarse), (max-height: 560px) {
-  .shortcuts {
+  .withSnippet .hitSecondary {
+    max-width: none;
+  }
+  .shortcuts,
+  .returnKey {
     display: none;
   }
 }
 @media (forced-colors: active) {
-  .hitActive {
+  .hit[aria-selected='true'] {
     outline: 2px solid Highlight;
     outline-offset: -2px;
   }

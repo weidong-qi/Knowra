@@ -104,19 +104,26 @@ for (const width of [1280, 390]) {
     await trigger.click();
     const dialog = page.getByRole('dialog', { name: '全局搜索' });
     const input = dialog.getByRole('combobox');
-    const scopes = dialog.getByRole('group', { name: '搜索范围' });
+    const scopePicker = dialog.getByRole('button', { name: /搜索范围/ });
+    const pickScope = async (name: string) => {
+      await scopePicker.click();
+      await page.getByRole('option', { name, exact: true }).click();
+      await expect(input).toBeFocused();
+    };
     await expect(input).toBeFocused();
     await expect(dialog.getByRole('option', { name: /编辑器验收笔记/ })).toContainText('工作');
     await dialog.screenshot({ path: info.outputPath(`全局搜索-打开-${width}.png`) });
-    await scopes.getByRole('button', { name: '资料' }).click();
+    const inputTop = (await input.boundingBox())!.y;
+    await pickScope('资料');
     await input.fill('验收');
     await expect(dialog.getByRole('option')).toHaveCount(2);
     await expect(dialog.locator('mark').first()).toHaveText('验收');
+    await expect.poll(async () => Math.abs((await input.boundingBox())!.y - inputTop)).toBeLessThanOrEqual(1);
     await input.press('ArrowDown');
     await expect(dialog.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
     await expect.poll(() => dialog.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
     await dialog.screenshot({ path: info.outputPath(`全局搜索-结果-${width}.png`) });
-    await scopes.getByRole('button', { name: '标签' }).click();
+    await pickScope('标签');
     await expect(input).toHaveValue('验收');
     await expect(dialog.getByRole('option')).toHaveCount(0);
     await expect(dialog.getByText('没有匹配「验收」的结果')).toBeVisible();
@@ -125,7 +132,7 @@ for (const width of [1280, 390]) {
     await input.press('Escape');
     await expect(trigger).toBeFocused();
     await trigger.click();
-    await expect(scopes.getByRole('button', { name: '全部' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(scopePicker).toHaveText('全部类型');
   });
 }
 

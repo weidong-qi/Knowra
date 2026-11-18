@@ -16,6 +16,11 @@
   justify-content: center;
 }
 
+.underlay.topAligned {
+  align-items: flex-start;
+  padding-top: min(14dvh, 112px);
+}
+
 .underlay[data-entering] {
   animation: overlayFadeIn var(--motion-mid) var(--motion-ease);
 }

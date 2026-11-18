@@ -4,7 +4,7 @@ import { IconButton } from '../button/IconButton';
 import { PressableButton } from '../button/PressableButton';
 import styles from './SearchBox.module.css';
 
-export type SearchBoxSize = 'toolbar' | 'sidebar' | 'command' | 'field' | 'embedded';
+export type SearchBoxSize = 'toolbar' | 'sidebar' | 'command' | 'palette' | 'field' | 'embedded';
 
 interface SearchSurfaceProps {
   children: ReactNode;

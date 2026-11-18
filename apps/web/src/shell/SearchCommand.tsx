@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   COMMAND_SEARCH_QUERY_LIMIT,
   type CommandNoteSearcher,
   type CommandNoteSearchHit
 } from '@study-accelerator/web-core';
-import { Dialog, DialogBody } from '../components/ui/overlay/Dialog';
+import { Dialog, DialogBody, DialogFooter } from '../components/ui/overlay/Dialog';
 import { EmptyState, LoadingState } from '../components/ui/status';
-import { SearchBox } from '../components/ui/input';
+import { SearchBox, Select } from '../components/ui/input';
 import { cx } from '../components/ui/classnames';
-import { SegmentedButton, SegmentedControl } from '../components/ui/button';
+import { ListBoxOption } from '../components/ui/collection/ListBoxOption';
 import { hasMath } from '../components/math/splitMath';
 import { ArrowUpRightIcon, NoteIcon, SearchIcon, TagIcon } from '../components/icons/knowra';
 import { useCommandNoteSearch } from './useCommandNoteSearch';
@@ -21,15 +21,17 @@ export interface SearchHit {
   primary: string;
   secondary?: string;
   hint?: string;
+  isSnippet?: boolean;
   group: '资料' | '标签' | '动作';
   onSelect(context: CommandSelectionContext): CommandSelectionResult;
 }
 
 const searchScopes = ['全部', '资料', '标签', '动作'] as const;
 type SearchScope = (typeof searchScopes)[number];
+const scopeOptions = searchScopes.map(id => ({ id, label: id === '全部' ? '全部类型' : id }));
 const groupIcons = { 资料: NoteIcon, 标签: TagIcon, 动作: ArrowUpRightIcon };
 const placeholders = {
-  全部: '搜索资料、标签或动作…',
+  全部: '搜索工作区…',
   资料: '搜索资料标题或正文…',
   标签: '搜索标签名称…',
   动作: '搜索可执行的动作…'
@@ -110,7 +112,7 @@ export function SearchCommand({
     return () => window.cancelAnimationFrame(handle);
   }, [isOpen]);
 
-  const filtered = useMemo(() => {
+  const matches = useMemo(() => {
     if (!isOpen) return [];
     const scopedHits = scope === '全部' ? hits : hits.filter(hit => hit.group === scope);
     if (!query.trim()) return scopedHits;
@@ -121,7 +123,7 @@ export function SearchCommand({
     });
     const remoteHits = new Map(bodySearch.hits.map(note => [`note:${note.id}`, note]));
     const merged = localHits.map(hit =>
-      remoteHits.has(hit.id) ? { ...hit, secondary: remoteHits.get(hit.id)!.snippet } : hit
+      remoteHits.has(hit.id) ? { ...hit, secondary: remoteHits.get(hit.id)!.snippet, isSnippet: true } : hit
     );
     const localIds = new Set(localHits.map(hit => hit.id));
     // 正文已由服务端匹配，不能再次用标题过滤丢弃。
@@ -131,6 +133,7 @@ export function SearchCommand({
         id,
         primary: note.title || '（无标题）',
         secondary: note.snippet,
+        isSnippet: true,
         hint: '资料',
         group: '资料',
         onSelect: context => commandSearch.onSelect(note, context)
@@ -138,6 +141,12 @@ export function SearchCommand({
     }
     return merged;
   }, [hits, scope, query, isOpen, bodySearch.hits, commandSearch]);
+
+  const filtered = useMemo(
+    () =>
+      scope === '全部' ? searchScopes.slice(1).flatMap(group => matches.filter(hit => hit.group === group)) : matches,
+    [matches, scope]
+  );
 
   // 当过滤结果变化时，保证 activeIndex 不越界。
   useEffect(() => {
@@ -174,13 +183,18 @@ export function SearchCommand({
   const activeHit = selectable ? filtered[activeIndex] : undefined;
 
   return (
-    <Dialog title="全局搜索" isOpen={isOpen} onOpenChange={handleOpenChange} size="md">
-      <DialogBody className={styles.commandBody}>
-        <div className={styles.commandPanel}>
+    <Dialog
+      title="全局搜索"
+      placement="top"
+      isOpen={isOpen}
+      onOpenChange={handleOpenChange}
+      size="md"
+      headerContent={
+        <div className={styles.searchLine}>
           <SearchBox
-            size="command"
+            size="palette"
             label="搜索关键字"
-            icon={<SearchIcon size={18} />}
+            icon={<SearchIcon size={21} />}
             ref={inputRef}
             type="text"
             name="global-search"
@@ -218,83 +232,72 @@ export function SearchCommand({
             }
             clearLabel="清除搜索关键字"
           />
-          <div className={styles.toolbar}>
-            <SegmentedControl aria-label="搜索范围">
-              {searchScopes.map(item => (
-                <SegmentedButton
-                  key={item}
-                  aria-pressed={scope === item}
-                  onPress={() => {
-                    opening.cancel();
-                    setScope(item);
-                    inputRef.current?.focus();
-                  }}
-                >
-                  {item}
-                </SegmentedButton>
-              ))}
-            </SegmentedControl>
-            {selectable && (
-              <span className={styles.count} role="status">
-                {filtered.length} 项结果
-              </span>
-            )}
-          </div>
-          <div id="search-command-results" className={styles.hitList} aria-busy={pending ? 'true' : undefined}>
-            {opening.error ? (
-              <div role="alert">
-                <EmptyState title="打开笔记失败" description={opening.error} />
-              </div>
-            ) : null}
-            <SearchResults
-              hits={selectable ? filtered : []}
-              query={query.trim()}
-              scope={scope}
-              activeIndex={activeIndex}
-              onActiveChange={setActiveIndex}
-              onSelect={hit => {
-                if (!selectable || !filtered.includes(hit)) return;
-                opening.select(hit.onSelect);
-              }}
+          <Select
+            label="搜索范围"
+            presentation="toolbar"
+            className={styles.scope}
+            options={scopeOptions}
+            selectedKey={scope}
+            onSelectionChange={key => {
+              const nextScope = searchScopes.find(item => item === key);
+              if (!nextScope) return;
+              opening.cancel();
+              setScope(nextScope);
+              requestAnimationFrame(() => inputRef.current?.focus());
+            }}
+          />
+        </div>
+      }
+    >
+      <DialogBody>
+        <div id="search-command-results" className={styles.hitList} aria-busy={pending ? 'true' : undefined}>
+          {opening.error ? (
+            <div role="alert">
+              <EmptyState title="打开笔记失败" description={opening.error} />
+            </div>
+          ) : null}
+          <SearchResults
+            hits={selectable ? filtered : []}
+            query={query.trim()}
+            scope={scope}
+            activeIndex={activeIndex}
+            onActiveChange={setActiveIndex}
+            onSelect={hit => {
+              if (!selectable || !filtered.includes(hit)) return;
+              opening.select(hit.onSelect);
+            }}
+          />
+          {pending ? (
+            <LoadingState label={opening.pending ? '正在载入笔记…' : isComposing ? '输入完成后搜索…' : '正在搜索…'} />
+          ) : bodySearch.state === 'error' ? (
+            <div role="alert">
+              <EmptyState title="正文搜索失败" description={bodySearch.error ?? '请重新输入关键字重试。'} />
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={<SearchIcon size={24} />}
+              title={
+                query.trim() ? `没有匹配「${query.trim()}」的结果` : `暂无${scope === '全部' ? '可搜索的内容' : scope}`
+              }
+              description={
+                scope !== '全部'
+                  ? '切换到「全部」可查看其他类型的结果。'
+                  : query.trim()
+                    ? '试试更短的关键词或其他名称。'
+                    : undefined
+              }
             />
-            {pending ? (
-              <LoadingState label={opening.pending ? '正在载入笔记…' : isComposing ? '输入完成后搜索…' : '正在搜索…'} />
-            ) : bodySearch.state === 'error' ? (
-              <div role="alert">
-                <EmptyState title="正文搜索失败" description={bodySearch.error ?? '请重新输入关键字重试。'} />
-              </div>
-            ) : filtered.length === 0 ? (
-              <EmptyState
-                icon={<SearchIcon size={24} />}
-                title={
-                  query.trim()
-                    ? `没有匹配「${query.trim()}」的结果`
-                    : `暂无${scope === '全部' ? '可搜索的内容' : scope}`
-                }
-                description={
-                  scope !== '全部'
-                    ? '切换到「全部」可查看其他类型的结果。'
-                    : query.trim()
-                      ? '试试更短的关键词或其他名称。'
-                      : undefined
-                }
-              />
-            ) : null}
-          </div>
-          <div className={styles.shortcuts} aria-hidden="true">
-            <span>
-              <kbd>↑</kbd>
-              <kbd>↓</kbd>选择
-            </span>
-            <span>
-              <kbd>Enter</kbd>打开
-            </span>
-            <span>
-              <kbd>Esc</kbd>关闭
-            </span>
-          </div>
+          ) : null}
         </div>
       </DialogBody>
+      <DialogFooter>
+        <div className={styles.footer}>
+          <span role="status">{selectable ? `${filtered.length} 项结果` : ''}</span>
+          <span className={styles.shortcuts} aria-hidden="true">
+            ↑ ↓ 选择<span>↵ 打开</span>
+          </span>
+        </div>
+      </DialogFooter>
     </Dialog>
   );
 }
@@ -313,11 +316,12 @@ function SearchResults({ hits, query, scope, activeIndex, onActiveChange, onSele
     () => (query ? new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi') : null),
     [query]
   );
+  const activeRef = useRef<HTMLLIElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   useEffect(() => {
     const list = listRef.current;
     const scrollport = list?.parentElement;
-    const active = list?.children.item(activeIndex);
+    const active = activeRef.current;
     if (!scrollport || !(active instanceof HTMLElement)) return;
     // 只滚动结果区，不能移动对话框/页面，也不从 combobox 抢走键盘焦点。
     const row = active.getBoundingClientRect();
@@ -333,31 +337,41 @@ function SearchResults({ hits, query, scope, activeIndex, onActiveChange, onSele
         const Icon = groupIcons[hit.group];
         const isActive = index === activeIndex;
         return (
-          <li
-            key={hit.id}
-            id={`search-hit-${hit.id}`}
-            role="option"
-            aria-label={[hit.primary, hit.secondary, hit.group].filter(Boolean).join('，')}
-            aria-selected={isActive}
-            className={cx(styles.hit, isActive && styles.hitActive)}
-            onMouseEnter={() => onActiveChange(index)}
-            onClick={() => onSelect(hit)}
-          >
-            <span className={styles.hitIcon} aria-hidden="true">
-              <Icon size={18} />
-            </span>
-            <span className={styles.hitBody}>
-              <span className={styles.hitPrimary}>
-                <MatchText text={hit.primary} pattern={matchPattern} />
+          <Fragment key={hit.id}>
+            {scope === '全部' && hits[index - 1]?.group !== hit.group && (
+              <li role="presentation" aria-hidden="true" className={styles.sectionLabel}>
+                {hit.group === '动作' ? '快捷动作' : hit.group}
+              </li>
+            )}
+            <ListBoxOption
+              ref={isActive ? activeRef : undefined}
+              selected={isActive}
+              id={`search-hit-${hit.id}`}
+              aria-label={[hit.primary, hit.secondary, hit.group].filter(Boolean).join('，')}
+              className={styles.hit}
+              onMouseEnter={() => onActiveChange(index)}
+              onClick={() => onSelect(hit)}
+            >
+              <span className={styles.hitIcon} aria-hidden="true">
+                <Icon size={18} />
               </span>
-              {hit.secondary ? (
-                <span className={styles.hitSecondary}>
-                  <MatchText text={hit.secondary} pattern={matchPattern} />
+              <span className={cx(styles.hitBody, hit.isSnippet && styles.withSnippet)}>
+                <span className={styles.hitPrimary}>
+                  <MatchText text={hit.primary} pattern={matchPattern} />
                 </span>
-              ) : null}
-            </span>
-            {scope === '全部' && <span className={styles.hitHint}>{hit.hint ?? hit.group}</span>}
-          </li>
+                {hit.secondary && (hit.group === '资料' || query) ? (
+                  <span className={styles.hitSecondary}>
+                    <MatchText text={hit.secondary} pattern={matchPattern} />
+                  </span>
+                ) : null}
+              </span>
+              {isActive && (
+                <span className={styles.returnKey} aria-hidden="true">
+                  ↵
+                </span>
+              )}
+            </ListBoxOption>
+          </Fragment>
         );
       })}
     </ul>
