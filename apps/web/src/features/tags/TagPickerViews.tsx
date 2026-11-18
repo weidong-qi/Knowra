@@ -58,13 +58,7 @@ export function SelectTagsView({
             </section>
           ) : null}
           {canWrite && !trimmed ? (
-            <Button
-              variant="default"
-              size="compact"
-              className={styles.createPill}
-              icon={<PlusIcon size={14} />}
-              onPress={onCreate}
-            >
+            <Button variant="default" size="chip" icon={<PlusIcon size={14} />} onPress={onCreate}>
               新建标签
             </Button>
           ) : null}
@@ -132,6 +126,7 @@ export function SelectTagsView({
           <div className={styles.createActionBar}>
             <Button
               variant="ghost"
+              shape="square"
               className={styles.createRow}
               icon={<PlusIcon size={14} />}
               onPress={onCreateFromQuery}
