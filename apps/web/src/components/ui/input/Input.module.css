@@ -283,8 +283,8 @@
 .box[data-indeterminate],
 .checkbox[data-hovered]:not([data-disabled]) .box[data-selected],
 .checkbox[data-hovered]:not([data-disabled]) .box[data-indeterminate] {
-  border-color: var(--accent-solid);
-  background: var(--accent-solid);
+  border-color: var(--checkbox-selected-background, var(--accent-solid));
+  background: var(--checkbox-selected-background, var(--accent-solid));
 }
 .checkbox[data-focus-visible] {
   outline: 0;
@@ -339,11 +339,18 @@
   align-items: center;
   gap: inherit;
 }
-.checkbox[data-variant='row'] .box {
+.rowIndicator {
+  --checkbox-selected-background: var(--ni-accent, var(--accent-solid));
+  color: var(--ni-btn-on-accent, var(--text-on-accent));
   width: 16px;
   height: 16px;
   border-radius: 5px;
   box-shadow: none;
+}
+.rowIndicator .check {
+  color: inherit;
+  width: 11px;
+  height: 11px;
 }
 .checkbox[data-variant='row'][data-selected] {
   font-weight: 500;
@@ -360,7 +367,7 @@
   outline: 0;
   box-shadow: none;
 }
-.checkbox[data-variant='row'] .box[data-selected] {
+.rowIndicator[data-selected] {
   animation: checkboxPop 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes checkboxPop {
@@ -375,8 +382,15 @@
   }
 }
 @media (hover: hover) and (pointer: fine) {
-  .checkbox[data-variant='row']:not([data-hovered], [data-focus-visible], [data-disabled], [data-invalid])
-    .box:not([data-selected], [data-indeterminate]) {
+  :where(label, button):not(
+      :hover,
+      :focus-visible,
+      [data-hovered],
+      [data-focus-visible],
+      [data-disabled],
+      [data-invalid]
+    )
+    > .rowIndicator:not([data-selected], [data-indeterminate]) {
     opacity: 0;
   }
 }
@@ -387,10 +401,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .checkbox[data-variant='row'],
-  .checkbox[data-variant='row'] .box {
+  .rowIndicator {
     transition: none;
   }
-  .checkbox[data-variant='row'] .box[data-selected] {
+  .rowIndicator[data-selected] {
     animation: none;
   }
 }

@@ -52,51 +52,8 @@
   flex: none;
   color: var(--ni-accent, var(--accent));
 }
-.box {
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--ni-line-2, var(--border-strong));
-  border-radius: 5px;
-  background: var(--ni-surf, var(--surface-page));
-  color: var(--ni-btn-on-accent, var(--text-on-accent));
-  transition:
-    opacity var(--motion-fast) var(--motion-ease),
-    transform var(--motion-fast) var(--motion-ease),
-    background var(--motion-fast) var(--motion-ease),
-    border-color var(--motion-fast) var(--motion-ease);
-}
-.box[data-checked] {
-  border-color: var(--ni-accent, var(--accent-solid));
-  background: var(--ni-accent, var(--accent-solid));
-  animation: checkboxPop 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes checkboxPop {
-  0% {
-    transform: scale(0.86);
-  }
-  60% {
-    transform: scale(1.06);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-@media (hover: hover) and (pointer: fine) {
-  .box:not([data-checked]) {
-    opacity: 0;
-    transform: scale(0.88);
-  }
-  .row:is(:hover, [data-hovered], :focus-visible) .box:not([data-checked]) {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .row,
-  .box {
+  .row {
     transition: none;
     animation: none;
   }

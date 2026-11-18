@@ -36,7 +36,7 @@ for (const mode of ['light', 'dark'] as const) {
     const tag = page.getByRole('menu', { name: '标签', exact: true }).getByRole('menuitemcheckbox', { name: /^学习/ });
     await tag.click();
     await expect(tag).toHaveAttribute('aria-checked', 'true');
-    const box = tag.locator('[class*="box"][data-checked]');
+    const box = tag.locator('[aria-hidden="true"][data-selected]');
     await expect(box.locator('svg')).toBeVisible();
     await expect.poll(() => selectedControlContrast(box)).toBeGreaterThanOrEqual(3);
   });
