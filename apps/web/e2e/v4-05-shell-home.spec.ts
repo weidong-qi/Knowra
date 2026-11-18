@@ -141,7 +141,7 @@ test.describe('V4-05 公共 Shell 与主页', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/#/materials');
     const toggle = page.getByRole('button', { name: '切换侧栏' });
-    const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+    const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
     const module = page
       .getByRole('navigation', { name: '工作域导航' })
       .getByRole('button', { name: '资料', exact: true });
@@ -220,8 +220,8 @@ test.describe('V4-05 公共 Shell 与主页', () => {
   test('侧栏头部搜索替代搜索栏，新建使用圆形透明高光并保留菜单', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/#/materials');
-    const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
-    const search = sidebar.getByRole('button', { name: '搜索笔记', exact: true });
+    const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
+    const search = sidebar.getByRole('button', { name: '搜索资料', exact: true });
     const create = sidebar.getByRole('button', { name: '新建', exact: true });
     await expect(sidebar.getByRole('searchbox')).toHaveCount(0);
     const searchBox = await search.boundingBox(),

@@ -281,7 +281,7 @@ function AppContent() {
           navigationKey={location.pathname}
           activeDomain={activeDomain}
           contextSidebarOpen={showNotesContextSidebar}
-          contextSidebarLabel={isKnowledgeWorkspace ? '知识库导航' : isTodos ? '待办导航' : '笔记导航'}
+          contextSidebarLabel={isKnowledgeWorkspace ? '知识库导航' : isTodos ? '待办导航' : '资料导航'}
           contextSidebar={
             isNotesIndex || isNoteEditor ? (
               <NotesContextSidebar

@@ -60,7 +60,7 @@ for (const mode of ['light', 'dark'] as const) {
       await page.screenshot({ path: info.outputPath('notes-shapes.png'), animations: 'disabled' });
 
       // 目录选中背景使用小圆角；窄屏通过现有面板开关打开同一目录。
-      const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+      const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
       if (width === 390) await page.getByRole('button', { name: '切换侧栏' }).click();
       await expect(sidebar.locator('[aria-current="page"]').first()).toHaveCSS('border-radius', '6px');
       if (width === 390) await page.keyboard.press('Escape');

@@ -76,7 +76,7 @@ test('PDF 新增、修改、删除批注后，无需刷新页面即可更新索�
         }).format(new Date(value)),
       latest.updatedAt
     );
-    // “全部笔记”走服务端分页查询，“笔记库”使用本地工作区快照。
+    // “全部资料”走服务端分页查询，“笔记库”使用本地工作区快照。
     await expect(rows.first()).toHaveAttribute('data-entry-key', `note:${pdf.id}`);
     await expect(row).toContainText(formatted);
     await page.goto(`${runtime.origin}/#/materials?scope=root`);

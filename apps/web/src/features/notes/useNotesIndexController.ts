@@ -38,7 +38,15 @@ export function useNotesIndexController(onOpenNote?: (id: string) => void) {
   const tagMatch: 'all' | 'any' = new URLSearchParams(queryString).get('match') === 'any' ? 'any' : 'all';
   const isRecycleView = notesIndex.scope === 'trash';
   const [view, setView] = useState<ViewMode>('grid');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [selectedTypeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const showsFolders =
+    (notesIndex.scope === 'root' || (notesIndex.scope === 'all' && Boolean(navigation.selectedFolderId))) &&
+    !notesIndex.selectedTagId &&
+    urlTagIds.length === 0;
+  const typeFilter = selectedTypeFilter === 'folder' && !showsFolders ? 'all' : selectedTypeFilter;
+  useEffect(() => {
+    if (!showsFolders && selectedTypeFilter === 'folder') setTypeFilter('all');
+  }, [showsFolders, selectedTypeFilter]);
   const [sort, setSort] = useState<SortMode>('updated-desc');
   const [group, setGroup] = useState<GroupMode>('updated');
   const [properties, setProperties] = useState({ ...DEFAULT_DISPLAY_PROPERTIES });
@@ -65,7 +73,7 @@ export function useNotesIndexController(onOpenNote?: (id: string) => void) {
   const [remoteRevision, setRemoteRevision] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const data = useNotesIndexData({ sort, typeFilter, queryString, urlTagIds, tagMatch, remoteRevision });
+  const data = useNotesIndexData({ sort, showsFolders, typeFilter, queryString, urlTagIds, tagMatch, remoteRevision });
   const refresh = () => {
     data.setRemotePage(null);
     setRemoteRevision(value => value + 1);

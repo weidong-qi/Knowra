@@ -71,13 +71,13 @@ describe('NotesContextSidebar', () => {
     const surface = document.querySelector('[data-ni-mode]');
     expect(surface).toHaveAttribute('data-ni-mode', 'dark');
     expect(surface).toHaveAttribute('data-ni-shape', 'pill');
-    expect(screen.getByRole('button', { name: /全部笔记3/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /全部资料3/ })).toBeInTheDocument();
   });
   it('uses a header search action without a permanent search field', async () => {
     const onOpenSearch = vi.fn();
     renderSidebar({ onOpenSearch });
-    expect(screen.queryByRole('searchbox', { name: '搜索笔记目录' })).not.toBeInTheDocument();
-    const search = screen.getByRole('button', { name: '搜索笔记' });
+    expect(screen.queryByRole('searchbox', { name: '搜索资料目录' })).not.toBeInTheDocument();
+    const search = screen.getByRole('button', { name: '搜索资料' });
     const create = screen.getByRole('button', { name: '新建' });
     expect(search.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await userEvent.click(search);
@@ -87,7 +87,7 @@ describe('NotesContextSidebar', () => {
     const onOpenIndex = vi.fn();
     const { store } = renderSidebar({ onOpenIndex });
 
-    expect(screen.getByRole('button', { name: /全部笔记3/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /全部资料3/ })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /收藏1/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /未整理1/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /回收站1/ })).toBeInTheDocument();
@@ -106,14 +106,14 @@ describe('NotesContextSidebar', () => {
     const onOpenIndex = vi.fn();
     const { store } = renderSidebar({ onOpenIndex });
 
-    const rootEntry = screen.getByRole('button', { name: /笔记库2/ });
+    const rootEntry = screen.getByRole('button', { name: /根目录2/ });
     const firstFolder = screen.getByRole('button', { name: /产品设计2/ });
     expect(rootEntry.compareDocumentPosition(firstFolder) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await userEvent.click(rootEntry);
 
     expect(store.getState().notesIndex.scope).toBe('root');
     expect(rootEntry).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: /全部笔记3/ })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: /全部资料3/ })).not.toHaveAttribute('aria-current');
     expect(onOpenIndex).toHaveBeenCalledOnce();
   });
 
@@ -316,7 +316,7 @@ describe('NotesContextSidebar', () => {
     expect(screen.getByRole('dialog', { name: '新建笔记' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: '取消' }));
 
-    await userEvent.click(screen.getByRole('button', { name: '笔记更多操作' }));
+    await userEvent.click(screen.getByRole('button', { name: '资料更多操作' }));
     await userEvent.click(await screen.findByRole('menuitem', { name: '新建文件夹' }));
     expect(screen.getByRole('dialog', { name: '新建文件夹' })).toBeInTheDocument();
   });
@@ -510,7 +510,7 @@ describe('NotesContextSidebar', () => {
 
     expect(folderDragArea).toHaveAttribute('data-hover-active', 'true');
     expect(card).toHaveTextContent('2 篇笔记');
-    expect(card).toHaveTextContent('笔记库');
+    expect(card).toHaveTextContent('根目录');
     expect(card).toHaveTextContent(/更新于/);
     expect(card).not.toHaveTextContent('规划草案');
     expect(card).not.toHaveTextContent('设计复盘');
@@ -528,7 +528,7 @@ describe('NotesContextSidebar', () => {
     fireEvent.pointerEnter(noteDragArea, { pointerType: 'mouse' });
     const card = await screen.findByRole('region', { name: '规划草案信息' });
 
-    expect(card).toHaveTextContent('笔记库 / 产品设计');
+    expect(card).toHaveTextContent('根目录 / 产品设计');
     expect(card).toHaveTextContent(/更新于/);
     expect(card).toHaveTextContent('设计');
 

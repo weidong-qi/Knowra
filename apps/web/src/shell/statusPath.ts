@@ -15,7 +15,7 @@ export interface StatusPathInput {
  *
  * A store selection is intentionally not an implicit location. In particular,
  * workspace hydration may select the first note in the background; `/materials`
- * must still describe the index surface as `笔记库 / 全部笔记`.
+ * must still describe the index surface as `根目录 / 全部资料`.
  */
 export function deriveStatusPath({
   pathname,
@@ -45,13 +45,13 @@ export function deriveStatusPath({
   if (routeDomain === 'materials') {
     if (pathname.startsWith('/materials/notes/')) {
       return [
-        { id: 'materials:root', label: '笔记库', onNavigate: onNavigateMaterials },
+        { id: 'materials:root', label: '根目录', onNavigate: onNavigateMaterials },
         { id: 'materials:note', label: noteTitle || '笔记', current: true }
       ];
     }
     return [
-      { id: 'materials:root', label: '笔记库', onNavigate: onNavigateMaterials },
-      { id: 'materials:index', label: '全部笔记', current: true }
+      { id: 'materials:root', label: '根目录', onNavigate: onNavigateMaterials },
+      { id: 'materials:index', label: '全部资料', current: true }
     ];
   }
 
