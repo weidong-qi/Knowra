@@ -23,19 +23,19 @@ function createMaskedIcon(displayName: string, renderGlyph: (maskPrefix: string)
   return Icon;
 }
 
-/** 首页：知境晶核实心方印（源自 Knowra 图形标志）。 */
-export const RailHomeIcon = createMaskedIcon('RailHomeIcon', id => (
-  <>
-    <defs>
-      <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <rect x="6.4" y="6.4" width="11.2" height="11.2" rx="2.7" fill="#000" />
-        <rect x="8.8" y="8.8" width="5.2" height="5.2" rx="1.4" fill="#fff" />
-      </mask>
-    </defs>
-    <rect x="3" y="3" width="18" height="18" rx="5.5" fill="currentColor" stroke="none" mask={`url(#${id})`} />
-  </>
-));
+/** 首页：显示器里的应用窗口代表桌面工作区。 */
+export const RailHomeIcon = createIcon(
+  'RailHomeIcon',
+  <g fill="currentColor" stroke="none">
+    <path
+      fillRule="evenodd"
+      d="M4.9 3.5h14.2A2.9 2.9 0 0 1 22 6.4v8.2a2.9 2.9 0 0 1-2.9 2.9H4.9A2.9 2.9 0 0 1 2 14.6V6.4a2.9 2.9 0 0 1 2.9-2.9Z
+         M6.1 6.2h8.3a1.2 1.2 0 0 1 1.2 1.2v5.1a1.2 1.2 0 0 1-1.2 1.2H6.1a1.2 1.2 0 0 1-1.2-1.2V7.4a1.2 1.2 0 0 1 1.2-1.2Z"
+    />
+    <rect x="6.3" y="7.5" width="4" height="1.3" rx=".65" />
+    <path d="M10.5 17h3v2h2.6a1 1 0 0 1 0 2H7.9a1 1 0 0 1 0-2h2.6Z" />
+  </g>
+);
 
 export const RailSearchIcon = createMaskedIcon('RailSearchIcon', id => (
   <>
