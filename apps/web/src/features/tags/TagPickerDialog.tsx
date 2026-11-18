@@ -3,7 +3,7 @@ import type { Tag } from '@study-accelerator/web-core';
 import { parseTagColor } from '@study-accelerator/shared/tag-colors';
 import { Button, IconButton, Popover, PopoverDialog } from '../../components/ui';
 import { ChevronLeftIcon, CloseIcon, SettingsIcon, TagIcon } from '../../components/icons/knowra';
-import { normalizeTagColor, tagColorStyle } from './tagColor';
+import { tagColorStyle } from './tagColor';
 import { useTagPickerController, type TagPickerProps, type DialogMode } from './useTagPickerController';
 import { SelectTagsView, ManageTagsView, TagForm, DeleteTagView } from './TagPickerViews';
 import styles from './TagPickerDialog.module.css';
@@ -67,6 +67,8 @@ export function TagPickerDialog(props: TagPickerProps) {
             setMode('manage');
           };
   const title = dialogTitle(mode, editingTag);
+  const parsedColor = parseTagColor(color);
+  const previewColor = parsedColor ?? 'neutral';
   return (
     <Popover
       triggerRef={triggerRef}
@@ -98,8 +100,8 @@ export function TagPickerDialog(props: TagPickerProps) {
               {mode === 'form' ? (
                 <span
                   className={styles.headerPreview}
-                  style={tagColorStyle(color)}
-                  data-color={normalizeTagColor(color)}
+                  style={tagColorStyle(previewColor)}
+                  data-color={previewColor}
                   aria-hidden="true"
                 >
                   <span className={styles.headerPreviewDot} />
@@ -217,7 +219,7 @@ export function TagPickerDialog(props: TagPickerProps) {
                   form="tag-form"
                   variant={'primary'}
                   isPending={pending}
-                  isDisabled={!name.trim() || !groupId || !parseTagColor(color)}
+                  isDisabled={!name.trim() || !groupId || !parsedColor}
                 >
                   {editingTag ? '保存修改' : returnMode === 'select' ? '创建并添加' : '创建标签'}
                 </Button>
