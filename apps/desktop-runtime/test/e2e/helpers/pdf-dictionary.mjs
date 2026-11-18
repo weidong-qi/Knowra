@@ -60,7 +60,7 @@ export async function exercisePdfDictionary(page) {
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   const wordPoint = async word => {
     const text = page.locator('.textLayer span').filter({ hasText: word }).first();
-    await text.evaluate(span => span.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+    await text.evaluate(span => span.scrollIntoView({ block: 'center', inline: 'nearest' }));
     let point;
     // PDF.js 可在缩放后重排整行。按目标词的字形范围取点，确认连续采样仍命中该词所在页。
     await expect
@@ -80,20 +80,31 @@ export async function exercisePdfDictionary(page) {
               const x = box.x + box.width / 2;
               const y = box.y + box.height / 2;
               const hit = document.elementFromPoint(x, y);
-              if (!hit || !span.closest('.page')?.contains(hit)) return null;
+              if (!hit || !span.closest('.page')?.contains(hit)) {
+                return {
+                  x,
+                  y,
+                  hit: hit?.outerHTML.slice(0, 220),
+                  viewport: [innerWidth, innerHeight],
+                  span: span.getBoundingClientRect().toJSON(),
+                  page: span.closest('.page')?.getBoundingClientRect().toJSON()
+                };
+              }
               return {
                 x,
                 y,
-                stable: Boolean(previous && Math.abs(previous.x - x) < 1 && Math.abs(previous.y - y) < 1)
+                stable: Boolean(
+                  previous && !previous.viewport && Math.abs(previous.x - x) < 1 && Math.abs(previous.y - y) < 1
+                )
               };
             },
             { word, previous }
           );
-          return point?.stable;
+          return point;
         },
         { message: `等待 PDF 单词可双击：${word}` }
       )
-      .toBe(true);
+      .toMatchObject({ stable: true });
     return point;
   };
   const openWord = async word => {
