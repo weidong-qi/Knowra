@@ -10,15 +10,12 @@ import { startLocalRuntime } from '../../src/runtime-server.mjs';
 import { withPageFailureDiagnostics } from '../fixtures/page-failure-diagnostics.mjs';
 
 async function assertVisibleMatch(snippet, query) {
-  const visible = await snippet.evaluate((element, needle) => {
-    const node = element.firstChild,
-      text = element.textContent ?? '',
-      offset = text.indexOf(needle);
-    if (!node || node.nodeType !== Node.TEXT_NODE || offset < 0) return false;
+  const match = snippet.locator('mark').filter({ hasText: query }).first();
+  await expect(match).toHaveText(query);
+  const visible = await match.evaluate(element => {
     const range = document.createRange();
-    range.setStart(node, offset);
-    range.setEnd(node, offset + needle.length);
-    const bounds = element.getBoundingClientRect(),
+    range.selectNodeContents(element);
+    const bounds = element.parentElement.getBoundingClientRect(),
       rects = [...range.getClientRects()];
     return (
       rects.length > 0 &&
@@ -30,7 +27,7 @@ async function assertVisibleMatch(snippet, query) {
           rect.bottom <= bounds.bottom + 1
       )
     );
-  }, query);
+  });
   assert.equal(visible, true, '正文关键字必须完整落在片段的可见边界内，不能被省略样式截掉。');
 }
 

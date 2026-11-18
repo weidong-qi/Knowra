@@ -155,6 +155,24 @@
 .shell[data-size='command'] .input {
   font-size: 14px;
 }
+/* 快捷搜索面板首行，输入区与面板共用一个表面。 */
+.shell[data-size='palette'],
+.shell[data-size='palette']:not([data-disabled]):is(:hover, :focus-within) {
+  flex: 1 1 auto;
+  min-height: 42px;
+  gap: 12px;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.shell[data-size='palette'] .input {
+  height: 42px;
+  font-size: 18px;
+}
+.shell[data-size='palette']:focus-within .icon {
+  color: var(--text-primary);
+}
+
 .shell[data-size='embedded']:not([data-invalid]):not([data-disabled]):not(:focus-within) {
   border-color: transparent;
   background: transparent;

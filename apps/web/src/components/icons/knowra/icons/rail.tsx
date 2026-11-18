@@ -23,19 +23,16 @@ function createMaskedIcon(displayName: string, renderGlyph: (maskPrefix: string)
   return Icon;
 }
 
-/** 首页：知境晶核实心方印（源自 Knowra 图形标志）。 */
-export const RailHomeIcon = createMaskedIcon('RailHomeIcon', id => (
-  <>
-    <defs>
-      <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <rect x="6.4" y="6.4" width="11.2" height="11.2" rx="2.7" fill="#000" />
-        <rect x="8.8" y="8.8" width="5.2" height="5.2" rx="1.4" fill="#fff" />
-      </mask>
-    </defs>
-    <rect x="3" y="3" width="18" height="18" rx="5.5" fill="currentColor" stroke="none" mask={`url(#${id})`} />
-  </>
-));
+/** 首页：四宫格应用入口。 */
+export const RailHomeIcon = createIcon(
+  'RailHomeIcon',
+  <g fill="currentColor" stroke="none">
+    <rect x="3" y="3" width="8" height="8" rx="2.4" />
+    <rect x="13" y="3" width="8" height="8" rx="2.4" />
+    <rect x="3" y="13" width="8" height="8" rx="2.4" />
+    <rect x="13" y="13" width="8" height="8" rx="2.4" />
+  </g>
+);
 
 export const RailSearchIcon = createMaskedIcon('RailSearchIcon', id => (
   <>
@@ -51,153 +48,84 @@ export const RailSearchIcon = createMaskedIcon('RailSearchIcon', id => (
   </>
 ));
 
-/** 资料：叠放的实心纸页，保留前页折角与后页透明隔离缝。 */
-export const RailNoteIcon = createMaskedIcon('RailNoteIcon', id => (
-  <>
-    <defs>
-      <mask id={`${id}-front`} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <path d="M13.3 5.2v3.6a1.1 1.1 0 0 0 1.1 1.1h3.6" fill="none" stroke="#000" strokeWidth={2.5} />
-        <path d="M14.2 5.2l3.8 3.8v-4h-4Z" fill="#000" />
-        <rect x="7.4" y="12.2" width="6.8" height="1.65" rx="0.82" fill="#000" />
-        <rect x="7.4" y="15.6" width="4.5" height="1.65" rx="0.82" fill="#000" />
-      </mask>
-      <mask id={`${id}-back`} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <rect x="3.5" y="4.3" width="14.9" height="17.6" rx="3.4" fill="#000" />
-      </mask>
-    </defs>
-    <g stroke="none">
-      <rect
-        x="7.4"
-        y="3.0"
-        width="12.2"
-        height="15.0"
-        rx="2.6"
-        fill="currentColor"
-        opacity={0.36}
-        mask={`url(#${id}-back)`}
-      />
-      <rect x="4.6" y="5.4" width="12.6" height="15.4" rx="2.8" fill="currentColor" mask={`url(#${id}-front)`} />
-      <path d="M13.7 5.55 17.05 8.9H14.5a.8.8 0 0 1-.8-.8V5.55Z" fill="currentColor" opacity={0.45} />
-    </g>
-  </>
-));
-
-/** 知识：星团图谱（一大两小实心节点 + 连桥两端透明隔离缝）。 */
-export const RailKnowledgeIcon = createMaskedIcon('RailKnowledgeIcon', id => (
-  <>
-    <defs>
-      <mask id={`${id}-links`} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <circle cx="16.2" cy="7.2" r="4.65" fill="#000" />
-        <circle cx="6.0" cy="11.2" r="3.8" fill="#000" />
-        <circle cx="14.0" cy="17.8" r="3.9" fill="#000" />
-      </mask>
-      <mask id={`${id}-hero`} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <circle cx="16.2" cy="7.2" r="1.45" fill="#000" />
-      </mask>
-    </defs>
+/** 资料：露出折角纸页的收纳盒，盒面留出标签槽。 */
+export const RailNoteIcon = createIcon(
+  'RailNoteIcon',
+  <g>
     <path
-      d="M6.0 11.2L16.2 7.2L14.0 17.8Z"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.1}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      opacity={0.46}
-      mask={`url(#${id}-links)`}
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M6.1 8.7V5.2a2.5 2.5 0 0 1 2.5-2.5h7.1c.5 0 .9.2 1.2.5l3.3 3.4c.3.3.5.7.5 1.2v2.5c.3.4.4.9.4 1.5v6.1a3.3 3.3 0 0 1-3.3 3.3H6.2a3.3 3.3 0 0 1-3.3-3.3v-6.7a2.5 2.5 0 0 1 2.5-2.5h.7Z
+         M8.6 3.8c-.8 0-1.4.6-1.4 1.4v5.7c0 .7.5 1.2 1.2 1.2h7.5c.6 0 1-.2 1.4-.7l.4-.6c.4-.5.8-.7 1.4-.7h.4V7.6h-2.8c-.7 0-1.2-.5-1.2-1.2V3.8H8.6Z
+         M10.3 15.3a.9.9 0 0 0 0 1.8h3.4a.9.9 0 1 0 0-1.8h-3.4Z"
     />
-    <g stroke="none">
-      <circle cx="16.2" cy="7.2" r="3.7" fill="currentColor" mask={`url(#${id}-hero)`} />
-      <circle cx="6.0" cy="11.2" r="2.85" fill="currentColor" />
-      <circle cx="14.0" cy="17.8" r="2.95" fill="currentColor" />
+    <path d="M10.1 6.9h3.9m-3.9 2.7H14" strokeWidth={1.25} />
+  </g>
+);
+
+/** 知识：三个实心节点在中心交汇。 */
+export const RailKnowledgeIcon = createIcon(
+  'RailKnowledgeIcon',
+  <>
+    <path d="m5.6 9.6 6.5 3 5.8-5.7m-5.8 5.7 1.1 5.8" strokeWidth={1.15} />
+    <g fill="currentColor" stroke="none">
+      <circle cx="5.6" cy="9.6" r="3" />
+      <circle cx="17.9" cy="6.9" r="3.1" />
+      <circle cx="13.2" cy="18.4" r="3.1" />
     </g>
   </>
-));
+);
 
-/** 试题：圆角实心题卡 + 负形问号。 */
+/** 试题：圆角实心题卡与镂空问号。 */
 export const RailQuestionIcon = createMaskedIcon('RailQuestionIcon', id => (
   <>
     <defs>
       <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <path
-          d="M9.55 9.15a2.55 2.55 0 1 1 3.75 2.2c-.85.5-1.3.95-1.3 1.8"
-          fill="none"
-          stroke="#000"
-          strokeWidth={2.1}
-          strokeLinecap="round"
-        />
-        <circle cx="12" cy="16.6" r="1.25" fill="#000" />
+        <rect width="24" height="24" fill="white" stroke="none" />
+        <path d="M9.3 9a2.7 2.7 0 0 1 5.4 0c0 2.2-2.7 2.4-2.7 4.4" stroke="black" strokeWidth={1.95} />
+        <circle cx="12" cy="16.6" r="1.1" fill="black" stroke="none" />
       </mask>
     </defs>
-    <rect x="4.8" y="3.4" width="14.4" height="17.2" rx="3.4" fill="currentColor" stroke="none" mask={`url(#${id})`} />
+    <rect x="4" y="3.4" width="16" height="17.2" rx="3.1" fill="currentColor" stroke="none" mask={`url(#${id})`} />
   </>
 ));
 
-/** 任务：带顶夹与透明卡槽的实心剪贴板。 */
+/** 任务：带顶夹、勾选项和摘要线的剪贴板。 */
 export const RailTaskIcon = createMaskedIcon('RailTaskIcon', id => (
   <>
     <defs>
       <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <rect x="7.5" y="1.8" width="9.0" height="5.5" rx="2.2" fill="#000" />
-        <path
-          d="m7.9 11.4 1.15 1.15 2.15-2.2"
-          fill="none"
-          stroke="#000"
-          strokeWidth={1.7}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <rect x="12.7" y="10.65" width="3.7" height="1.6" rx="0.8" fill="#000" />
-        <rect x="7.8" y="15.0" width="8.4" height="1.6" rx="0.8" fill="#000" />
+        <rect width="24" height="24" fill="white" stroke="none" />
+        <rect x="8" y="2" width="8" height="5.3" rx="2" fill="black" stroke="none" />
+        <path d="m7.4 11.7 1.2 1.2 2.1-2.1m2.3.8h3.5M7.6 16.5h8.8" stroke="black" strokeWidth={1.6} />
       </mask>
     </defs>
-    <g stroke="none">
-      <rect x="5.0" y="4.8" width="14.0" height="16.0" rx="3.1" fill="currentColor" mask={`url(#${id})`} />
-      <rect x="8.7" y="2.8" width="6.6" height="3.3" rx="1.35" fill="currentColor" />
+    <g fill="currentColor" stroke="none">
+      <rect x="4.2" y="5" width="15.6" height="16.2" rx="3.1" mask={`url(#${id})`} />
+      <rect x="8.6" y="2.8" width="6.8" height="3.8" rx="1.65" />
     </g>
   </>
 ));
 
-/** 待办：保留日历+对勾语义，顶部装订耳与浅透月历头结合负形对勾。 */
+/** 待办：双装订环日历与镂空对勾。 */
 export const RailTodoIcon = createMaskedIcon('RailTodoIcon', id => (
   <>
     <defs>
-      <mask id={`${id}-top`} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <rect x="6.9" y="2.4" width="3.6" height="4.2" rx="1.5" fill="#000" />
-        <rect x="13.5" y="2.4" width="3.6" height="4.2" rx="1.5" fill="#000" />
-      </mask>
-      <mask id={`${id}-body`} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect x="0" y="0" width="24" height="24" fill="#fff" />
-        <path
-          d="m8.7 15.0 2.15 2.15 4.45-4.5"
-          fill="none"
-          stroke="#000"
-          strokeWidth={2.15}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+      <mask id={id} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+        <rect width="24" height="24" fill="white" stroke="none" />
+        <g fill="black" stroke="none">
+          <rect x="6.2" y="2" width="3.6" height="4.9" rx="1.8" />
+          <rect x="14.2" y="2" width="3.6" height="4.9" rx="1.8" />
+          <rect x="3" y="9" width="18" height=".9" />
+        </g>
+        <path d="m8.8 15.3 2.1 2.1 4.5-4.5" stroke="black" strokeWidth={2} />
       </mask>
     </defs>
-    <g stroke="none">
-      <rect x="7.6" y="3.0" width="2.2" height="3.1" rx="1.1" fill="currentColor" />
-      <rect x="14.2" y="3.0" width="2.2" height="3.1" rx="1.1" fill="currentColor" />
-      <path
-        d="M4.4 7.8A2.8 2.8 0 0 1 7.2 5h9.6a2.8 2.8 0 0 1 2.8 2.8V9H4.4V7.8Z"
-        fill="currentColor"
-        opacity={0.44}
-        mask={`url(#${id}-top)`}
-      />
-      <path
-        d="M4.4 10.1h15.2v7.3a3.2 3.2 0 0 1-3.2 3.2H7.6a3.2 3.2 0 0 1-3.2-3.2v-7.3Z"
-        fill="currentColor"
-        mask={`url(#${id}-body)`}
-      />
+    <g fill="currentColor" stroke="none">
+      <rect x="3.5" y="4.6" width="17" height="16.3" rx="3" mask={`url(#${id})`} />
+      <rect x="6.9" y="3" width="2.2" height="3.2" rx="1.1" />
+      <rect x="14.9" y="3" width="2.2" height="3.2" rx="1.1" />
     </g>
   </>
 ));
