@@ -107,6 +107,7 @@ for (const width of [1280, 390]) {
     const scopes = dialog.getByRole('group', { name: '搜索范围' });
     await expect(input).toBeFocused();
     await expect(dialog.getByRole('option', { name: /编辑器验收笔记/ })).toContainText('工作');
+    await dialog.screenshot({ path: info.outputPath(`全局搜索-打开-${width}.png`) });
     await scopes.getByRole('button', { name: '资料' }).click();
     await input.fill('验收');
     await expect(dialog.getByRole('option')).toHaveCount(2);
