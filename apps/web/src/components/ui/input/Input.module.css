@@ -321,6 +321,80 @@
   pointer-events: none;
 }
 
+.checkbox[data-variant='row'] {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font: 400 13px/1.4 var(--font-ui);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+.checkbox[data-variant='row'] .checkboxLabel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: inherit;
+}
+.checkbox[data-variant='row'] .box {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+.checkbox[data-variant='row'][data-selected] {
+  font-weight: 500;
+}
+.checkbox[data-variant='row'][data-hovered]:not([data-disabled]),
+.checkbox[data-variant='row'][data-focus-visible] {
+  background: var(--surface-hover);
+}
+.checkbox[data-variant='row'][data-focus-visible] {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
+}
+.checkbox[data-variant='row'][data-focus-visible] .box {
+  outline: 0;
+  box-shadow: none;
+}
+.checkbox[data-variant='row'] .box[data-selected] {
+  animation: checkboxPop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes checkboxPop {
+  0% {
+    transform: scale(0.86);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .checkbox[data-variant='row']:not([data-hovered], [data-focus-visible], [data-disabled], [data-invalid])
+    .box:not([data-selected], [data-indeterminate]) {
+    opacity: 0;
+  }
+}
+@media (max-width: 767px), (any-pointer: coarse) {
+  .checkbox[data-variant='row'] {
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkbox[data-variant='row'],
+  .checkbox[data-variant='row'] .box {
+    transition: none;
+  }
+  .checkbox[data-variant='row'] .box[data-selected] {
+    animation: none;
+  }
+}
+
 /* Select：触发器与输入框一致，浮层由共享 Popover 管理。 */
 .selectTrigger {
   display: inline-flex;

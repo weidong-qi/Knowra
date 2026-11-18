@@ -11,15 +11,21 @@ export interface CheckboxProps extends Omit<RACheckboxProps, 'className' | 'chil
   children?: ReactNode;
   className?: string;
   indeterminateIcon?: ReactNode;
+  variant?: 'default' | 'row';
   size?: 'default' | 'compact';
 }
 
 export const Checkbox = forwardRef<HTMLLabelElement, CheckboxProps>(function Checkbox(
-  { children, className, size = 'default', ...rest },
+  { children, className, variant = 'default', size = 'default', ...rest },
   ref
 ) {
   return (
-    <RACheckbox ref={ref} className={cx(styles.checkbox, size === 'compact' && styles.checkboxCompact, className)} {...rest}>
+    <RACheckbox
+      ref={ref}
+      data-variant={variant}
+      className={cx(styles.checkbox, size === 'compact' && styles.checkboxCompact, className)}
+      {...rest}
+    >
       {({ isSelected, isIndeterminate, isDisabled }) => (
         <>
           <span
@@ -34,12 +40,19 @@ export const Checkbox = forwardRef<HTMLLabelElement, CheckboxProps>(function Che
                 <rect y="5" width="12" height="2" />
               </svg>
             ) : isSelected ? (
-              <svg className={styles.check} viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <svg
+                className={styles.check}
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
                 <path d="M2 6.5l2.5 2.5L10 3.5" />
               </svg>
             ) : null}
           </span>
-          {children ? <span>{children}</span> : null}
+          {children ? <span className={styles.checkboxLabel}>{children}</span> : null}
         </>
       )}
     </RACheckbox>

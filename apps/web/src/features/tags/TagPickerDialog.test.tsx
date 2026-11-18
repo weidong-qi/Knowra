@@ -101,7 +101,7 @@ describe('TagPickerDialog', () => {
     );
     const onOpenChange = vi.fn();
     renderPicker({ onSave, onOpenChange });
-    await user.click(screen.getByRole('button', { name: '多模态' }));
+    await user.click(screen.getByRole('checkbox', { name: '多模态' }));
     await user.click(screen.getByRole('button', { name: '保存到笔记' }));
     await user.click(screen.getByRole('button', { name: '关闭' }));
     await user.click(screen.getByRole('button', { name: '取消' }));
@@ -110,9 +110,7 @@ describe('TagPickerDialog', () => {
     expect(screen.getByRole('button', { name: '保存到笔记' })).toBeInTheDocument();
     await act(async () => reject(new Error('暂时失败')));
     expect(screen.getByRole('alert')).toHaveTextContent('暂时失败');
-    expect(
-      screen.getAllByRole('button', { name: '多模态' }).some(button => button.getAttribute('aria-pressed') === 'true')
-    ).toBe(true);
+    expect(screen.getByRole('checkbox', { name: '多模态' })).toBeChecked();
     await user.click(screen.getByRole('button', { name: '关闭' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -165,7 +163,11 @@ describe('TagPickerDialog', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     renderPicker({ onSave });
 
-    await user.click(screen.getByRole('button', { name: '多模态' }));
+    const option = screen.getByRole('checkbox', { name: '多模态' });
+    expect(option).not.toBeChecked();
+    option.focus();
+    await user.keyboard('[Space]');
+    expect(option).toBeChecked();
     await user.click(screen.getByRole('button', { name: '管理标签库' }));
     await user.click(screen.getByRole('button', { name: '返回选择标签' }));
     await user.click(screen.getByRole('button', { name: '保存到笔记' }));

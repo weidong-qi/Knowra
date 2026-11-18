@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 import type { Tag, TagGroup } from '@study-accelerator/web-core';
-import { Button, IconButton, SearchBox, Select, TextField } from '../../components/ui';
+import { Button, Checkbox, IconButton, SearchBox, Select, TextField } from '../../components/ui';
 import { DeleteIcon, EditIcon, PlusIcon, SearchIcon } from '../../components/icons/knowra';
 import { TagChip } from './TagChip';
 import { TagColorPicker } from './TagColorPicker';
@@ -74,7 +74,7 @@ export function SelectTagsView({
         <div className={styles.searchHeader}>
           <SearchBox
             label="搜索已有标签"
-            size="field"
+            size="embedded"
             icon={<SearchIcon size={15} />}
             name="tag-search"
             autoComplete="off"
@@ -101,38 +101,23 @@ export function SelectTagsView({
                 </span>
               </div>
               <div className={styles.optionList}>
-                {tags.map(tag => {
-                  const isSelected = selected.has(tag.id);
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      className={styles.optionRow}
+                {tags.map(tag => (
+                  <Checkbox
+                    key={tag.id}
+                    variant="row"
+                    isSelected={selected.has(tag.id)}
+                    isDisabled={!canWrite}
+                    onChange={() => onToggle(tag)}
+                  >
+                    <span
+                      className={styles.optionDot}
                       style={tagColorStyle(tag.color)}
                       data-color={normalizeTagColor(tag.color)}
-                      data-selected={isSelected || undefined}
-                      aria-pressed={isSelected}
-                      onClick={() => onToggle(tag)}
-                    >
-                      <span className={styles.optionCheck} data-checked={isSelected || undefined} aria-hidden="true">
-                        {isSelected ? (
-                          <svg
-                            viewBox="0 0 12 12"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.1"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M2.2 6.3 4.8 8.9 9.8 3.4" />
-                          </svg>
-                        ) : null}
-                      </span>
-                      <span className={styles.optionDot} aria-hidden="true" />
-                      <span className={styles.optionName}>{tag.name || '未命名标签'}</span>
-                    </button>
-                  );
-                })}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.optionName}>{tag.name || '未命名标签'}</span>
+                  </Checkbox>
+                ))}
               </div>
             </section>
           ))}
