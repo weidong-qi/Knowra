@@ -19,6 +19,7 @@ import styles from './NotesIndexView.module.css';
 export function NotesIndexHeader({
   path,
   count,
+  folderCount = 0,
   canWrite,
   isRecycleView,
   selectionMode,
@@ -33,6 +34,7 @@ export function NotesIndexHeader({
   renderTools?(slots: { more: ReactNode; create: ReactNode }): ReactNode;
   path: PathSegment[];
   count: number;
+  folderCount?: number;
   canWrite: boolean;
   isRecycleView: boolean;
   selectionMode: boolean;
@@ -103,7 +105,10 @@ export function NotesIndexHeader({
       <div className={styles.heading}>
         <NoteIcon size={17} />
         <strong>{path.at(-1)?.label ?? '笔记索引'}</strong>
-        <span title="当前已加载范围内的项目数，包含笔记与文件夹" aria-label={`已加载 ${count} 项`}>
+        <span
+          title={`当前已加载 ${count - folderCount} 份资料${folderCount ? `、${folderCount} 个文件夹` : ''}`}
+          aria-label={`已加载 ${count} 项`}
+        >
           {count}
         </span>
       </div>

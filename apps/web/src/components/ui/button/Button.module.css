@@ -44,6 +44,7 @@
 .toolbar,
 .footer,
 .compact,
+.chip,
 .mini {
   --button-min-height: var(--index-size-28);
   height: auto;
@@ -57,6 +58,11 @@
 
 .compact {
   --button-min-height: 29px;
+  padding-inline: 10px;
+}
+.chip {
+  --button-min-height: 24px;
+  --button-default-shadow: 0 0 0 1px var(--border-subtle), 0 1px 2px rgb(24 30 48 / 4%);
   padding-inline: 10px;
 }
 .toolbar {
@@ -247,7 +253,7 @@
 ) {
   background: transparent;
   border-color: var(--ni-line-2, var(--border-strong));
-  box-shadow: none;
+  box-shadow: var(--button-default-shadow, none);
 }
 .btn:where(
     :not(

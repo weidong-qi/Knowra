@@ -2,15 +2,7 @@ import { useState, type FormEvent } from 'react';
 import type { Folder } from '@study-accelerator/web-core';
 import { isFolderWithin } from './entryMove';
 import { folderLocation } from './notesIndexNavigation';
-import {
-  Button,
-  Dialog,
-  DialogBody,
-  DialogClose,
-  DialogFooter,
-  TextField,
-  Select
-} from '../../components/ui';
+import { Button, Dialog, DialogBody, DialogClose, DialogFooter, TextField, Select } from '../../components/ui';
 
 export interface TreeEntryTarget {
   kind: 'folder' | 'note';
@@ -18,7 +10,11 @@ export interface TreeEntryTarget {
   name: string;
 }
 
-export function RenameTreeEntryDialog({ target, onClose, onRename }: {
+export function RenameTreeEntryDialog({
+  target,
+  onClose,
+  onRename
+}: {
   target: TreeEntryTarget;
   onClose(): void;
   onRename(value: string): Promise<void>;
@@ -48,8 +44,15 @@ export function RenameTreeEntryDialog({ target, onClose, onRename }: {
   }
 
   return (
-    <Dialog title={`重命名${entryLabel}`} isOpen onOpenChange={(open) => { if (!open) onClose(); }} isPending={pending}>
-      <form onSubmit={(event) => void handleSubmit(event)}>
+    <Dialog
+      title={`重命名${entryLabel}`}
+      isOpen
+      onOpenChange={open => {
+        if (!open) onClose();
+      }}
+      isPending={pending}
+    >
+      <form onSubmit={event => void handleSubmit(event)}>
         <DialogBody>
           <TextField
             autoFocus
@@ -63,14 +66,22 @@ export function RenameTreeEntryDialog({ target, onClose, onRename }: {
         </DialogBody>
         <DialogFooter>
           <DialogClose variant="ghost">取消</DialogClose>
-          <Button type="submit" variant="primary" isPending={pending}>保存</Button>
+          <Button type="submit" variant="primary" isPending={pending}>
+            保存
+          </Button>
         </DialogFooter>
       </form>
     </Dialog>
   );
 }
 
-export function DeleteTreeEntryDialog({ target, parentId = null, folders = {}, onClose, onDelete }: {
+export function DeleteTreeEntryDialog({
+  target,
+  parentId = null,
+  folders = {},
+  onClose,
+  onDelete
+}: {
   target: TreeEntryTarget;
   parentId?: string | null;
   folders?: Record<string, Folder>;
@@ -100,7 +111,9 @@ export function DeleteTreeEntryDialog({ target, parentId = null, folders = {}, o
     <Dialog
       title={isFolder ? '删除文件夹？' : '删除笔记？'}
       isOpen
-      onOpenChange={(open) => { if (!open) onClose(); }}
+      onOpenChange={open => {
+        if (!open) onClose();
+      }}
       isPending={pending}
     >
       <DialogBody>
@@ -109,14 +122,39 @@ export function DeleteTreeEntryDialog({ target, parentId = null, folders = {}, o
             ? `“${target.name}”及其子文件夹将移入回收站。请选择其中笔记的处理方式。`
             : `“${target.name}”将移入回收站。`}
         </p>
-        {isFolder ? <><Select label="内容处理方式" selectedKey={mode} onSelectionChange={key => setMode(String(key) as 'keep' | 'with-content')} options={[{ id: 'keep', label: '保留笔记并移至其他目录' }, { id: 'with-content', label: '笔记一起移入回收站' }]} />
-          {mode === 'keep' ? <Select label="笔记移至" selectedKey={destinationId || '__root__'} onSelectionChange={key => setDestinationId(key === '__root__' ? '' : String(key))}
-            options={[{ id: '__root__', label: '笔记库（根目录）' }, ...Object.values(folders).filter(folder => !isFolderWithin(folder.id, target.id, folders)).map(folder => ({ id: folder.id, label: folderLocation(folder.id, folders) }))]} /> : null}</> : null}
+        {isFolder ? (
+          <>
+            <Select
+              label="内容处理方式"
+              selectedKey={mode}
+              onSelectionChange={key => setMode(String(key) as 'keep' | 'with-content')}
+              options={[
+                { id: 'keep', label: '保留笔记并移至其他目录' },
+                { id: 'with-content', label: '笔记一起移入回收站' }
+              ]}
+            />
+            {mode === 'keep' ? (
+              <Select
+                label="笔记移至"
+                selectedKey={destinationId || '__root__'}
+                onSelectionChange={key => setDestinationId(key === '__root__' ? '' : String(key))}
+                options={[
+                  { id: '__root__', label: '根目录' },
+                  ...Object.values(folders)
+                    .filter(folder => !isFolderWithin(folder.id, target.id, folders))
+                    .map(folder => ({ id: folder.id, label: folderLocation(folder.id, folders) }))
+                ]}
+              />
+            ) : null}
+          </>
+        ) : null}
         {error ? <p role="alert">{error}</p> : null}
       </DialogBody>
       <DialogFooter>
         <DialogClose variant="ghost">取消</DialogClose>
-        <Button variant="danger" isPending={pending} onPress={() => void handleDelete()}>删除</Button>
+        <Button variant="danger" isPending={pending} onPress={() => void handleDelete()}>
+          删除
+        </Button>
       </DialogFooter>
     </Dialog>
   );

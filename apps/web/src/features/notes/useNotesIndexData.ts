@@ -13,6 +13,7 @@ const NOTE_PAGE_SIZE = 30;
 
 export function useNotesIndexData({
   sort,
+  showsFolders,
   typeFilter,
   queryString,
   urlTagIds,
@@ -20,6 +21,7 @@ export function useNotesIndexData({
   remoteRevision
 }: {
   sort: SortMode;
+  showsFolders: boolean;
   typeFilter: TypeFilter;
   queryString: string;
   urlTagIds: string[];
@@ -145,16 +147,25 @@ export function useNotesIndexData({
       );
     }
     const selectedFolder = navigation.selectedFolderId ? serverData.foldersById[navigation.selectedFolderId] : null;
-    const visibleFolders =
-      (notesIndex.scope === 'all' || notesIndex.scope === 'root') && !notesIndex.selectedTagId && urlTagIds.length === 0
-        ? (selectedFolder?.children ?? serverData.folderTree).filter(folder =>
-            folderMatchesQuery(folder, serverData.notes, notesIndex.query)
-          )
-        : [];
+    const visibleFolders = showsFolders
+      ? (selectedFolder?.children ?? serverData.folderTree).filter(folder =>
+          folderMatchesQuery(folder, serverData.notes, notesIndex.query)
+        )
+      : [];
     const folderItems: IndexItem[] = visibleFolders.map(folder => ({ kind: 'folder', folder }));
     const noteItems: IndexItem[] = sortNotes(visibleNotes, sort).map(note => ({ kind: 'note', note }));
     return [...folderItems.sort(compareFolderItems), ...noteItems];
-  }, [navigation.selectedFolderId, notesIndex, remotePage, serverData, sort, tagMatch, urlTagIds, useServerQuery]);
+  }, [
+    navigation.selectedFolderId,
+    notesIndex,
+    remotePage,
+    serverData,
+    sort,
+    tagMatch,
+    urlTagIds,
+    useServerQuery,
+    showsFolders
+  ]);
 
   const counts = {
     all: allItems.length,
@@ -171,5 +182,5 @@ export function useNotesIndexData({
           ? item.kind === 'note' && item.note.contentKind !== 'pdf'
           : item.kind === typeFilter)
   );
-  return { items, counts, remotePage, remoteLoading, remoteError, loadMore, setRemotePage };
+  return { showsFolders, items, counts, remotePage, remoteLoading, remoteError, loadMore, setRemotePage };
 }

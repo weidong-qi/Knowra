@@ -4,7 +4,7 @@ export interface NotesIndexAppearance {
   mode: 'light' | 'dark';
   theme: 'orange';
   shape: 'pill';
-  overlayMaterial: 'glass' | 'acrylic';
+  overlayMaterial: 'paper' | 'acrylic';
   dialogStyle: DialogStyle;
   inspectorStyle: InspectorStyle;
   stageStyle: StageStyle;
@@ -43,7 +43,7 @@ export const DEFAULT_NOTES_INDEX_APPEARANCE: Readonly<NotesIndexAppearance> = {
   mode: 'light',
   theme: 'orange',
   shape: 'pill',
-  overlayMaterial: 'glass',
+  overlayMaterial: 'paper',
   dialogStyle: 'float',
   inspectorStyle: 'float',
   stageStyle: 'soft',
@@ -75,7 +75,7 @@ export function parseNotesIndexAppearance(value: unknown): NotesIndexAppearance 
     // 保留旧外观存储格式及明暗偏好；pill 仅作为兼容值，实际形状由组件用途决定。
     theme: 'orange',
     shape: 'pill',
-    overlayMaterial: candidate.overlayMaterial === 'acrylic' ? 'acrylic' : 'glass',
+    overlayMaterial: candidate.overlayMaterial === 'acrylic' ? 'acrylic' : 'paper',
     dialogStyle: DIALOG_STYLES.includes(candidate.dialogStyle as DialogStyle)
       ? (candidate.dialogStyle as DialogStyle)
       : 'float',

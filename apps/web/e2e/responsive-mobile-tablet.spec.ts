@@ -133,7 +133,7 @@ for (const viewport of viewports) {
       await expect(index).toBeVisible();
       // 页头显示当前范围，索引模块身份保留在 article 的可访问名称上。
       const scopeTitle = index.locator('header').first().locator('strong');
-      await expect(scopeTitle).toHaveText('全部笔记');
+      await expect(scopeTitle).toHaveText('全部资料');
       await expect(scopeTitle).toBeVisible();
       await expectShellContained(page);
       const noteButton = index
@@ -202,9 +202,9 @@ for (const viewport of viewports) {
         await expectShellContained(page);
         const sidebarToggle = page.getByRole('button', { name: '切换侧栏', exact: true });
         await activate(sidebarToggle);
-        const sidebar = page.getByRole('dialog', { name: '笔记导航', exact: true });
+        const sidebar = page.getByRole('dialog', { name: '资料导航', exact: true });
         await expect(sidebar).toBeVisible();
-        const closeSidebar = sidebar.getByRole('button', { name: '关闭笔记导航', exact: true });
+        const closeSidebar = sidebar.getByRole('button', { name: '关闭资料导航', exact: true });
         await expectInViewport(page, closeSidebar);
         await expectTouchTarget(closeSidebar);
         await activate(closeSidebar);

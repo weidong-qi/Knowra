@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>知境 · 雾光藏馆</title>
+    <link rel="icon" href="assets/brand.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="workspace">
+      <nav class="rail" aria-label="工作域">
+        <img class="brand" src="assets/brand.svg" alt="知境" />
+        <div class="rail-items">
+          <button class="rail-button active" aria-label="资料" title="资料" id="materials">
+            <img src="assets/icons/component-library.svg" alt="" />
+          </button>
+          <span class="rail-button" title="知识"><img src="assets/icons/knowledge.svg" alt="知识" /></span>
+          <span class="rail-button" title="试题"><img src="assets/icons/note.svg" alt="试题" /></span>
+          <span class="rail-button" title="任务"><img src="assets/icons/task-list.svg" alt="任务" /></span>
+          <span class="rail-button" title="待办"><img src="assets/icons/calendar.svg" alt="待办" /></span>
+        </div>
+        <button class="rail-button theme-toggle" aria-label="切换深色模式" title="切换深色模式" id="theme">
+          <img src="assets/icons/settings.svg" alt="" />
+        </button>
+      </nav>
+      <aside class="sidebar">
+        <div class="wordmark">知境 · KNOWRA</div>
+        <h1>资料集</h1>
+        <nav aria-label="资料范围" class="scope-nav" id="scopes"></nav>
+        <div class="sidebar-rule"></div>
+        <p class="sidebar-caption">我的资料集</p>
+        <nav aria-label="我的资料集" id="collection-nav"></nav>
+        <div class="sidebar-footer"><span class="status-dot"></span>设计预览<span>雾光 · 01</span></div>
+      </aside>
+      <main class="main">
+        <header class="toolbar">
+          <label class="search"
+            ><img src="assets/icons/search.svg" alt="" /><input
+              id="search"
+              type="search"
+              placeholder="搜索资料、笔记或关键词…"
+              aria-label="搜索资料"
+            /><kbd>⌘ K</kbd></label
+          >
+          <button class="add" id="create" aria-label="新建笔记" title="新建笔记">
+            <img src="assets/icons/plus.svg" alt="" />
+          </button>
+        </header>
+        <div class="content">
+          <div class="page-heading">
+            <h2>资料集</h2>
+            <p>整理、阅读与沉淀你的知识资料<span class="heading-date"> · 2026-11-17</span></p>
+          </div>
+          <section class="collections" id="collections" aria-label="选择资料集"></section>
+          <section class="documents" aria-labelledby="list-title">
+            <header class="list-heading">
+              <div>
+                <h3 id="list-title"></h3>
+                <span id="result-count"></span>
+              </div>
+              <div class="list-tools">
+                <label class="sort"
+                  ><span class="sr-only">排序方式</span
+                  ><select id="sort">
+                    <option value="recent">最近打开</option>
+                    <option value="title">名称顺序</option>
+                  </select></label
+                ><button
+                  id="density"
+                  class="icon-button"
+                  aria-label="切换紧凑列表"
+                  aria-pressed="false"
+                  title="切换紧凑列表"
+                >
+                  <img src="assets/icons/list.svg" alt="" />
+                </button>
+              </div>
+            </header>
+            <div id="document-list" class="document-list"></div>
+          </section>
+        </div>
+      </main>
+      <aside class="inspector" id="inspector" aria-label="资料详情"></aside>
+    </div>
+    <dialog id="create-dialog" aria-labelledby="create-title">
+      <form id="create-form">
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow">记录新的想法</p>
+            <h2 id="create-title">新建笔记</h2>
+          </div>
+          <button type="button" class="icon-button" data-close aria-label="关闭">
+            <img src="assets/icons/close.svg" alt="" />
+          </button>
+        </header>
+        <label class="field"
+          >笔记名称<input
+            id="note-title"
+            name="title"
+            required
+            maxlength="80"
+            placeholder="给这个想法起个名字" /></label
+        ><label class="field"
+          >所属资料集<select id="note-collection" name="collection">
+            <option value="deep">深度学习</option>
+            <option value="math">数值分析</option>
+            <option value="paper">论文精读</option>
+          </select></label
+        >
+        <p class="form-note">这是设计预览，新建内容仅在本次页面中保留。</p>
+        <footer class="dialog-footer">
+          <button type="button" class="secondary" data-close>取消</button
+          ><button type="submit" class="primary">创建笔记</button>
+        </footer>
+      </form>
+    </dialog>
+    <dialog id="reader-dialog" class="reader-dialog" aria-labelledby="reader-title">
+      <header class="dialog-header">
+        <span class="eyebrow">阅读预览</span
+        ><button class="icon-button" data-close aria-label="关闭阅读">
+          <img src="assets/icons/close.svg" alt="" />
+        </button>
+      </header>
+      <article id="reader-content"></article>
+    </dialog>
+    <dialog id="annotations-dialog" aria-labelledby="annotations-title">
+      <header class="dialog-header">
+        <h2 id="annotations-title">标注与思考</h2>
+        <button class="icon-button" data-close aria-label="关闭标注">
+          <img src="assets/icons/close.svg" alt="" />
+        </button>
+      </header>
+      <div id="annotations-content"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status"></div>
+  </body>
+</html>

@@ -135,15 +135,15 @@ for (const viewport of viewports)
             .getByRole('navigation', { name: '移动端模块导航', exact: true })
             .getByRole('button', { name: '打开全局搜索', exact: true })
         : page
-            .getByRole('complementary', { name: '笔记上下文导航', exact: true })
-            .getByRole('button', { name: '搜索笔记', exact: true });
+            .getByRole('complementary', { name: '资料上下文导航', exact: true })
+            .getByRole('button', { name: '搜索资料', exact: true });
     const dialog = page.getByRole('dialog', { name: '全局搜索', exact: true });
     const input = dialog.getByRole('combobox', { name: '搜索关键字', exact: true });
     const resultList = dialog.locator('#search-command-results');
     const openSearch = async (keyboard = false) => {
       // 首页没有笔记侧栏；快捷键应从普通顶栏控件的焦点直接打开搜索。
       const search = searchTrigger();
-      // 平板的笔记导航默认折叠，先通过真实侧栏开关到达搜索入口。
+      // 平板的资料导航默认折叠，先通过真实侧栏开关到达搜索入口。
       if (!keyboard && !(await search.isVisible())) {
         await page.getByRole('button', { name: '切换侧栏', exact: true }).click();
         await expect(search).toBeVisible();
@@ -459,7 +459,7 @@ for (const viewport of viewports)
           .getByRole('menuitem', { name: '路径导航', exact: true })
           .click();
         const pathMenu = page.getByRole('menu', { name: '路径导航', exact: true });
-        await expect(pathMenu.getByRole('menuitem')).toHaveText(['笔记库', parentFolderName]);
+        await expect(pathMenu.getByRole('menuitem')).toHaveText(['根目录', parentFolderName]);
         await expect(pathMenu.getByRole('menuitem', { name: folderName, exact: true })).toHaveCount(0);
         const parent = pathMenu.getByRole('menuitem', { name: parentFolderName, exact: true });
         await parent.focus();
@@ -476,7 +476,7 @@ for (const viewport of viewports)
         );
       } else {
         const trail = page.getByRole('navigation', { name: '当前位置', exact: true });
-        await expect(trail).toHaveAttribute('title', `笔记库 / ${parentFolderName} / ${folderName}`);
+        await expect(trail).toHaveAttribute('title', `根目录 / ${parentFolderName} / ${folderName}`);
         const current = trail.locator('[aria-current="page"]');
         await expect(current).toHaveText(folderName);
         await checkUiFont('top-path-current', current);

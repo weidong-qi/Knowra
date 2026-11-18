@@ -1138,10 +1138,10 @@ test('V4-07 视图菜单统一控制阅读、编辑、专注、双侧栏与源�
 
   await openViewMenu();
   await page.getByRole('menuitem', { name: '隐藏左侧目录区', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: '笔记上下文导航' })).toHaveCount(0);
+  await expect(page.getByRole('complementary', { name: '资料上下文导航' })).toHaveCount(0);
   await openViewMenu();
   await page.getByRole('menuitem', { name: '显示左侧目录区', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: '笔记上下文导航' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: '资料上下文导航' })).toBeVisible();
 
   await openViewMenu();
   await page.getByRole('menuitem', { name: '显示右侧辅助区', exact: true }).click();
@@ -1166,14 +1166,14 @@ test('V4-07 视图菜单统一控制阅读、编辑、专注、双侧栏与源�
   await openViewMenu();
   await page.getByRole('menuitem', { name: '专注模式', exact: true }).click();
   await expect(page.getByRole('navigation', { name: '工作域导航' })).toHaveCount(0);
-  await expect(page.getByRole('complementary', { name: '笔记上下文导航' })).toHaveCount(0);
+  await expect(page.getByRole('complementary', { name: '资料上下文导航' })).toHaveCount(0);
   await expect(page.getByRole('banner', { name: '全局顶栏' })).not.toHaveAttribute('data-revealed', 'true');
   await page.mouse.move(400, 2);
   await expect(page.getByRole('banner', { name: '全局顶栏' })).toHaveAttribute('data-revealed', 'true');
   await expect(page.getByRole('button', { name: '切换专注模式' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: '切换专注模式' }).click();
   await expect(page.getByRole('navigation', { name: '工作域导航' })).toBeVisible();
-  await expect(page.getByRole('complementary', { name: '笔记上下文导航' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: '资料上下文导航' })).toBeVisible();
 });
 
 test('V4-07 文档检查器呈现真实信息并保证切换笔记时草稿不串写', async ({ page }) => {
@@ -1189,7 +1189,7 @@ test('V4-07 文档检查器呈现真实信息并保证切换笔记时草稿不�
   await page.getByRole('button', { name: '切换文档检查器' }).click();
   const inspector = page.getByRole('complementary', { name: '文档检查器' });
   await expect(inspector).toBeVisible();
-  const contextSidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+  const contextSidebar = page.getByRole('complementary', { name: '资料上下文导航' });
   const moduleRail = page.getByRole('navigation', { name: '工作域导航' });
   await expect
     .poll(async () => ({
@@ -2305,7 +2305,7 @@ test('V4-07 章节重点保存等待后不抢走搜索框焦点', async ({ page 
   await page.getByRole('menuitem', { name: '标记本节为重点', exact: true }).hover();
   await page.getByRole('menuitem', { name: '普通', exact: true }).click();
   await expect.poll(() => Boolean(finishSave)).toBe(true);
-  await page.getByRole('button', { name: '搜索笔记', exact: true }).click();
+  await page.getByRole('button', { name: '搜索资料', exact: true }).click();
   const search = page.getByRole('dialog', { name: '全局搜索' }).getByRole('combobox');
   await search.fill('查找');
   await finishSave!();

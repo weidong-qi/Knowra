@@ -23,7 +23,7 @@ for (const mode of ['light', 'dark'] as const) {
           if (mobile) await trigger.tap();
           else await trigger.click();
           const dialog = page.getByRole('dialog', { name: '工作区状态', exact: true });
-          const parent = dialog.getByRole('button', { name: '跳转到「笔记库」', exact: true });
+          const parent = dialog.getByRole('button', { name: '跳转到「根目录」', exact: true });
           if (action === 'Enter' || action === 'Space') await tabTo(page, parent);
           if (action === 'tap') await parent.tap();
           else if (action === 'click') await parent.click();
@@ -78,7 +78,7 @@ for (const mode of ['light', 'dark'] as const) {
           if (mobile) await trigger.tap();
           else await trigger.click();
           const dialog = page.getByRole('dialog', { name: '工作区状态', exact: true });
-          await tabTo(page, dialog.getByRole('button', { name: '跳转到「笔记库」', exact: true }));
+          await tabTo(page, dialog.getByRole('button', { name: '跳转到「根目录」', exact: true }));
           await page.keyboard.press('Escape');
           await expect(dialog).toBeHidden();
           await expect(trigger).toBeFocused();

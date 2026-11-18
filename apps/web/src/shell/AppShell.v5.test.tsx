@@ -75,13 +75,13 @@ describe('V5 分层外壳', () => {
     mockViewport(true);
     const rendered = render(<Shell />);
     fireEvent.click(screen.getByRole('button', { name: '切换侧栏' }));
-    expect(screen.getByRole('dialog', { name: '笔记导航' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '资料导航' })).toBeInTheDocument();
     rendered.rerender(<Shell focusMode />);
     expect(screen.queryByRole('button', { name: '切换侧栏' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: '笔记导航' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: '资料导航' })).not.toBeInTheDocument();
     rendered.rerender(<Shell />);
     expect(screen.getByRole('button', { name: '切换侧栏' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.queryByRole('dialog', { name: '笔记导航' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: '资料导航' })).not.toBeInTheDocument();
   });
   it('同步控制在状态浮层关闭时仍常驻，避免中断监听', async () => {
     mockViewport();
@@ -134,15 +134,15 @@ describe('V5 分层外壳', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     toggle.focus();
     fireEvent.click(toggle);
-    const panel = await screen.findByRole('dialog', { name: '笔记导航' });
+    const panel = await screen.findByRole('dialog', { name: '资料导航' });
     fireEvent.change(within(panel).getByRole('textbox', { name: '导航草稿' }), { target: { value: '保留草稿' } });
     resize(false);
-    expect(screen.queryByRole('dialog', { name: '笔记导航' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: '资料导航' })).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: '导航草稿' })).toHaveValue('保留草稿');
     resize(true);
-    expect(screen.getByRole('dialog', { name: '笔记导航' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '资料导航' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: '导航草稿' })).toHaveValue('保留草稿');
-    fireEvent.click(screen.getByRole('button', { name: '关闭笔记导航' }));
+    fireEvent.click(screen.getByRole('button', { name: '关闭资料导航' }));
     await waitFor(() => expect(toggle).toHaveFocus());
     expect(screen.getByRole('button', { name: '正文操作' })).toBeInTheDocument();
   });
@@ -150,9 +150,9 @@ describe('V5 分层外壳', () => {
     mockViewport(true);
     const rendered = render(<Shell />);
     fireEvent.click(screen.getByRole('button', { name: '切换侧栏' }));
-    expect(screen.getByRole('dialog', { name: '笔记导航' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '资料导航' })).toBeInTheDocument();
     rendered.rerender(<Shell navigationKey="/materials/notes/n1" />);
-    expect(screen.queryByRole('dialog', { name: '笔记导航' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: '资料导航' })).not.toBeInTheDocument();
   });
   it('专注模式下默认隐藏顶栏，移至最上边弹出、移开后隐藏', async () => {
     mockViewport();

@@ -25,7 +25,7 @@ for (const mode of ['light', 'dark'] as const) {
           mode
         );
         await page.goto('/#/materials');
-        const sidebar = page.getByRole('complementary', { name: '笔记上下文导航' });
+        const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
         if (mobile) await page.getByRole('button', { name: '切换侧栏', exact: true }).tap();
         await expect(sidebar).toBeVisible();
         await expect(sidebar.locator('[data-ni-mode]').first()).toHaveAttribute('data-ni-mode', mode);

@@ -35,7 +35,7 @@ test('真实页面：根目录和空白菜单、新建下拉、移动笔记与�
     const materialsUrl = `${runtime.origin}/#/materials?scope=root`;
     await page.goto(materialsUrl);
     await expect(page).toHaveURL(materialsUrl, { timeout: 10000 });
-    const root = page.getByRole('button', { name: /^笔记库\s*\d+/ });
+    const root = page.getByRole('button', { name: /^根目录\s*\d+/ });
     await expect(root).toBeVisible({ timeout: 10000 });
     await page.reload();
     await expect(page).toHaveURL(materialsUrl, { timeout: 10000 });
@@ -70,7 +70,7 @@ test('真实页面：根目录和空白菜单、新建下拉、移动笔记与�
     await expect(create).toBeFocused();
     // 侧栏新建同样复用两个选项。
     await page
-      .getByRole('complementary', { name: '笔记上下文导航' })
+      .getByRole('complementary', { name: '资料上下文导航' })
       .getByRole('button', { name: '新建', exact: true })
       .click();
     await expect(page.getByRole('menuitem', { name: '新建笔记', exact: true })).toBeVisible();
@@ -87,7 +87,7 @@ test('真实页面：根目录和空白菜单、新建下拉、移动笔记与�
         .getByRole('button', { name: /目标目录/ })
         .click();
       if (kind === '文件夹') await expect(page.getByRole('option', { name: /根目录创建/ })).toHaveCount(0);
-      await page.getByRole('option', { name: '笔记库 / 目标目录', exact: true }).click();
+      await page.getByRole('option', { name: '根目录 / 目标目录', exact: true }).click();
       await page.getByRole('button', { name: '移动', exact: true }).click();
       await expect(page.getByRole('dialog')).toHaveCount(0);
     }
@@ -101,6 +101,14 @@ test('真实页面：根目录和空白菜单、新建下拉、移动笔记与�
       data: { parentId: moved.id }
     });
     assert.equal(cycle.status(), 409);
+    // 全部资料跨目录平铺；根目录仍保留顶层文件夹。
+    const sidebar = page.getByRole('complementary', { name: '资料上下文导航' });
+    await sidebar.getByRole('button', { name: /^全部资料/ }).click();
+    await expect(content.getByRole('button', { name: '待移动笔记', exact: true })).toBeVisible();
+    await expect(content.locator('[data-entry-item][data-kind="folder"]')).toHaveCount(0);
+    await root.click();
+    await expect(content.getByRole('button', { name: '目标目录', exact: true })).toBeVisible();
+    await expect(content.getByRole('button', { name: '待移动笔记', exact: true })).toHaveCount(0);
     // 根目录菜单即使当前进入子目录也必须创建在根目录。
     await content.getByRole('button', { name: '目标目录', exact: true }).click();
     await content.getByRole('button', { name: '待移动笔记', exact: true }).click({ button: 'right' });
@@ -109,7 +117,7 @@ test('真实页面：根目录和空白菜单、新建下拉、移动笔记与�
       .getByRole('dialog')
       .getByRole('button', { name: /目标目录/ })
       .click();
-    await page.getByRole('option', { name: '笔记库（根目录）', exact: true }).click();
+    await page.getByRole('option', { name: '根目录', exact: true }).click();
     await page.getByRole('button', { name: '移动', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     const returnedNote = runtime.store.state.notes.find(note => note.title === '待移动笔记');
