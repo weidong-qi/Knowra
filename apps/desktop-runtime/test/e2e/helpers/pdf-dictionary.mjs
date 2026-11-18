@@ -62,7 +62,7 @@ export async function exercisePdfDictionary(page) {
     const text = page.locator('.textLayer span').filter({ hasText: word }).first();
     await text.evaluate(span => span.scrollIntoView({ block: 'center', inline: 'nearest' }));
     let point;
-    // PDF.js 可在缩放后重排整行。按目标词的字形范围取点，确认连续采样仍命中该词所在页。
+    // PDF.js 可在缩放后重排整行。按目标词的字形范围取点，确认连续采样仍命中目标文字。
     await expect
       .poll(
         async () => {
@@ -80,7 +80,7 @@ export async function exercisePdfDictionary(page) {
               const x = box.x + box.width / 2;
               const y = box.y + box.height / 2;
               const hit = document.elementFromPoint(x, y);
-              if (!hit || !span.closest('.page')?.contains(hit)) {
+              if (!span.contains(hit)) {
                 return {
                   x,
                   y,
