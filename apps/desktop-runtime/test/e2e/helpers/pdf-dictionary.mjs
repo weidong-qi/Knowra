@@ -58,28 +58,51 @@ export async function exercisePdfDictionary(page) {
   await expect(page.locator('.textLayer')).toContainText('Gradients', { timeout: 25000 });
   await expect(page.getByText('标注已保存', { exact: true })).toBeAttached();
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
-  const wordPoint = word =>
-    page.locator('.textLayer').evaluate((layer, word) => {
-      const span = [...layer.querySelectorAll('span')].find(el => el.textContent.includes(word));
-      const start = span.textContent.indexOf(word);
-      const range = document.createRange();
-      range.setStart(span.firstChild, start);
-      range.setEnd(span.firstChild, start + word.length);
-      const box = range.getBoundingClientRect();
-      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-    }, word);
-  const openWord = async word => {
+  const wordPoint = async word => {
     const text = page.locator('.textLayer span').filter({ hasText: word }).first();
-    // 坐标鼠标 API 不等文字层布局；先等待元素稳定，再在目标单词的相对位置真实双击。
-    await text.dblclick({ trial: true });
+    await text.evaluate(span => span.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+    let point;
+    // PDF.js 可在缩放后重排整行。按目标词的字形范围取点，确认连续采样仍命中该词所在页。
+    await expect
+      .poll(
+        async () => {
+          const previous = point;
+          point = await text.evaluate(
+            (span, { word, previous }) => {
+              const node = span.firstChild;
+              if (node?.nodeType !== Node.TEXT_NODE) return null;
+              const start = node.textContent.indexOf(word);
+              if (start < 0) return null;
+              const range = document.createRange();
+              range.setStart(node, start);
+              range.setEnd(node, start + word.length);
+              const box = range.getBoundingClientRect();
+              const x = box.x + box.width / 2;
+              const y = box.y + box.height / 2;
+              const hit = document.elementFromPoint(x, y);
+              if (!hit || !span.closest('.page')?.contains(hit)) return null;
+              return {
+                x,
+                y,
+                stable: Boolean(previous && Math.abs(previous.x - x) < 1 && Math.abs(previous.y - y) < 1)
+              };
+            },
+            { word, previous }
+          );
+          return point?.stable;
+        },
+        { message: `等待 PDF 单词可双击：${word}` }
+      )
+      .toBe(true);
+    return point;
+  };
+  const openWord = async word => {
     const point = await wordPoint(word);
-    const box = await text.boundingBox();
-    assert(box, `查词目标不可见：${word}`);
-    await text.dblclick({ position: { x: point.x - box.x, y: point.y - box.y }, delay: 70 });
+    await page.mouse.dblclick(point.x, point.y, { delay: 70 });
     const selection = await page.evaluate(() => window.getSelection()?.toString());
     await expect(
       page.getByRole('dialog', { name: 'PDF 查词' }),
-      `双击查词现场：${JSON.stringify({ word, point, box, selection })}`
+      `双击查词现场：${JSON.stringify({ word, point, selection })}`
     ).toBeVisible();
   };
   const lookup = page.getByRole('dialog', { name: 'PDF 查词' });
