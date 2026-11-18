@@ -283,8 +283,8 @@
 .box[data-indeterminate],
 .checkbox[data-hovered]:not([data-disabled]) .box[data-selected],
 .checkbox[data-hovered]:not([data-disabled]) .box[data-indeterminate] {
-  border-color: var(--accent-solid);
-  background: var(--accent-solid);
+  border-color: var(--checkbox-selected-background, var(--accent-solid));
+  background: var(--checkbox-selected-background, var(--accent-solid));
 }
 .checkbox[data-focus-visible] {
   outline: 0;
@@ -319,6 +319,94 @@
   height: 12px;
   color: var(--surface-page);
   pointer-events: none;
+}
+
+.checkbox[data-variant='row'] {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font: 400 13px/1.4 var(--font-ui);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+.checkbox[data-variant='row'] .checkboxLabel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: inherit;
+}
+.rowIndicator {
+  --checkbox-selected-background: var(--ni-accent, var(--accent-solid));
+  color: var(--ni-btn-on-accent, var(--text-on-accent));
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+.rowIndicator .check {
+  color: inherit;
+  width: 11px;
+  height: 11px;
+}
+.checkbox[data-variant='row'][data-selected] {
+  font-weight: 500;
+}
+.checkbox[data-variant='row'][data-hovered]:not([data-disabled]),
+.checkbox[data-variant='row'][data-focus-visible] {
+  background: var(--surface-hover);
+}
+.checkbox[data-variant='row'][data-focus-visible] {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
+}
+.checkbox[data-variant='row'][data-focus-visible] .box {
+  outline: 0;
+  box-shadow: none;
+}
+.rowIndicator[data-selected] {
+  animation: checkboxPop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes checkboxPop {
+  0% {
+    transform: scale(0.86);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(label, button):not(
+      :hover,
+      :focus-visible,
+      [data-hovered],
+      [data-focus-visible],
+      [data-disabled],
+      [data-invalid]
+    )
+    > .rowIndicator:not([data-selected], [data-indeterminate]) {
+    opacity: 0;
+  }
+}
+@media (max-width: 767px), (any-pointer: coarse) {
+  .checkbox[data-variant='row'] {
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkbox[data-variant='row'],
+  .rowIndicator {
+    transition: none;
+  }
+  .rowIndicator[data-selected] {
+    animation: none;
+  }
 }
 
 /* Select：触发器与输入框一致，浮层由共享 Popover 管理。 */

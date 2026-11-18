@@ -30,7 +30,7 @@ describe('浮层材质设置', () => {
   it('切换后保存，并让菜单及子菜单 portal 复用当前材质与明暗模式', async () => {
     const user = userEvent.setup();
     const { container } = render(<SettingsSurface />);
-    expect(screen.getByRole('button', { name: '通透玻璃' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '素净纸白' })).toHaveAttribute('aria-pressed', 'true');
     await user.click(screen.getByRole('button', { name: '磨砂亚克力' }));
     expect(screen.getByRole('button', { name: '磨砂亚克力' })).toHaveAttribute('aria-pressed', 'true');
     expect(JSON.parse(localStorage.getItem(NOTES_INDEX_APPEARANCE_KEY)!)).toMatchObject({ overlayMaterial: 'acrylic' });
@@ -63,11 +63,11 @@ describe('浮层材质设置', () => {
     }
     await user.keyboard('{Escape}');
     await waitFor(() => expect(trigger).toHaveFocus());
-    await user.click(screen.getByRole('button', { name: '通透玻璃' }));
+    await user.click(screen.getByRole('button', { name: '素净纸白' }));
     await user.click(screen.getByRole('button', { name: '预览菜单' }));
     expect(screen.getByRole('menu').closest('[data-overlay-material]')).toHaveAttribute(
       'data-overlay-material',
-      'glass'
+      'paper'
     );
   });
 });

@@ -1,8 +1,8 @@
 /* 筛选浮层、显示选项浮层与筛选条件胶囊；尺寸对照 V5 原型。 */
 .panel {
-  min-width: 232px;
+  min-width: 180px;
   max-width: 320px;
-  padding: 6px;
+  padding: 0;
   outline: 0; /* 继承浮层按可用空间算出的最大高度，内容超出时在面板内滚动。 */
   max-height: inherit;
   overflow-y: auto;
@@ -14,25 +14,22 @@
   gap: 1px;
 }
 .row {
-  width: 100%;
-  min-height: 30px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
+  composes: item from '../../components/ui/overlay/Overlay.module.css';
   color: var(--ni-ink, var(--text-primary));
-  font: 400 13px/1.4 var(--font-ui);
-  text-align: left;
-  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease);
+}
+.row:is(:hover, [data-hovered], :focus-visible) {
+  background: var(--ni-hover, var(--surface-hover));
+  outline: 0;
+}
+.row[data-focus-visible] {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
 }
 .rowIcon {
-  flex: 0 0 16px;
-  display: grid;
-  place-items: center;
-  color: var(--ni-ink-3, var(--text-muted));
+  composes: itemIcon from '../../components/ui/overlay/Overlay.module.css';
 }
 .rowLabel {
   min-width: 0;
@@ -55,26 +52,14 @@
   flex: none;
   color: var(--ni-accent, var(--accent));
 }
-.box {
-  flex: 0 0 15px;
-  width: 15px;
-  height: 15px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--ni-line-2, var(--border-strong));
-  border-radius: 4px;
-  background: var(--ni-surf, var(--surface-page));
-  color: var(--ni-btn-on-accent, var(--text-on-accent));
-}
-.box[data-checked] {
-  border-color: var(--ni-accent, var(--accent-solid));
-  background: var(--ni-accent, var(--accent-solid));
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    transition: none;
+    animation: none;
+  }
 }
 .sep {
-  height: 1px;
-  margin: 4px 2px;
-  border: 0;
-  background: var(--ni-line, var(--border-subtle));
+  composes: separator from '../../components/ui/overlay/Overlay.module.css';
 }
 .hint {
   margin: 4px 8px 2px;

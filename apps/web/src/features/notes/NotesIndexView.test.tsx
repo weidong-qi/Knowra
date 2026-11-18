@@ -311,9 +311,9 @@ describe('Notes index skeleton', () => {
     expect(api.emptyRecycleBin).not.toHaveBeenCalled();
   });
 
-  it('loads server batches incrementally without rendering every icon at once', async () => {
+  it('全部资料按批加载笔记，每页只渲染当前页的图标', async () => {
     const user = userEvent.setup();
-    const { api } = renderWithStore(<NotesIndexView path={[]} />, { extraNotes: 35 });
+    const { api } = renderWithStore(<NotesIndexView path={[]} />, { extraNotes: 38 });
     await vi.waitFor(() =>
       expect(api.queryNotes).toHaveBeenCalledWith(expect.objectContaining({ offset: 0, limit: 30 }))
     );
@@ -321,7 +321,7 @@ describe('Notes index skeleton', () => {
     await user.click(screen.getByRole('button', { name: '图标视图' }));
     await vi.waitFor(() => {
       expect(screen.getByTestId('notes-index-scroll').querySelectorAll('[data-entry-item]')).toHaveLength(20);
-      expect(screen.getByText('第 1 / 2 页 · 已载入 33 条')).toBeInTheDocument();
+      expect(screen.getByText('第 1 / 2 页 · 已载入 30 条')).toBeInTheDocument();
     });
     await user.click(screen.getByRole('button', { name: '加载更多' }));
     await vi.waitFor(() => expect(api.queryNotes).toHaveBeenCalledWith(expect.objectContaining({ offset: 30 })));

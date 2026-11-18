@@ -4,17 +4,20 @@ import { mockEditorWorkspace } from './fixtures/editorWorkspace';
 
 const appearanceKey = 'knowra:notes-index-appearance:v1';
 
-async function expectMaterial(menu: Locator, material: 'glass' | 'acrylic', mode: 'light' | 'dark', width: number) {
+async function expectMaterial(menu: Locator, material: 'paper' | 'acrylic', mode: 'light' | 'dark', width: number) {
   await expect(menu).toBeVisible();
   const scope = menu.locator('xpath=ancestor-or-self::*[@data-overlay-material][1]');
   await expect(scope).toHaveAttribute('data-overlay-material', material);
   await expect(scope).toHaveAttribute('data-ni-mode', mode);
   // 验证实际绘制层，不能仅凭 portal 上的数据属性认定材质生效。
-  await expect(menu).toHaveCSS(
-    'backdrop-filter',
-    material === 'glass' ? 'blur(14px) saturate(1.45)' : 'blur(28px) saturate(1.65)'
-  );
-  await expect(menu).toHaveCSS('background-image', /linear-gradient/);
+  if (material === 'paper') {
+    await expect(menu).toHaveCSS('backdrop-filter', 'none');
+    await expect(menu).toHaveCSS('background-image', 'none');
+    await expect(menu).toHaveCSS('background-color', mode === 'light' ? 'rgb(255, 255, 255)' : 'rgb(34, 37, 43)');
+  } else {
+    await expect(menu).toHaveCSS('backdrop-filter', 'blur(28px) saturate(1.65)');
+    await expect(menu).toHaveCSS('background-image', /linear-gradient/);
+  }
   expect(await menu.evaluate(element => Boolean(element.closest('#feature-stage')))).toBe(false);
   const box = await menu.boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
@@ -39,19 +42,19 @@ for (const width of [1440, 390]) {
     );
     await page.addInitScript(key => {
       if (!localStorage.getItem(key))
-        localStorage.setItem(key, JSON.stringify({ mode: 'light', overlayMaterial: 'glass' }));
+        localStorage.setItem(key, JSON.stringify({ mode: 'light', overlayMaterial: 'paper' }));
     }, appearanceKey);
     await page.goto('/#/settings');
     await page.getByRole('navigation', { name: '设置分类' }).getByRole('button', { name: /外观/ }).click();
     const trigger = page.getByRole('button', { name: '预览菜单', exact: true });
     const shell = page.locator('[data-ni-mode]:has(> #feature-stage)');
-    const backgrounds = new Map<string, string>();
+    const surfaces = new Map<string, string>();
     for (const mode of ['light', 'dark'] as const) {
       if (mode === 'dark') await page.getByRole('button', { name: '切换深色模式' }).click();
-      for (const material of ['acrylic', 'glass'] as const) {
+      for (const material of ['acrylic', 'paper'] as const) {
         const choice = page
           .getByRole('group', { name: '浮层材质' })
-          .getByRole('button', { name: material === 'glass' ? '通透玻璃' : '磨砂亚克力', exact: true });
+          .getByRole('button', { name: material === 'paper' ? '素净纸白' : '磨砂亚克力', exact: true });
         await choice.click();
         await expect(choice).toHaveAttribute('aria-pressed', 'true');
         await expect(shell).toHaveAttribute('data-overlay-material', material);
@@ -66,9 +69,12 @@ for (const width of [1440, 390]) {
         await trigger.click();
         const menu = page.getByRole('menu', { name: '预览菜单', exact: true });
         await expectMaterial(menu, material, mode, width);
-        backgrounds.set(
+        surfaces.set(
           `${mode}-${material}`,
-          await menu.evaluate(element => getComputedStyle(element).backgroundImage)
+          await menu.evaluate(element => {
+            const style = getComputedStyle(element);
+            return `${style.backgroundColor}|${style.backgroundImage}`;
+          })
         );
         await expect(menu.getByRole('menuitem', { name: '不可用选项' })).toHaveAttribute('aria-disabled', 'true');
         const status = menu.getByRole('menuitem', { name: '状态', exact: true });
@@ -102,7 +108,7 @@ for (const width of [1440, 390]) {
         await expect(trigger).toBeFocused();
       }
     }
-    expect(new Set(backgrounds.values()).size).toBe(4);
+    expect(new Set(surfaces.values()).size).toBe(4);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }

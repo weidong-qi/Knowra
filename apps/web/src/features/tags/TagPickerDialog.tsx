@@ -3,6 +3,7 @@ import type { Tag } from '@study-accelerator/web-core';
 import { parseTagColor } from '@study-accelerator/shared/tag-colors';
 import { Button, IconButton, Popover, PopoverDialog } from '../../components/ui';
 import { ChevronLeftIcon, CloseIcon, SettingsIcon, TagIcon } from '../../components/icons/knowra';
+import { tagColorStyle } from './tagColor';
 import { useTagPickerController, type TagPickerProps, type DialogMode } from './useTagPickerController';
 import { SelectTagsView, ManageTagsView, TagForm, DeleteTagView } from './TagPickerViews';
 import styles from './TagPickerDialog.module.css';
@@ -66,6 +67,8 @@ export function TagPickerDialog(props: TagPickerProps) {
             setMode('manage');
           };
   const title = dialogTitle(mode, editingTag);
+  const parsedColor = parseTagColor(color);
+  const previewColor = parsedColor ?? 'neutral';
   return (
     <Popover
       triggerRef={triggerRef}
@@ -79,7 +82,7 @@ export function TagPickerDialog(props: TagPickerProps) {
         <header className={styles.header}>
           {mode === 'select' ? (
             <span className={styles.headIcon} aria-hidden="true">
-              <TagIcon size={18} />
+              <TagIcon size={16} />
             </span>
           ) : (
             <IconButton
@@ -88,11 +91,24 @@ export function TagPickerDialog(props: TagPickerProps) {
               aria-label={mode === 'manage' ? '返回选择标签' : '返回'}
               onPress={goBack}
             >
-              <ChevronLeftIcon size={18} />
+              <ChevronLeftIcon size={16} />
             </IconButton>
           )}
           <div className={styles.headText}>
-            <h2>{title}</h2>
+            <div className={styles.headTitleRow}>
+              <h2>{title}</h2>
+              {mode === 'form' ? (
+                <span
+                  className={styles.headerPreview}
+                  style={tagColorStyle(previewColor)}
+                  data-color={previewColor}
+                  aria-hidden="true"
+                >
+                  <span className={styles.headerPreviewDot} />
+                  <span>{name.trim() || '新标签'}</span>
+                </span>
+              ) : null}
+            </div>
             <p>{dialogDescription(mode)}</p>
           </div>
           {mode === 'select' ? (
@@ -105,77 +121,79 @@ export function TagPickerDialog(props: TagPickerProps) {
                 setMode('manage');
               }}
             >
-              <SettingsIcon size={18} />
+              <SettingsIcon size={16} />
             </IconButton>
           ) : null}
           <IconButton disabled={pending} size={28} aria-label="关闭" onPress={() => requestOpenChange(false)}>
             <CloseIcon size={16} />
           </IconButton>
         </header>
-        <fieldset key={mode} disabled={pending} className={styles.body}>
-          {mode === 'select' ? (
-            <SelectTagsView
-              canWrite={canWrite}
-              query={query}
-              selected={selected}
-              selectedTags={selectedTags}
-              visibleGroups={visibleGroups}
-              exactMatch={exactMatch}
-              notice={notice}
-              error={error}
-              onQueryChange={setQuery}
-              onToggle={toggle}
-              onCreate={() => openCreate('select')}
-              onCreateFromQuery={() => openCreate('select', query.trim())}
-            />
-          ) : null}
-          {mode === 'manage' ? (
-            <ManageTagsView
-              canWrite={canWrite}
-              query={managerQuery}
-              groups={managedGroups}
-              usageCounts={usageCounts}
-              notice={notice}
-              error={error}
-              onQueryChange={setManagerQuery}
-              onCreate={() => openCreate('manage')}
-              onEdit={openEdit}
-              onDelete={openDelete}
-              onOpenFullManager={
-                onOpenFullManager
-                  ? () => {
-                      requestOpenChange(false);
-                      if (!pending) onOpenFullManager();
-                    }
-                  : undefined
-              }
-            />
-          ) : null}
-          {mode === 'form' ? (
-            <TagForm
-              editingTag={editingTag}
-              groups={orderedGroups}
-              name={name}
-              groupId={groupId}
-              color={color}
-              error={error}
-              onNameChange={setName}
-              onGroupChange={setGroupId}
-              onColorChange={setColor}
-              onSubmit={() => void submitTag()}
-            />
-          ) : null}
-          {mode === 'delete' && deleteTarget ? (
-            <DeleteTagView
-              tag={deleteTarget}
-              usageCount={deleteUsageCount}
-              candidates={tags.filter(tag => tag.id !== deleteTarget.id)}
-              mergeTargetId={mergeTargetId}
-              error={error}
-              onMergeTargetChange={setMergeTargetId}
-            />
-          ) : null}
-        </fieldset>
+        <div key={mode} className={styles.body} data-mode={mode}>
+          <fieldset disabled={pending} className={styles.fieldset}>
+            {mode === 'select' ? (
+              <SelectTagsView
+                canWrite={canWrite}
+                query={query}
+                selected={selected}
+                selectedTags={selectedTags}
+                visibleGroups={visibleGroups}
+                exactMatch={exactMatch}
+                notice={notice}
+                error={error}
+                onQueryChange={setQuery}
+                onToggle={toggle}
+                onCreate={() => openCreate('select')}
+                onCreateFromQuery={() => openCreate('select', query.trim())}
+              />
+            ) : null}
+            {mode === 'manage' ? (
+              <ManageTagsView
+                canWrite={canWrite}
+                query={managerQuery}
+                groups={managedGroups}
+                usageCounts={usageCounts}
+                notice={notice}
+                error={error}
+                onQueryChange={setManagerQuery}
+                onCreate={() => openCreate('manage')}
+                onEdit={openEdit}
+                onDelete={openDelete}
+                onOpenFullManager={
+                  onOpenFullManager
+                    ? () => {
+                        requestOpenChange(false);
+                        if (!pending) onOpenFullManager();
+                      }
+                    : undefined
+                }
+              />
+            ) : null}
+            {mode === 'form' ? (
+              <TagForm
+                editingTag={editingTag}
+                groups={orderedGroups}
+                name={name}
+                groupId={groupId}
+                color={color}
+                error={error}
+                onNameChange={setName}
+                onGroupChange={setGroupId}
+                onColorChange={setColor}
+                onSubmit={() => void submitTag()}
+              />
+            ) : null}
+            {mode === 'delete' && deleteTarget ? (
+              <DeleteTagView
+                tag={deleteTarget}
+                usageCount={deleteUsageCount}
+                candidates={tags.filter(tag => tag.id !== deleteTarget.id)}
+                mergeTargetId={mergeTargetId}
+                error={error}
+                onMergeTargetChange={setMergeTargetId}
+              />
+            ) : null}
+          </fieldset>
+        </div>
         {mode !== 'manage' ? (
           <footer className={styles.footer}>
             {mode === 'select' ? (
@@ -201,7 +219,7 @@ export function TagPickerDialog(props: TagPickerProps) {
                   form="tag-form"
                   variant={'primary'}
                   isPending={pending}
-                  isDisabled={!name.trim() || !groupId || !parseTagColor(color)}
+                  isDisabled={!name.trim() || !groupId || !parsedColor}
                 >
                   {editingTag ? '保存修改' : returnMode === 'select' ? '创建并添加' : '创建标签'}
                 </Button>

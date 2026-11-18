@@ -1,5 +1,12 @@
 import { useMemo, type KeyboardEvent, type ReactNode } from 'react';
-import { Popover, PopoverDialog, PressableButton, SegmentedButton, SegmentedControl } from '../../components/ui';
+import {
+  CheckboxIndicator,
+  Popover,
+  PopoverDialog,
+  PressableButton,
+  SegmentedButton,
+  SegmentedControl
+} from '../../components/ui';
 import {
   CalendarIcon,
   CheckIcon,
@@ -54,11 +61,7 @@ export function Row({
       data-checked={checked || undefined}
       onPress={onPress}
     >
-      {box ? (
-        <span className={styles.box} data-checked={checked || undefined} aria-hidden="true">
-          {checked ? <CheckIcon size={11} /> : null}
-        </span>
-      ) : null}
+      {box ? <CheckboxIndicator variant="row" isSelected={checked} /> : null}
       {icon ? (
         <span className={styles.rowIcon} aria-hidden="true">
           {icon}

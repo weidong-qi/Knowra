@@ -49,6 +49,13 @@ test('真实页面创建、筛选和编辑自定义标签色，明暗主题与�
   const filterDot = page.getByRole('menuitemcheckbox', { name: /侧栏自定义/ }).locator('i');
   await expect(filterDot).toHaveCSS('background-color', 'rgb(60, 104, 255)');
   await page.keyboard.press('Escape');
+  const longTagNames = Array.from({ length: 12 }, (_, index) => `用于验证多行滚动的长标签 ${index + 1}`);
+  for (const name of longTagNames) {
+    const response = await page.request.post(`${runtime.origin}/api/knowledge/tags`, {
+      data: { spaceId: storedTag().spaceId, groupId: storedTag().groupId, color: 'blue', name }
+    });
+    assert.equal(response.status(), 201);
+  }
   const noteResponse = await page.request.post(`${runtime.origin}/api/knowledge/notes`, {
     data: { spaceId: storedTag().spaceId, title: '颜色验收笔记', rawMarkdown: '验证笔记标签颜色' }
   });
@@ -66,10 +73,20 @@ test('真实页面创建、筛选和编辑自定义标签色，明暗主题与�
     .getByRole('complementary', { name: '文档检查器' })
     .getByRole('button', { name: '添加', exact: true })
     .click();
-  await page
-    .getByRole('dialog', { name: '编辑笔记标签' })
-    .getByRole('button', { name: '新建标签', exact: true })
-    .click();
+  const picker = page.getByRole('dialog', { name: '编辑笔记标签' });
+  for (const name of longTagNames) {
+    await picker.getByText(name, { exact: true }).click();
+    await expect(picker.getByRole('checkbox', { name, exact: true })).toBeChecked();
+  }
+  const search = picker.getByRole('searchbox', { name: '搜索已有标签' });
+  const lastChip = picker.getByRole('button', { name: `移除标签 ${longTagNames.at(-1)}`, exact: true });
+  await lastChip.scrollIntoViewIfNeeded();
+  await expect(lastChip).toBeInViewport({ ratio: 1 });
+  await expect(search).toBeInViewport({ ratio: 1 });
+  await search.fill(longTagNames.at(-1));
+  await expect(picker.getByText(longTagNames.at(-1), { exact: true }).last()).toBeInViewport();
+  await picker.getByRole('button', { name: '清除搜索' }).click();
+  await picker.getByRole('button', { name: '新建标签', exact: true }).click();
   const noteForm = page.getByRole('dialog', { name: '新建标签', exact: true });
   await noteForm.getByRole('textbox', { name: '标签名称' }).fill('笔记自定义');
   await noteForm.getByRole('textbox', { name: '十六进制颜色' }).fill('#1764C0');

@@ -302,13 +302,12 @@
 
 /* 全局浮层材质：每个 portal 继承同一外观作用域，保持菜单单层绘制。 */
 :root,
-[data-overlay-material='glass'] {
-  --surface-overlay: linear-gradient(145deg, #ffffffc7, #f7faff9c);
-  --border-overlay: #fffffff0;
+[data-overlay-material='paper'] {
+  --surface-overlay: #ffffff;
+  --border-overlay: rgb(24 30 48 / 8.5%);
   --shadow-overlay:
-    inset 0 1px 0 #fff, inset 0 -1px 0 #b0b8c91a, 0 0 0 1px #7e899e25, 0 2px 4px #202b3a0a, 0 10px 18px -10px #202b3a40,
-    0 28px 48px -22px #202b3a40;
-  --overlay-backdrop: blur(14px) saturate(145%);
+    0 1px 2px rgb(24 30 48 / 4%), 0 8px 20px -6px rgb(24 30 48 / 10%), 0 20px 44px -16px rgb(24 30 48 / 12%);
+  --overlay-backdrop: none;
 }
 
 [data-overlay-material='acrylic'] {
@@ -318,18 +317,19 @@
   --overlay-backdrop: blur(28px) saturate(165%);
 }
 
-[data-ni-mode='dark'][data-overlay-material='glass'] {
-  --surface-overlay: linear-gradient(145deg, #2b303cb8, #1e232c9e);
-  --border-overlay: #ffffff2b;
-  --shadow-overlay:
-    inset 0 1px 0 #ffffff20, inset 0 -1px 0 #ffffff05, 0 0 0 1px #0003, 0 2px 4px #0004, 0 10px 18px -10px #0009,
-    0 28px 48px -22px #000c;
+[data-ni-mode='dark'],
+[data-ni-mode='dark'][data-overlay-material='paper'] {
+  --surface-overlay: #22252b;
+  --border-overlay: rgb(255 255 255 / 10%);
+  --shadow-overlay: 0 1px 2px rgb(0 0 0 / 32%), 0 8px 22px -6px rgb(0 0 0 / 50%), 0 22px 48px -16px rgb(0 0 0 / 62%);
+  --overlay-backdrop: none;
 }
 
 [data-ni-mode='dark'][data-overlay-material='acrylic'] {
   --surface-overlay: linear-gradient(145deg, #303642ed, #252b34e8);
   --border-overlay: #ffffff23;
   --shadow-overlay: inset 0 1px 1px #ffffff1b, 0 0 0 1px #0003, 0 4px 8px -5px #0007, 0 24px 46px -19px #000c;
+  --overlay-backdrop: blur(28px) saturate(165%);
 }
 
 /* 手机顶栏容纳 44px 按钮；平板与桌面（含触屏）使用更紧凑的尺寸。 */

@@ -29,7 +29,7 @@ describe('全局定稿外观', () => {
       mode: 'dark',
       theme: 'orange',
       shape: 'pill',
-      overlayMaterial: 'glass',
+      overlayMaterial: 'paper',
       dialogStyle: 'float',
       inspectorStyle: 'float',
       stageStyle: 'soft',
@@ -47,12 +47,13 @@ describe('全局定稿外观', () => {
       sidebarBorder: false
     });
   });
-  it('旧数据默认通透玻璃，只接受已支持的浮层材质', () => {
+  it('旧数据默认素净纸白，只接受已支持的浮层材质', () => {
     expect(
       parseNotesIndexAppearance({ shellColorLight: 'red', sidebarColorDark: '#ABCDEF', sidebarCard: 'yes' })
     ).toMatchObject({ shellColorLight: null, sidebarColorDark: '#abcdef', sidebarCard: false });
-    expect(parseNotesIndexAppearance(null).overlayMaterial).toBe('glass');
-    expect(parseNotesIndexAppearance({ overlayMaterial: 'unknown' }).overlayMaterial).toBe('glass');
+    expect(parseNotesIndexAppearance(null).overlayMaterial).toBe('paper');
+    expect(parseNotesIndexAppearance({ overlayMaterial: 'glass' }).overlayMaterial).toBe('paper');
+    expect(parseNotesIndexAppearance({ overlayMaterial: 'unknown' }).overlayMaterial).toBe('paper');
     expect(parseNotesIndexAppearance({ overlayMaterial: 'acrylic' }).overlayMaterial).toBe('acrylic');
     // 主按钮统一为纸感样式；旧版保存的“白玻璃”等按钮样式偏好会被忽略，不出现在解析结果里。
     expect(parseNotesIndexAppearance({ buttonStyle: 'frost' })).not.toHaveProperty('buttonStyle');
@@ -116,7 +117,7 @@ describe('全局定稿外观', () => {
       mode: 'dark',
       theme: 'orange',
       shape: 'pill',
-      overlayMaterial: 'glass',
+      overlayMaterial: 'paper',
       dialogStyle: 'float',
       inspectorStyle: 'float',
       stageStyle: 'soft',
@@ -141,7 +142,7 @@ describe('全局定稿外观', () => {
       mode: 'dark',
       theme: 'orange',
       shape: 'pill',
-      overlayMaterial: 'glass',
+      overlayMaterial: 'paper',
       dialogStyle: 'float',
       inspectorStyle: 'float',
       stageStyle: 'soft',

@@ -4,31 +4,32 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 20px;
+  height: 24px;
   max-width: 100%;
-  padding: 0 9px;
+  padding: 0 10px;
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--surface-raised);
-  color: var(--text-secondary);
-  box-shadow: inset 0 0 0 1px var(--border-subtle);
+  color: var(--text-primary);
+  box-shadow:
+    0 0 0 1px var(--border-subtle),
+    0 1px 2px rgb(24 30 48 / 4%);
   font: 500 12px/1 var(--font-ui);
   text-decoration: none;
   transition:
     background var(--motion-fast) var(--motion-ease),
     box-shadow var(--motion-fast) var(--motion-ease),
-    color var(--motion-fast) var(--motion-ease);
+    color var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
 }
 .chip::before {
   content: '';
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   flex: none;
   border-radius: 50%;
   background: var(--tag-color);
-  box-shadow:
-    0 0 0 1px var(--border-strong),
-    0 0 0 2px color-mix(in srgb, var(--tag-color) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tag-color) 28%, transparent);
 }
 .chip[data-color='blue'] {
   --tag-color: var(--color-info);
@@ -47,18 +48,23 @@
 }
 .chip[data-selected='true'] {
   color: var(--text-primary);
+  background: color-mix(in srgb, var(--tag-color) 8%, var(--surface-raised));
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--tag-color) 45%, var(--border-subtle)),
-    0 2px 0 color-mix(in srgb, var(--tag-color) 50%, var(--surface-raised));
+    0 0 0 1px color-mix(in srgb, var(--tag-color) 38%, var(--border-subtle)),
+    0 1px 2px rgb(24 30 48 / 6%);
 }
 .interactive {
   cursor: pointer;
 }
 .interactive:hover {
   background: var(--surface-hover);
+  box-shadow:
+    0 0 0 1px var(--border-strong),
+    0 2px 4px rgb(24 30 48 / 6%);
 }
 .interactive:active {
-  background: var(--surface-hover);
+  background: var(--surface-pressed);
+  transform: scale(0.98);
 }
 .interactive:focus-visible {
   outline: 2px solid var(--accent-text);
@@ -74,6 +80,12 @@
 }
 .remove {
   font: 400 14px/1 var(--font-ui);
+  opacity: 0.6;
+  transition: opacity var(--motion-fast) var(--motion-ease);
+}
+.interactive:hover .remove,
+.interactive:focus-visible .remove {
+  opacity: 1;
 }
 /* 触屏保持 44px 点击区，但不撑大胶囊外观。 */
 @media (pointer: coarse), (max-width: 767px) {

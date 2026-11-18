@@ -198,15 +198,15 @@ export function OverlayMaterialSettings() {
         <div className={`${styles.settingRow} ${styles.materialRow}`}>
           <div className={styles.settingCopy}>
             <h4>浮层材质</h4>
-            <p>通透玻璃轻盈透亮，磨砂亚克力柔和朦胧。应用于下拉菜单与弹出面板，切换后即时保存。</p>
+            <p>素净纸白纯净利落，磨砂亚克力柔和朦胧。应用于下拉菜单与弹出面板，切换后即时保存。</p>
           </div>
           <div className={`${styles.settingControl} ${styles.materialControl}`}>
             <SegmentedControl aria-label="浮层材质">
               <SegmentedButton
-                aria-pressed={overlayMaterial === 'glass'}
-                onPress={() => setNotesIndexAppearance({ overlayMaterial: 'glass' })}
+                aria-pressed={overlayMaterial === 'paper'}
+                onPress={() => setNotesIndexAppearance({ overlayMaterial: 'paper' })}
               >
-                通透玻璃
+                素净纸白
               </SegmentedButton>
               <SegmentedButton
                 aria-pressed={overlayMaterial === 'acrylic'}

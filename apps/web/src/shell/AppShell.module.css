@@ -114,7 +114,7 @@
   overscroll-behavior: contain;
   border-radius: var(--shell-panel-radius) 0 0 var(--shell-panel-radius);
   background: var(--ni-shell-panel, var(--surface-sidebar-solid));
-  box-shadow: var(--shadow-page);
+  box-shadow: inset -1px 0 0 rgb(var(--ink-rgb) / 0.055);
 }
 .contextSidebar:not([data-open]) {
   display: none;
@@ -282,6 +282,9 @@
   }
   .shellWithSidebar[data-sidebar-card='true'] .contextSidebar {
     margin-right: var(--shell-gap);
+    box-shadow:
+      0 0 0 1px rgb(var(--ink-rgb) / 0.06),
+      0 2px 8px -4px rgb(var(--ink-rgb) / 0.08);
   }
   .shellWithSidebar[data-sidebar-card='true'] .stage {
     border-radius: var(--shell-panel-radius);
@@ -304,7 +307,7 @@
     pointer-events: none;
   }
   .shellWithSidebar[data-stage-style='soft'][data-sidebar-card='false'] .contextSidebar {
-    box-shadow: inset -1px 0 0 rgb(var(--ink-rgb) / 0.08);
+    box-shadow: inset -1px 0 0 rgb(var(--ink-rgb) / 0.055);
   }
   .shellWithSidebar[data-stage-style='soft'][data-sidebar-card='false'] .stage,
   .shellWithSidebar[data-stage-style='soft'][data-sidebar-card='false'] .stage:focus-visible {
