@@ -1,16 +1,136 @@
-/* V5 命令面板：中性结果卡片与语义选中态；查询、键盘选择由现有逻辑负责。 */
-.commandPanel { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: 0; }
-.hitList { max-height: 50vh; min-width: 0; overflow: auto; overscroll-behavior: contain; padding: var(--space-1); border-top: 1px solid var(--border-subtle); }
-.resultList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-.hit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--text-primary); cursor: pointer; user-select: none; }
-.hitActive { background: var(--surface-selected); border-color: var(--border-subtle); }
-.hitGroup { font: 500 var(--font-size-meta)/1.4 var(--font-ui); color: var(--text-secondary); padding: 2px 6px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-page); white-space: nowrap; }
-.hitActive .hitGroup { color: var(--accent-on-tint); border-color: var(--accent-border); background: var(--accent-soft); }
-.hitBody { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
-.hitPrimary { font-size: var(--font-size-ui); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hitSecondary { color: var(--text-secondary); font-size: var(--font-size-meta); line-height: 1.6; overflow-wrap: anywhere; white-space: normal; }
-.hitHint { color: var(--text-muted); font: 400 var(--font-size-meta)/1.4 var(--font-ui); white-space: nowrap; }
-@media (max-width: 430px) {
-  .hit { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-2); }
-  .hitHint { grid-column: 2; justify-self: start; }
+.commandBody {
+  min-height: 0;
+}
+.commandPanel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 12px;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.count,
+.shortcuts,
+.hitHint {
+  color: var(--text-secondary);
+  font: 400 var(--font-size-meta)/1.4 var(--font-ui);
+}
+.count {
+  font-variant-numeric: tabular-nums;
+}
+.hitList {
+  height: clamp(128px, 37dvh, 320px);
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-block: 1px solid var(--border-subtle);
+  padding-block: 6px;
+}
+.resultList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hit {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.hit + .hit {
+  margin-top: 2px;
+}
+.hitActive {
+  background: var(--surface-selected);
+}
+.hitIcon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-control);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+.hitActive .hitIcon {
+  background: var(--surface-page);
+  color: var(--accent-text);
+}
+.hitBody {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.hitPrimary {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hitSecondary {
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.match {
+  background: var(--accent-soft);
+  color: var(--accent-on-tint);
+  font-weight: 650;
+}
+.shortcuts,
+.shortcuts span {
+  display: flex;
+  align-items: center;
+}
+.shortcuts {
+  gap: 16px;
+}
+.shortcuts span {
+  gap: 4px;
+}
+.shortcuts kbd {
+  min-width: 18px;
+  padding: 1px 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  background: var(--surface-page);
+  font: 500 11px/1.4 var(--font-ui);
+  text-align: center;
+}
+@media (max-width: 480px) {
+  .hit {
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding-inline: 4px;
+  }
+  .hitIcon {
+    width: 26px;
+    height: 26px;
+  }
+}
+@media (hover: none) and (pointer: coarse), (max-height: 560px) {
+  .shortcuts {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .hitActive {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }
