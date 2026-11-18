@@ -189,9 +189,9 @@ for (const viewport of viewports)
       await expect(second).toBeInViewport({ ratio: 0.95 });
       const copy = second.locator(':scope > span').nth(1);
       await checkReadable('long-search-snippet', copy.locator(':scope > span').nth(1), 120, 10);
-      await checkUiFont('search-group', second.locator(':scope > span').first());
+      await checkUiFont('search-section', dialog.locator('li[role="presentation"]').filter({ hasText: /^资料$/ }));
       await checkUiFont('search-primary', copy.locator(':scope > span').first());
-      await checkUiFont('search-hint', second.locator(':scope > span').last());
+      await checkUiFont('search-snippet', copy.locator(':scope > span').nth(1));
       await capture('02-title-results-arrow-selection', dialog);
       await input.focus();
       await page.keyboard.press('Enter');
