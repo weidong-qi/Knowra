@@ -16,7 +16,7 @@
     const kind = note.kind === 'pdf' ? 'PDF / 阅读预览' : 'NOTE / 笔记预览';
     panel.innerHTML = `<div class="pk-h"><span>内容预览</span><button class="ib" data-closepeek aria-label="关闭预览">${ic('x')}</button></div>
       <div class="pk-b"><div class="pk-eyebrow">${kind}</div><h2>${esc(note.title)}</h2><p class="sum">${esc(note.sum)}</p>
-      
+
       <div class="preview-origin">${esc(locName(note))}<span>${note.kind === 'pdf' ? note.pages + ' 页' : note.words.toLocaleString() + ' 字'}</span></div>
       <h4>内容脉络</h4><ol class="ol">${note.ol.map(item => `<li>${esc(item)}</li>`).join('')}</ol>
       <div class="excerpt">${esc(note.id === 'n1' ? '细腻并不意味着更多。让每一次强调，都有它存在的理由。' : note.sum)}</div></div>
