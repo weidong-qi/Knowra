@@ -1,4 +1,4 @@
-/* 个人待办：沿用笔记索引的 --ni-* 色板、52px 页头、粘性分组标题与悬浮详情卡。 */
+/* 个人待办：Things 3 式温润留白与列表流 + 自然周日历 + 流式主详分栏。 */
 .panel {
   container-type: inline-size;
   display: flex;
@@ -10,20 +10,22 @@
 
 .header {
   flex: none;
-  min-height: 52px;
+  min-height: 58px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 20px;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 clamp(18px, 3.2vw, 36px);
   background: var(--ni-glow-divider, linear-gradient(var(--ni-line), var(--ni-line))) bottom / 100% 1px no-repeat;
 }
+
 .heading {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
-  font-size: 14px;
-  letter-spacing: -0.01em;
+  font-size: 17px;
+  letter-spacing: -0.015em;
 }
 .heading > svg {
   flex: none;
@@ -38,17 +40,40 @@
 }
 .heading > span {
   flex: none;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: var(--ni-fill-3);
   color: var(--ni-ink-3);
-  font-size: 11.5px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-.headerNote {
-  margin-left: auto;
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+.headerProgress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--ni-surf);
+  box-shadow: inset 0 0 0 1px var(--ni-line);
   color: var(--ni-ink-3);
-  font-size: 11.5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.headerProgress strong {
+  color: var(--ni-ink);
+  font-weight: 600;
+}
+.headerNote {
+  color: var(--ni-ink-3);
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -60,19 +85,22 @@
   justify-content: space-between;
   gap: 12px;
   margin: 0;
-  padding: 6px 20px;
-  border-bottom: 1px solid var(--ni-line);
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--ni-line);
   color: var(--ink-danger, var(--ni-danger));
   background: var(--ink-danger-soft, var(--ni-danger-soft));
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.6;
 }
 
+/* 主-详流式分栏 */
 .wrap {
   flex: 1;
   min-height: 0;
   display: flex;
   position: relative;
+  overflow: hidden;
 }
 .content {
   flex: 1;
@@ -80,44 +108,44 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.content[data-has-peek] {
-  padding-right: calc(min(340px, 44%) + var(--shell-gap, 8px) * 2);
+.stage {
+  width: min(100%, 1060px);
+  margin: 0 auto;
+  padding: 26px clamp(18px, 3.6vw, 48px) 96px;
 }
 
 .page {
-  padding: 4px 0 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
-/* 快速添加：一行虚线占位，聚焦后才像输入框。 */
-.quickAdd,
-.quickAddCompact {
+/* 融入列表流底部的轻量 QuickAdd */
+.standaloneQuickAdd {
+  margin-top: -12px;
+}
+.standaloneQuickAdd[data-attached] {
+  margin-top: -28px;
+}
+.quickAddWrap {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ni-ink-3);
+  flex-direction: column;
+  border-bottom: 1px solid var(--ni-line);
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+.quickAddWrap[data-expanded] {
+  border-bottom-color: var(--ni-accent-line);
 }
 .quickAdd {
-  margin: 12px 20px 8px;
-  padding: 0 12px;
-  min-height: 40px;
-  border: 1px dashed var(--ni-line-2);
-  border-radius: 10px;
-  transition:
-    border-color 0.14s ease,
-    background-color 0.14s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 4px 8px;
+  color: var(--ni-ink-3);
 }
-.quickAdd:focus-within {
-  border-style: solid;
-  border-color: var(--ni-accent-line);
-  background: var(--ni-surf);
-  box-shadow: 0 0 0 3px var(--ni-accent-soft);
-}
-.quickAddCompact {
-  min-height: 32px;
-  padding-left: calc(20px + 26px + var(--depth, 0) * 22px);
-  padding-right: 20px;
-}
-.quickAddCompact:focus-within .quickAddIcon,
 .quickAdd:focus-within .quickAddIcon {
   color: var(--ni-accent);
 }
@@ -127,40 +155,73 @@
 .quickAddField {
   flex: 1;
   min-width: 0;
-}
-.quickAddField {
-  font-size: 13px;
+  font-size: 14.5px;
   color: var(--ni-ink);
 }
-
-/* 分组：与笔记索引分组标题同一节奏，粘在滚动区顶部。 */
-.group + .group {
-  margin-top: 4px;
-}
-.groupHeading {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  height: 38px;
+.quickAddSubmit {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px 0 12px;
-  border-bottom: 1px solid var(--ni-line);
-  background: color-mix(in srgb, var(--ni-page) 86%, transparent);
-  backdrop-filter: blur(10px);
+  gap: 6px;
+}
+.quickAddChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 12px 36px;
+}
+.quickChip {
+  font-size: 12px;
+}
+.quickChip[data-active] {
+  background: var(--ni-accent-soft) !important;
+  color: var(--ni-accent-ink) !important;
+  box-shadow: inset 0 0 0 1px var(--ni-accent-line);
+}
+.quickChipDate {
+  font-size: 12px;
+}
+.quickChipSelect {
+  min-width: 120px;
+}
+
+.quickAddCompact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding-left: calc(10px + 28px + var(--depth, 0) * 26px);
+  padding-right: 10px;
+  color: var(--ni-ink-3);
+}
+.quickAddCompact:focus-within .quickAddIcon {
+  color: var(--ni-accent);
+}
+
+/* 无框温润分组：对齐参考图1的大标题与清晰层级 */
+.group {
+  display: flex;
+  flex-direction: column;
+}
+.groupHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 10px;
 }
 .groupToggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  height: 100%;
-  padding: 0 4px;
+  padding: 2px 4px;
   border: 0;
+  border-radius: 8px;
   background: transparent;
   color: var(--ni-ink);
-  font: 400 13px/1.5 var(--font-ui);
+  font: 400 14px/1.4 var(--font-ui);
   cursor: pointer;
 }
 .groupToggle > svg {
@@ -171,25 +232,35 @@
   transform: rotate(-90deg);
 }
 .groupToggle strong {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
-.groupToggle > span {
+.groupCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--ni-fill-2);
   color: var(--ni-ink-3);
+  font-size: 12px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 .groupToggle[data-focus-visible] {
   outline: 2px solid var(--ni-accent);
-  outline-offset: -2px;
-  border-radius: 6px;
+  outline-offset: 1px;
 }
 .group[data-tone='alert'] .groupToggle strong {
-  color: var(--ni-accent-ink);
+  color: var(--ni-danger);
 }
 .groupActions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   margin-left: auto;
 }
 .groupBody {
@@ -197,15 +268,16 @@
   flex-direction: column;
 }
 
-/* 行：36px、半像素分隔线，悬停出底色，操作按钮悬停时才出现。 */
+/* 待办行：舒展间距 + 柔和底线 + 圆角微方框 */
 .row {
   position: relative;
-  min-height: 38px;
+  min-height: 54px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 12px 0 calc(8px + var(--depth, 0) * 22px);
-  border-bottom: 0.5px solid var(--ni-line);
+  gap: 12px;
+  padding: 10px 10px 10px calc(10px + var(--depth, 0) * 26px);
+  border-radius: 10px;
+  border-bottom: 1px solid var(--ni-line);
   transition: background-color 0.12s ease;
 }
 .row:hover,
@@ -242,22 +314,27 @@
   color: var(--ni-ink);
 }
 
-/* 完成圈：未完成是细圈，悬停预示勾，完成后填充强调色。 */
+/* 圆角微方勾选框（19x19，rx=5），支持缩放反馈 */
 .check {
   flex: none;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 7px;
   background: transparent;
   cursor: pointer;
+  transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.check svg circle {
-  fill: transparent;
+.check:active {
+  transform: scale(0.86);
+}
+.check svg rect {
+  fill: var(--ni-surf);
   stroke: var(--ni-ink-4);
-  stroke-width: 1.3;
+  stroke-width: 1.5;
   transition:
     fill 0.16s ease,
     stroke 0.16s ease;
@@ -265,21 +342,21 @@
 .check svg path {
   fill: none;
   stroke: transparent;
-  stroke-width: 1.6;
+  stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: stroke 0.16s ease;
 }
-.check[data-hovered] svg circle {
+.check[data-hovered] svg rect {
   stroke: var(--ni-accent);
 }
 .check[data-hovered] svg path {
-  stroke: color-mix(in srgb, var(--ni-accent) 60%, transparent);
+  stroke: color-mix(in srgb, var(--ni-accent) 55%, transparent);
 }
-.check[data-paused] svg circle {
-  stroke-dasharray: 2.4 2.2;
+.check[data-paused] svg rect {
+  stroke-dasharray: 3 2.5;
 }
-.check[aria-checked='true'] svg circle {
+.check[aria-checked='true'] svg rect {
   fill: var(--ni-accent);
   stroke: var(--ni-accent);
 }
@@ -289,10 +366,11 @@
 .check[data-focus-visible],
 .rowMain[data-focus-visible],
 .expander[data-focus-visible],
-.todayButton[data-focus-visible],
-.addChildButton[data-focus-visible] {
+.dayPill[data-focus-visible],
+.mainlineCard[data-focus-visible],
+.boardCard[data-focus-visible] {
   outline: 2px solid var(--ni-accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 .check[data-disabled] {
   cursor: default;
@@ -302,48 +380,81 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 2px 4px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--ni-ink);
   text-align: left;
-  font: 400 13px/1.5 var(--font-ui);
+  font-family: var(--font-ui);
   cursor: pointer;
 }
 .rowTitle {
+  width: 100%;
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+.rowTitleText {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
 }
-.row[data-status='done'] .rowTitle {
+.row[data-status='done'] .rowTitleText {
   color: var(--ni-ink-3);
   font-weight: 400;
   text-decoration: line-through;
   text-decoration-color: var(--ni-ink-4);
 }
-.row[data-status='paused'] .rowTitle {
+.row[data-status='paused'] .rowTitleText {
   color: var(--ni-ink-2);
-}
-.rowContext {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ni-ink-3);
-  font-size: 11.5px;
 }
 .starMark {
   flex: none;
   color: var(--ni-fav);
   fill: var(--ni-fav);
+}
+
+.rowContext {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ni-ink-3);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.rowContextItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contextDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--dot-color, var(--ni-accent));
+}
+.contextInbox {
+  flex: none;
+  opacity: 0.78;
+}
+.rowContextPlan {
+  flex: none;
+  color: var(--ni-ink-3);
 }
 
 .rowMeta {
@@ -352,17 +463,15 @@
   align-items: center;
   gap: 6px;
   color: var(--ni-ink-3);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 .planChip,
-.dueChip,
-.pausedChip,
 .progressChip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 20px;
-  padding: 0 7px;
+  height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -375,27 +484,8 @@
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--ni-line-2);
 }
-.pausedChip {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  background: var(--ni-fill-2);
-  color: var(--ni-ink-3);
-}
-.dueChip {
-  color: var(--ni-ink-2);
-}
-.dueChip[data-tone='soon'] {
-  color: var(--ni-accent-ink);
-}
-.dueChip[data-tone='today'] {
-  background: var(--ni-accent-soft);
-  color: var(--ni-accent-ink);
-}
-.dueChip[data-tone='overdue'] {
-  background: var(--ni-danger-soft);
-  color: var(--ni-danger);
-  font-weight: 500;
+.dueBadge {
+  gap: 4px;
 }
 .progressChip {
   padding: 0 4px;
@@ -403,7 +493,7 @@
 }
 .progressTrack {
   position: relative;
-  width: 34px;
+  width: 36px;
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
@@ -421,13 +511,22 @@
   transition: width 0.24s var(--ni-ease, ease);
 }
 
+/* 之前未完成 / 截止提醒：常驻快捷操作按钮 */
+.carryoverActions {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 普通行悬停浮现操作 */
 .rowActions {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.14s ease;
 }
 .row:hover .rowActions,
 .row:focus-within .rowActions,
@@ -437,20 +536,7 @@
 }
 .todayButton,
 .addChildButton {
-  height: 24px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--ni-ink-2);
-  font: 500 11.5px/1 var(--font-ui);
   white-space: nowrap;
-  cursor: pointer;
-}
-.todayButton[data-hovered],
-.addChildButton[data-hovered] {
-  background: var(--ni-accent-soft);
-  color: var(--ni-accent-ink);
 }
 .rowDate {
   display: inline-flex;
@@ -464,69 +550,292 @@
   white-space: nowrap;
 }
 
+/* 子任务树与柔和引导线 */
 .tree {
+  position: relative;
   display: flex;
   flex-direction: column;
 }
+.tree[data-nested] {
+  position: relative;
+}
+.tree[data-nested]::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 10px;
+  left: 20px;
+  width: 1px;
+  background: var(--ni-line);
+}
 
-/* 状态与星标筛选。 */
+/* 计划页：无外框自然周日历条（对齐参考图精致药丸） */
+.weekStripWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--ni-line);
+}
+.weekHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+.weekHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.weekTitle {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ni-ink);
+}
+.weekReset {
+  font-size: 12px;
+}
+.weekNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 720px;
+}
+.weekCell {
+  display: flex;
+  justify-content: center;
+}
+.dayPill {
+  width: 64px;
+  padding: 12px 6px 10px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--ni-ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+.dayPill[data-hovered]:not([data-selected]):not([data-past]) {
+  background: var(--ni-hover);
+}
+.dayPill[data-past] {
+  opacity: 0.42;
+  cursor: default;
+}
+.dayPill[data-selected] {
+  background: var(--ni-ink);
+  color: var(--ni-page);
+  box-shadow: 0 6px 18px -10px color-mix(in srgb, var(--ni-ink) 55%, transparent);
+}
+.dayWeek {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ni-ink-3);
+}
+.dayPill[data-today]:not([data-selected]) .dayWeek {
+  color: var(--ni-accent);
+}
+.dayPill[data-selected] .dayWeek {
+  color: inherit;
+  opacity: 0.82;
+}
+.dayNum {
+  font-size: 21px;
+  line-height: 1.1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.dayDots {
+  height: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.dayDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+}
+.dayPill[data-selected] .dayDot {
+  opacity: 0.78;
+}
+
+/* 计划页多日看板 */
+.planBoard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.boardCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 280px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--ni-surf);
+  box-shadow: var(--ni-sh-card, inset 0 0 0 1px var(--ni-line));
+}
+.boardColHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ni-line);
+}
+.boardColHead strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.boardColHead span {
+  color: var(--ni-ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.boardColBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.boardCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--ni-line);
+  border-radius: 12px;
+  background: var(--ni-page);
+  color: var(--ni-ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.14s ease,
+    background-color 0.14s ease;
+}
+.boardCard[data-hovered] {
+  border-color: var(--ni-accent-line);
+}
+.boardCard[data-selected] {
+  background: var(--ni-accent-soft);
+  border-color: var(--ni-accent-line);
+}
+.boardCardTitle {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.boardCardMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  color: var(--ni-ink-3);
+  font-size: 12px;
+}
+.boardCardMeta > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.boardEmpty {
+  margin: auto 0;
+  text-align: center;
+  color: var(--ni-ink-3);
+  font-size: 12.5px;
+}
+
+/* 状态与星标筛选 */
 .filters {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding: 12px 20px 0;
 }
 
-/* 主线卡片：与笔记卡片同样的白底细环，而不是重阴影。 */
+/* 主线卡片：舒展 3 列自适应网格 */
 .mainlineGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-  padding: 8px 20px 0;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
 }
-.mainlineCard {
+.mainlineCardWrap {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 132px;
-  padding: 14px 16px 12px;
-  border: 0;
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--ni-surf);
-  box-shadow: var(--ni-sh-card);
-  color: var(--ni-ink);
-  text-align: left;
-  font: 400 13px/1.5 var(--font-ui);
-  cursor: pointer;
+  box-shadow: var(--ni-sh-card, inset 0 0 0 1px var(--ni-line));
   transition:
     box-shadow 0.16s ease,
     transform 0.16s ease;
 }
-.mainlineCard[data-hovered] {
+.mainlineCardWrap:hover {
   box-shadow:
     0 0 0 1px var(--ni-accent-line),
-    0 8px 22px -14px color-mix(in srgb, var(--ni-accent) 45%, transparent);
+    0 10px 26px -16px color-mix(in srgb, var(--ni-accent) 45%, transparent);
 }
-.mainlineCard[data-focus-visible] {
-  outline: 2px solid var(--ni-accent);
-  outline-offset: 2px;
-}
-.mainlineCard[data-status='paused'],
-.mainlineCard[data-status='archived'] {
+.mainlineCardWrap[data-status='paused'],
+.mainlineCardWrap[data-status='archived'] {
   background: var(--ni-surf-2, var(--ni-surf));
+  opacity: 0.86;
+}
+.mainlineCard {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 196px;
+  padding: 20px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--ni-ink);
+  text-align: left;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+.mainlineCardMenu {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.mainlineCardWrap:hover .mainlineCardMenu,
+.mainlineCardWrap:focus-within .mainlineCardMenu {
+  opacity: 1;
 }
 .mainlineTop {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding-right: 26px;
 }
 .mainlineTop strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 .mainlineGoal {
@@ -535,36 +844,49 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   color: var(--ni-ink-2);
-  font-size: 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
 }
 .mainlineNext {
+  margin-top: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--ni-page);
+  box-shadow: inset 0 0 0 1px var(--ni-line);
   color: var(--ni-ink-2);
-  font-size: 12px;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .mainlineFoot {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  margin-top: auto;
 }
 .mainlineCount {
   color: var(--ni-ink-3);
-  font-size: 11.5px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+.progressRing {
+  flex: none;
+  transform: rotate(-90deg);
+}
 
-/* 主线详情：参考笔记编辑页的居中文档栏。 */
+/* 主线详情：舒展项目工作台 */
 .doc {
-  width: min(100%, 760px);
-  margin: 0 auto;
-  padding: 28px 24px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 .docCrumb {
   display: flex;
   align-items: center;
   gap: 6px;
   color: var(--ni-ink-3);
-  font-size: 12px;
+  font-size: 12.5px;
 }
 .docCrumb > span {
   min-width: 0;
@@ -583,12 +905,33 @@
 .crumbLink[data-hovered] {
   color: var(--ni-ink);
 }
+.docHero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--ni-line);
+}
+.docHeroMain {
+  flex: 1;
+  min-width: 0;
+}
 .docTitle {
-  margin: 14px 0 10px;
-  font-size: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.02em;
+}
+.docDot {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
 }
 .docTitleButton {
   padding: 0;
@@ -606,134 +949,101 @@
   gap: 10px;
   flex-wrap: wrap;
 }
-.metaPill {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 6px;
-  background: var(--ni-fill-2);
-  color: var(--ni-ink-2);
-  font-size: 11.5px;
-}
-.metaPill[data-status='done'] {
-  background: color-mix(in srgb, var(--ni-st-done) 14%, transparent);
-  color: color-mix(in srgb, var(--ni-st-done) 70%, var(--ni-ink));
-}
 .metaText {
   color: var(--ni-ink-3);
-  font-size: 12px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
 .docGoal {
-  margin: 16px 0 0;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: var(--ni-fill-4, var(--ni-fill-2));
-  box-shadow: inset 0 0 0 1px var(--ni-line);
-  color: var(--ni-body, var(--ni-ink));
-  font-size: 13px;
-  line-height: 1.75;
+  margin: 14px 0 0;
+  color: var(--ni-ink-2);
+  font-size: 14px;
+  line-height: 1.65;
   white-space: pre-wrap;
 }
+.docHeroRing {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: var(--ni-surf);
+  box-shadow: inset 0 0 0 1px var(--ni-line);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .nextCard {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin: 20px 0 6px;
-  padding: 12px 12px 12px 16px;
-  border-radius: 12px;
+  padding: 14px 18px;
+  border-radius: 16px;
   background: var(--ni-surf);
   box-shadow:
     0 0 0 1px var(--ni-accent-line),
-    0 6px 18px -12px color-mix(in srgb, var(--ni-accent) 50%, transparent);
+    0 8px 20px -14px color-mix(in srgb, var(--ni-accent) 40%, transparent);
 }
 .nextLabel {
   color: var(--ni-accent-ink);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 .nextCard strong {
   min-width: 0;
   flex: 1;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 .nextActions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   margin-left: auto;
 }
 .docTree {
-  margin-top: 18px;
-  border-top: 1px solid var(--ni-line);
-}
-.docTree .row {
-  padding-left: calc(var(--depth, 0) * 22px);
-  padding-right: 0;
-}
-.docTree .quickAddCompact {
-  padding-left: calc(26px + var(--depth, 0) * 22px);
-  padding-right: 0;
-}
-
-/* 空状态：沿用笔记索引的插图与文字层级。 */
-.empty {
   display: flex;
   flex-direction: column;
+}
+.docTreeHead {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 56px 24px;
-  color: var(--ni-ink-3);
-  text-align: center;
-  font: 400 13px/1.7 var(--font-ui);
+  gap: 8px;
+  padding: 0 8px 10px;
 }
-.empty strong {
-  color: var(--ni-ink);
-  font-size: 14px;
-  font-weight: 550;
-}
-.empty p {
-  max-width: 360px;
+.docTreeHead h2 {
   margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 空状态 */
+.empty {
+  padding: 56px 24px;
 }
 .emptyArt {
   margin-bottom: 4px;
 }
 
-/* 详情卡：浮在内容之上，与笔记索引的预览卡一致。 */
+/* 右侧流式详情面板（Inspector） */
 .peek {
-  --peek-pad: 16px;
-  --peek-line: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--border-subtle) 75%, transparent) 16%,
-    color-mix(in srgb, var(--border-subtle) 75%, transparent) 84%,
-    transparent
-  );
-  position: absolute;
-  z-index: 6;
-  top: var(--shell-gap, 8px);
-  right: var(--shell-gap, 8px);
-  bottom: var(--shell-gap, 8px);
-  width: 340px;
+  --peek-pad: 22px;
+  flex: none;
+  width: 400px;
   max-width: 44%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--radius-panel);
-  background: var(--surface-card-tint, color-mix(in srgb, var(--text-primary) 4.5%, var(--surface-page)));
-  box-shadow:
-    var(--sidebar-highlight, inset 0 1px 0 transparent),
-    0 0 0 1px var(--ni-ctx-border, var(--border-subtle)),
-    0 14px 34px -16px color-mix(in srgb, #000 32%, transparent);
-  animation: peekIn 200ms var(--motion-ease, ease) both;
+  border-left: 1px solid var(--ni-line);
+  background: var(--ni-surf);
+  animation: peekIn 180ms var(--motion-ease, ease) both;
 }
 @keyframes peekIn {
   from {
     opacity: 0;
-    transform: translateX(14px);
+    transform: translateX(16px);
   }
   to {
     opacity: 1;
@@ -742,34 +1052,17 @@
 }
 .peekHeader {
   flex: none;
-  height: 44px;
+  height: 58px;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 0 var(--peek-pad);
-}
-.peekKind {
-  color: var(--ni-ink-3);
-  font-size: 12px;
-}
-.peekStatus {
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--ni-fill-2);
-  color: var(--ni-ink-2);
-  font-size: 11px;
-}
-.peekStatus[data-status='done'] {
-  background: color-mix(in srgb, var(--ni-st-done) 14%, transparent);
-  color: color-mix(in srgb, var(--ni-st-done) 70%, var(--ni-ink));
+  padding: 0 14px 0 var(--peek-pad);
+  border-bottom: 1px solid var(--ni-line);
 }
 .peekHeaderActions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   margin-left: auto;
 }
 .peekBody {
@@ -779,24 +1072,25 @@
   overscroll-behavior: contain;
 }
 .peekHeading {
-  padding: 8px var(--peek-pad) 14px;
-  background: var(--peek-line) bottom / 100% 1px no-repeat;
+  padding: 18px var(--peek-pad) 16px;
+  border-bottom: 1px solid var(--ni-line);
 }
 .peekPath {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--ni-ink-3);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
 .peekTitleField {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.45;
 }
 .peekTitleStatic {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -806,46 +1100,53 @@
   font-size: 12px;
 }
 .peekSection {
-  padding: 14px var(--peek-pad);
-  background: var(--peek-line) bottom / 100% 1px no-repeat;
+  padding: 16px var(--peek-pad);
+  border-bottom: 1px solid var(--ni-line);
 }
 .peekSection:last-child {
-  background: none;
+  border-bottom: 0;
 }
 .peekSection > h4 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   color: var(--ni-ink-3);
   font-size: 12px;
   font-weight: 500;
+}
+.peekChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.peekChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--ni-page);
+  box-shadow: inset 0 0 0 1px var(--ni-line);
+}
+.peekProgressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--ni-ink-3);
+}
+.peekProgressRow strong {
+  color: var(--ni-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .nextStepText {
   margin: 0;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
 }
-.fieldList {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  align-items: center;
-  gap: 6px 8px;
-  margin: 0;
-  font-size: 12px;
-}
-.fieldList dt {
-  color: var(--ni-ink-3);
-}
-.fieldList dd {
-  min-width: 0;
-  margin: 0 0 0 -8px;
-}
-.fieldText {
-  padding-left: 8px;
-  color: var(--ni-ink-2);
-}
 .warningList {
-  margin: 10px 0 0;
-  padding: 8px 10px 8px 26px;
-  border-radius: 8px;
+  margin: 12px 0 0;
+  padding: 8px 12px 8px 26px;
+  border-radius: 10px;
   background: var(--ni-accent-soft);
   color: var(--ni-accent-ink);
   font-size: 12px;
@@ -855,38 +1156,9 @@
   flex: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px var(--peek-pad);
-  background: var(--peek-line) top / 100% 1px no-repeat;
-}
-
-/* 撤销提示：与笔记索引批量栏同一位置与形态。 */
-.undoBar {
-  position: absolute;
-  z-index: 8;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: calc(100% - 24px);
-  padding: 6px 8px 6px 14px;
-  border-radius: var(--radius-panel);
-  background: var(--ni-toast-bg);
-  color: #fff;
-  box-shadow: 0 8px 32px #0003;
-  font-size: 12.5px;
-  white-space: nowrap;
-  animation: peekIn 160ms var(--motion-ease, ease) both;
-}
-.undoBar > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.undoButton {
-  color: var(--ni-toast-act) !important;
+  gap: 8px;
+  padding: 12px var(--peek-pad);
+  border-top: 1px solid var(--ni-line);
 }
 
 .dialogText,
@@ -900,17 +1172,6 @@
   font-size: 12px;
 }
 
-.missedChip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 20px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--ni-accent-soft);
-  color: var(--ni-accent-ink);
-  white-space: nowrap;
-}
 .reminderMark {
   display: inline-flex;
   color: var(--ni-ink-3);
@@ -941,51 +1202,6 @@
   gap: 6px;
 }
 
-/* 提醒到点时的应用内通知卡（网页端，或系统通知不可用时）。 */
-.reminderStack {
-  position: fixed;
-  z-index: 60;
-  right: 16px;
-  bottom: 16px;
-  display: grid;
-  gap: 8px;
-  width: min(320px, calc(100vw - 32px));
-}
-.reminderCard {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 4px 10px;
-  padding: 12px 10px 10px 14px;
-  border-radius: var(--radius-panel);
-  background: var(--ni-surf, var(--surface-page));
-  color: var(--ni-ink, var(--text-primary));
-  box-shadow: var(--ni-sh-pop, 0 10px 30px #0003);
-  animation: peekIn 180ms var(--motion-ease, ease) both;
-}
-.reminderCard > svg {
-  margin-top: 2px;
-  color: var(--ni-accent);
-}
-.reminderCard strong {
-  font-size: 13px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.reminderCard p {
-  grid-column: 2;
-  margin: 0;
-  color: var(--ni-ink-3, var(--text-secondary));
-  font-size: 12px;
-}
-.reminderCardActions {
-  grid-column: 2 / 4;
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-/* 外壳在 920px 以下隐藏侧栏，入口使用相同断点。 */
 .mobileTabs {
   display: none;
 }
@@ -994,7 +1210,7 @@
   width: 100%;
 }
 
-/* 左侧上下文栏。 */
+/* 左侧上下文栏 */
 .sidebar {
   height: 100%;
   min-height: 0;
@@ -1005,10 +1221,10 @@
 }
 .sidebarHeader {
   flex: none;
-  min-height: 48px;
+  min-height: 52px;
   display: flex;
   align-items: center;
-  padding: 0 8px 0 14px;
+  padding: 0 10px 0 16px;
 }
 .sidebarTitle {
   flex: 1;
@@ -1021,43 +1237,47 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 8px 8px;
+  padding: 0 10px 10px;
 }
 .sidebarSection + .sidebarSection {
-  margin-top: 18px;
+  margin-top: 20px;
 }
 .sidebarSectionTitle {
-  margin: 0 0 4px;
-  padding: 4px 6px;
+  margin: 0 0 6px;
+  padding: 4px 8px;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
 }
 .sidebarRing {
   --p: 0;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 999px;
   background:
-    radial-gradient(closest-side, var(--ni-shell-panel, var(--surface-page)) 62%, transparent 64%),
-    conic-gradient(var(--ni-accent) calc(var(--p) * 360deg), var(--ni-fill-2) 0);
+    radial-gradient(closest-side, var(--ni-shell-panel, var(--surface-page)) 60%, transparent 62%),
+    conic-gradient(var(--ring-color, var(--ni-accent)) calc(var(--p) * 360deg), var(--ni-fill-2) 0);
 }
 
 @container (max-width: 720px) {
   .header {
-    padding-inline: 12px;
+    padding-inline: 14px;
   }
-  .quickAdd {
-    margin-inline: 12px;
+  .headerProgress {
+    display: none;
   }
-  .rowContext,
   .planChip {
     display: none;
   }
-  .doc {
-    padding-inline: 12px;
+  .weekGrid {
+    gap: 2px;
+  }
+  .dayPill {
+    width: 100%;
+    padding: 8px 2px;
   }
 }
+
 @media (max-width: 920px), (any-pointer: coarse) {
   .mobileTabs {
     display: flex;
@@ -1066,7 +1286,8 @@
     border-bottom: 1px solid var(--ni-line);
   }
 }
-@media (max-width: 767px), (any-pointer: coarse) {
+
+@media (max-width: 900px), (any-pointer: coarse) {
   .rowActions {
     opacity: 1;
   }
@@ -1075,27 +1296,27 @@
   .rowDate {
     display: none;
   }
-  .content[data-has-peek] {
-    padding-right: 0;
-  }
   .peek {
+    position: absolute;
+    z-index: 6;
     inset: 0 0 0 auto;
-    width: min(360px, 100%);
+    width: min(380px, 100%);
     max-width: 100%;
-    border-radius: 0;
+    box-shadow: -12px 0 32px -12px color-mix(in srgb, #000 24%, transparent);
   }
   .row {
-    min-height: 44px;
+    min-height: 52px;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .peek,
-  .undoBar {
+  .peek {
     animation: none;
   }
   .groupToggle > svg,
   .expander > svg,
-  .progressTrack > span {
+  .progressTrack > span,
+  .check {
     transition: none;
   }
 }

@@ -9,19 +9,86 @@ import {
   type TodoIndex,
   type TodoListFilter
 } from '@study-accelerator/web-core';
-import { ChevronDownIcon, ChevronRightIcon, ClockIcon, StarIcon } from '../../components/icons/knowra';
-import { Button, EmptyArt, PressableButton, SegmentedButton, SegmentedControl } from '../../components/ui';
+import {
+  CalendarIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  StarIcon
+} from '../../components/icons/knowra';
+import {
+  Badge,
+  Button,
+  EmptyArt,
+  EmptyState,
+  IconButton,
+  PressableButton,
+  SegmentedButton,
+  SegmentedControl
+} from '../../components/ui';
 import { useTodoActions } from './TodoActions';
-import { TodoRow } from './TodoRow';
+import { TodoMenu, TodoRow } from './TodoRow';
 import { TodoTree } from './TodoTree';
 import { QuickAdd } from './QuickAdd';
-import { dueLabel, dueTone, formatDateLabel, relativeDateLabel } from './todoPresentation';
+import {
+  addDaysToDate,
+  dueLabel,
+  dueTone,
+  formatDateLabel,
+  mainlineAccentColor,
+  mondayOfWeek,
+  relativeDateLabel,
+  weekDaysFrom
+} from './todoPresentation';
 import styles from './PersonalTodos.module.css';
 
 interface PageProps {
   todos: Todo[];
   index: TodoIndex;
   selectedId: string | null;
+}
+
+function ProgressRing({
+  done,
+  total,
+  size = 20,
+  color
+}: {
+  done: number;
+  total: number;
+  size?: number;
+  color?: string;
+}) {
+  const pct = total ? done / total : 0;
+  const stroke = 2.4;
+  const r = (size - stroke * 1.5) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - pct);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className={styles.progressRing} aria-hidden="true">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.16"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color ?? 'var(--ni-accent)'}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+      />
+    </svg>
+  );
 }
 
 function Group({
@@ -51,7 +118,7 @@ function Group({
     <>
       {collapsible ? <ChevronDownIcon size={14} /> : null}
       <strong>{title}</strong>
-      <span>{count}</span>
+      <span className={styles.groupCount}>{count}</span>
     </>
   );
   return (
@@ -82,16 +149,6 @@ function Group({
   );
 }
 
-function Empty({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className={styles.empty} role="status">
-      <EmptyArt className={styles.emptyArt} />
-      <strong>{title}</strong>
-      <p>{children}</p>
-    </div>
-  );
-}
-
 export function TodayPage({ todos, index, selectedId }: PageProps) {
   const actions = useTodoActions();
   const { today } = actions;
@@ -102,17 +159,27 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
     const scheduled = new Set(todayExpanded ? base.today.map(todo => todo.id) : []);
     return { ...base, dueAlerts: base.dueAlerts.filter(todo => !scheduled.has(todo.id)) };
   }, [todos, today, todayExpanded]);
+  const openMainlines = useMemo(() => topLevelTodos(todos, 'mainline', 'open'), [todos]);
   const nothing = !view.today.length && !view.earlier.length && !view.doneToday.length && !view.dueAlerts.length;
+  const quickAddNode = (
+    <QuickAdd
+      parentId={null}
+      plannedDate={today}
+      mainlines={openMainlines}
+      placeholder="添加今天要做的事（作为支线）"
+    />
+  );
+
   return (
     <div className={styles.page}>
-      <QuickAdd parentId={null} plannedDate={today} placeholder="添加今天要做的事（作为支线）" />
       {view.dueAlerts.length ? (
         <Group title="截止提醒" count={view.dueAlerts.length} collapsible={false} tone="alert">
           {view.dueAlerts.map(todo => (
-            <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext />
+            <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext showCarryoverActions />
           ))}
         </Group>
       ) : null}
+
       {view.today.length ? (
         <Group title="今日安排" count={view.today.length} expanded={todayExpanded} onExpandedChange={setTodayExpanded}>
           {view.today.map(todo => (
@@ -120,6 +187,13 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
           ))}
         </Group>
       ) : null}
+
+      {!view.today.length || todayExpanded ? (
+        <div className={styles.standaloneQuickAdd} data-attached={view.today.length > 0 || undefined}>
+          {quickAddNode}
+        </div>
+      ) : null}
+
       {view.earlier.length ? (
         <Group
           title="之前未完成"
@@ -128,64 +202,273 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
             <>
               <Button
                 size="mini"
+                shape="square"
                 variant="ghost"
                 onPress={() => view.earlier.forEach(todo => actions.addToToday(todo))}
               >
                 全部今天继续
               </Button>
-              <Button size="mini" variant="ghost" onPress={() => view.earlier.forEach(todo => actions.clearPlan(todo))}>
+              <Button
+                size="mini"
+                shape="square"
+                variant="ghost"
+                onPress={() => view.earlier.forEach(todo => actions.clearPlan(todo))}
+              >
                 全部取消安排
               </Button>
             </>
           }
         >
           {view.earlier.map(todo => (
-            <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext />
+            <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext showCarryoverActions />
           ))}
         </Group>
       ) : null}
+
       {view.doneToday.length ? (
-        <Group title="今日已完成" count={view.doneToday.length}>
+        <Group title="今日已完成" count={view.doneToday.length} defaultExpanded={false}>
           {view.doneToday.map(todo => (
             <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext />
           ))}
         </Group>
       ) : null}
+
       {nothing ? (
-        <Empty title="今天还没有安排">
-          在上方直接添加，或在主线、支线里给事项点「加入今天」。只设截止日期不会自动进入今天。
-        </Empty>
+        <EmptyState
+          className={styles.empty}
+          icon={<EmptyArt className={styles.emptyArt} />}
+          title="今天还没有安排"
+          description="在上方直接添加，或在主线、支线里给事项点「加入今天」。只设截止日期不会自动进入今天。"
+        />
       ) : null}
     </div>
   );
 }
 
-export function PlanPage({ todos, index, selectedId }: PageProps) {
-  const { today } = useTodoActions();
+export function PlanPage({ todos, index, selectedId, mode = 'list' }: PageProps & { mode?: 'list' | 'board' }) {
+  const actions = useTodoActions();
+  const { today } = actions;
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const thisMonday = useMemo(() => mondayOfWeek(today), [today]);
+  const weekMonday = useMemo(() => addDaysToDate(thisMonday, weekOffset * 7), [thisMonday, weekOffset]);
+  const days = useMemo(() => weekDaysFrom(weekMonday, today), [weekMonday, today]);
+
   const groups = useMemo(() => planView(todos, today), [todos, today]);
-  if (!groups.length)
+  const todayBase = useMemo(() => todayView(todos, today), [todos, today]);
+
+  const allPlannedByDate = useMemo(() => {
+    const map = new Map<string, Todo[]>();
+    for (const todo of todayBase.today) {
+      const list = map.get(today) ?? [];
+      list.push(todo);
+      map.set(today, list);
+    }
+    for (const group of groups) {
+      map.set(group.date, group.todos);
+    }
+    return map;
+  }, [groups, todayBase.today, today]);
+
+  const totalFuture = useMemo(() => groups.reduce((sum, group) => sum + group.todos.length, 0), [groups]);
+
+  const firstMonth = days[0]!.month;
+  const lastMonth = days[6]!.month;
+  const year = days[0]!.date.slice(0, 4);
+  const rangeTitle = firstMonth === lastMonth ? `${year}年 ${firstMonth}月` : `${year}年 ${firstMonth}–${lastMonth}月`;
+
+  const visibleGroups = useMemo(() => {
+    if (!selectedDate) return groups;
+    if (selectedDate === today) return todayBase.today.length ? [{ date: today, todos: todayBase.today }] : [];
+    return groups.filter(group => group.date === selectedDate);
+  }, [groups, selectedDate, today, todayBase.today]);
+
+  const boardDays = useMemo(() => days.filter(day => !day.isPast).slice(0, 4), [days]);
+
+  const weekStrip = (
+    <div className={styles.weekStripWrap}>
+      <div className={styles.weekHeader}>
+        <div className={styles.weekHeaderLeft}>
+          <span className={styles.weekTitle}>{rangeTitle}</span>
+          {selectedDate ? (
+            <Button size="chip" variant="ghost" className={styles.weekReset} onPress={() => setSelectedDate(null)}>
+              显示全部计划 ({totalFuture})
+            </Button>
+          ) : null}
+        </div>
+        <div className={styles.weekNav}>
+          <IconButton
+            size={28}
+            aria-label="上一周"
+            title="上一周"
+            isDisabled={weekOffset === 0}
+            onPress={() => {
+              setWeekOffset(value => Math.max(0, value - 1));
+              setSelectedDate(null);
+            }}
+          >
+            <ChevronLeftIcon size={15} />
+          </IconButton>
+          <Button
+            size="mini"
+            shape="square"
+            variant="ghost"
+            onPress={() => {
+              setWeekOffset(0);
+              setSelectedDate(null);
+            }}
+          >
+            本周
+          </Button>
+          <IconButton
+            size={28}
+            aria-label="下一周"
+            title="下一周"
+            onPress={() => {
+              setWeekOffset(value => value + 1);
+              setSelectedDate(null);
+            }}
+          >
+            <ChevronRightIcon size={15} />
+          </IconButton>
+        </div>
+      </div>
+
+      <div className={styles.weekGrid} role="group" aria-label="选择一周内的日期">
+        {days.map(day => {
+          const dayItems = allPlannedByDate.get(day.date) ?? [];
+          const isSelected = selectedDate ? selectedDate === day.date : day.isToday;
+          const dots = dayItems.slice(0, 3).map(item => {
+            const chain = index.ancestors(item.id);
+            const root = chain.length ? chain[chain.length - 1]! : item;
+            return root.kind === 'mainline' ? mainlineAccentColor(root.id) : 'var(--ni-ink-3)';
+          });
+          return (
+            <div key={day.date} className={styles.weekCell}>
+              <PressableButton
+                className={styles.dayPill}
+                isDisabled={day.isPast}
+                data-selected={isSelected || undefined}
+                data-today={day.isToday || undefined}
+                data-past={day.isPast || undefined}
+                aria-pressed={selectedDate === day.date}
+                aria-label={`${formatDateLabel(day.date, today)}，${dayItems.length} 项安排`}
+                onPress={() => {
+                  if (day.isPast) return;
+                  setSelectedDate(prev => (prev === day.date ? null : day.date));
+                }}
+              >
+                <span className={styles.dayWeek}>{day.week}</span>
+                <span className={styles.dayNum}>{day.day}</span>
+                <span className={styles.dayDots} aria-hidden="true">
+                  {dots.map((color, idx) => (
+                    <span
+                      key={idx}
+                      className={styles.dayDot}
+                      style={{ background: isSelected ? 'currentColor' : color }}
+                    />
+                  ))}
+                </span>
+              </PressableButton>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  if (mode === 'board') {
     return (
       <div className={styles.page}>
-        <Empty title="之后还没有安排">给事项设置计划日期后，会按日期出现在这里。</Empty>
+        {weekStrip}
+        <div className={styles.planBoard}>
+          {boardDays.map(day => {
+            const items = allPlannedByDate.get(day.date) ?? [];
+            return (
+              <section key={day.date} className={styles.boardCol} aria-label={formatDateLabel(day.date, today)}>
+                <header className={styles.boardColHead}>
+                  <strong>
+                    {relativeDateLabel(day.date, today) === formatDateLabel(day.date, today)
+                      ? formatDateLabel(day.date, today)
+                      : `${relativeDateLabel(day.date, today)} · ${day.day}日`}
+                  </strong>
+                  <span>{items.length}</span>
+                </header>
+                <div className={styles.boardColBody}>
+                  {items.length ? (
+                    items.map(todo => {
+                      const chain = index.ancestors(todo.id);
+                      const root = chain.length ? chain[chain.length - 1]! : null;
+                      const dotColor = root && root.kind === 'mainline' ? mainlineAccentColor(root.id) : null;
+                      return (
+                        <PressableButton
+                          key={todo.id}
+                          className={styles.boardCard}
+                          data-selected={selectedId === todo.id || undefined}
+                          onPress={() => actions.select(todo.id)}
+                        >
+                          <span className={styles.boardCardTitle}>{todo.title}</span>
+                          {chain.length ? (
+                            <span className={styles.boardCardMeta}>
+                              <span
+                                className={styles.contextDot}
+                                style={dotColor ? ({ '--dot-color': dotColor } as React.CSSProperties) : undefined}
+                              />
+                              <span>
+                                {chain
+                                  .map(n => n.title)
+                                  .reverse()
+                                  .join(' › ')}
+                              </span>
+                            </span>
+                          ) : null}
+                        </PressableButton>
+                      );
+                    })
+                  ) : (
+                    <p className={styles.boardEmpty}>暂无安排</p>
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
     );
+  }
+
   return (
     <div className={styles.page}>
-      {groups.map(group => (
-        <Group
-          key={group.date}
-          title={
-            relativeDateLabel(group.date, today) === formatDateLabel(group.date, today)
-              ? formatDateLabel(group.date, today)
-              : `${relativeDateLabel(group.date, today)} · ${formatDateLabel(group.date, today)}`
+      {weekStrip}
+      {visibleGroups.length ? (
+        visibleGroups.map(group => (
+          <Group
+            key={group.date}
+            title={
+              relativeDateLabel(group.date, today) === formatDateLabel(group.date, today)
+                ? formatDateLabel(group.date, today)
+                : `${relativeDateLabel(group.date, today)} · ${formatDateLabel(group.date, today)}`
+            }
+            count={group.todos.length}
+          >
+            {group.todos.map(todo => (
+              <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext />
+            ))}
+          </Group>
+        ))
+      ) : (
+        <EmptyState
+          className={styles.empty}
+          icon={<CalendarIcon size={28} />}
+          title={selectedDate ? `${relativeDateLabel(selectedDate, today)}还没有安排` : '之后还没有安排'}
+          description={
+            selectedDate
+              ? '可以点击「显示全部计划」，或在待办详情里把事项安排到这一天。'
+              : '给事项设置计划日期后，会按日期出现在这里。'
           }
-          count={group.todos.length}
-        >
-          {group.todos.map(todo => (
-            <TodoRow key={todo.id} todo={todo} index={index} selectedId={selectedId} showContext />
-          ))}
-        </Group>
-      ))}
+        />
+      )}
     </div>
   );
 }
@@ -259,16 +542,23 @@ export function SidelinesPage({ todos, index, selectedId }: PageProps) {
   return (
     <div className={styles.page}>
       {list.filters}
-      {list.filter === 'open' ? <QuickAdd parentId={null} kind="sideline" placeholder="随手记一件事" /> : null}
       <div role="list" className={styles.groupBody}>
         {list.items.map(todo => (
           <SidelineItem key={todo.id} todo={todo} index={index} selectedId={selectedId} />
         ))}
       </div>
+      {list.filter === 'open' ? (
+        <div className={styles.standaloneQuickAdd}>
+          <QuickAdd parentId={null} kind="sideline" placeholder="随手记一件事" />
+        </div>
+      ) : null}
       {!list.items.length ? (
-        <Empty title={list.filter === 'open' ? '没有进行中的支线' : '这里还是空的'}>
-          支线用来接住零散的小事，也可以拆成步骤；需要长期规划时可以升级为主线。
-        </Empty>
+        <EmptyState
+          className={styles.empty}
+          icon={<EmptyArt className={styles.emptyArt} />}
+          title={list.filter === 'open' ? '没有进行中的支线' : '这里还是空的'}
+          description="支线用来接住零散的小事，也可以拆成步骤；需要长期规划时可以升级为主线。"
+        />
       ) : null}
     </div>
   );
@@ -298,62 +588,79 @@ export function MainlinesPage({ todos, index, onOpenMainline }: PageProps & { on
   return (
     <div className={styles.page}>
       {list.filters}
-      {list.filter === 'open' ? (
-        <QuickAdd parentId={null} kind="mainline" placeholder="新建主线：一个能判断是否达成的目标" />
-      ) : null}
       <div className={styles.mainlineGrid}>
         {list.items.map(todo => {
           const progress = progressOf(index, todo.id);
+          const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
           const step = nextStep(index, todo.id);
           const tone = dueTone(todo, today);
+          const color = mainlineAccentColor(todo.id);
           return (
-            <PressableButton
+            <div
               key={todo.id}
-              className={styles.mainlineCard}
+              className={styles.mainlineCardWrap}
               data-status={todo.archivedAt ? 'archived' : todo.status}
-              onPress={() => onOpenMainline(todo.id)}
-              aria-label={`打开主线「${todo.title}」`}
             >
-              <span className={styles.mainlineTop}>
-                <strong>{todo.title}</strong>
-                {todo.starred ? <StarIcon size={13} className={styles.starMark} /> : null}
-              </span>
-              {todo.goal ? <span className={styles.mainlineGoal}>{todo.goal}</span> : null}
-              <span className={styles.mainlineNext}>
-                {todo.status === 'paused'
-                  ? `已暂停${todo.pauseReason ? ` · ${todo.pauseReason}` : ''}`
-                  : step.kind === 'item'
-                    ? `下一步：${step.todo.title}`
-                    : step.kind === 'confirmParent'
-                      ? `确认完成：${step.todo.title}`
-                      : todo.status === 'done'
-                        ? '已完成'
-                        : progress.total
-                          ? '剩余步骤都已暂停'
-                          : '还没有拆解任务'}
-              </span>
-              <span className={styles.mainlineFoot}>
-                <span className={styles.progressTrack} data-wide>
-                  <span style={{ width: progress.total ? `${(progress.done / progress.total) * 100}%` : '0%' }} />
+              <PressableButton
+                className={styles.mainlineCard}
+                onPress={() => onOpenMainline(todo.id)}
+                aria-label={`打开主线「${todo.title}」`}
+              >
+                <span className={styles.mainlineTop}>
+                  <ProgressRing done={progress.done} total={progress.total} size={24} color={color} />
+                  <strong>{todo.title}</strong>
+                  {todo.starred ? <StarIcon size={13} className={styles.starMark} /> : null}
                 </span>
-                <span className={styles.mainlineCount}>
-                  {progress.done}/{progress.total}
+                {todo.goal ? <span className={styles.mainlineGoal}>{todo.goal}</span> : null}
+                <span className={styles.mainlineNext}>
+                  {todo.status === 'paused' ? (
+                    `已暂停${todo.pauseReason ? ` · ${todo.pauseReason}` : ''}`
+                  ) : step.kind === 'item' ? (
+                    <>
+                      <span style={{ color }}>下一步：</span>
+                      {step.todo.title}
+                    </>
+                  ) : step.kind === 'confirmParent' ? (
+                    `确认完成：${step.todo.title}`
+                  ) : todo.status === 'done' ? (
+                    '已完成'
+                  ) : progress.total ? (
+                    '剩余步骤都已暂停'
+                  ) : (
+                    '还没有拆解任务'
+                  )}
                 </span>
-                {tone ? (
-                  <span className={styles.dueChip} data-tone={tone}>
-                    <ClockIcon size={12} />
-                    {dueLabel(todo, today)}
+                <span className={styles.mainlineFoot}>
+                  <span className={styles.mainlineCount}>
+                    进度 {progress.done}/{progress.total}（{pct}%）
                   </span>
-                ) : null}
-              </span>
-            </PressableButton>
+                  {tone ? (
+                    <Badge tone={tone === 'overdue' ? 'danger' : tone === 'today' ? 'warning' : 'neutral'} hideDot>
+                      <ClockIcon size={11} />
+                      {dueLabel(todo, today)}
+                    </Badge>
+                  ) : null}
+                </span>
+              </PressableButton>
+              <div className={styles.mainlineCardMenu}>
+                <TodoMenu todo={todo} />
+              </div>
+            </div>
           );
         })}
       </div>
+      {list.filter === 'open' ? (
+        <div className={styles.standaloneQuickAdd}>
+          <QuickAdd parentId={null} kind="mainline" placeholder="新建主线：一个能判断是否达成的目标" />
+        </div>
+      ) : null}
       {!list.items.length ? (
-        <Empty title={list.filter === 'open' ? '还没有主线' : '这里还是空的'}>
-          主线承接有明确终点的目标，可以先记下目标，再边做边拆解。
-        </Empty>
+        <EmptyState
+          className={styles.empty}
+          icon={<EmptyArt className={styles.emptyArt} />}
+          title={list.filter === 'open' ? '还没有主线' : '这里还是空的'}
+          description="主线承接有明确终点的目标，可以先记下目标，再边做边拆解。"
+        />
       ) : null}
     </div>
   );
@@ -375,6 +682,15 @@ export function MainlinePage({
   const progress = progressOf(index, mainline.id);
   const step = nextStep(index, mainline.id);
   const tone = dueTone(mainline, today);
+  const color = mainlineAccentColor(mainline.id);
+  const statusTone = mainline.archivedAt
+    ? 'neutral'
+    : mainline.status === 'done'
+      ? 'success'
+      : mainline.status === 'paused'
+        ? 'warning'
+        : 'accent';
+
   return (
     <div className={styles.doc}>
       <nav className={styles.docCrumb} aria-label="当前位置">
@@ -384,33 +700,46 @@ export function MainlinePage({
         <ChevronRightIcon size={12} />
         <span>{mainline.title}</span>
       </nav>
-      <h1 className={styles.docTitle}>
-        <PressableButton className={styles.docTitleButton} onPress={() => actions.select(mainline.id)}>
-          {mainline.title}
-        </PressableButton>
-      </h1>
-      <div className={styles.docMeta}>
-        <span className={styles.metaPill} data-status={mainline.archivedAt ? 'archived' : mainline.status}>
-          {mainline.archivedAt
-            ? '已归档'
-            : mainline.status === 'done'
-              ? '已完成'
-              : mainline.status === 'paused'
-                ? '已暂停'
-                : '进行中'}
-        </span>
-        <span className={styles.metaText}>
-          进展 {progress.done}/{progress.total}
-        </span>
-        {tone ? (
-          <span className={styles.dueChip} data-tone={tone}>
-            <ClockIcon size={12} />
-            {dueLabel(mainline, today)}
+
+      <div className={styles.docHero}>
+        <div className={styles.docHeroMain}>
+          <h1 className={styles.docTitle}>
+            <span className={styles.docDot} style={{ background: color }} aria-hidden="true" />
+            <PressableButton className={styles.docTitleButton} onPress={() => actions.select(mainline.id)}>
+              {mainline.title}
+            </PressableButton>
+          </h1>
+          <div className={styles.docMeta}>
+            <Badge tone={statusTone}>
+              {mainline.archivedAt
+                ? '已归档'
+                : mainline.status === 'done'
+                  ? '已完成'
+                  : mainline.status === 'paused'
+                    ? '已暂停'
+                    : '进行中'}
+            </Badge>
+            <span className={styles.metaText}>
+              进展 {progress.done}/{progress.total}
+            </span>
+            {tone ? (
+              <Badge tone={tone === 'overdue' ? 'danger' : tone === 'today' ? 'warning' : 'neutral'} hideDot>
+                <ClockIcon size={11} />
+                {dueLabel(mainline, today)}
+              </Badge>
+            ) : null}
+            {mainline.starred ? <StarIcon size={13} className={styles.starMark} aria-label="已加星标" /> : null}
+          </div>
+          {mainline.goal ? <p className={styles.docGoal}>{mainline.goal}</p> : null}
+        </div>
+        <div className={styles.docHeroRing}>
+          <ProgressRing done={progress.done} total={progress.total} size={28} color={color} />
+          <span>
+            {progress.done}/{progress.total}
           </span>
-        ) : null}
-        {mainline.starred ? <StarIcon size={13} className={styles.starMark} aria-label="已加星标" /> : null}
+        </div>
       </div>
-      {mainline.goal ? <p className={styles.docGoal}>{mainline.goal}</p> : null}
+
       {step.kind !== 'none' && !mainline.archivedAt ? (
         <div className={styles.nextCard}>
           <span className={styles.nextLabel}>{step.kind === 'confirmParent' ? '可以收尾了' : '下一步'}</span>
@@ -430,7 +759,12 @@ export function MainlinePage({
           </span>
         </div>
       ) : null}
+
       <div className={styles.docTree}>
+        <div className={styles.docTreeHead}>
+          <h2>拆解步骤</h2>
+          <span className={styles.groupCount}>{index.children(mainline.id).length}</span>
+        </div>
         <TodoTree parent={mainline} index={index} selectedId={selectedId} addPlaceholder="添加任务" />
         {!index.children(mainline.id).length && mainline.archivedAt ? (
           <p className={styles.metaText}>这条主线没有拆解任务。</p>

@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { remindersMissed, remindersToDeliver, type Todo } from '@study-accelerator/web-core';
-import { BellIcon } from '../../components/icons/knowra';
-import { Button } from '../../components/ui';
+import { ToastRegion, type ToastItem } from '../../components/ui';
 import { useNavigate } from '../../app/router';
 import { sharedTodoStore, type TodoStore } from './todoStore';
-import styles from './PersonalTodos.module.css';
 
 const DELIVERED_KEY = 'knowra:todo-reminders:delivered:v1';
 const CHECK_MS = 30_000;
@@ -116,33 +114,32 @@ export function TodoReminderRunner({
       window.clearInterval(refreshTimer);
     };
   }, [store]);
-  if (!cards.length) return null;
-  const dismiss = (id: string) => setCards(list => list.filter(item => item.id !== id));
-  return (
-    <div className={styles.reminderStack} role="region" aria-label="待办提醒">
-      {cards.map(todo => (
-        <div key={todo.id} className={styles.reminderCard} role="alert">
-          <BellIcon size={16} />
-          <strong>{todo.title}</strong>
-          <span />
-          <p>待办提醒</p>
-          <div className={styles.reminderCardActions}>
-            <Button size="mini" variant="ghost" onPress={() => dismiss(todo.id)}>
-              知道了
-            </Button>
-            <Button
-              size="mini"
-              variant="primary"
-              onPress={() => {
-                dismiss(todo.id);
-                navigate('/learning');
-              }}
-            >
-              查看
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
+  const dismiss = useCallback((id: string) => setCards(list => list.filter(item => item.id !== id)), []);
+  const items = useMemo<ToastItem[]>(
+    () =>
+      cards.map(todo => ({
+        id: `todo-reminder:${todo.id}`,
+        title: todo.title,
+        description: '待办提醒',
+        tone: 'warning',
+        role: 'alert',
+        actions: [
+          {
+            label: '知道了',
+            variant: 'ghost',
+            onPress: () => dismiss(todo.id)
+          },
+          {
+            label: '查看',
+            variant: 'primary',
+            onPress: () => {
+              dismiss(todo.id);
+              navigate('/learning');
+            }
+          }
+        ]
+      })),
+    [cards, dismiss, navigate]
   );
+  return <ToastRegion items={items} ariaLabel="待办提醒" />;
 }

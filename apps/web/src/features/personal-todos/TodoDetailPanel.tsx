@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { dateWarnings, nextStep, progressOf, type Todo, type TodoIndex } from '@study-accelerator/web-core';
 import { CalendarIcon, ClockIcon, CloseIcon, StarIcon } from '../../components/icons/knowra';
-import { Button, DatePicker, IconButton, TextAreaField, TextField } from '../../components/ui';
+import { Badge, Button, DatePicker, IconButton, TextAreaField, TextField } from '../../components/ui';
 import { useTodoActions } from './TodoActions';
 import { TodoMenu } from './TodoRow';
 import { ReminderEditor } from './ReminderEditor';
@@ -54,20 +54,34 @@ export function TodoDetailPanel({
   const progress = children.length ? progressOf(index, todo.id) : null;
   const step = todo.parentId === null && children.length ? nextStep(index, todo.id) : null;
   const tone = dueTone(todo, today);
+  const statusTone = archived ? 'neutral' : done ? 'success' : todo.status === 'paused' ? 'warning' : 'accent';
+
   return (
     <aside className={styles.peek} aria-label={`待办详情：${todo.title}`}>
       <header className={styles.peekHeader}>
-        <span className={styles.peekKind}>{KIND_LABEL[todo.kind]}</span>
-        <span className={styles.peekStatus} data-status={archived ? 'archived' : todo.status}>
-          {statusLabel(todo)}
-        </span>
+        <Badge tone="neutral" hideDot>
+          {KIND_LABEL[todo.kind]}
+        </Badge>
+        <Badge tone={statusTone}>{statusLabel(todo)}</Badge>
         <span className={styles.peekHeaderActions}>
+          {!locked ? (
+            <IconButton
+              size={24}
+              aria-label={todo.starred ? '取消星标' : '加星标'}
+              title={todo.starred ? '取消星标' : '加星标'}
+              aria-pressed={todo.starred}
+              onPress={() => void actions.update(todo, { starred: !todo.starred })}
+            >
+              <StarIcon size={15} className={todo.starred ? styles.starMark : undefined} />
+            </IconButton>
+          ) : null}
           <TodoMenu todo={todo} />
           <IconButton size={24} aria-label="关闭详情" title="关闭" onPress={onClose}>
             <CloseIcon size={16} />
           </IconButton>
         </span>
       </header>
+
       <div className={styles.peekBody}>
         <section className={styles.peekHeading}>
           {path.length ? <span className={styles.peekPath}>{path.join(' › ')}</span> : null}
@@ -92,36 +106,25 @@ export function TodoDetailPanel({
           {archived ? <p className={styles.peekPause}>已归档，只能查看。</p> : null}
         </section>
 
-        {step && step.kind !== 'none' ? (
-          <section className={styles.peekSection}>
-            <h4>下一步</h4>
-            <p className={styles.nextStepText}>
-              {step.kind === 'confirmParent' ? `确认完成：${step.todo.title}` : step.todo.title}
-            </p>
-          </section>
-        ) : null}
-
         <section className={styles.peekSection}>
-          <dl className={styles.fieldList}>
-            <dt>计划日期</dt>
-            <dd>
+          <div className={styles.peekChips}>
+            <div className={styles.peekChip}>
               <DatePicker
                 label="计划日期"
                 value={todo.plannedDate}
                 today={today}
-                placeholder="未安排"
+                placeholder="安排日期"
                 icon={<CalendarIcon size={13} />}
                 isDisabled={locked || done}
                 onChange={plannedDate => void actions.update(todo, { plannedDate })}
               />
-            </dd>
-            <dt>截止日期</dt>
-            <dd>
+            </div>
+            <div className={styles.peekChip}>
               <DatePicker
                 label="截止日期"
                 value={todo.dueDate}
                 today={today}
-                placeholder="无截止"
+                placeholder="设置截止"
                 icon={<ClockIcon size={13} />}
                 isDisabled={locked}
                 tone={tone === 'overdue' ? 'danger' : tone === 'today' ? 'attention' : 'default'}
@@ -129,9 +132,8 @@ export function TodoDetailPanel({
               >
                 {todo.dueDate ? `${todo.dueDate.slice(5).replace('-', '月')}日 · ${dueLabel(todo, today)}` : undefined}
               </DatePicker>
-            </dd>
-            <dt>提醒</dt>
-            <dd>
+            </div>
+            <div className={styles.peekChip}>
               <ReminderEditor
                 key={`${todo.id}:${todo.revision}`}
                 todo={todo}
@@ -139,30 +141,18 @@ export function TodoDetailPanel({
                 isDisabled={locked || done}
                 onSave={reminder => actions.setReminder(todo, reminder)}
               />
-            </dd>
-            <dt>星标</dt>
-            <dd>
-              <Button
-                size="compact"
-                variant="ghost"
-                isDisabled={locked}
-                aria-pressed={todo.starred}
-                onPress={() => void actions.update(todo, { starred: !todo.starred })}
-              >
-                <StarIcon size={13} className={todo.starred ? styles.starMark : undefined} />
-                {todo.starred ? '已加星标' : '加星标'}
-              </Button>
-            </dd>
-            {progress ? (
-              <>
-                <dt>进展</dt>
-                <dd className={styles.fieldText}>
-                  直接下级 {progress.done}/{progress.total} 完成
-                  {progress.paused ? `，${progress.paused} 项暂停` : ''}
-                </dd>
-              </>
-            ) : null}
-          </dl>
+            </div>
+          </div>
+
+          {progress ? (
+            <div className={styles.peekProgressRow}>
+              <span>直接下级进展</span>
+              <strong>
+                {progress.done}/{progress.total} 完成{progress.paused ? ` · ${progress.paused} 项暂停` : ''}
+              </strong>
+            </div>
+          ) : null}
+
           {warnings.length ? (
             <ul className={styles.warningList}>
               {warnings.map(warning => (
@@ -171,6 +161,15 @@ export function TodoDetailPanel({
             </ul>
           ) : null}
         </section>
+
+        {step && step.kind !== 'none' ? (
+          <section className={styles.peekSection}>
+            <h4>下一步</h4>
+            <p className={styles.nextStepText}>
+              {step.kind === 'confirmParent' ? `确认完成：${step.todo.title}` : step.todo.title}
+            </p>
+          </section>
+        ) : null}
 
         {todo.kind === 'mainline' ? (
           <section className={styles.peekSection}>
@@ -184,17 +183,19 @@ export function TodoDetailPanel({
             />
           </section>
         ) : null}
+
         <section className={styles.peekSection}>
           <TextAreaField
-            label="说明"
-            placeholder="背景、要求或想法"
-            rows={4}
+            label="备注"
+            placeholder="补充背景、思路或参考链接…"
+            rows={5}
             isDisabled={locked}
             className={styles.fullField}
             {...note}
           />
         </section>
       </div>
+
       {!locked ? (
         <footer className={styles.peekFooter}>
           {done ? (

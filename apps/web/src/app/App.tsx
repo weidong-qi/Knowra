@@ -2,6 +2,7 @@ import { knowledgeLibraryNavigationKey } from '../features/knowledge/library/kno
 import { KnowledgeLibraryProvider } from '../features/knowledge/library/KnowledgeLibraryProvider';
 import { KnowledgeContextSidebar } from '../features/knowledge/library/KnowledgeContextSidebar';
 import { ScopedAppearanceProvider } from '../components/ui/overlay';
+import { ToastViewport } from '../components/ui';
 import { NotesIndexAppearanceControls, notesIndexAppearanceProps } from '../features/notes/NotesIndexAppearance';
 import { useNotesIndexAppearance } from '../features/notes/notesIndexAppearanceModel';
 import { RecoveryDraftNotice } from '../features/editor/RecoveryDraftNotice';
@@ -448,6 +449,7 @@ function AppContent() {
             <RecoveryDraftNotice onOpenNote={openNote} />
             <BudgetAlertBanner />
             <TodoReminderRunner />
+            <ToastViewport />
             <AppRoutes
               pathname={location.pathname}
               routeDomain={routeDomain}
