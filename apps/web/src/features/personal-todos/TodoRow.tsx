@@ -5,10 +5,13 @@ import {
   CalendarIcon,
   ChevronRightIcon,
   ClockIcon,
+  InboxIcon,
   MoreHorizontalIcon,
   StarIcon
 } from '../../components/icons/knowra';
 import {
+  Badge,
+  Button,
   DatePicker,
   IconButton,
   Menu,
@@ -19,7 +22,7 @@ import {
   PressableButton
 } from '../../components/ui';
 import { useTodoActions } from './TodoActions';
-import { contextPath, dueLabel, dueTone, relativeDateLabel } from './todoPresentation';
+import { contextPath, dueLabel, dueTone, mainlineAccentColor, relativeDateLabel, topLevelOf } from './todoPresentation';
 import styles from './PersonalTodos.module.css';
 
 export interface TodoRowProps {
@@ -29,9 +32,11 @@ export interface TodoRowProps {
   depth?: number;
   /** 平铺视图（今天、计划）显示所属主线与父任务。 */
   showContext?: boolean;
+  /** 在「之前未完成」行内常驻「今天继续 / 改到明天」按钮，并在第二行标出原计划日期。 */
+  showCarryoverActions?: boolean;
   expanded?: boolean;
   onToggleExpanded?(): void;
-  /** 由调用方追加在行尾的附加内容，例如进入主线的箭头。 */
+  /** 由调用方追加在行尾的附加内容，例如添加步骤入口。 */
   trailing?: ReactNode;
   onOpen?(todo: Todo): void;
 }
@@ -42,6 +47,7 @@ export function TodoRow({
   selectedId,
   depth = 0,
   showContext = false,
+  showCarryoverActions = false,
   expanded,
   onToggleExpanded,
   trailing,
@@ -55,9 +61,16 @@ export function TodoRow({
   const done = todo.status === 'done';
   const tone = dueTone(todo, today);
   const context = showContext ? contextPath(index, todo) : [];
+  const top = showContext ? topLevelOf(index, todo) : null;
+  const topColor = top && top.kind === 'mainline' ? mainlineAccentColor(top.id) : null;
   const todayAction = todayActionOf(todo, today);
   const [menuOpen, setMenuOpen] = useState(false);
   const open = () => (onOpen ? onOpen(todo) : actions.select(todo.id));
+
+  const hasSubline =
+    showContext &&
+    (context.length > 0 || todo.kind === 'sideline' || (showCarryoverActions && Boolean(todo.plannedDate)));
+
   return (
     <div
       className={styles.row}
@@ -65,6 +78,7 @@ export function TodoRow({
       data-status={todo.status}
       data-archived={archived || undefined}
       data-menu-open={menuOpen || undefined}
+      data-carryover={showCarryoverActions || undefined}
       style={{ '--depth': depth } as React.CSSProperties}
       role="listitem"
     >
@@ -77,9 +91,10 @@ export function TodoRow({
         >
           <ChevronRightIcon size={14} />
         </PressableButton>
-      ) : (
+      ) : depth > 0 ? (
         <span className={styles.expanderSpace} aria-hidden="true" />
-      )}
+      ) : null}
+
       <PressableButton
         className={styles.check}
         role="checkbox"
@@ -89,18 +104,44 @@ export function TodoRow({
         data-paused={todo.status === 'paused' || undefined}
         onPress={() => actions.toggleDone(todo)}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-          <circle cx="8" cy="8" r="6.6" />
-          <path d="m5.2 8.2 1.9 1.9 3.8-4" />
+        <svg width="19" height="19" viewBox="0 0 19 19" aria-hidden="true">
+          <rect x="1.25" y="1.25" width="16.5" height="16.5" rx="5" />
+          <path d="m5.8 9.7 2.4 2.4 5-5.2" />
         </svg>
       </PressableButton>
+
       <PressableButton className={styles.rowMain} onPress={open} aria-label={`打开「${todo.title}」详情`}>
         <span className={styles.rowTitle}>
-          {todo.title}
+          <span className={styles.rowTitleText}>{todo.title}</span>
           {todo.starred ? <StarIcon size={13} className={styles.starMark} aria-label="已加星标" /> : null}
         </span>
-        {context.length ? <span className={styles.rowContext}>{context.join(' › ')}</span> : null}
+        {hasSubline ? (
+          <span className={styles.rowContext}>
+            {context.length > 0 ? (
+              <span className={styles.rowContextItem}>
+                <span
+                  className={styles.contextDot}
+                  style={topColor ? ({ '--dot-color': topColor } as React.CSSProperties) : undefined}
+                  aria-hidden="true"
+                />
+                <span>{context.join(' › ')}</span>
+              </span>
+            ) : todo.kind === 'sideline' ? (
+              <span className={styles.rowContextItem}>
+                <InboxIcon size={12} className={styles.contextInbox} aria-hidden="true" />
+                <span>独立支线</span>
+              </span>
+            ) : null}
+            {showCarryoverActions && todo.plannedDate ? (
+              <span className={styles.rowContextPlan}>
+                {context.length > 0 || todo.kind === 'sideline' ? '· ' : ''}原计划
+                {relativeDateLabel(todo.plannedDate, today)}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
       </PressableButton>
+
       <span className={styles.rowMeta}>
         {progress ? (
           <span className={styles.progressChip} title={`直接下级完成 ${progress.done}/${progress.total}`}>
@@ -111,21 +152,21 @@ export function TodoRow({
           </span>
         ) : null}
         {todo.reminder?.state === 'missed' && !done && !archived ? (
-          <span className={styles.missedChip} title="提醒时间已过，应用当时未打开；请重新设置">
-            <BellIcon size={12} />
+          <Badge tone="warning" hideDot title="提醒时间已过，应用当时未打开；请重新设置">
+            <BellIcon size={11} />
             提醒已错过
-          </span>
+          </Badge>
         ) : todo.reminder?.state === 'pending' && !done && !archived ? (
           <span className={styles.reminderMark} title="已设置提醒" aria-label="已设置提醒">
-            <BellIcon size={12} />
+            <BellIcon size={13} />
           </span>
         ) : null}
         {todo.status === 'paused' ? (
-          <span className={styles.pausedChip} title={todo.pauseReason ?? undefined}>
+          <Badge tone="neutral" hideDot title={todo.pauseReason ?? undefined}>
             {todo.pausedBy === 'parent' ? '随上级暂停' : todo.pauseReason ? `暂停 · ${todo.pauseReason}` : '已暂停'}
-          </span>
+          </Badge>
         ) : null}
-        {todo.plannedDate && !done && todo.plannedDate !== today ? (
+        {todo.plannedDate && !done && todo.plannedDate !== today && !showCarryoverActions ? (
           <span
             className={styles.planChip}
             data-earlier={todo.plannedDate < today || undefined}
@@ -136,21 +177,67 @@ export function TodoRow({
           </span>
         ) : null}
         {tone ? (
-          <span className={styles.dueChip} data-tone={tone}>
-            <ClockIcon size={12} />
+          <Badge
+            tone={tone === 'overdue' ? 'danger' : tone === 'today' ? 'warning' : 'neutral'}
+            hideDot
+            className={styles.dueBadge}
+          >
+            <ClockIcon size={11} />
             {dueLabel(todo, today)}
-          </span>
+          </Badge>
         ) : null}
       </span>
-      <span className={styles.rowActions}>
-        {!archived && !done && todo.status === 'active' && todayAction !== 'alreadyToday' ? (
-          <PressableButton
-            className={styles.todayButton}
-            onPress={() => actions.addToToday(todo)}
-            aria-label={todayAction === 'moveToToday' ? `把「${todo.title}」改到今天` : `把「${todo.title}」加入今天`}
+
+      {showCarryoverActions && !archived && !done && todo.status === 'active' ? (
+        <span className={styles.carryoverActions}>
+          {todayAction !== 'alreadyToday' ? (
+            <Button
+              size="mini"
+              shape="pill"
+              variant="ghost"
+              className={styles.todayButton}
+              onPress={() => actions.addToToday(todo)}
+              aria-label={todayAction === 'moveToToday' ? `把「${todo.title}」改到今天` : `把「${todo.title}」加入今天`}
+            >
+              {todo.plannedDate && todo.plannedDate < today ? '今天继续' : '今天做'}
+            </Button>
+          ) : null}
+          <Button
+            size="mini"
+            shape="pill"
+            variant="ghost"
+            onPress={() => actions.moveToTomorrow(todo)}
+            aria-label={`把「${todo.title}」改到明天`}
           >
-            {todayAction === 'moveToToday' ? '改到今天' : '加入今天'}
-          </PressableButton>
+            改到明天
+          </Button>
+        </span>
+      ) : null}
+
+      <span className={styles.rowActions}>
+        {!showCarryoverActions && !archived && !done && todo.status === 'active' ? (
+          todayAction !== 'alreadyToday' ? (
+            <Button
+              size="mini"
+              shape="pill"
+              variant="ghost"
+              className={styles.todayButton}
+              onPress={() => actions.addToToday(todo)}
+              aria-label={todayAction === 'moveToToday' ? `把「${todo.title}」改到今天` : `把「${todo.title}」加入今天`}
+            >
+              {todayAction === 'moveToToday' ? '改到今天' : '加入今天'}
+            </Button>
+          ) : (
+            <Button
+              size="mini"
+              shape="pill"
+              variant="ghost"
+              onPress={() => actions.moveToTomorrow(todo)}
+              aria-label={`把「${todo.title}」改到明天`}
+            >
+              改到明天
+            </Button>
+          )
         ) : null}
         {!archived ? (
           <span className={styles.rowDate}>
@@ -159,11 +246,10 @@ export function TodoRow({
               value={todo.plannedDate}
               today={today}
               onChange={plannedDate => void actions.update(todo, { plannedDate })}
-              icon={<CalendarIcon size={13} />}
+              icon={<CalendarIcon size={14} />}
+              iconOnly
               isDisabled={done}
-            >
-              <span className={styles.srOnly}>改期</span>
-            </DatePicker>
+            />
           </span>
         ) : null}
         <TodoMenu todo={todo} onOpenChange={setMenuOpen} />

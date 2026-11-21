@@ -61,7 +61,14 @@ for (const mode of ['light', 'dark'] as const) {
         if (mobile) await trigger.tap();
         else await trigger.click();
         const inspector = page.getByRole('complementary', { name: '文档检查器', exact: true });
-        await inspector.getByRole('tab', { name: '大纲', exact: true }).click();
+        const outlineTab = inspector.getByRole('tab', { name: '大纲', exact: true });
+        if (mobile) await outlineTab.tap();
+        else {
+          await inspector.getByRole('tab', { name: '信息', exact: true }).focus();
+          await page.keyboard.press('ArrowRight');
+          await expect(outlineTab).toBeFocused();
+        }
+        await expect(inspector.getByRole('tabpanel', { name: '大纲', exact: true })).toBeVisible();
         const rows = inspector.getByRole('navigation', { name: '文档大纲' }).getByRole('button');
         await expect(rows).toHaveCount(3);
         expect(await rows.evaluateAll(elements => elements.map(element => element.getAttribute('data-depth')))).toEqual(

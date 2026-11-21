@@ -9,8 +9,10 @@ import {
   type TodoCommand
 } from '@study-accelerator/web-core';
 import { TodosView, parseTodoRoute } from './TodosView';
+import { QuickAdd } from './QuickAdd';
+import { TodoActionsProvider } from './TodoActions';
 import { createTodoStore } from './todoStore';
-import { dueLabel, pageCounts, relativeDateLabel } from './todoPresentation';
+import { dueLabel, formatDateLabel, mondayOfWeek, pageCounts, relativeDateLabel } from './todoPresentation';
 import { addDaysToDate } from '../../components/ui/input/DatePicker';
 
 afterEach(cleanup);
@@ -33,7 +35,7 @@ function fakeServer(seed: TodoCommand[] = []) {
     commands.push(command);
     return { data: { changed: apply(command) } };
   });
-  return { store: createTodoStore(requestJson as never), commands, todos: () => todos };
+  return { store: createTodoStore(requestJson as never), commands, todos: () => todos, requestJson };
 }
 
 const today = localDateOf(new Date());
@@ -75,7 +77,7 @@ describe('今天页面', () => {
     const server = fakeServer();
     const user = userEvent.setup();
     render(<TodosView pathname="/learning" store={server.store} />);
-    const input = await screen.findByRole('textbox', { name: '添加今天要做的事（作为支线）' });
+    const input = await screen.findByRole('textbox', { name: '添加今天要做的事' });
     await user.type(input, '买牛奶{Enter}');
     await screen.findByText('买牛奶');
     expect(server.commands[0]).toMatchObject({ type: 'create', parentId: null, title: '买牛奶', plannedDate: today });
@@ -210,4 +212,104 @@ it('折叠今日安排并清空后重新加入今天，截止事项仍只显示�
   await user.click(group);
   expect(screen.getAllByText('重建截止任务')).toHaveLength(1);
   expect(screen.queryByText('截止提醒')).not.toBeInTheDocument();
+});
+
+it('多日看板选中下周日后显示当天的安排', async () => {
+  const sunday = addDaysToDate(mondayOfWeek(today), 13);
+  const server = fakeServer([{ type: 'create', id: 's', parentId: null, title: '周日复盘', plannedDate: sunday }]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning/plan" store={server.store} />);
+  await user.click(await screen.findByRole('button', { name: '多日看板' }));
+  await user.click(await screen.findByRole('button', { name: '下一周' }));
+  expect(screen.queryByText('周日复盘')).toBeNull();
+  await user.click(screen.getByRole('button', { name: formatDateLabel(sunday, today) + '，1 项安排' }));
+  expect(
+    within(screen.getByRole('region', { name: formatDateLabel(sunday, today) })).getByText('周日复盘')
+  ).toBeVisible();
+});
+
+it('跨日更新快速添加的默认日期并保留显式选择', async () => {
+  const { store, commands } = fakeServer();
+  const user = userEvent.setup();
+  const quickAdd = (date: string) => (
+    <TodoActionsProvider store={store} todos={[]} today={date} onSelect={() => {}}>
+      <QuickAdd parentId={null} plannedDate={date} placeholder="添加待办" />
+    </TodoActionsProvider>
+  );
+  const view = render(quickAdd('2026-11-21'));
+  const input = screen.getByRole('textbox', { name: '添加待办' });
+  await user.type(input, '默认日期');
+  view.rerender(quickAdd('2026-11-22'));
+  await user.keyboard('{Enter}');
+  expect(commands.at(-1)).toMatchObject({ plannedDate: '2026-11-22' });
+  await user.type(input, '显式安排');
+  await user.click(screen.getByRole('button', { name: '明天' }));
+  view.rerender(quickAdd('2026-11-24'));
+  await user.click(screen.getByRole('button', { name: '添加' }));
+  expect(commands.at(-1)).toMatchObject({ plannedDate: '2026-11-23' });
+});
+
+it('详情按层级展示组织操作，子步骤创建失败后可以原文重试', async () => {
+  const server = fakeServer([{ type: 'create', id: 'm', parentId: null, kind: 'mainline', title: '本周主线' }]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning/mainlines/m" store={server.store} />);
+  await user.click(await screen.findByRole('button', { name: '编辑主线属性' }));
+  const panel = within(screen.getByRole('complementary', { name: '待办详情：本周主线' }));
+  expect(panel.queryByRole('button', { name: '移动' })).toBeNull();
+  const input = panel.getByRole('textbox', { name: '添加子步骤' });
+  server.requestJson.mockRejectedValueOnce(new Error('暂时离线'));
+  await user.type(input, '整理草稿{Enter}');
+  expect(await screen.findByText('暂时离线')).toBeVisible();
+  expect(input).toHaveValue('整理草稿');
+  await user.keyboard('{Enter}');
+  await user.click(await panel.findByRole('button', { name: '整理草稿' }));
+  const child = within(screen.getByRole('complementary', { name: '待办详情：整理草稿' }));
+  expect(child.getByRole('button', { name: '移动' })).toBeVisible();
+  expect(child.queryByRole('button', { name: '升格' })).toBeNull();
+});
+
+it('主线详情失焦保存备注和目标，键盘可打开子步骤', async () => {
+  const server = fakeServer([
+    { type: 'create', id: 'm', parentId: null, kind: 'mainline', title: '本周主线' },
+    { type: 'create', id: 's', parentId: 'm', title: '整理票据' }
+  ]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning/mainlines/m" store={server.store} />);
+  await user.click(await screen.findByRole('button', { name: '编辑主线属性' }));
+  const panel = within(screen.getByRole('complementary', { name: '待办详情：本周主线' }));
+  await user.type(panel.getByRole('textbox', { name: '备注' }), '保留原件');
+  await user.type(panel.getByRole('textbox', { name: '目标与完成标准' }), '完成报销');
+  await user.tab();
+  await waitFor(() =>
+    expect(server.todos().find(todo => todo.id === 'm')).toMatchObject({ note: '保留原件', goal: '完成报销' })
+  );
+  panel.getByRole('checkbox', { name: '完成子步骤：整理票据' }).focus();
+  await user.tab();
+  expect(panel.getByRole('button', { name: '整理票据' })).toHaveFocus();
+  await user.keyboard('{Enter}');
+  expect(await screen.findByRole('complementary', { name: '待办详情：整理票据' })).toBeVisible();
+});
+
+it('收起输入框和折叠今日安排均保留快速添加的草稿', async () => {
+  const server = fakeServer([{ type: 'create', id: 'a', parentId: null, title: '已有安排', plannedDate: today }]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning" store={server.store} />);
+  const input = await screen.findByRole('textbox', { name: '添加今天要做的事' });
+  await user.type(input, '保存我的草稿');
+  await user.click(screen.getByRole('button', { name: '明天' }));
+  await user.click(screen.getByRole('button', { name: '星标' }));
+  await user.click(screen.getByRole('button', { name: '收起' }));
+  expect(input).toHaveValue('保存我的草稿');
+  const group = screen.getByRole('button', { name: /今日安排/ });
+  await user.click(group);
+  expect(input).not.toBeVisible();
+  await user.click(group);
+  await user.click(input);
+  expect(screen.getByRole('button', { name: '明天' })).toHaveAttribute('aria-pressed', 'true');
+  await user.click(screen.getByRole('button', { name: '添加' }));
+  expect(server.commands.at(-1)).toMatchObject({
+    title: '保存我的草稿',
+    plannedDate: addDaysToDate(today, 1),
+    starred: true
+  });
 });

@@ -49,7 +49,7 @@ export function NotesIndexHeader({
   const ancestors = path.filter((segment, index) => index < path.length - 1 && !segment.current && segment.onNavigate);
   const more = (
     <MenuTrigger>
-      <IconButton size={30} aria-label="更多操作" aria-pressed={selectionMode}>
+      <IconButton size={28} aria-label="更多操作" aria-pressed={selectionMode}>
         <MoreHorizontalIcon size={16} />
       </IconButton>
       <MenuPopover {...theme}>

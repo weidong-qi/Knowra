@@ -84,15 +84,6 @@
   padding: 0;
 }
 
-.comfortableGroup .segment {
-  min-height: 28px;
-  padding: 0 12px;
-  font-size: 13px;
-}
-.comfortableGroup .count {
-  font-size: 11px;
-}
-
 .underline {
   gap: 12px;
   padding: 0;
@@ -133,36 +124,6 @@
   box-shadow: var(--focus-ring);
 }
 
-.outline {
-  gap: 6px;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-}
-.outline .segment {
-  min-width: 0;
-  min-height: 30px;
-  gap: 6px;
-  padding: 0 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control);
-  background: var(--surface-raised);
-}
-.outline .segment:is([aria-pressed='true'], [aria-selected='true']),
-.outline .segment:is([aria-pressed='true'], [aria-selected='true'])[data-hovered]:not([data-disabled]) {
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  box-shadow: none;
-}
-.outline .segment[data-focus-visible] {
-  box-shadow: var(--focus-ring);
-}
-.outline.compactGroup .segment {
-  min-height: 24px;
-  padding: 0 6px;
-}
-
 @media (max-width: 767px) {
   .segment {
     min-height: var(--index-size-44);
@@ -171,10 +132,7 @@
   .compactGroup .iconOnly {
     width: var(--index-size-44);
   }
-  .compactGroup .segment,
-  .comfortableGroup .segment,
-  .outline .segment,
-  .outline.compactGroup .segment {
+  .compactGroup .segment {
     min-height: var(--index-size-44);
   }
 }

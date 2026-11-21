@@ -6,6 +6,7 @@ import {
   type Todo,
   type TodoCommand
 } from '@study-accelerator/web-core';
+import { createReminderReceipts } from './reminderDelivery';
 
 export interface TodoUndo {
   id: number;
@@ -30,6 +31,7 @@ type Listener = () => void;
 /** 待办的前端数据源：命令都交给服务端按共享规则执行，成功后合并返回的变更记录。 */
 export function createTodoStore(requestJson = createApiClient().requestJson) {
   let state: TodoState = { status: 'idle', todos: [], error: null, unavailable: false, undo: null, notice: null };
+  const reminderReceipts = createReminderReceipts();
   const listeners = new Set<Listener>();
   let writeVersion = 0;
   let loading: Promise<void> | null = null;
@@ -49,6 +51,7 @@ export function createTodoStore(requestJson = createApiClient().requestJson) {
           const version = writeVersion;
           const { data } = await requestJson<{ data: { todos: Todo[] } }>('/api/todos');
           if (version !== writeVersion) continue;
+          reminderReceipts.prune(data.todos, Date.now());
           set({ status: 'ready', todos: data.todos, unavailable: false });
           return;
         }
@@ -96,6 +99,7 @@ export function createTodoStore(requestJson = createApiClient().requestJson) {
     }
   }
   return {
+    reminderReceipts,
     getState: () => state,
     subscribe(listener: Listener) {
       listeners.add(listener);

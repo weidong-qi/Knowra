@@ -203,7 +203,7 @@ export function KnowledgeIndexTools(props: KnowledgeIndexToolsProps) {
         {displayMenu}
         {inspector}
         <MenuTrigger>
-          <IconButton size={30} aria-label="更多操作">
+          <IconButton size={28} aria-label="更多操作">
             <MoreHorizontalIcon size={16} />
           </IconButton>
           <MenuPopover {...theme}>

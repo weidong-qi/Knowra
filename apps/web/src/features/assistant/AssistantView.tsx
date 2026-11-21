@@ -766,7 +766,7 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
               新对话
             </Button>
             <MenuTrigger>
-              <IconButton size={30} aria-label="更多操作">
+              <IconButton size={28} aria-label="更多操作">
                 <MoreHorizontalIcon size={16} />
               </IconButton>
               <MenuPopover>
@@ -992,7 +992,7 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
                       ) : null}
                       <div className={styles.messageActions}>
                         <IconButton
-                          size={30}
+                          size={28}
                           aria-label="复制回答"
                           onPress={() => {
                             void navigator.clipboard?.writeText(message.content).then(
@@ -1236,7 +1236,7 @@ function ConversationAssistantView({ pathname, onOpenNote }: AssistantViewProps)
                         </span>
                       ) : null}
                       <IconButton
-                        size={30}
+                        size={28}
                         tone="primary"
                         aria-label={pending ? '处理中…' : pendingSend.current ? '重试发送' : '发送消息'}
                         isDisabled={

@@ -117,9 +117,8 @@
   color: #fff;
   border-color: transparent;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 20%),
-    0 1px 1px rgb(150 60 20 / 35%),
-    0 2px 4px -1px rgb(150 60 20 / 25%);
+    inset 0 1px 0 rgb(255 255 255 / 16%),
+    0 1px 2px rgb(150 60 20 / 22%);
 }
 
 :global([data-ni-mode='dark']) .primary {
@@ -131,9 +130,8 @@
   color: #fff;
   border-color: transparent;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 20%),
-    0 1px 1px rgb(150 60 20 / 35%),
-    0 3px 6px -1px rgb(150 60 20 / 30%);
+    inset 0 1px 0 rgb(255 255 255 / 16%),
+    0 1px 3px rgb(150 60 20 / 26%);
 }
 
 .primary[data-pressed]:not([data-disabled]):not([disabled]):not([data-pending]) {
@@ -143,15 +141,32 @@
 
 .danger {
   --knowra-icon-accent: currentColor;
-  color: var(--ink-danger);
-  border-color: color-mix(in srgb, var(--ink-danger) 24%, transparent);
+  --bs-danger: #dc2626;
+  font-weight: 600;
+  background: var(--bs-danger);
+  color: #fff;
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 16%),
+    0 1px 2px rgb(140 20 20 / 22%);
 }
 
-.danger[data-hovered]:not([data-disabled]):not([data-pending]),
-.danger[data-pressed]:not([data-disabled]):not([data-pending]) {
-  background: var(--ink-danger-soft);
-  border-color: var(--ink-danger);
-  color: var(--ink-danger);
+:global([data-ni-mode='dark']) .danger {
+  --bs-danger: #c53030;
+}
+
+.danger[data-hovered]:not([data-disabled]):not([disabled]):not([data-pending]) {
+  background: color-mix(in srgb, var(--bs-danger) 90%, #000);
+  color: #fff;
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 16%),
+    0 1px 3px rgb(140 20 20 / 26%);
+}
+
+.danger[data-pressed]:not([data-disabled]):not([disabled]):not([data-pending]) {
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 22%);
+  transform: scale(0.975);
 }
 
 .ghost {
@@ -235,7 +250,7 @@
   flex: 0 0 auto;
 }
 
-/* ===== 默认按钮：细线。透明底加 1px 描边，悬停填一层灰，按下加深；不用投影和玻璃，明暗共用同一套令牌。 ===== */
+/* ===== 默认按钮：纸感微浮。微白底加细灰描边与轻量底影，呼应主按钮的物理质感。 ===== */
 .btn:where(
   :not(
     .primary,
@@ -251,9 +266,9 @@
     [aria-current='page']
   )
 ) {
-  background: transparent;
-  border-color: var(--ni-line-2, var(--border-strong));
-  box-shadow: var(--button-default-shadow, none);
+  background: var(--surface-raised, var(--surface-page, #fff));
+  border-color: var(--ni-line, var(--border-subtle));
+  box-shadow: var(--button-default-shadow, 0 1px 2px rgb(24 30 48 / 5%), inset 0 -1px 0 rgb(24 30 48 / 3%));
 }
 .btn:where(
     :not(
@@ -271,7 +286,7 @@
     )
   )[data-hovered]:not([data-disabled]):not([data-pending]) {
   background: var(--surface-hover);
-  border-color: color-mix(in srgb, var(--ni-ink, var(--text-primary)) 28%, transparent);
+  border-color: var(--ni-line-2, var(--border-strong));
 }
 .btn:where(
     :not(
@@ -289,7 +304,7 @@
     )
   )[data-pressed]:not([data-disabled]):not([data-pending]) {
   background: var(--surface-pressed);
-  box-shadow: none;
+  box-shadow: inset 0 1px 2px rgb(24 30 48 / 8%);
 }
 
 @media (max-width: 767px) {

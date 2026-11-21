@@ -131,7 +131,8 @@
 .fieldBare {
   gap: 0;
 }
-.fieldBare .inputShell {
+.fieldBare .inputShell,
+.fieldBare:not([data-disabled]):focus-within .inputShell {
   height: auto;
   min-height: 30px;
   padding: 0;
@@ -186,26 +187,43 @@
   cursor: not-allowed;
 }
 
-/* 对话输入区由外层容器承载焦点态，文本域本身不额外绘制边框。 */
-.composerField {
+/* 无边框文本域共用自适应高度，内联和带内边距两种外观用于嵌入内容区。 */
+.borderlessField {
   display: flex;
   width: 100%;
   gap: 0;
 }
-.composerField .textareaShell,
-.composerField:not([data-disabled]):focus-within .textareaShell {
+.borderlessField .textareaShell,
+.borderlessField:not([data-disabled]):focus-within .textareaShell {
   outline: 0;
   border: 0;
   background: transparent;
   box-shadow: none;
 }
-.composerField .textarea {
+.borderlessField .textarea {
   min-height: 64px;
   max-height: 180px;
   padding: 13px 15px 5px;
   resize: none;
   field-sizing: content;
   overflow-y: auto;
+}
+
+.borderlessField[data-presentation='inline'] .textarea {
+  padding: 2px 0;
+  min-height: 36px;
+  line-height: 1.5;
+}
+.borderlessField[data-presentation='inline']:not([data-disabled]) .textarea {
+  color: var(--ni-ink-2, var(--text-secondary));
+}
+.borderlessField[data-presentation='inset'] .textarea {
+  padding: 12px 14px;
+  line-height: 1.55;
+}
+.borderlessField:not([data-presentation='composer']):has(.textarea[data-focus-visible]) .textareaShell {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
 }
 
 .error {
@@ -481,6 +499,43 @@
   font-weight: 400;
 }
 
+.chipSelect {
+  flex: 0 1 auto;
+  max-width: 196px;
+}
+.chipSelect .selectTrigger {
+  width: auto;
+  max-width: 100%;
+  height: 24px;
+  padding: 0 10px;
+  gap: 5px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ni-ink-2, var(--text-secondary));
+  font-size: 12px;
+  box-shadow: none;
+}
+.chipSelect .selectTrigger[data-hovered]:not([data-disabled]),
+.chipSelect .selectTrigger[data-pressed]:not([data-disabled]) {
+  background: var(--ni-hover, var(--surface-hover));
+  color: var(--ni-ink, var(--text-primary));
+}
+.chipSelect .selectTrigger[data-active] {
+  background: var(--ni-accent-soft, var(--accent-soft, rgba(44, 107, 237, 0.09)));
+  color: var(--ni-accent-ink, var(--accent));
+  box-shadow: inset 0 0 0 1px var(--ni-accent-line, var(--accent-line, rgba(44, 107, 237, 0.28)));
+  font-weight: 500;
+}
+.chipSelect .selectTrigger[data-active] .selectChevron {
+  color: currentColor;
+}
+.chipSelect .selectTrigger[data-focus-visible] {
+  outline: 2px solid var(--ni-accent, var(--accent));
+  outline-offset: 1px;
+  box-shadow: none;
+}
+
 @media (max-width: 1050px) {
   .toolbarSelect {
     flex: 1 1 180px;
@@ -507,7 +562,7 @@
   }
 }
 @media (max-height: 600px) {
-  .composerField .textarea {
+  .borderlessField .textarea {
     min-height: 44px;
     max-height: 80px;
     padding-top: 8px;

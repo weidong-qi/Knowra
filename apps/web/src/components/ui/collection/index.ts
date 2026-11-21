@@ -6,3 +6,5 @@ export { GridList, GridListItem } from './GridList';
 export type { GridListProps, GridListColumn } from './GridList';
 export { TagGroup, Tag, TagList } from './TagGroup';
 export type { TagGroupProps, TagItem } from './TagGroup';
+export { GroupedList, GroupedRow, GroupedSubRow } from './GroupedList';
+export type { GroupedListProps, GroupedRowProps, GroupedSubRowProps } from './GroupedList';

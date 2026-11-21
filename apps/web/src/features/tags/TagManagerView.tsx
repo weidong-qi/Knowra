@@ -182,7 +182,7 @@ export function TagManagerView() {
   const options = (
     <PopoverTrigger>
       <IconButton
-        size={compact ? 40 : 30}
+        size={compact ? 40 : 28}
         className={styles.dotHost}
         data-on={optionsActive || undefined}
         aria-label="筛选与排序"
