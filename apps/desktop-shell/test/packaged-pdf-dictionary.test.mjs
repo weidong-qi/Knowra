@@ -22,5 +22,6 @@ test('Mac 离线查词：内置词库、真实双击、释义标注与重开', {
   await expect.poll(() => fs.existsSync(path.join(directory, 'ready.json')), { timeout: 30000 }).toBe(true);
   const page = await app.firstWindow();
   await page.waitForLoadState('domcontentloaded');
+  await page.bringToFront();
   await exercisePdfDictionary(page);
 });

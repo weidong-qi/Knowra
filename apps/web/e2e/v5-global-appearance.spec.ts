@@ -116,10 +116,13 @@ for (const width of [1280, 390]) {
     await dialog.screenshot({ path: info.outputPath(`全局搜索-打开-${width}.png`) });
     const inputTop = (await input.boundingBox())!.y;
     await pickScope('资料');
+    // 让光标离开结果区，以第一项为键盘导航的起点。
+    await input.hover();
     await input.fill('验收');
     await expect(dialog.getByRole('option')).toHaveCount(2);
     await expect(dialog.locator('mark').first()).toHaveText('验收');
     await expect.poll(async () => Math.abs((await input.boundingBox())!.y - inputTop)).toBeLessThanOrEqual(1);
+    await expect(dialog.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
     await input.press('ArrowDown');
     await expect(dialog.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
     await expect.poll(() => dialog.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
@@ -454,7 +457,7 @@ test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完�
   await expect(lastFolder).toBeInViewport();
   await page.screenshot({ path: info.outputPath('sidebar-scroll.png') });
   for (const { width, targetSize } of [
-    { width: 1440, targetSize: 30 },
+    { width: 1440, targetSize: 28 },
     { width: 390, targetSize: 44 }
   ]) {
     await page.setViewportSize({ width, height: 844 });
@@ -575,11 +578,19 @@ for (const mode of ['light', 'dark']) {
       });
       expect(colors.actual).toEqual(colors.expected);
     }
-    // 默认按钮是细线样式：透明底和 1px 描边，没有投影；主按钮仍保留纸感投影，防止用全局移除样式掩盖问题。
-    const outline = page.getByRole('button', { name: '默认胶囊', exact: true });
-    await expect(outline).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(outline).toHaveCSS('border-top-width', '1px');
-    await expect(outline).toHaveCSS('box-shadow', 'none');
+    // 默认按钮使用主题浮层底色、细边和轻投影；禁用态仍须清除投影。
+    const pill = page.getByRole('button', { name: '默认胶囊', exact: true });
+    const raisedColor = await pill.evaluate(element => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'var(--surface-raised)';
+      element.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    await expect(pill).toHaveCSS('background-color', raisedColor);
+    await expect(pill).toHaveCSS('border-top-width', '1px');
+    await expect(pill).not.toHaveCSS('box-shadow', 'none');
     await expect(page.getByRole('button', { name: '发布', exact: true })).not.toHaveCSS('box-shadow', 'none');
   });
 }

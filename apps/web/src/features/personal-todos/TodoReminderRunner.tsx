@@ -77,7 +77,7 @@ export function TodoReminderRunner({
     let active = true;
     const check = async () => {
       const state = store.getState();
-      if (state.status === 'idle') await store.load();
+      if (state.status === 'idle' || state.status === 'loading') await store.load();
       if (!active || store.getState().status !== 'ready') return;
       const plan = planReminders(store.getState().todos, deps.current.now(), log.current);
       for (const todo of plan.missed) {
