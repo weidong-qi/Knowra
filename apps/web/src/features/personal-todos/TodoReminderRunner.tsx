@@ -22,25 +22,18 @@ function deliveredLog() {
     }
     return memory;
   };
-  return {
-    has: (key: string) => read().has(key),
-    add(key: string) {
-      const next = [...read(), key].slice(-200);
-      memory = new Set(next);
-      try {
-        window.localStorage.setItem(DELIVERED_KEY, JSON.stringify(next));
-      } catch {
-        /* 同上。 */
-      }
+  const save = (next: string[]) => {
+    memory = new Set(next);
+    try {
+      window.localStorage.setItem(DELIVERED_KEY, JSON.stringify(next));
+    } catch {
+      /* 同上。 */
     }
   };
-}
-
-/** 本次检查需要投递和标为错过的提醒（纯函数，便于测试）。 */
-export function planReminders(todos: Todo[], now: string, delivered: { has(key: string): boolean }) {
   return {
-    deliver: remindersToDeliver(todos, now).filter(todo => !delivered.has(reminderKey(todo))),
-    missed: remindersMissed(todos, now)
+    has: (key: string) => read().has(key),
+    add: (key: string) => save([...read(), key].slice(-200)),
+    remove: (key: string) => save([...read()].filter(item => item !== key))
   };
 }
 
@@ -69,38 +62,50 @@ export function TodoReminderRunner({
   const navigate = useNavigate();
   const [cards, setCards] = useState<Todo[]>([]);
   const log = useRef(deliveredLog());
+  const inFlight = useRef(new Set<string>());
   // 回调放进 ref：父组件重渲染时不重建定时器。
   const deps = useRef({ notify, now });
   deps.current = { notify, now };
   useEffect(() => {
     let active = true;
-    let checking = false;
-    const check = async () => {
-      if (checking) return;
-      checking = true;
+    const handleReminder = async (todo: Todo, outcome: 'fired' | 'missed') => {
+      const key = reminderKey(todo);
+      if (inFlight.current.has(key)) return;
+      inFlight.current.add(key);
       try {
-        const state = store.getState();
-        if (state.status === 'idle' || state.status === 'loading') await store.load();
-        if (!active || store.getState().status !== 'ready') return;
-        const plan = planReminders(store.getState().todos, deps.current.now(), log.current);
-        for (const todo of plan.missed) {
-          if (!active) return;
-          await store
-            .execute({ type: 'ackReminder', id: todo.id, dueAt: todo.reminder!.dueAt, outcome: 'missed' })
-            .catch(() => undefined);
+        const delivered = log.current.has(key);
+        if (outcome === 'fired' && !delivered) {
+          log.current.add(key);
+          const shown = await deps.current.notify(todo).catch(() => false);
+          if (!shown) {
+            if (!active) {
+              log.current.remove(key);
+              return;
+            }
+            setCards(list => [...list.filter(item => item.id !== todo.id), todo]);
+          }
         }
-        for (const todo of plan.deliver) {
-          if (!active) return;
-          log.current.add(reminderKey(todo));
-          const shown = await deps.current.notify(todo);
-          if (!shown && active) setCards(list => [...list.filter(item => item.id !== todo.id), todo]);
-          await store
-            .execute({ type: 'ackReminder', id: todo.id, dueAt: todo.reminder!.dueAt, outcome: 'fired' })
-            .catch(() => undefined);
-        }
+        // 已投递但回写失败时，后续轮询只重试「已提醒」，即使此时已超过宽限期。
+        await store
+          .execute({
+            type: 'ackReminder',
+            id: todo.id,
+            dueAt: todo.reminder!.dueAt,
+            outcome: delivered ? 'fired' : outcome
+          })
+          .catch(() => undefined);
       } finally {
-        checking = false;
+        inFlight.current.delete(key);
       }
+    };
+    const check = async () => {
+      const state = store.getState();
+      if (state.status === 'idle' || state.status === 'loading') await store.load();
+      if (!active || store.getState().status !== 'ready') return;
+      const { todos } = store.getState();
+      const now = deps.current.now();
+      for (const todo of remindersToDeliver(todos, now)) void handleReminder(todo, 'fired');
+      for (const todo of remindersMissed(todos, now)) void handleReminder(todo, 'missed');
     };
     void check();
     const checkTimer = window.setInterval(() => void check(), CHECK_MS);

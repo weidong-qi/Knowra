@@ -5,10 +5,11 @@ import {
   applyTodoCommand,
   localDateOf,
   mergeTodoChanges,
+  remindersToDeliver,
   type Todo,
   type TodoCommand
 } from '@study-accelerator/web-core';
-import { TodoReminderRunner, planReminders } from './TodoReminderRunner';
+import { TodoReminderRunner } from './TodoReminderRunner';
 import { TodosView } from './TodosView';
 import { createTodoStore } from './todoStore';
 
@@ -49,6 +50,52 @@ const withReminder = (at: string, id = 'r'): TodoCommand[] => [
 ];
 
 describe('提醒投递', () => {
+  it('首条回写耗时 11 分钟时，30 秒后到期的另一条仍按时投递', async () => {
+    const aDue = '2026-11-09T02:00:00.000Z';
+    const bDue = '2026-11-09T02:00:30.000Z';
+    vi.useFakeTimers({ now: Date.parse(aDue) });
+    try {
+      const server = fakeServer([...withReminder(aDue, 'a'), ...withReminder(bDue, 'b')]);
+      const execute = server.store.execute;
+      vi.spyOn(server.store, 'execute').mockImplementationOnce(async command => {
+        await new Promise(resolve => setTimeout(resolve, 11 * 60_000));
+        return execute(command);
+      });
+      const notify = vi.fn(async (_todo: Todo) => true);
+      render(<TodoReminderRunner store={server.store} notify={notify} />);
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
+      expect(notify.mock.calls.map(([todo]) => todo.id)).toEqual(['a', 'b']);
+      expect(server.commands).toEqual([{ type: 'ackReminder', id: 'b', dueAt: bDue, outcome: 'fired' }]);
+      await act(() => vi.advanceTimersByTimeAsync(11 * 60_000));
+      expect(notify).toHaveBeenCalledTimes(2);
+      expect(server.commands).toEqual([
+        { type: 'ackReminder', id: 'b', dueAt: bDue, outcome: 'fired' },
+        { type: 'ackReminder', id: 'a', dueAt: aDue, outcome: 'fired' }
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('回写失败后即使超过宽限期，仍只补写已提醒', async () => {
+    const at = '2026-11-09T02:00:00.000Z';
+    vi.useFakeTimers({ now: Date.parse(at) });
+    try {
+      const server = fakeServer(withReminder(at));
+      const ack = vi.spyOn(server.store, 'execute').mockRejectedValueOnce(new Error('暂时离线'));
+      const notify = vi.fn(async () => true);
+      render(<TodoReminderRunner store={server.store} notify={notify} />);
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(ack).toHaveBeenCalledTimes(1);
+      vi.setSystemTime(Date.parse(at) + 11 * 60_000);
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
+      expect(notify).toHaveBeenCalledTimes(1);
+      expect(server.commands).toEqual([{ type: 'ackReminder', id: 'r', dueAt: at, outcome: 'fired' }]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('首次加载跨过轮询间隔且首条回写延迟时，每条到期提醒只投递一次', async () => {
     vi.useFakeTimers();
     try {
@@ -84,7 +131,7 @@ describe('提醒投递', () => {
       });
       await act(() => vi.advanceTimersByTimeAsync(30_000));
       expect(notify.mock.calls.map(([todo]) => todo.id)).toEqual(['a', 'b']);
-      expect(server.commands.map(command => command.id)).toEqual(['a', 'b']);
+      expect(server.commands.map(command => command.id).sort()).toEqual(['a', 'b']);
     } finally {
       vi.useRealTimers();
     }
@@ -103,7 +150,7 @@ describe('提醒投递', () => {
     expect(notify).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).toBeNull();
     unmount();
-    expect(planReminders(server.todos(), now(), { has: () => false }).deliver).toEqual([]);
+    expect(remindersToDeliver(server.todos(), now())).toEqual([]);
   });
 
   it('系统通知不可用时在应用内弹出提醒卡', async () => {
