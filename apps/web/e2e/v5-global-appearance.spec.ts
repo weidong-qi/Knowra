@@ -610,6 +610,65 @@ test('待办详情预览可从顶栏切换场景', async ({ page }) => {
   }
 });
 
+test('原窗口在系统通知返回前关闭后，第二个窗口展示提醒并回写', async ({ page, context }) => {
+  const first = await context.newPage();
+  const at = new Date(Date.now() - 1000).toISOString();
+  const title = '跨窗口提醒';
+  let todos = applyTodoCommand([], { type: 'create', id: 'cross-window', parentId: null, title }, { now: at }).changed;
+  todos = applyTodoCommand(
+    todos,
+    {
+      type: 'setReminder',
+      id: 'cross-window',
+      expectedRevision: todos[0]!.revision,
+      reminder: { kind: 'fixed', at }
+    },
+    { now: at }
+  ).changed;
+  const commands: TodoCommand[] = [];
+  for (const tab of [first, page]) {
+    await mockEditorWorkspace(tab, []);
+    await tab.route('**/api/todos', route => route.fulfill({ json: { data: { todos } } }));
+    await tab.route('**/api/todos/commands', route => {
+      const { command } = route.request().postDataJSON() as { command: TodoCommand };
+      commands.push(command);
+      const { changed } = applyTodoCommand(todos, command, { now: new Date().toISOString() });
+      todos = mergeTodoChanges(todos, changed);
+      return route.fulfill({ json: { data: { changed } } });
+    });
+  }
+  await first.addInitScript(() => {
+    window.knowraDesktop = {
+      onPrepareClose() {},
+      onCancelClose() {},
+      notify: () => {
+        document.documentElement.dataset.notificationPending = 'true';
+        return new Promise<boolean>(() => {});
+      }
+    };
+  });
+  await page.clock.install();
+  await first.goto('/#/learning/sidelines');
+  await expect(first.locator('html')).toHaveAttribute('data-notification-pending', 'true');
+  await page.goto('/#/learning/sidelines');
+  await expect(page.getByRole('checkbox', { name: '完成「跨窗口提醒」' })).toBeVisible();
+  await page.clock.fastForward(30_000);
+  await expect(page.getByRole('alert').filter({ hasText: title })).toHaveCount(0);
+  expect(commands).toEqual([]);
+  await first.close();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await navigator.locks.query()).held?.filter(lock => lock.name?.includes('cross-window')).length ?? 0
+      )
+    )
+    .toBe(0);
+  await page.clock.fastForward(30_000);
+  await expect(page.getByRole('alert').filter({ hasText: title })).toBeVisible();
+  await expect.poll(() => commands).toEqual([{ type: 'ackReminder', id: 'cross-window', dueAt: at, outcome: 'fired' }]);
+});
+
 test('短视口内可透过提醒间隙点击、滚动提醒并使用限时撤销', async ({ page }) => {
   await mockEditorWorkspace(page, []);
   await page.setViewportSize({ width: 960, height: 480 });

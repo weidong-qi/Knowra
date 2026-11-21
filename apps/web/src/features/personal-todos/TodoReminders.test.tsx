@@ -49,7 +49,118 @@ const withReminder = (at: string, id = 'r'): TodoCommand[] => [
   { type: 'setReminder', id, expectedRevision: 1, reminder: { kind: 'fixed', at } }
 ];
 
+function sharedStorage() {
+  const entries = new Map<string, string>();
+  return {
+    getItem: (key: string) => entries.get(key) ?? null,
+    setItem: vi.fn((key: string, value: string) => {
+      entries.set(key, value);
+    }),
+    removeItem: (key: string) => {
+      entries.delete(key);
+    },
+    key: (index: number) => [...entries.keys()][index] ?? null,
+    get length() {
+      return entries.size;
+    }
+  };
+}
+
 describe('提醒投递', () => {
+  it('首个窗口关闭且系统通知失败后，第二个窗口展示卡片才回写已提醒', async () => {
+    const at = '2026-11-09T02:00:00.000Z';
+    vi.useFakeTimers({ now: Date.parse(at) });
+    vi.stubGlobal('localStorage', sharedStorage());
+    try {
+      const server = fakeServer(withReminder(at));
+      const secondStore = createTodoStore(server.requestJson as never);
+      let finishNotification!: (shown: boolean) => void;
+      const firstNotify = vi.fn(
+        () =>
+          new Promise<boolean>(resolve => {
+            finishNotification = resolve;
+          })
+      );
+      const first = render(<TodoReminderRunner store={server.store} notify={firstNotify} />);
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(firstNotify).toHaveBeenCalledTimes(1);
+
+      const secondNotify = vi.fn(async () => false);
+      const execute = secondStore.execute;
+      const visibleAtAck: boolean[] = [];
+      vi.spyOn(secondStore, 'execute').mockImplementation(command => {
+        visibleAtAck.push(screen.queryByRole('alert') !== null);
+        return execute(command);
+      });
+      render(<TodoReminderRunner store={secondStore} notify={secondNotify} />);
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(server.commands).toEqual([]);
+      expect(secondNotify).not.toHaveBeenCalled();
+      first.unmount();
+      await act(async () => {
+        finishNotification(false);
+      });
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
+      expect(secondNotify).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('alert')).toHaveTextContent('交实验报告');
+      expect(visibleAtAck).toEqual([true]);
+      expect(server.commands).toEqual([{ type: 'ackReminder', id: 'r', dueAt: at, outcome: 'fired' }]);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('旧投递记录不能证明已显示，新窗口可凭真实回执补写', async () => {
+    const at = '2026-11-09T02:00:00.000Z';
+    const storage = sharedStorage();
+    storage.setItem('knowra:todo-reminders:delivered:v1', JSON.stringify(['r@' + at]));
+    vi.stubGlobal('localStorage', storage);
+    try {
+      const server = fakeServer(withReminder(at));
+      const firstAck = vi.spyOn(server.store, 'execute').mockRejectedValueOnce(new Error('暂时离线'));
+      const notify = vi.fn(async () => true);
+      const first = render(<TodoReminderRunner store={server.store} notify={notify} now={() => at} />);
+      await waitFor(() => expect(firstAck).toHaveBeenCalledTimes(1));
+      expect(notify).toHaveBeenCalledTimes(1);
+      first.unmount();
+      const next = createTodoStore(server.requestJson as never);
+      render(<TodoReminderRunner store={next} notify={notify} now={() => at} />);
+      await waitFor(() =>
+        expect(server.commands).toEqual([{ type: 'ackReminder', id: 'r', dueAt: at, outcome: 'fired' }])
+      );
+      expect(notify).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('本地存储可读但写满、首次回写失败时，同一窗口只重试回写', async () => {
+    const at = '2026-11-09T02:00:00.000Z';
+    vi.useFakeTimers({ now: Date.parse(at) });
+    const storage = sharedStorage();
+    storage.setItem.mockImplementation(() => {
+      throw new DOMException('存储已满', 'QuotaExceededError');
+    });
+    vi.stubGlobal('localStorage', storage);
+    try {
+      const server = fakeServer(withReminder(at));
+      const ack = vi.spyOn(server.store, 'execute').mockRejectedValueOnce(new Error('暂时离线'));
+      const notify = vi.fn(async () => true);
+      render(<TodoReminderRunner store={server.store} notify={notify} />);
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(ack).toHaveBeenCalledTimes(1);
+      expect(storage.setItem).toHaveBeenCalled();
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
+      expect(notify).toHaveBeenCalledTimes(1);
+      expect(ack).toHaveBeenCalledTimes(2);
+      expect(server.commands).toEqual([{ type: 'ackReminder', id: 'r', dueAt: at, outcome: 'fired' }]);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it('首条回写耗时 11 分钟时，30 秒后到期的另一条仍按时投递', async () => {
     const aDue = '2026-11-09T02:00:00.000Z';
     const bDue = '2026-11-09T02:00:30.000Z';

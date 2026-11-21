@@ -3,39 +3,10 @@ import { remindersMissed, remindersToDeliver, type Todo } from '@study-accelerat
 import { ToastRegion, type ToastItem } from '../../components/ui';
 import { useNavigate } from '../../app/router';
 import { sharedTodoStore, type TodoStore } from './todoStore';
+import { reminderKey, withReminderClaim } from './reminderDelivery';
 
-const DELIVERED_KEY = 'knowra:todo-reminders:delivered:v1';
 const CHECK_MS = 30_000;
 const REFRESH_MS = 5 * 60_000;
-
-const reminderKey = (todo: Todo) => `${todo.id}@${todo.reminder?.dueAt ?? ''}`;
-
-/** 本设备已投递过的提醒；多个窗口共享，避免同一设备重复弹出。读写失败时退回内存。 */
-function deliveredLog() {
-  let memory = new Set<string>();
-  const read = () => {
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(DELIVERED_KEY) ?? '[]') as unknown;
-      if (Array.isArray(parsed)) memory = new Set(parsed.filter((item): item is string => typeof item === 'string'));
-    } catch {
-      /* 存储不可用时只用内存记录。 */
-    }
-    return memory;
-  };
-  const save = (next: string[]) => {
-    memory = new Set(next);
-    try {
-      window.localStorage.setItem(DELIVERED_KEY, JSON.stringify(next));
-    } catch {
-      /* 同上。 */
-    }
-  };
-  return {
-    has: (key: string) => read().has(key),
-    add: (key: string) => save([...read(), key].slice(-200)),
-    remove: (key: string) => save([...read()].filter(item => item !== key))
-  };
-}
 
 async function systemNotify(todo: Todo) {
   if (typeof window.knowraDesktop?.notify !== 'function') return false;
@@ -60,40 +31,50 @@ export function TodoReminderRunner({
   now?(): string;
 }) {
   const navigate = useNavigate();
-  const [cards, setCards] = useState<Todo[]>([]);
-  const log = useRef(deliveredLog());
+  const [cards, setCards] = useState<{ todo: Todo; onShown(): void }[]>([]);
   const inFlight = useRef(new Set<string>());
   // 回调放进 ref：父组件重渲染时不重建定时器。
   const deps = useRef({ notify, now });
   deps.current = { notify, now };
   useEffect(() => {
-    let active = true;
-    const handleReminder = async (todo: Todo, outcome: 'fired' | 'missed') => {
+    const lifetime = new AbortController();
+    const waitingForCard = new Map<string, (shown: boolean) => void>();
+    const showCard = (todo: Todo) =>
+      new Promise<boolean>(resolve => {
+        waitingForCard.get(todo.id)?.(false);
+        waitingForCard.set(todo.id, resolve);
+        const onShown = () => {
+          if (waitingForCard.get(todo.id) === resolve) {
+            waitingForCard.delete(todo.id);
+            resolve(true);
+          }
+        };
+        setCards(list => [...list.filter(card => card.todo.id !== todo.id), { todo, onShown }]);
+      });
+    const handleReminder = async (todo: Todo, planned: 'fired' | 'missed') => {
       const key = reminderKey(todo);
       if (inFlight.current.has(key)) return;
       inFlight.current.add(key);
       try {
-        const delivered = log.current.has(key);
-        if (outcome === 'fired' && !delivered) {
-          log.current.add(key);
-          const shown = await deps.current.notify(todo).catch(() => false);
-          if (!shown) {
-            if (!active) {
-              log.current.remove(key);
-              return;
-            }
-            setCards(list => [...list.filter(item => item.id !== todo.id), todo]);
+        const outcome = await withReminderClaim(
+          key,
+          lifetime.signal,
+          async (): Promise<'fired' | 'missed' | undefined> => {
+            if (lifetime.signal.aborted) return;
+            if (store.reminderReceipts.has(key)) return 'fired';
+            if (planned === 'missed') return 'missed';
+            const systemShown = await deps.current.notify(todo).catch(() => false);
+            const shown = systemShown || (!lifetime.signal.aborted && (await showCard(todo)));
+            if (!shown) return;
+            store.reminderReceipts.remember(key, Date.now());
+            return 'fired';
           }
+        );
+        if (outcome) {
+          await store
+            .execute({ type: 'ackReminder', id: todo.id, dueAt: todo.reminder!.dueAt, outcome })
+            .catch(() => undefined);
         }
-        // 已投递但回写失败时，后续轮询只重试「已提醒」，即使此时已超过宽限期。
-        await store
-          .execute({
-            type: 'ackReminder',
-            id: todo.id,
-            dueAt: todo.reminder!.dueAt,
-            outcome: delivered ? 'fired' : outcome
-          })
-          .catch(() => undefined);
       } finally {
         inFlight.current.delete(key);
       }
@@ -101,7 +82,7 @@ export function TodoReminderRunner({
     const check = async () => {
       const state = store.getState();
       if (state.status === 'idle' || state.status === 'loading') await store.load();
-      if (!active || store.getState().status !== 'ready') return;
+      if (lifetime.signal.aborted || store.getState().status !== 'ready') return;
       const { todos } = store.getState();
       const now = deps.current.now();
       for (const todo of remindersToDeliver(todos, now)) void handleReminder(todo, 'fired');
@@ -114,15 +95,18 @@ export function TodoReminderRunner({
       if (document.visibilityState === 'visible') void store.load();
     }, REFRESH_MS);
     return () => {
-      active = false;
+      lifetime.abort();
+      for (const resolve of waitingForCard.values()) resolve(false);
+      waitingForCard.clear();
       window.clearInterval(checkTimer);
       window.clearInterval(refreshTimer);
     };
   }, [store]);
-  const dismiss = useCallback((id: string) => setCards(list => list.filter(item => item.id !== id)), []);
+  const dismiss = useCallback((id: string) => setCards(list => list.filter(card => card.todo.id !== id)), []);
   const items = useMemo<ToastItem[]>(
     () =>
-      cards.map(todo => ({
+      cards.map(({ todo, onShown }) => ({
+        onShown,
         id: `todo-reminder:${todo.id}`,
         title: todo.title,
         description: '待办提醒',

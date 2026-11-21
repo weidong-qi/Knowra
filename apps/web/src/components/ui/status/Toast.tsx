@@ -21,6 +21,8 @@ export interface ToastItem {
   tone?: StatusTone;
   icon?: ReactNode;
   actions?: ToastAction[];
+  /** 通知卡片已挂载到实际显示的通知栏。 */
+  onShown?(): void;
   onDismiss?(): void;
   /** 限时操作置顶，滚动其他通知时仍可点击。 */
   pinned?: boolean;
@@ -138,10 +140,13 @@ export interface ToastCardProps extends ToastItem {
 
 /** 温润毛玻璃通知卡：左侧状态圆标 + 标题/说明 + 右侧轻量操作与关闭按钮。 */
 export const ToastCard = forwardRef<HTMLDivElement, ToastCardProps>(function ToastCard(
-  { title, description, tone = 'neutral', icon, actions, onDismiss, pinned, role = 'status', className },
+  { title, description, tone = 'neutral', icon, actions, onShown, onDismiss, pinned, role = 'status', className },
   ref
 ) {
   const singleLine = !description;
+  useLayoutEffect(() => {
+    onShown?.();
+  }, [onShown]);
   return (
     <div
       ref={ref}
