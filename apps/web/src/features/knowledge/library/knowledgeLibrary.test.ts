@@ -8,6 +8,13 @@ import {
 } from './knowledgeLibraryRoute';
 const item = { id: 'k', title: '当前知识' } as KnowledgeItem;
 describe('知识库导航与共享数据', () => {
+  it('定义草稿恢复深链接保留目标与草稿 ID，恢复操作不重挂工作区', () => {
+    const route = parseKnowledgeLibraryRoute('/knowledge/concepts?concept=math&draft=knowledge-123');
+    expect(route).toMatchObject({ id: 'math', definitionDraftId: 'knowledge-123' });
+    expect(parseKnowledgeLibraryRoute(knowledgeLibraryPath(route))).toEqual(route);
+    expect(knowledgeLibraryNavigationKey(knowledgeLibraryPath(route))).toBe('/knowledge/concepts');
+    expect(knowledgeLibraryPath({ ...route, definitionDraftId: null })).toBe('/knowledge/concepts?concept=math');
+  });
   it('保留旧深链接和中文搜索，序列化后可恢复范围与选择', () => {
     const route = parseKnowledgeLibraryRoute('/knowledge/concepts?scope=muted&q=卷积&concept=a');
     expect(parseKnowledgeLibraryRoute(knowledgeLibraryPath(route))).toEqual(route);

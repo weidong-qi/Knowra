@@ -70,8 +70,10 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await page.goto(`${runtime.origin}/#/materials/notes/${note.id}`);
   await expect(page.locator('.textLayer')).toContainText('EGULARIZATION', { timeout: 25000 });
   const inspector = page.getByRole('complementary', { name: 'PDF 检查器' });
-  await inspector.getByRole('tab', { name: '目录', exact: true }).click();
-  const panel = inspector.getByRole('tabpanel');
+  await inspector.getByRole('tab', { name: /标注/ }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(inspector.getByRole('tab', { name: '目录', exact: true })).toBeFocused();
+  const panel = inspector.getByRole('tabpanel', { name: '目录', exact: true });
   await expect.poll(() => panel.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
   await panel.hover();
   await page.mouse.wheel(0, 5000);

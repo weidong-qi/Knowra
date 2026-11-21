@@ -239,7 +239,7 @@ function AppContent() {
           pathname: location.pathname,
           routeDomain,
           onNavigateHome: () => navigate('/'),
-          onNavigateMaterials: () => navigate('/materials'),
+          onNavigateMaterials: () => navigate(indexRoute('root')),
           noteTitle: editorNote?.title
         });
 

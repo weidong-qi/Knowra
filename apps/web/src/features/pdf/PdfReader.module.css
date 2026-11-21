@@ -249,19 +249,21 @@
   display: flex;
   flex-direction: column;
 }
-.panelTabBar {
-  flex: 0 0 auto;
-  padding: 8px 44px 10px 10px;
-  background: var(--panel-line) bottom / 100% 1px no-repeat;
+.panelTabs > [role='tablist'] {
+  margin: 8px 44px 10px 10px;
 }
-.panelSegmented {
-  width: 100%;
-}
-.panelSegment {
+.panelTabs [role='tab'] {
   flex: 1 1 0;
   min-width: 0;
 }
-.panelBody {
+.panelTabs > :global(.react-aria-TabPanels) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.panelTabs [role='tabpanel'] {
   min-height: 0;
   flex: 1;
   overflow: auto;

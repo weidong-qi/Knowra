@@ -32,7 +32,8 @@ export function QuickAdd({
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [draftPlan, setDraftPlan] = useState<string | null>(plannedDate ?? null);
+  const [planOverride, setDraftPlan] = useState<string | null>();
+  const draftPlan = planOverride === undefined ? (plannedDate ?? null) : planOverride;
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [starred, setStarred] = useState(false);
   const [targetParentId, setTargetParentId] = useState<string>(parentId ?? '');
@@ -61,7 +62,7 @@ export function QuickAdd({
 
   const resetDraft = () => {
     setTitle('');
-    setDraftPlan(plannedDate ?? null);
+    setDraftPlan(undefined);
     setDueDate(null);
     setStarred(false);
     setTargetParentId(parentId ?? '');

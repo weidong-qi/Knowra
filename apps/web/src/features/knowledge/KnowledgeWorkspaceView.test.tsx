@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Annotation, KnowledgeEvidence, KnowledgeItem } from '@study-accelerator/web-core';
 import { canNavigate } from '../../app/navigationGuard';
+import { RouterProvider } from '../../app/router';
 import { flushBeforeWorkspaceBackup, flushBeforeWorkspaceRestore } from '../../app/desktopLifecycle';
 import { CreateKnowledgeCandidateDialog } from './CreateKnowledgeCandidateDialog';
 import { KnowledgeWorkspaceView, type KnowledgeWorkspaceViewProps } from './KnowledgeWorkspaceView';
@@ -88,6 +89,35 @@ async function clickDetailAction(name: string) {
 }
 
 describe('KnowledgeWorkspaceView', () => {
+  it('知识库恢复定义草稿时跳转原概念，不按普通候选保存', async () => {
+    const user = userEvent.setup();
+    const value = {
+      title: '数学的定义',
+      canonicalStatement: '恢复正文',
+      userExplanation: '',
+      knowledgeType: 'concept' as const
+    };
+    knowledgeDraftRecovery.write(getKnowledgeDraftScope(), {
+      version: 1,
+      kind: 'create',
+      candidateId: 'definition-123',
+      initialValue: value,
+      value,
+      definitionTarget: { conceptId: 'math', conceptName: '数学' }
+    });
+    await knowledgeDraftRecovery.flush();
+    const input = props();
+    const navigate = vi.fn();
+    render(
+      <RouterProvider location={{ pathname: '/knowledge', navigate }}>
+        <KnowledgeWorkspaceView {...input} />
+      </RouterProvider>
+    );
+    await user.click(await screen.findByRole('button', { name: '恢复草稿：数学的定义' }));
+    expect(navigate).toHaveBeenCalledWith('/knowledge/concepts?concept=math&draft=definition-123');
+    expect(screen.queryByRole('dialog', { name: '新建知识点' })).not.toBeInTheDocument();
+    expect(input.onCreate).not.toHaveBeenCalled();
+  });
   it('空库加载完成后，按工具栏范围唯一定位同名新建入口并打开候选对话框', async () => {
     const user = userEvent.setup();
     const input = props({ selectedItemId: null, onList: vi.fn().mockResolvedValue([]) });

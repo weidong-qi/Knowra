@@ -298,7 +298,11 @@ export function PlanPage({
     return groups.filter(group => group.date === selectedDate);
   }, [groups, selectedDate, today, todayBase.today]);
 
-  const boardDays = useMemo(() => days.filter(day => !day.isPast).slice(0, 4), [days]);
+  const upcomingDays = days.filter(day => !day.isPast);
+  const boardWidth = 4;
+  const selectedDayIndex = upcomingDays.findIndex(day => day.date === selectedDate);
+  const boardStart = Math.max(0, Math.min(selectedDayIndex, upcomingDays.length - boardWidth));
+  const boardDays = upcomingDays.slice(boardStart, boardStart + boardWidth);
 
   const weekStrip = (
     <div className={styles.weekStripWrap}>

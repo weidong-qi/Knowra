@@ -104,6 +104,8 @@ export function TodoDetailPanel({
   const children = index.children(todo.id);
   const progress = children.length ? progressOf(index, todo.id) : null;
   const step = todo.parentId === null && children.length ? nextStep(index, todo.id) : null;
+  const canMove = !locked && todo.kind !== 'mainline';
+  const canPromote = !locked && todo.kind === 'sideline' && todo.parentId === null;
   const canAddChild = !locked && !done && index.depth(todo.id) < TODO_MAX_DEPTH;
   const tone = dueTone(todo, today);
   const statusTone = archived ? 'neutral' : done ? 'success' : todo.status === 'paused' ? 'warning' : 'accent';
@@ -112,6 +114,7 @@ export function TodoDetailPanel({
   const tomorrow = addDaysToDate(today, 1);
 
   const [childDraft, setChildDraft] = useState('');
+  const [creatingChild, setCreatingChild] = useState(false);
   const [expandedRow, setExpandedRow] = useState<ExpandableRowId | null>(null);
   const [compact, setCompact] = useState(
     () => window.matchMedia?.('(max-width: 900px), (any-pointer: coarse)').matches ?? false
@@ -135,9 +138,14 @@ export function TodoDetailPanel({
 
   const submitChild = async () => {
     const trimmed = childDraft.trim();
-    if (!trimmed || !canAddChild) return;
-    setChildDraft('');
-    await actions.create({ parentId: todo.id, title: trimmed });
+    if (!trimmed || !canAddChild || creatingChild) return;
+    setCreatingChild(true);
+    try {
+      const created = await actions.create({ parentId: todo.id, title: trimmed });
+      if (created) setChildDraft(current => (current === childDraft ? '' : current));
+    } finally {
+      setCreatingChild(false);
+    }
   };
 
   const createdLabel = formatShortIsoDate(todo.createdAt, today);
@@ -422,16 +430,16 @@ export function TodoDetailPanel({
             icon={<NodesIcon size={16} />}
             label="所属上级"
             description={parent ? parent.title : '无（独立）'}
-            onPress={!locked ? () => actions.move(todo) : undefined}
+            onPress={canMove ? () => actions.move(todo) : undefined}
             control={
-              !locked ? (
+              canMove ? (
                 <Button size="mini" variant="ghost" onPress={() => actions.move(todo)}>
                   移动
                 </Button>
               ) : undefined
             }
           />
-          {!locked && todo.kind !== 'mainline' ? (
+          {canPromote ? (
             <GroupedRow
               icon={<TargetIcon size={16} />}
               label="主线"

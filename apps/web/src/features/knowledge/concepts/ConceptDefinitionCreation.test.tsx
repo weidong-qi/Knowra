@@ -12,11 +12,91 @@ import { canNavigate } from '../../../app/navigationGuard';
 import { ConceptWorkspace } from './ConceptWorkspace';
 import { createConceptStore, setSharedConceptStore } from './conceptStore';
 import { useConceptDefinitionLink } from './useConceptDefinitionLink';
+import { getKnowledgeDraftScope, knowledgeDraftRecovery } from '../knowledgeDraftRecovery';
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await knowledgeDraftRecovery.flush();
   setSharedConceptStore(null);
   sessionStorage.clear();
+});
+
+it('重新挂载后可从概念页恢复定义，写定义复用原候选 ID 与正文并挂回原概念', async () => {
+  const user = userEvent.setup();
+  const now = '2026-11-16T00:00:00Z';
+  const options = { now, requestHash: 'a'.repeat(64) };
+  const items: KnowledgeItem[] = [];
+  let state = applyConceptCommand(
+    emptyConceptState(),
+    [],
+    {
+      type: 'createConcept',
+      id: 'math',
+      name: '数学',
+      operationId: 'create',
+      expectedRevision: 0
+    },
+    options
+  );
+  const store = createConceptStore(
+    vi.fn(async (url: string, input?: { body?: string }) => {
+      if (!url.endsWith('/commands')) return { data: state };
+      const changed = applyConceptCommand(state, items, JSON.parse(input!.body!).command, options);
+      state = mergeConceptChanges(state, changed);
+      return { data: { changed } };
+    }) as never
+  );
+  setSharedConceptStore(store);
+  const create = vi.fn(async (input: CreateKnowledgeCandidateInput) => {
+    const item = {
+      ...input,
+      id: input.id!,
+      sourceMode: 'manual',
+      importance: null,
+      reviewStatus: 'candidate',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null
+    } as KnowledgeItem;
+    items.push(item);
+    return { item, evidence: [] };
+  });
+  const mount = () =>
+    render(
+      <ConceptWorkspace
+        selectedId="math"
+        canWrite
+        onSelect={vi.fn()}
+        onOpenItem={vi.fn()}
+        onListItems={async () => items}
+        onCreateItem={create}
+      />
+    );
+  let view = mount();
+  await user.click(await screen.findByRole('button', { name: '写定义' }));
+  await user.type(screen.getByRole('textbox', { name: '核心陈述' }), '恢复后的数学定义。');
+  await knowledgeDraftRecovery.flush();
+  const original = knowledgeDraftRecovery.list(getKnowledgeDraftScope())[0]!;
+  expect(original.definitionTarget).toEqual({ conceptId: 'math', conceptName: '数学' });
+  view.unmount();
+  view = mount();
+  await user.click(await screen.findByRole('button', { name: '恢复定义草稿：数学的定义' }));
+  expect(screen.getByRole('textbox', { name: '核心陈述' })).toHaveValue('恢复后的数学定义。');
+  expect(screen.getByRole('button', { name: /知识类型/ })).toBeDisabled();
+  view.unmount();
+  mount();
+  await user.click(await screen.findByRole('button', { name: '写定义' }));
+  expect(screen.getByRole('status')).toHaveTextContent('已恢复未保存的知识草稿');
+  await user.click(screen.getByRole('button', { name: '保存' }));
+  await waitFor(() => expect(state.links).toHaveLength(1));
+  expect(create).toHaveBeenCalledOnce();
+  expect(create.mock.calls[0]![0]).toMatchObject({
+    id: original.candidateId,
+    canonicalStatement: '恢复后的数学定义。',
+    knowledgeType: 'concept'
+  });
+  expect(state.links[0]).toMatchObject({ conceptId: 'math', knowledgeItemId: original.candidateId, role: 'subject' });
+  expect(knowledgeDraftRecovery.list(getKnowledgeDraftScope())).toEqual([]);
 });
 
 it('写定义沿用草稿保护，保存失败保留输入，挂靠失败只重试关联', async () => {
@@ -145,4 +225,42 @@ it('挂靠已经提交但响应丢失时，重试先核对快照而不重复写�
   expect(result.current.task).toBeNull();
   expect(request.mock.calls.filter(([url]) => url.endsWith('/commands'))).toHaveLength(1);
   expect(state.links).toHaveLength(1);
+});
+
+it('目标概念已删除时保留恢复草稿并允许导出，禁止创建孤立的定义知识', async () => {
+  const user = userEvent.setup();
+  const value = {
+    title: '数学的定义',
+    canonicalStatement: '定义正文',
+    userExplanation: '',
+    knowledgeType: 'concept' as const
+  };
+  const draft = {
+    version: 1 as const,
+    kind: 'create' as const,
+    candidateId: 'orphan-definition',
+    initialValue: value,
+    value,
+    definitionTarget: { conceptId: 'deleted-math', conceptName: '数学' }
+  };
+  knowledgeDraftRecovery.write(getKnowledgeDraftScope(), draft);
+  await knowledgeDraftRecovery.flush();
+  setSharedConceptStore(createConceptStore(vi.fn(async () => ({ data: emptyConceptState() })) as never));
+  const create = vi.fn();
+  render(
+    <ConceptWorkspace
+      selectedId="deleted-math"
+      canWrite
+      onSelect={vi.fn()}
+      onOpenItem={vi.fn()}
+      onListItems={async () => []}
+      onCreateItem={create}
+    />
+  );
+  await user.click(await screen.findByRole('button', { name: '恢复定义草稿：数学的定义' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('目标概念已删除或合并');
+  expect(screen.getByRole('button', { name: '导出定义草稿：数学的定义' })).toBeEnabled();
+  expect(screen.queryByRole('textbox', { name: '核心陈述' })).not.toBeInTheDocument();
+  expect(create).not.toHaveBeenCalled();
+  expect(knowledgeDraftRecovery.list(getKnowledgeDraftScope())).toEqual([draft]);
 });

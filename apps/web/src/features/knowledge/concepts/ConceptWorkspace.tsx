@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   conceptItemLinks,
   conceptDefinitions,
@@ -15,6 +15,8 @@ import { WorkspacePanel, WorkspacePanelBody, WorkspacePanelFooter } from '../../
 import { PathTrail } from '../../../shell/PathTrail';
 import { useNavigate } from '../../../app/router';
 import { randomId } from '../../../browser/randomId';
+import { downloadTextFile } from '../../../browser/downloadFile';
+import { getKnowledgeDraftScope, knowledgeDraftRecovery, type KnowledgeDraft } from '../knowledgeDraftRecovery';
 import { notesIndexAppearanceProps } from '../../notes/NotesIndexAppearance';
 import { useNotesIndexAppearance } from '../../notes/notesIndexAppearanceModel';
 import { formatUpdatedAt } from '../../notes/notesIndexModel';
@@ -38,6 +40,8 @@ import indexStyles from '../KnowledgeIndex.module.css';
 import styles from './Concepts.module.css';
 export interface ConceptWorkspaceProps {
   selectedId: string | null;
+  recoveryDraftId?: string | null;
+  onRecoveryDraftClosed?(): void;
   canWrite: boolean;
   refreshKey?: number;
   scope?: string;
@@ -53,6 +57,8 @@ export interface ConceptWorkspaceProps {
 }
 export function ConceptWorkspace({
   selectedId,
+  recoveryDraftId,
+  onRecoveryDraftClosed,
   canWrite,
   refreshKey,
   scope: routeScope,
@@ -91,7 +97,21 @@ export function ConceptWorkspace({
   const [removal, setRemoval] = useState<{ ids: string[]; move: boolean } | null>(null);
   const [action, setAction] = useState<'merge' | 'delete' | null>(null);
   const [definitionConcept, setDefinitionConcept] = useState<KnowledgeConcept | null>(null);
+  const [definitionDraft, setDefinitionDraft] = useState<KnowledgeDraft>();
+  const [definitionDrafts, setDefinitionDrafts] = useState<KnowledgeDraft[] | null>(null);
+  const [draftError, setDraftError] = useState('');
+  const handledRecovery = useRef<string | null>(null);
+  const draftScope = getKnowledgeDraftScope();
   const definitionLink = useConceptDefinitionLink(store);
+  useEffect(() => {
+    try {
+      setDefinitionDrafts(knowledgeDraftRecovery.list(draftScope).filter(draft => draft.definitionTarget));
+      setDraftError('');
+    } catch (cause) {
+      setDefinitionDrafts(null);
+      setDraftError(cause instanceof Error ? cause.message : '定义草稿读取失败，请保留恢复文件。');
+    }
+  }, [draftScope, definitionConcept, refreshKey]);
   useEffect(() => {
     if (!cache) void store.load();
   }, [cache, store, refreshKey]);
@@ -121,6 +141,48 @@ export function ConceptWorkspace({
   }, [selectedId, setInspectorOpen]);
   const write = canWrite && state.status === 'ready' && !state.unavailable && itemsReady;
   const concept = state.concepts.find(row => row.id === selectedId && !row.deletedAt);
+  const restoreDefinition = useCallback(
+    (draft: KnowledgeDraft) => {
+      const target = state.concepts.find(row => row.id === draft.definitionTarget?.conceptId && !row.deletedAt);
+      if (!target) {
+        setDraftError('目标概念已删除或合并，定义草稿仍保留。请导出草稿后核对目标概念。');
+        return;
+      }
+      if (selectedId !== target.id) onSelect(target.id);
+      setDefinitionDraft(draft);
+      setDefinitionConcept(target);
+    },
+    [state.concepts, selectedId, onSelect]
+  );
+  function writeDefinition(target: KnowledgeConcept) {
+    try {
+      const previous = knowledgeDraftRecovery
+        .list(draftScope)
+        .find(draft => draft.definitionTarget?.conceptId === target.id);
+      setDefinitionDraft(previous);
+      setDefinitionConcept(target);
+    } catch (cause) {
+      setDraftError(cause instanceof Error ? cause.message : '定义草稿读取失败，请保留恢复文件。');
+    }
+  }
+  useEffect(() => {
+    if (!recoveryDraftId) {
+      handledRecovery.current = null;
+      return;
+    }
+    if (
+      !write ||
+      !onCreateItem ||
+      !definitionDrafts ||
+      definitionLink.task ||
+      handledRecovery.current === recoveryDraftId
+    )
+      return;
+    handledRecovery.current = recoveryDraftId;
+    const draft = definitionDrafts.find(row => row.candidateId === recoveryDraftId);
+    if (draft) restoreDefinition(draft);
+    else setDraftError('未找到这条定义草稿，请核对当前资料库与恢复文件。');
+  }, [recoveryDraftId, write, onCreateItem, definitionDrafts, definitionLink.task, restoreDefinition]);
   const itemsById = useMemo(() => new Map(items.map(item => [item.id, item])), [items]);
   const allLinks = useMemo(() => conceptItemLinks(state, items), [state, items]);
   const links = allLinks.filter(row => row.conceptId === selectedId);
@@ -267,6 +329,41 @@ export function ConceptWorkspace({
             </Button>
           </div>
         ) : null}
+        {draftError ? (
+          <p className={styles.notice} role="alert">
+            {draftError}
+          </p>
+        ) : null}
+        {definitionDrafts?.length ? (
+          <section className={styles.notice} aria-label="未保存的定义草稿">
+            <strong>有 {definitionDrafts.length} 条定义草稿尚未保存</strong>
+            {definitionDrafts.map(draft => (
+              <Fragment key={draft.candidateId}>
+                <Button
+                  size="compact"
+                  variant="ghost"
+                  isDisabled={!write || !onCreateItem || Boolean(definitionLink.task)}
+                  onPress={() => restoreDefinition(draft)}
+                >
+                  恢复定义草稿：{draft.value.title || draft.definitionTarget!.conceptName}
+                </Button>
+                <Button
+                  size="compact"
+                  variant="ghost"
+                  onPress={() =>
+                    downloadTextFile(
+                      `${draft.value.title || '定义'}-恢复草稿.json`,
+                      JSON.stringify(draft, null, 2),
+                      'application/json;charset=utf-8'
+                    )
+                  }
+                >
+                  导出定义草稿：{draft.value.title || draft.definitionTarget!.conceptName}
+                </Button>
+              </Fragment>
+            ))}
+          </section>
+        ) : null}
         {definitionLink.task ? (
           <div className={styles.notice} role={definitionLink.error ? 'alert' : 'status'}>
             <span>
@@ -388,7 +485,7 @@ export function ConceptWorkspace({
                     onOpenGraph={() => navigate(`/knowledge/graph?concept=${encodeURIComponent(concept.id)}`)}
                     onAttach={() => setLinkOpen(true)}
                     onWriteDefinition={
-                      onCreateItem && !definitionLink.task ? () => setDefinitionConcept(concept) : undefined
+                      onCreateItem && !definitionLink.task ? () => writeDefinition(concept) : undefined
                     }
                     onOpenItem={onOpenItem}
                     onAction={key => {
@@ -456,19 +553,34 @@ export function ConceptWorkspace({
       ) : null}
       {definitionConcept && onCreateItem ? (
         <CreateKnowledgeCandidateDialog
+          key={definitionDraft?.candidateId ?? definitionConcept.id}
+          recoveryDraft={definitionDraft}
+          definitionTarget={{ conceptId: definitionConcept.id, conceptName: definitionConcept.name }}
           title={`为“${definitionConcept.name}”写定义`}
           initialValue={{ title: `${definitionConcept.name}的定义`, knowledgeType: 'concept' }}
           lockKnowledgeType
           canWrite={write}
-          onClose={() => setDefinitionConcept(null)}
+          onClose={() => {
+            setDefinitionConcept(null);
+            setDefinitionDraft(undefined);
+            onRecoveryDraftClosed?.();
+          }}
           onCreate={input => {
+            const snapshot = store.getState();
+            if (
+              snapshot.status !== 'ready' ||
+              snapshot.unavailable ||
+              !snapshot.concepts.some(row => row.id === definitionConcept.id && !row.deletedAt)
+            )
+              throw new Error('目标概念已删除或暂不可用，定义草稿已保留，请核对后重试。');
             if (!input.canonicalStatement?.trim()) throw new Error('请在核心陈述中填写定义正文。');
             return onCreateItem(input);
           }}
           onCreated={item => {
             cache?.accept(item);
             setItems(current => [item, ...current.filter(row => row.id !== item.id)]);
-            void definitionLink.start(definitionConcept, item);
+            const target = store.getState().concepts.find(row => row.id === definitionConcept.id && !row.deletedAt);
+            void definitionLink.start(target ?? definitionConcept, item);
           }}
         >
           <p className={styles.selectionCount}>

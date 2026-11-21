@@ -36,6 +36,7 @@ import { KnowledgeSourceDialog } from './KnowledgeSourceDialog';
 import { KnowledgeItemDialog } from './KnowledgeItemDialog';
 import { knowledgeFormValue } from './KnowledgeItemForm';
 import { getKnowledgeDraftScope, knowledgeDraftRecovery, type KnowledgeDraft } from './knowledgeDraftRecovery';
+import { knowledgeLibraryPath } from './library/knowledgeLibraryRoute';
 import { filterKnowledgeItems, knowledgeError, knowledgeReviewViewStatus } from './knowledgeViewModel';
 import { groupKnowledge, sortKnowledge, useKnowledgeDisplay } from './knowledgeIndexModel';
 import { KnowledgeIndexSections, handleKnowledgeListKeys } from './KnowledgeIndexItems';
@@ -663,6 +664,18 @@ export function KnowledgeWorkspaceView(props: KnowledgeWorkspaceViewProps) {
                       key={draft.candidateId}
                       variant="ghost"
                       onPress={() => {
+                        if (draft.definitionTarget) {
+                          navigate(
+                            knowledgeLibraryPath({
+                              page: 'concepts',
+                              scope: 'all',
+                              query: '',
+                              id: draft.definitionTarget.conceptId,
+                              definitionDraftId: draft.candidateId
+                            })
+                          );
+                          return;
+                        }
                         setRecoveryDraft(draft);
                         if (draft.kind === 'create') setCreateOpen(true);
                         else setEditDraft(draft);

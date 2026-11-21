@@ -25,9 +25,11 @@ export interface ButtonProps extends Omit<RAButtonProps, 'className' | 'children
    */
   variant?: ButtonVariant;
   /** 工作区工具栏、分组标题、密集卡片的尺寸；视觉规则统一由本组件维护。 */
-  size?: 'default' | 'workspace' | 'compact' | 'chip' | 'mini' | 'footer';
+  size?: 'default' | 'workspace' | 'compact' | 'chip' | 'mini' | 'toolbar' | 'footer';
   /** 小型操作默认胶囊；square 为小圆角矩形，不随主题变为胶囊。 */
   shape?: 'square' | 'pill';
+  /** 低强调蓝色操作，用于卡片内的“查看”等入口。 */
+  emphasis?: 'normal' | 'soft';
   /** 图标（仅 icon 模式时作为主内容；其它模式可与 label 并列）。 */
   icon?: ReactNode;
   /** 提交/保存中状态，禁用按压但保留焦点。 */
@@ -44,10 +46,26 @@ const variantClass: Record<ButtonVariant, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'default', size = 'default', shape = 'pill', icon, children, className, isPending, ...rest },
+  {
+    variant = 'default',
+    size = 'default',
+    shape = 'pill',
+    emphasis = 'normal',
+    icon,
+    children,
+    className,
+    isPending,
+    ...rest
+  },
   ref
 ) {
-  const composed = cx(variantClass[variant], size !== 'default' && styles[size], styles[shape], className);
+  const composed = cx(
+    variantClass[variant],
+    size !== 'default' && styles[size],
+    styles[shape],
+    emphasis === 'soft' && styles.soft,
+    className
+  );
   return (
     <RAButton ref={ref} className={composed} isPending={isPending} {...rest}>
       {icon}

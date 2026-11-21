@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconButton, SegmentedButton, SegmentedControl } from '../../components/ui/button';
+import { IconButton } from '../../components/ui/button';
+import { Tabs, type TabsItem } from '../../components/ui/collection';
 import { CloseIcon } from '../../components/icons/knowra';
 import {
   extractInspectorOutline,
@@ -18,14 +19,14 @@ import type { EditorInspectorProps } from './inspector/types';
 export type { EditorInspectorProps } from './inspector/types';
 import styles from './EditorInspector.module.css';
 
-const inspectorTabs = [
+const inspectorTabs: TabsItem[] = [
   { id: 'info', label: '信息' },
   { id: 'outline', label: '大纲' },
   { id: 'links', label: '链接' },
   { id: 'annotations', label: '标注' },
   { id: 'versions', label: '记录' },
   { id: 'ai', label: 'AI' }
-] as const;
+];
 
 export function EditorInspector(props: EditorInspectorProps) {
   const [selectedTab, setSelectedTab] = useState('info');
@@ -83,25 +84,17 @@ export function EditorInspector(props: EditorInspectorProps) {
           <CloseIcon size={18} />
         </IconButton>
       </header>
-      <div className={styles.tabs}>
-        <div className={styles.tabBar}>
-          <SegmentedControl role="tablist" aria-label="检查器视图" density="compact" className={styles.tabSegmented}>
-            {inspectorTabs.map(item => (
-              <SegmentedButton
-                key={item.id}
-                role="tab"
-                aria-selected={selectedTab === item.id}
-                className={styles.tabSegment}
-                onPress={() => setSelectedTab(item.id)}
-              >
-                {item.label}
-              </SegmentedButton>
-            ))}
-          </SegmentedControl>
-        </div>
-        <div className={styles.tabBody}>
-          <div role="tabpanel" className={styles.panel} data-panel={selectedTab}>
-            {selectedTab === 'info' ? (
+      <Tabs
+        appearance="segmented"
+        className={styles.tabs}
+        aria-label="检查器视图"
+        items={inspectorTabs}
+        selectedKey={selectedTab}
+        onSelectionChange={key => setSelectedTab(String(key))}
+      >
+        {item => (
+          <div className={styles.panel} data-panel={String(item.id)}>
+            {item.id === 'info' ? (
               <InfoPanel
                 {...props}
                 assignedTags={tags}
@@ -112,8 +105,8 @@ export function EditorInspector(props: EditorInspectorProps) {
                 onOrganize={() => setOrganizeOpen(true)}
               />
             ) : null}
-            {selectedTab === 'outline' ? <OutlinePanel outline={outline} onNavigate={props.onNavigateHeading} /> : null}
-            {selectedTab === 'links' ? (
+            {item.id === 'outline' ? <OutlinePanel outline={outline} onNavigate={props.onNavigateHeading} /> : null}
+            {item.id === 'links' ? (
               <LinksPanel
                 relations={relations}
                 loading={props.linkedNotesLoading}
@@ -125,14 +118,14 @@ export function EditorInspector(props: EditorInspectorProps) {
                 onOpenLinkedNote={props.onOpenLinkedNote}
               />
             ) : null}
-            {selectedTab === 'annotations' ? (
+            {item.id === 'annotations' ? (
               <AnnotationPanel
                 key={props.note.id}
                 {...props}
                 canWrite={props.canWrite && props.extendedWritesEnabled !== false}
               />
             ) : null}
-            {selectedTab === 'versions' ? (
+            {item.id === 'versions' ? (
               <VersionHistoryPanel
                 key={props.note.id}
                 note={props.note}
@@ -146,7 +139,7 @@ export function EditorInspector(props: EditorInspectorProps) {
                 onGetVersion={props.onGetVersion}
               />
             ) : null}
-            {selectedTab === 'ai' ? (
+            {item.id === 'ai' ? (
               <AnnotationPanel
                 key={`ai-${props.note.id}`}
                 {...props}
@@ -155,8 +148,8 @@ export function EditorInspector(props: EditorInspectorProps) {
               />
             ) : null}
           </div>
-        </div>
-      </div>
+        )}
+      </Tabs>
       {/* 标签草稿和异步操作归属当前笔记，切换笔记必须创建独立会话。 */}
       <TagPickerDialog
         key={props.note.id}

@@ -663,8 +663,9 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
       mockSnapshot: createEmptyWorkspaceSnapshot()
     });
 
+    const navigate = vi.fn();
     render(
-      <RouterProvider location={{ pathname: '/materials/notes/note-1', navigate: vi.fn() }}>
+      <RouterProvider location={{ pathname: '/materials/notes/note-1', navigate }}>
         <AppProviders store={store}>
           <App />
         </AppProviders>
@@ -676,10 +677,10 @@ describe('V4-05 workspace bootstrap (AppShell + HomeView)', () => {
     expect(screen.getByRole('toolbar', { name: '笔记格式工具栏' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: '资料上下文导航' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '工作区状态' }));
-    expect(within(await screen.findByLabelText('工作区位置')).getByText('Note')).toHaveAttribute(
-      'aria-current',
-      'location'
-    );
+    const breadcrumb = within(await screen.findByLabelText('工作区位置'));
+    expect(breadcrumb.getByText('Note')).toHaveAttribute('aria-current', 'location');
+    fireEvent.click(breadcrumb.getByRole('button', { name: '跳转到「根目录」' }));
+    expect(navigate).toHaveBeenCalledWith('/materials?scope=root');
   });
 
   it('moves editor tabs into the Mac titlebar while keeping the browser layout intact', async () => {

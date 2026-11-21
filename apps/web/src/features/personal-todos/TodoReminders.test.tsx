@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -104,6 +104,7 @@ describe('提醒设置', () => {
     const user = userEvent.setup();
     render(<TodosView pathname="/learning" store={server.store} />);
     await user.click(await screen.findByRole('button', { name: '打开「交材料」详情' }));
+    await user.click(await screen.findByRole('switch', { name: '启用提醒' }));
     await user.click(await screen.findByRole('button', { name: '设置提醒' }));
     const dialog = await screen.findByRole('dialog', { name: '设置提醒' });
     expect(within(dialog).getByRole('button', { name: '相对截止' })).toHaveAttribute('aria-pressed', 'true');
@@ -117,6 +118,15 @@ describe('提醒设置', () => {
     expect(await screen.findByRole('button', { name: /提醒：截止前 1 天 09:00/ })).toBeInTheDocument();
     const reminder = server.todos()[0]!.reminder!;
     expect(reminder.state).toBe('pending');
-    expect(reminder.kind === 'beforeDue' && reminder.dueAt).toBeTruthy();
+    await act(async () => {
+      await server.store.execute({
+        type: 'update',
+        id: 's',
+        expectedRevision: server.todos()[0]!.revision,
+        patch: { dueDate: '2099-01-11' }
+      });
+    });
+    const updated = server.todos()[0]!.reminder!;
+    expect(Date.parse(updated.dueAt) - Date.parse(reminder.dueAt)).toBe(86_400_000);
   });
 });

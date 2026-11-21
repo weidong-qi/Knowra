@@ -9,8 +9,10 @@ import {
   type TodoCommand
 } from '@study-accelerator/web-core';
 import { TodosView, parseTodoRoute } from './TodosView';
+import { QuickAdd } from './QuickAdd';
+import { TodoActionsProvider } from './TodoActions';
 import { createTodoStore } from './todoStore';
-import { dueLabel, pageCounts, relativeDateLabel } from './todoPresentation';
+import { dueLabel, formatDateLabel, mondayOfWeek, pageCounts, relativeDateLabel } from './todoPresentation';
 import { addDaysToDate } from '../../components/ui/input/DatePicker';
 
 afterEach(cleanup);
@@ -33,7 +35,7 @@ function fakeServer(seed: TodoCommand[] = []) {
     commands.push(command);
     return { data: { changed: apply(command) } };
   });
-  return { store: createTodoStore(requestJson as never), commands, todos: () => todos };
+  return { store: createTodoStore(requestJson as never), commands, todos: () => todos, requestJson };
 }
 
 const today = localDateOf(new Date());
@@ -210,4 +212,58 @@ it('折叠今日安排并清空后重新加入今天，截止事项仍只显示�
   await user.click(group);
   expect(screen.getAllByText('重建截止任务')).toHaveLength(1);
   expect(screen.queryByText('截止提醒')).not.toBeInTheDocument();
+});
+
+it('多日看板选中下周日后显示当天的安排', async () => {
+  const sunday = addDaysToDate(mondayOfWeek(today), 13);
+  const server = fakeServer([{ type: 'create', id: 's', parentId: null, title: '周日复盘', plannedDate: sunday }]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning/plan" store={server.store} />);
+  await user.click(await screen.findByRole('button', { name: '多日看板' }));
+  await user.click(await screen.findByRole('button', { name: '下一周' }));
+  expect(screen.queryByText('周日复盘')).toBeNull();
+  await user.click(screen.getByRole('button', { name: formatDateLabel(sunday, today) + '，1 项安排' }));
+  expect(
+    within(screen.getByRole('region', { name: formatDateLabel(sunday, today) })).getByText('周日复盘')
+  ).toBeVisible();
+});
+
+it('跨日更新快速添加的默认日期并保留显式选择', async () => {
+  const { store, commands } = fakeServer();
+  const user = userEvent.setup();
+  const quickAdd = (date: string) => (
+    <TodoActionsProvider store={store} todos={[]} today={date} onSelect={() => {}}>
+      <QuickAdd parentId={null} plannedDate={date} placeholder="添加待办" />
+    </TodoActionsProvider>
+  );
+  const view = render(quickAdd('2026-11-21'));
+  const input = screen.getByRole('textbox', { name: '添加待办' });
+  await user.type(input, '默认日期');
+  view.rerender(quickAdd('2026-11-22'));
+  await user.keyboard('{Enter}');
+  expect(commands.at(-1)).toMatchObject({ plannedDate: '2026-11-22' });
+  await user.type(input, '显式安排');
+  await user.click(screen.getByRole('button', { name: '明天' }));
+  view.rerender(quickAdd('2026-11-24'));
+  await user.click(screen.getByRole('button', { name: '添加', exact: true }));
+  expect(commands.at(-1)).toMatchObject({ plannedDate: '2026-11-23' });
+});
+
+it('详情按层级展示组织操作，子步骤创建失败后可以原文重试', async () => {
+  const server = fakeServer([{ type: 'create', id: 'm', parentId: null, kind: 'mainline', title: '本周主线' }]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning/mainlines/m" store={server.store} />);
+  await user.click(await screen.findByRole('button', { name: '编辑主线属性' }));
+  const panel = within(screen.getByRole('complementary', { name: '待办详情：本周主线' }));
+  expect(panel.queryByRole('button', { name: '移动' })).toBeNull();
+  const input = panel.getByRole('textbox', { name: '添加子步骤' });
+  server.requestJson.mockRejectedValueOnce(new Error('暂时离线'));
+  await user.type(input, '整理草稿{Enter}');
+  expect(await screen.findByText('暂时离线')).toBeVisible();
+  expect(input).toHaveValue('整理草稿');
+  await user.keyboard('{Enter}');
+  await user.click(await panel.findByRole('button', { name: '整理草稿', exact: true }));
+  const child = within(screen.getByRole('complementary', { name: '待办详情：整理草稿' }));
+  expect(child.getByRole('button', { name: '移动', exact: true })).toBeVisible();
+  expect(child.queryByRole('button', { name: '升格' })).toBeNull();
 });

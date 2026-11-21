@@ -41,6 +41,7 @@
 
 /* 页面只负责排列，按钮外观及尺寸在此统一维护。 */
 .workspace,
+.toolbar,
 .footer,
 .compact,
 .chip,
@@ -63,6 +64,11 @@
   --button-min-height: 24px;
   --button-default-shadow: 0 0 0 1px var(--border-subtle), 0 1px 2px rgb(24 30 48 / 4%);
   padding-inline: 10px;
+}
+.toolbar {
+  --button-min-height: 28px;
+  min-height: 28px;
+  padding-inline: 9px;
 }
 .footer {
   --button-min-height: 22px;
@@ -175,6 +181,21 @@
   box-shadow: none;
 }
 
+.soft {
+  --knowra-icon-accent: currentColor;
+  border-color: var(--accent-border, var(--border-subtle));
+  background: var(--accent-soft, var(--ink-accent-soft));
+  color: var(--accent-on-tint);
+  box-shadow: none;
+}
+
+.soft[data-hovered]:not([data-disabled]):not([data-pending]),
+.soft[data-pressed]:not([data-disabled]):not([data-pending]) {
+  background: var(--accent-soft, var(--ink-accent-soft));
+  border-color: var(--accent);
+  color: var(--accent-on-tint);
+}
+
 .workspace[aria-pressed='true'],
 .workspace[aria-current='page'],
 .workspace[aria-expanded='true'] {
@@ -235,6 +256,7 @@
     .primary,
     .ghost,
     .danger,
+    .soft,
     .mini,
     .footer,
     [data-disabled],
@@ -253,6 +275,7 @@
       .primary,
       .ghost,
       .danger,
+      .soft,
       .mini,
       .footer,
       [data-disabled],
@@ -270,6 +293,7 @@
       .primary,
       .ghost,
       .danger,
+      .soft,
       .mini,
       .footer,
       [data-disabled],

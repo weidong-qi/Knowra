@@ -103,26 +103,21 @@
   display: flex;
   flex-direction: column;
 }
-.tabBar {
-  flex: 0 0 auto;
-  padding: 4px 12px 10px;
-  background: var(--inspector-line) bottom / 100% 1px no-repeat;
+.tabs > [role='tablist'] {
+  margin: 4px 12px 10px;
 }
-.tabSegmented {
-  width: 100%;
-}
-.tabSegment {
+.tabs [role='tab'] {
   flex: 1 1 0;
   min-width: 0;
   padding-inline: 4px;
 }
-.tabBody {
+.tabs > :global(.react-aria-TabPanels) {
   min-height: 0;
   flex: 1;
   overflow: auto;
   overscroll-behavior: contain;
 }
-.tabBody [role='tabpanel'] {
+.tabs [role='tabpanel'] {
   padding: 0;
 }
 
@@ -404,7 +399,7 @@
   height: 100%;
   min-height: 0;
 }
-.tabBody [role='tabpanel']:has(.annotationPanel) {
+.tabs [role='tabpanel']:has(.annotationPanel) {
   height: 100%;
 }
 .annotationPanel {

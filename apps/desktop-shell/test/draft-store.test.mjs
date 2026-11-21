@@ -26,7 +26,20 @@ test('原生知识草稿保留来源与 CAS，兼容正文草稿，拒绝失去�
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const key = 'knowra:knowledge-draft:v1:["dataset-a","k1"]';
   const value = { title: '知识', canonicalStatement: '陈述', userExplanation: '', knowledgeType: 'concept' };
-  const draft = { version: 1, kind: 'create', candidateId: 'k1', value, initialValue: value, source: { annotationId: 'a1', noteVersionId: 'v1', expectedAnnotationRevision: 3, quoteText: '原文', headingPath: ['标题'] } };
+  const draft = {
+    version: 1,
+    kind: 'create',
+    candidateId: 'k1',
+    value,
+    initialValue: value,
+    source: {
+      annotationId: 'a1',
+      noteVersionId: 'v1',
+      expectedAnnotationRevision: 3,
+      quoteText: '原文',
+      headingPath: ['标题']
+    }
+  };
   const store = createDraftStore(dir);
   store.write('knowra:note-draft:v1:["space","note"]', { markdown: '正文草稿', baseMarkdown: '原文' });
   store.write(key, draft);
@@ -37,4 +50,25 @@ test('原生知识草稿保留来源与 CAS，兼容正文草稿，拒绝失去�
   assert.equal(createDraftStore(dir).read()[key].expectedUpdatedAt, 'old-version');
   store.write(key, null);
   assert.equal(Object.keys(createDraftStore(dir).read()).length, 1);
+});
+
+test('原生定义草稿重建后保留目标概念，拒绝无效目标且不覆盖原草稿', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'knowra-definition-drafts-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const key = 'knowra:knowledge-draft:v1:["dataset-a","definition-1"]';
+  const value = { title: '数学的定义', canonicalStatement: '定义正文', userExplanation: '', knowledgeType: 'concept' };
+  const draft = {
+    version: 1,
+    kind: 'create',
+    candidateId: 'definition-1',
+    value,
+    initialValue: value,
+    definitionTarget: { conceptId: 'math', conceptName: '数学' }
+  };
+  const store = createDraftStore(dir);
+  store.write(key, draft);
+  assert.deepEqual(createDraftStore(dir).read()[key], draft);
+  assert.throws(() => store.write(key, { ...draft, definitionTarget: { conceptId: '', conceptName: '数学' } }));
+  assert.throws(() => store.write(key, { ...draft, value: { ...value, knowledgeType: 'fact' } }));
+  assert.deepEqual(createDraftStore(dir).read()[key], draft);
 });
