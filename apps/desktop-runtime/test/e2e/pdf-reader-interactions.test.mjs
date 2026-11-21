@@ -73,12 +73,12 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   await inspector.getByRole('tab', { name: /标注/ }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(inspector.getByRole('tab', { name: '目录', exact: true })).toBeFocused();
-  const panel = inspector.getByRole('tabpanel', { name: '目录', exact: true });
-  await expect.poll(() => panel.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
-  await panel.hover();
+  const outlinePanel = inspector.getByRole('tabpanel', { name: '目录', exact: true });
+  await expect.poll(() => outlinePanel.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await outlinePanel.hover();
   await page.mouse.wheel(0, 5000);
   await expect(inspector.getByRole('button', { name: 'Section 60', exact: true })).toBeInViewport();
-  await expect.poll(() => panel.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => outlinePanel.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   // 新选区含大小写字形和空格；同时保存旧版逐片段坐标，用来核验历史标注的显示兼容。
   const legacySegments = await page.locator('.textLayer').evaluate(layer => {
     const spans = [...layer.querySelectorAll('span[role="presentation"]')].filter(
@@ -316,15 +316,16 @@ test('PDF 交互：长目录与标注独立滚动、连续高亮、批注悬停�
   }
   await page.reload();
   await inspector.getByRole('tab', { name: /标注/ }).click();
-  await expect.poll(() => panel.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
-  await panel.hover();
+  const annotationsPanel = inspector.getByRole('tabpanel', { name: /标注/ });
+  await expect.poll(() => annotationsPanel.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await annotationsPanel.hover();
   await page.mouse.wheel(0, 5000);
   await expect(inspector.getByRole('button', { name: /定位标注.*Scroll mark 14/ })).toBeInViewport();
   // 这些标注使用相同坐标：点击后明确选择目标，再核对侧栏定位；重复选择也要再次滚动。
   const finalMark = page.locator('[data-pdf-annotation-id="list-14"]');
   await finalMark.evaluate(el => el.scrollIntoView({ block: 'center', inline: 'center' }));
   for (let attempt = 0; attempt < 2; attempt++) {
-    await panel.evaluate(el => {
+    await annotationsPanel.evaluate(el => {
       el.scrollTop = 0;
     });
     const point = await page.evaluate(() => {
