@@ -198,11 +198,10 @@ export function TodoDetailPanel({
           )}
           <TextAreaField
             label="备注"
-            presentation="composer"
+            presentation="inline"
             placeholder="备注：补充背景、思路或参考链接…"
             rows={2}
             isDisabled={locked}
-            className={styles.peekNoteInline}
             {...note}
           />
         </div>
@@ -389,14 +388,17 @@ export function TodoDetailPanel({
                         isDisabled={locked || Boolean(child.archivedAt)}
                         onChange={() => actions.toggleDone(child)}
                       />
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="compact"
+                        shape="square"
                         className={styles.peekChildTitle}
-                        data-done={childDone || undefined}
-                        onClick={() => actions.select(child.id)}
+                        onPress={() => actions.select(child.id)}
                       >
-                        {child.title}
-                      </button>
+                        <span className={styles.peekChildLabel} data-done={childDone || undefined}>
+                          {child.title}
+                        </span>
+                      </Button>
                     </li>
                   );
                 })}
@@ -455,16 +457,14 @@ export function TodoDetailPanel({
 
         {todo.kind === 'mainline' ? (
           <GroupedList title="目标与完成标准">
-            <div className={styles.peekGoalCard}>
-              <TextAreaField
-                label="目标与完成标准"
-                presentation="composer"
-                placeholder="这条主线做到什么程度算完成？可以边做边补充。"
-                rows={3}
-                isDisabled={locked}
-                {...goal}
-              />
-            </div>
+            <TextAreaField
+              label="目标与完成标准"
+              presentation="inset"
+              placeholder="这条主线做到什么程度算完成？可以边做边补充。"
+              rows={3}
+              isDisabled={locked}
+              {...goal}
+            />
           </GroupedList>
         ) : null}
 

@@ -187,26 +187,43 @@
   cursor: not-allowed;
 }
 
-/* 对话输入区由外层容器承载焦点态，文本域本身不额外绘制边框。 */
-.composerField {
+/* 无边框文本域共用自适应高度，内联和带内边距两种外观用于嵌入内容区。 */
+.borderlessField {
   display: flex;
   width: 100%;
   gap: 0;
 }
-.composerField .textareaShell,
-.composerField:not([data-disabled]):focus-within .textareaShell {
+.borderlessField .textareaShell,
+.borderlessField:not([data-disabled]):focus-within .textareaShell {
   outline: 0;
   border: 0;
   background: transparent;
   box-shadow: none;
 }
-.composerField .textarea {
+.borderlessField .textarea {
   min-height: 64px;
   max-height: 180px;
   padding: 13px 15px 5px;
   resize: none;
   field-sizing: content;
   overflow-y: auto;
+}
+
+.borderlessField[data-presentation='inline'] .textarea {
+  padding: 2px 0;
+  min-height: 36px;
+  line-height: 1.5;
+}
+.borderlessField[data-presentation='inline']:not([data-disabled]) .textarea {
+  color: var(--ni-ink-2, var(--text-secondary));
+}
+.borderlessField[data-presentation='inset'] .textarea {
+  padding: 12px 14px;
+  line-height: 1.55;
+}
+.borderlessField:not([data-presentation='composer']):has(.textarea[data-focus-visible]) .textareaShell {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
 }
 
 .error {
@@ -545,7 +562,7 @@
   }
 }
 @media (max-height: 600px) {
-  .composerField .textarea {
+  .borderlessField .textarea {
     min-height: 44px;
     max-height: 80px;
     padding-top: 8px;

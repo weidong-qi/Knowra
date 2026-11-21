@@ -268,6 +268,28 @@ it('详情按层级展示组织操作，子步骤创建失败后可以原文重�
   expect(child.queryByRole('button', { name: '升格' })).toBeNull();
 });
 
+it('主线详情失焦保存备注和目标，键盘可打开子步骤', async () => {
+  const server = fakeServer([
+    { type: 'create', id: 'm', parentId: null, kind: 'mainline', title: '本周主线' },
+    { type: 'create', id: 's', parentId: 'm', title: '整理票据' }
+  ]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning/mainlines/m" store={server.store} />);
+  await user.click(await screen.findByRole('button', { name: '编辑主线属性' }));
+  const panel = within(screen.getByRole('complementary', { name: '待办详情：本周主线' }));
+  await user.type(panel.getByRole('textbox', { name: '备注' }), '保留原件');
+  await user.type(panel.getByRole('textbox', { name: '目标与完成标准' }), '完成报销');
+  await user.tab();
+  await waitFor(() =>
+    expect(server.todos().find(todo => todo.id === 'm')).toMatchObject({ note: '保留原件', goal: '完成报销' })
+  );
+  panel.getByRole('checkbox', { name: '完成子步骤：整理票据' }).focus();
+  await user.tab();
+  expect(panel.getByRole('button', { name: '整理票据' })).toHaveFocus();
+  await user.keyboard('{Enter}');
+  expect(await screen.findByRole('complementary', { name: '待办详情：整理票据' })).toBeVisible();
+});
+
 it('收起输入框和折叠今日安排均保留快速添加的草稿', async () => {
   const server = fakeServer([{ type: 'create', id: 'a', parentId: null, title: '已有安排', plannedDate: today }]);
   const user = userEvent.setup();

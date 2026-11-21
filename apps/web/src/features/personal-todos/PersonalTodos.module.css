@@ -1169,24 +1169,6 @@
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
-.peekNoteInline [data-input-shadow-owner] {
-  border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-}
-.peekNoteInline textarea {
-  padding: 2px 0 !important;
-  min-height: 36px;
-  resize: none;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ni-ink-2);
-}
-.peekNoteInline textarea::placeholder {
-  color: var(--ni-ink-3);
-}
 .peekPause {
   margin: 2px 0 0;
   color: var(--ni-ink-3);
@@ -1287,21 +1269,14 @@
 .peekChildTitle {
   flex: 1;
   min-width: 0;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  text-align: left;
-  font: 400 13px/1.4 var(--font-ui);
-  color: var(--ni-ink);
+  justify-content: flex-start;
+}
+.peekChildLabel {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
 }
-.peekChildTitle:hover {
-  color: var(--ni-accent-ink);
-}
-.peekChildTitle[data-done] {
+.peekChildLabel[data-done] {
   color: var(--ni-ink-3);
   text-decoration: line-through;
 }
@@ -1320,18 +1295,6 @@
   font-size: 11.5px;
   color: var(--ni-ink-3);
   text-align: center;
-}
-.peekGoalCard [data-input-shadow-owner] {
-  border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-}
-.peekGoalCard textarea {
-  padding: 12px 14px !important;
-  resize: none;
-  font-size: 13px;
-  line-height: 1.55;
 }
 .warningList {
   margin: 0;

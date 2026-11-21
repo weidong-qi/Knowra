@@ -222,10 +222,9 @@ export function TodoDetailPreview() {
                 />
                 <TextAreaField
                   label="备注"
-                  presentation="composer"
+                  presentation="inline"
                   placeholder="备注"
                   rows={2}
-                  className={styles.noteInline}
                   value={state.note}
                   onChange={note => setState(prev => ({ ...prev, note }))}
                 />
@@ -400,16 +399,14 @@ export function TodoDetailPreview() {
 
               {state.kindLabel === '主线' ? (
                 <GroupedList title="目标与完成标准">
-                  <div className={styles.goalCard}>
-                    <TextAreaField
-                      label="目标与完成标准"
-                      presentation="composer"
-                      placeholder="这条主线做到什么程度算完成？"
-                      rows={3}
-                      value={state.goal ?? ''}
-                      onChange={goal => setState(prev => ({ ...prev, goal }))}
-                    />
-                  </div>
+                  <TextAreaField
+                    label="目标与完成标准"
+                    presentation="inset"
+                    placeholder="这条主线做到什么程度算完成？"
+                    rows={3}
+                    value={state.goal ?? ''}
+                    onChange={goal => setState(prev => ({ ...prev, goal }))}
+                  />
                 </GroupedList>
               ) : null}
 

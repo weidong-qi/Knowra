@@ -189,27 +189,6 @@
   line-height: 1.35;
 }
 
-.noteInline [data-input-shadow-owner] {
-  border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-}
-
-.noteInline textarea {
-  padding: 2px 0 !important;
-  min-height: 36px;
-  resize: none;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ni-ink-2, #4b4a46);
-}
-
-.noteInline textarea::placeholder {
-  color: var(--ni-ink-3, #8c8a84);
-}
-
 .inspectorBody {
   flex: 1;
   min-height: 0;
@@ -284,20 +263,6 @@
 .nextStepBox strong {
   color: var(--ni-ink, #1f2329);
   font-weight: 500;
-}
-
-.goalCard [data-input-shadow-owner] {
-  border: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-}
-
-.goalCard textarea {
-  padding: 12px 14px !important;
-  resize: none;
-  font-size: 13px;
-  line-height: 1.55;
 }
 
 .warningBanner {
