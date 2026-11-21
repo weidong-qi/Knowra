@@ -1,16 +1,125 @@
-/* V5 命令面板：中性结果卡片与语义选中态；查询、键盘选择由现有逻辑负责。 */
-.commandPanel { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: 0; }
-.hitList { max-height: 50vh; min-width: 0; overflow: auto; overscroll-behavior: contain; padding: var(--space-1); border-top: 1px solid var(--border-subtle); }
-.resultList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-.hit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--text-primary); cursor: pointer; user-select: none; }
-.hitActive { background: var(--surface-selected); border-color: var(--border-subtle); }
-.hitGroup { font: 500 var(--font-size-meta)/1.4 var(--font-ui); color: var(--text-secondary); padding: 2px 6px; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-page); white-space: nowrap; }
-.hitActive .hitGroup { color: var(--accent-on-tint); border-color: var(--accent-border); background: var(--accent-soft); }
-.hitBody { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
-.hitPrimary { font-size: var(--font-size-ui); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hitSecondary { color: var(--text-secondary); font-size: var(--font-size-meta); line-height: 1.6; overflow-wrap: anywhere; white-space: normal; }
-.hitHint { color: var(--text-muted); font: 400 var(--font-size-meta)/1.4 var(--font-ui); white-space: nowrap; }
-@media (max-width: 430px) {
-  .hit { grid-template-columns: auto minmax(0, 1fr); padding: var(--space-2); }
-  .hitHint { grid-column: 2; justify-self: start; }
+.searchLine {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.searchLine > .scope {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.hitList {
+  max-height: min(48dvh, 400px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
+}
+.resultList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sectionLabel {
+  padding: 12px 10px 4px;
+  font: 500 var(--font-size-meta)/1.4 var(--font-ui);
+  color: var(--text-muted);
+}
+.resultList .hit {
+  min-height: 36px;
+  gap: 10px;
+}
+.hitIcon {
+  color: var(--text-secondary);
+  display: inline-flex;
+  flex: none;
+}
+.hitBody {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+.hitPrimary {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hitSecondary {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  color: var(--text-secondary);
+  font: 400 var(--font-size-meta)/1.55 var(--font-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.withSnippet {
+  display: grid;
+  gap: 3px;
+}
+.withSnippet .hitSecondary {
+  margin: 0;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.match {
+  color: var(--text-primary);
+  font-weight: 700;
+  background: var(--accent-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-border);
+  text-underline-offset: 2px;
+}
+.returnKey {
+  color: var(--text-secondary);
+  font: 500 14px/1 var(--font-ui);
+}
+.footer,
+.shortcuts {
+  display: flex;
+  align-items: center;
+}
+.footer {
+  width: 100%;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font: 400 var(--font-size-meta)/1.4 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.shortcuts {
+  gap: 16px;
+}
+@media (max-width: 480px) {
+  .searchLine {
+    gap: 6px;
+  }
+  .resultList .hit {
+    min-height: 44px;
+  }
+  .hitBody {
+    gap: 8px;
+  }
+  .hitSecondary {
+    max-width: 38%;
+  }
+  .withSnippet .hitSecondary {
+    max-width: none;
+  }
+  .shortcuts,
+  .returnKey {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .hit[aria-selected='true'] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }

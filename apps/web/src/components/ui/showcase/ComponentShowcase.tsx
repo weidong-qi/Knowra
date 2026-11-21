@@ -163,6 +163,12 @@ export function ComponentShowcase() {
         <Badge tone="success">已冻结 V4-00.5</Badge>
       </header>
 
+      <p style={{ margin: '0 0 18px' }}>
+        <a className={styles.catalogLink} href="#/showcase/todo-detail">
+          待办详情侧栏视觉预览（Mac 提醒事项风格） →
+        </a>
+      </p>
+
       <ColorTokens />
       <ButtonSection />
       <IconSection />

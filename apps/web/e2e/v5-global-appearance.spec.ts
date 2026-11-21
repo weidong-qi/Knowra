@@ -89,6 +89,53 @@ for (const mode of ['light', 'dark'] as const) {
   });
 }
 
+for (const width of [1280, 390]) {
+  test(`全局搜索在 ${width}px 下展示范围、命中和空结果`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 800 });
+    await mockEditorWorkspace(page, []);
+    await page.route('**/api/knowledge/tags?*', route =>
+      route.fulfill({ json: { data: [{ id: 'tag-study', name: '学习', spaceId: 'space-1' }] } })
+    );
+    await page.goto('/#/materials');
+    const trigger =
+      width < 768
+        ? page.getByRole('navigation', { name: '移动端模块导航' }).getByRole('button', { name: '打开全局搜索' })
+        : page.getByRole('navigation', { name: '工作域导航' }).getByRole('button', { name: '全局搜索' });
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: '全局搜索' });
+    const input = dialog.getByRole('combobox');
+    const scopePicker = dialog.getByRole('button', { name: /搜索范围/ });
+    const pickScope = async (name: string) => {
+      await scopePicker.click();
+      await page.getByRole('option', { name, exact: true }).click();
+      await expect(input).toBeFocused();
+    };
+    await expect(input).toBeFocused();
+    await expect(dialog.getByRole('option', { name: /编辑器验收笔记/ })).toContainText('工作');
+    await dialog.screenshot({ path: info.outputPath(`全局搜索-打开-${width}.png`) });
+    const inputTop = (await input.boundingBox())!.y;
+    await pickScope('资料');
+    await input.fill('验收');
+    await expect(dialog.getByRole('option')).toHaveCount(2);
+    await expect(dialog.locator('mark').first()).toHaveText('验收');
+    await expect.poll(async () => Math.abs((await input.boundingBox())!.y - inputTop)).toBeLessThanOrEqual(1);
+    await input.press('ArrowDown');
+    await expect(dialog.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(() => dialog.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    await dialog.screenshot({ path: info.outputPath(`全局搜索-结果-${width}.png`) });
+    await pickScope('标签');
+    await expect(input).toHaveValue('验收');
+    await expect(dialog.getByRole('option')).toHaveCount(0);
+    await expect(dialog.getByText('没有匹配「验收」的结果')).toBeVisible();
+    await input.fill('学习');
+    await expect(dialog.getByRole('option', { name: /#学习/ })).toBeVisible();
+    await input.press('Escape');
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    await expect(scopePicker).toHaveText('全部类型');
+  });
+}
+
 test('全局定稿外观跨页面和浮层生效，明暗切换在刷新后保留', async ({ page }, info) => {
   await mockEditorWorkspace(page, []);
   await page.route('**/api/ai/model-settings', route =>

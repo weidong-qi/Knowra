@@ -41,6 +41,8 @@ export function useDialogClose(): DialogCloseContextValue {
 export interface DialogProps extends Omit<RADialogProps, 'className' | 'children'> {
   /** 必须：弹窗标题，给 screen reader 与视觉都使用。 */
   title: string;
+  /** 用搜索框等交互内容替代可见标题，title 仍提供对话框的无障碍名称。 */
+  headerContent?: ReactNode;
   /** Dialog 容器内的内容（包含 body / footer）。 */
   children: ReactNode;
   className?: string;
@@ -51,6 +53,7 @@ export interface DialogProps extends Omit<RADialogProps, 'className' | 'children
   /** 描述（同时给 aria-describedby）。 */
   description?: string;
   size?: 'sm' | 'md';
+  placement?: 'center' | 'top';
   /** 独立滚动面板，自带可见标题与关闭按钮。 */
   presentation?: 'dialog' | 'panel';
   /** 受控打开状态；与 DialogTrigger 不可同时使用。 */
@@ -60,7 +63,21 @@ export interface DialogProps extends Omit<RADialogProps, 'className' | 'children
 }
 
 export const Dialog = forwardRef<HTMLDivElement, DialogProps>(function Dialog(
-  { title, children, className, isDismissable = true, isPending, description, isOpen, onOpenChange, size = 'sm', presentation = 'dialog', ...rest },
+  {
+    title,
+    headerContent,
+    children,
+    className,
+    isDismissable = true,
+    isPending,
+    description,
+    isOpen,
+    onOpenChange,
+    size = 'sm',
+    placement = 'center',
+    presentation = 'dialog',
+    ...rest
+  },
   ref
 ) {
   const sizeClass = presentation === 'panel' ? styles.panelSize : size === 'md' ? styles.sizeMd : styles.sizeSm;
@@ -71,34 +88,36 @@ export const Dialog = forwardRef<HTMLDivElement, DialogProps>(function Dialog(
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       sizeClass={sizeClass}
+      placement={placement}
     >
-      <RADialog
-        ref={ref}
-        className={cx(styles.overlay, className)}
-        aria-label={title}
-        {...rest}
-      >
+      <RADialog ref={ref} className={cx(styles.overlay, className)} aria-label={title} {...rest}>
         {({ close }) => (
-          <NestedOverlay><DialogCloseContext.Provider value={{ close }}>
-            {presentation !== 'panel' ? <header className={styles.header}>
-              <RAHeading slot="title" className={styles.title}>{title}</RAHeading>
-              {isDismissable ? (
-                <DialogClose aria-label="关闭对话框" />
+          <NestedOverlay>
+            <DialogCloseContext.Provider value={{ close }}>
+              {presentation !== 'panel' ? (
+                <header className={styles.header}>
+                  {headerContent ?? (
+                    <RAHeading slot="title" className={styles.title}>
+                      {title}
+                    </RAHeading>
+                  )}
+                  {isDismissable ? <DialogClose aria-label="关闭对话框" /> : null}
+                </header>
               ) : null}
-            </header> : null}
-            {description ? (
-              <p className={styles.description}>{description}</p>
-            ) : null}
-            {children}
-            {isPending ? (
-              <div className={styles.busyOverlay} role="status" aria-label="提交中" aria-busy="true">
-                <div className={styles.busyContent}>
-                  <span className={styles.busyLabel} aria-hidden="true">正在处理…</span>
-                  <SkeletonPulse className={styles.busySkeleton} />
+              {description ? <p className={styles.description}>{description}</p> : null}
+              {children}
+              {isPending ? (
+                <div className={styles.busyOverlay} role="status" aria-label="提交中" aria-busy="true">
+                  <div className={styles.busyContent}>
+                    <span className={styles.busyLabel} aria-hidden="true">
+                      正在处理…
+                    </span>
+                    <SkeletonPulse className={styles.busySkeleton} />
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </DialogCloseContext.Provider></NestedOverlay>
+              ) : null}
+            </DialogCloseContext.Provider>
+          </NestedOverlay>
         )}
       </RADialog>
     </ModalShell>
@@ -111,6 +130,7 @@ function ModalShell({
   isOpen,
   onOpenChange,
   sizeClass,
+  placement,
   children
 }: {
   isDismissable: boolean;
@@ -118,6 +138,7 @@ function ModalShell({
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   sizeClass: string;
+  placement: DialogProps['placement'];
   children: ReactNode;
 }) {
   const appearance = useScopedAppearance();
@@ -128,7 +149,7 @@ function ModalShell({
       isKeyboardDismissDisabled={!isDismissable || isPending}
       isOpen={isOpen}
       onOpenChange={onOpenChange}
-      className={cx(styles.underlay, styles.overlay, appearance?.className)}
+      className={cx(styles.underlay, styles.overlay, placement === 'top' && styles.topAligned, appearance?.className)}
     >
       <RAModal className={cx(styles.dialog, sizeClass)}>{children}</RAModal>
     </RAModalOverlay>
@@ -143,15 +164,16 @@ export function DialogTrigger({ children, ...rest }: DialogTriggerProps) {
   return <RADialogTrigger {...rest}>{children}</RADialogTrigger>;
 }
 
-export const DialogBody = forwardRef<HTMLDivElement, { children: ReactNode; className?: string }>(
-  function DialogBody({ children, className }, ref) {
-    return (
-      <div ref={ref} className={cx(styles.body, className)}>
-        {children}
-      </div>
-    );
-  }
-);
+export const DialogBody = forwardRef<HTMLDivElement, { children: ReactNode; className?: string }>(function DialogBody(
+  { children, className },
+  ref
+) {
+  return (
+    <div ref={ref} className={cx(styles.body, className)}>
+      {children}
+    </div>
+  );
+});
 
 export const DialogFooter = forwardRef<HTMLDivElement, { children: ReactNode; className?: string }>(
   function DialogFooter({ children, className }, ref) {

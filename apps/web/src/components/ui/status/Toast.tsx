@@ -1,11 +1,11 @@
 // 全站统一右上角通知栏（Toast）：温润毛玻璃卡片风格，支持命令式调用与局部声明式归并。
 
 import { forwardRef, useEffect, useId, useLayoutEffect, useSyncExternalStore, type ReactNode } from 'react';
-import { BellIcon, CloseIcon, StatusDotIcon } from '../../icons/knowra';
+import { CloseIcon } from '../../icons/knowra';
 import { Button, IconButton } from '../button';
 import { cx } from '../classnames';
 import type { StatusTone } from '../tokens';
-import { ToastSwarmCheck } from './ToastSwarmCheck';
+import { ToastSwarmIcon } from './ToastSwarmIcon';
 import styles from './Status.module.css';
 
 export interface ToastAction {
@@ -127,25 +127,7 @@ const toneClass: Record<StatusTone, string> = {
 };
 
 function DefaultToastIcon({ tone }: { tone: StatusTone }) {
-  if (tone === 'success') return <ToastSwarmCheck size={22} />;
-  if (tone === 'warning') return <BellIcon size={12} />;
-  if (tone === 'danger') {
-    return (
-      <svg
-        width="12"
-        height="12"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.1"
-        aria-hidden="true"
-      >
-        <path d="M8 4.2v4.3" strokeLinecap="round" />
-        <circle cx="8" cy="11.6" r="0.95" fill="currentColor" stroke="none" />
-      </svg>
-    );
-  }
-  return <StatusDotIcon size={10} />;
+  return <ToastSwarmIcon tone={tone} size={22} />;
 }
 
 export interface ToastCardProps extends ToastItem {

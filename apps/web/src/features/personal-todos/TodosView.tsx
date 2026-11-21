@@ -17,7 +17,7 @@ import { useNotesIndexAppearance } from '../notes/notesIndexAppearanceModel';
 import { TodoActionsProvider } from './TodoActions';
 import { TodoDetailPanel } from './TodoDetailPanel';
 import { MainlinePage, MainlinesPage, PlanPage, SidelinesPage, TodayPage } from './TodoPages';
-import { formatDateLabel, pageCounts } from './todoPresentation';
+import { addDaysToDate, formatDateLabel, mondayOfWeek, pageCounts, weekDaysFrom } from './todoPresentation';
 import { sharedTodoStore, useTodoState, type TodoStore } from './todoStore';
 import styles from './PersonalTodos.module.css';
 
@@ -75,7 +75,17 @@ export function TodosView({ pathname, store = sharedTodoStore() }: { pathname: s
   const notice = useTodoState(store, state => state.notice);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [planMode, setPlanMode] = useState<'list' | 'board'>('list');
+  const [planWeekOffset, setPlanWeekOffset] = useState(0);
+  const [planSelectedDate, setPlanSelectedDate] = useState<string | null>(null);
   const index = useMemo(() => indexTodos(todos), [todos]);
+  const planRangeTitle = useMemo(() => {
+    const monday = addDaysToDate(mondayOfWeek(today), planWeekOffset * 7);
+    const days = weekDaysFrom(monday, today);
+    const firstMonth = days[0]!.month;
+    const lastMonth = days[6]!.month;
+    const year = days[0]!.date.slice(0, 4);
+    return firstMonth === lastMonth ? `${year}年 ${firstMonth}月` : `${year}年 ${firstMonth}–${lastMonth}月`;
+  }, [today, planWeekOffset]);
   useEffect(() => {
     if (status === 'idle') void store.load();
   }, [status, store]);
@@ -130,6 +140,12 @@ export function TodosView({ pathname, store = sharedTodoStore() }: { pathname: s
               <Icon size={17} />
               <strong>{mainline ? mainline.title : title}</strong>
               <span>{visibleCount}</span>
+              {route.page === 'plan' ? <em className={styles.headerMonth}>{planRangeTitle}</em> : null}
+              {route.page === 'plan' && planSelectedDate ? (
+                <Button size="chip" variant="ghost" onPress={() => setPlanSelectedDate(null)}>
+                  显示全部
+                </Button>
+              ) : null}
             </span>
             <div className={styles.headerRight}>
               {route.page === 'today' && todayStats.total > 0 ? (
@@ -146,14 +162,27 @@ export function TodosView({ pathname, store = sharedTodoStore() }: { pathname: s
                 </div>
               ) : null}
               {route.page === 'plan' ? (
-                <SegmentedControl density="compact" aria-label="计划视图模式">
-                  <SegmentedButton aria-pressed={planMode === 'list'} onPress={() => setPlanMode('list')}>
-                    时间线
-                  </SegmentedButton>
-                  <SegmentedButton aria-pressed={planMode === 'board'} onPress={() => setPlanMode('board')}>
-                    多日看板
-                  </SegmentedButton>
-                </SegmentedControl>
+                <>
+                  <Button
+                    size="compact"
+                    variant="ghost"
+                    isDisabled={planWeekOffset === 0 && !planSelectedDate}
+                    onPress={() => {
+                      setPlanWeekOffset(0);
+                      setPlanSelectedDate(null);
+                    }}
+                  >
+                    本周
+                  </Button>
+                  <SegmentedControl density="compact" aria-label="计划视图模式">
+                    <SegmentedButton aria-pressed={planMode === 'list'} onPress={() => setPlanMode('list')}>
+                      时间线
+                    </SegmentedButton>
+                    <SegmentedButton aria-pressed={planMode === 'board'} onPress={() => setPlanMode('board')}>
+                      多日看板
+                    </SegmentedButton>
+                  </SegmentedControl>
+                </>
               ) : null}
               {route.page === 'mainline' && mainline ? (
                 <Button
@@ -164,7 +193,9 @@ export function TodosView({ pathname, store = sharedTodoStore() }: { pathname: s
                   编辑主线属性
                 </Button>
               ) : null}
-              <span className={styles.headerNote}>{formatDateLabel(today, today)}</span>
+              {route.page !== 'plan' ? (
+                <span className={styles.headerNote}>{formatDateLabel(today, today)}</span>
+              ) : null}
             </div>
           </header>
 
@@ -207,7 +238,16 @@ export function TodosView({ pathname, store = sharedTodoStore() }: { pathname: s
                   route.page === 'today' ? (
                     <TodayPage todos={todos} index={index} selectedId={selectedId} />
                   ) : route.page === 'plan' ? (
-                    <PlanPage todos={todos} index={index} selectedId={selectedId} mode={planMode} />
+                    <PlanPage
+                      todos={todos}
+                      index={index}
+                      selectedId={selectedId}
+                      mode={planMode}
+                      weekOffset={planWeekOffset}
+                      onWeekOffsetChange={setPlanWeekOffset}
+                      selectedDate={planSelectedDate}
+                      onSelectDate={setPlanSelectedDate}
+                    />
                   ) : route.page === 'sidelines' ? (
                     <SidelinesPage todos={todos} index={index} selectedId={selectedId} />
                   ) : route.page === 'mainlines' ? (

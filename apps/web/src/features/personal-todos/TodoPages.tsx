@@ -240,11 +240,37 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
   );
 }
 
-export function PlanPage({ todos, index, selectedId, mode = 'list' }: PageProps & { mode?: 'list' | 'board' }) {
+export function PlanPage({
+  todos,
+  index,
+  selectedId,
+  mode = 'list',
+  weekOffset: controlledWeekOffset,
+  onWeekOffsetChange,
+  selectedDate: controlledSelectedDate,
+  onSelectDate
+}: PageProps & {
+  mode?: 'list' | 'board';
+  weekOffset?: number;
+  onWeekOffsetChange?(next: number): void;
+  selectedDate?: string | null;
+  onSelectDate?(date: string | null): void;
+}) {
   const actions = useTodoActions();
   const { today } = actions;
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [uncontrolledWeekOffset, setUncontrolledWeekOffset] = useState(0);
+  const weekOffset = controlledWeekOffset !== undefined ? controlledWeekOffset : uncontrolledWeekOffset;
+  const setWeekOffset = (next: number) => {
+    if (onWeekOffsetChange) onWeekOffsetChange(next);
+    else setUncontrolledWeekOffset(next);
+  };
+  const [uncontrolledSelectedDate, setUncontrolledSelectedDate] = useState<string | null>(null);
+  const selectedDate = controlledSelectedDate !== undefined ? controlledSelectedDate : uncontrolledSelectedDate;
+  const setSelectedDate = (next: string | null | ((prev: string | null) => string | null)) => {
+    const resolved = typeof next === 'function' ? next(selectedDate) : next;
+    if (onSelectDate) onSelectDate(resolved);
+    else setUncontrolledSelectedDate(resolved);
+  };
 
   const thisMonday = useMemo(() => mondayOfWeek(today), [today]);
   const weekMonday = useMemo(() => addDaysToDate(thisMonday, weekOffset * 7), [thisMonday, weekOffset]);
@@ -266,13 +292,6 @@ export function PlanPage({ todos, index, selectedId, mode = 'list' }: PageProps 
     return map;
   }, [groups, todayBase.today, today]);
 
-  const totalFuture = useMemo(() => groups.reduce((sum, group) => sum + group.todos.length, 0), [groups]);
-
-  const firstMonth = days[0]!.month;
-  const lastMonth = days[6]!.month;
-  const year = days[0]!.date.slice(0, 4);
-  const rangeTitle = firstMonth === lastMonth ? `${year}年 ${firstMonth}月` : `${year}年 ${firstMonth}–${lastMonth}月`;
-
   const visibleGroups = useMemo(() => {
     if (!selectedDate) return groups;
     if (selectedDate === today) return todayBase.today.length ? [{ date: today, todos: todayBase.today }] : [];
@@ -283,52 +302,18 @@ export function PlanPage({ todos, index, selectedId, mode = 'list' }: PageProps 
 
   const weekStrip = (
     <div className={styles.weekStripWrap}>
-      <div className={styles.weekHeader}>
-        <div className={styles.weekHeaderLeft}>
-          <span className={styles.weekTitle}>{rangeTitle}</span>
-          {selectedDate ? (
-            <Button size="chip" variant="ghost" className={styles.weekReset} onPress={() => setSelectedDate(null)}>
-              显示全部计划 ({totalFuture})
-            </Button>
-          ) : null}
-        </div>
-        <div className={styles.weekNav}>
-          <IconButton
-            size={28}
-            aria-label="上一周"
-            title="上一周"
-            isDisabled={weekOffset === 0}
-            onPress={() => {
-              setWeekOffset(value => Math.max(0, value - 1));
-              setSelectedDate(null);
-            }}
-          >
-            <ChevronLeftIcon size={15} />
-          </IconButton>
-          <Button
-            size="mini"
-            shape="square"
-            variant="ghost"
-            onPress={() => {
-              setWeekOffset(0);
-              setSelectedDate(null);
-            }}
-          >
-            本周
-          </Button>
-          <IconButton
-            size={28}
-            aria-label="下一周"
-            title="下一周"
-            onPress={() => {
-              setWeekOffset(value => value + 1);
-              setSelectedDate(null);
-            }}
-          >
-            <ChevronRightIcon size={15} />
-          </IconButton>
-        </div>
-      </div>
+      <IconButton
+        size={28}
+        aria-label="上一周"
+        title="上一周"
+        isDisabled={weekOffset === 0}
+        onPress={() => {
+          setWeekOffset(Math.max(0, weekOffset - 1));
+          setSelectedDate(null);
+        }}
+      >
+        <ChevronLeftIcon size={15} />
+      </IconButton>
 
       <div className={styles.weekGrid} role="group" aria-label="选择一周内的日期">
         {days.map(day => {
@@ -370,6 +355,18 @@ export function PlanPage({ todos, index, selectedId, mode = 'list' }: PageProps 
           );
         })}
       </div>
+
+      <IconButton
+        size={28}
+        aria-label="下一周"
+        title="下一周"
+        onPress={() => {
+          setWeekOffset(weekOffset + 1);
+          setSelectedDate(null);
+        }}
+      >
+        <ChevronRightIcon size={15} />
+      </IconButton>
     </div>
   );
 

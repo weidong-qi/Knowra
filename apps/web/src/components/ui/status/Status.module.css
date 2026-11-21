@@ -358,12 +358,12 @@
 
 .toastIcon {
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: var(--surface-hover);
+  background: transparent;
   color: var(--text-secondary);
 }
 
@@ -372,9 +372,6 @@
 }
 
 .toastSuccess .toastIcon {
-  width: 22px;
-  height: 22px;
-  background: transparent;
   color: #16c765;
 }
 
@@ -383,18 +380,15 @@
 }
 
 .toastWarning .toastIcon {
-  background: var(--ink-warning-soft);
-  color: var(--ink-warning);
+  color: var(--ink-warning, #d97706);
 }
 
 .toastDanger .toastIcon {
-  background: var(--ink-danger-soft);
-  color: var(--ink-danger);
+  color: var(--ink-danger, #dc2626);
 }
 
 .toastAccent .toastIcon {
-  background: var(--accent-soft);
-  color: var(--accent-on-tint);
+  color: var(--accent-on-tint, #e86c2c);
 }
 
 .toastBody {

@@ -38,6 +38,10 @@ export function deriveStatusPath({
     return [home, { id: 'showcase', label: '组件库' }, { id: 'icons', label: '图标库', current: true }];
   }
 
+  if (pathname === '/showcase/todo-detail') {
+    return [home, { id: 'showcase', label: '组件库' }, { id: 'todo-detail', label: '待办详情侧栏预览', current: true }];
+  }
+
   if (pathname === '/settings') {
     return [home, { id: 'settings', label: '设置', current: true }];
   }
