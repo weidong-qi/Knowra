@@ -75,7 +75,7 @@ describe('今天页面', () => {
     const server = fakeServer();
     const user = userEvent.setup();
     render(<TodosView pathname="/learning" store={server.store} />);
-    const input = await screen.findByRole('textbox', { name: '添加今天要做的事（作为支线）' });
+    const input = await screen.findByRole('textbox', { name: '添加今天要做的事' });
     await user.type(input, '买牛奶{Enter}');
     await screen.findByText('买牛奶');
     expect(server.commands[0]).toMatchObject({ type: 'create', parentId: null, title: '买牛奶', plannedDate: today });

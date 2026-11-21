@@ -31,8 +31,7 @@ export interface SelectOption {
   isDisabled?: boolean;
 }
 
-export interface SelectProps<T extends Key = string>
-  extends Omit<RASelectProps<T>, 'className' | 'children'> {
+export interface SelectProps<T extends Key = string> extends Omit<RASelectProps<T>, 'className' | 'children'> {
   label: string;
   description?: string;
   errorMessage?: string;
@@ -41,8 +40,10 @@ export interface SelectProps<T extends Key = string>
   isInvalid?: boolean;
   isDisabled?: boolean;
   options: SelectOption[];
-  /** 工具栏中的紧凑筛选框；标签仍提供给辅助技术。 */
-  presentation?: 'field' | 'toolbar';
+  /** 工具栏中的紧凑筛选框或轻量药丸芯片；标签仍提供给辅助技术。 */
+  presentation?: 'field' | 'toolbar' | 'chip';
+  /** chip 模式下标记当前是否有选中的非默认项。 */
+  isActive?: boolean;
   leadingIcon?: ReactNode;
   className?: string;
   children?: ReactNode;
@@ -59,6 +60,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
     isDisabled,
     options,
     presentation = 'field',
+    isActive,
     leadingIcon,
     className,
     ...rest
@@ -66,24 +68,40 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
   ref
 ) {
   const appearance = useScopedAppearance();
+  const isCompactLabel = presentation === 'toolbar' || presentation === 'chip';
   return (
     <RASelect
       ref={ref}
       isRequired={isRequired}
       isInvalid={isInvalid}
       isDisabled={isDisabled}
-      className={cx(styles.field, presentation === 'toolbar' && styles.toolbarSelect, className)}
+      className={cx(
+        styles.field,
+        presentation === 'toolbar' && styles.toolbarSelect,
+        presentation === 'chip' && styles.chipSelect,
+        className
+      )}
       {...rest}
     >
-      <Label className={cx(styles.label, presentation === 'toolbar' && styles.visuallyHidden)}>
+      <Label className={cx(styles.label, isCompactLabel && styles.visuallyHidden)}>
         {label}
-        {isRequired ? <span className={styles.required} aria-hidden="true">*</span> : null}
+        {isRequired ? (
+          <span className={styles.required} aria-hidden="true">
+            *
+          </span>
+        ) : null}
       </Label>
       {description ? (
-        <Text slot="description" className={styles.description}>{description}</Text>
+        <Text slot="description" className={styles.description}>
+          {description}
+        </Text>
       ) : null}
-      <RAButton className={styles.selectTrigger} data-input-shadow-owner="true">
-        {leadingIcon ? <span className={styles.selectLeadingIcon} aria-hidden="true">{leadingIcon}</span> : null}
+      <RAButton className={styles.selectTrigger} data-input-shadow-owner="true" data-active={isActive || undefined}>
+        {leadingIcon ? (
+          <span className={styles.selectLeadingIcon} aria-hidden="true">
+            {leadingIcon}
+          </span>
+        ) : null}
         <RASelectValue className={styles.selectValue}>
           {({ selectedText, isPlaceholder }) => (
             <span data-placeholder={isPlaceholder || undefined}>{selectedText ?? placeholder}</span>
@@ -91,10 +109,19 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
         </RASelectValue>
         <ChevronDownIcon className={styles.selectChevron} size={12} />
       </RAButton>
-      <RAPopover {...appearance} className={cx(overlayStyles.popover, appearance?.className)} offset={4} placement="bottom start">
+      <RAPopover
+        {...appearance}
+        className={cx(overlayStyles.popover, appearance?.className)}
+        offset={4}
+        placement="bottom start"
+      >
         <NestedOverlay>{asRAListBox(options)}</NestedOverlay>
       </RAPopover>
-      {errorMessage ? <div className={styles.error} role="alert">{errorMessage}</div> : null}
+      {errorMessage ? (
+        <div className={styles.error} role="alert">
+          {errorMessage}
+        </div>
+      ) : null}
     </RASelect>
   );
 });
@@ -102,7 +129,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
 function asRAListBox(options: SelectOption[]) {
   return (
     <RAListBox className={collectionStyles.listbox} items={options}>
-      {(item) => (
+      {item => (
         <RAItem id={item.id} textValue={item.label} isDisabled={item.isDisabled}>
           {item.label}
         </RAItem>

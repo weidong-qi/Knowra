@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { PdfAnnotation } from '@study-accelerator/shared/pdf';
 import { CloseIcon } from '../../components/icons/knowra';
-import { IconButton, PressableButton, Tabs, type TabsItem } from '../../components/ui';
+import { IconButton, PressableButton, SegmentedButton, SegmentedControl } from '../../components/ui';
 import { PdfAnnotationsList } from './PdfAnnotationsPanel';
 import { EMPTY_PDF_FILTER, filterPdfAnnotations, PdfAnnotationFilters } from './PdfAnnotationFilters';
 import styles from './PdfReader.module.css';
@@ -47,24 +47,35 @@ export function PdfSidePanel({
   // 始终放在同一份 keyed 列表中；筛选命中变化不能把选中编辑器移到另一个组件树。
   const shown = items.filter(item => visibleIds.has(item.id) || item.id === selected);
   const hiddenSelectedId = shown.find(item => !visibleIds.has(item.id))?.id;
-  const tabs: TabsItem[] = [
-    { id: 'marks', label: items.length ? `标注 ${items.length}` : '标注' },
-    { id: 'outline', label: '目录' }
-  ];
   return (
     <aside className={styles.sidePanel} aria-label="PDF 检查器">
       <IconButton className={styles.panelClose} aria-label="关闭 PDF 检查器" onPress={onClose}>
         <CloseIcon size={18} />
       </IconButton>
-      <Tabs
-        className={styles.panelTabs}
-        aria-label="检查器视图"
-        items={tabs}
-        selectedKey={tab}
-        onSelectionChange={key => onTab(String(key) as PdfPanelTab)}
-      >
-        {item =>
-          item.id === 'marks' ? (
+      <div className={styles.panelTabs}>
+        <div className={styles.panelTabBar}>
+          <SegmentedControl role="tablist" aria-label="检查器视图" density="compact" className={styles.panelSegmented}>
+            <SegmentedButton
+              role="tab"
+              aria-selected={tab === 'marks'}
+              count={items.length || undefined}
+              className={styles.panelSegment}
+              onPress={() => onTab('marks')}
+            >
+              标注
+            </SegmentedButton>
+            <SegmentedButton
+              role="tab"
+              aria-selected={tab === 'outline'}
+              className={styles.panelSegment}
+              onPress={() => onTab('outline')}
+            >
+              目录
+            </SegmentedButton>
+          </SegmentedControl>
+        </div>
+        <div role="tabpanel" className={styles.panelBody}>
+          {tab === 'marks' ? (
             <>
               <PdfAnnotationFilters items={items} count={visible.length} filter={filter} onChange={setFilter} />
               {items.length && !visible.length ? (
@@ -95,9 +106,9 @@ export function PdfSidePanel({
             ))
           ) : (
             <p className={styles.panelEmpty}>这份 PDF 没有目录。</p>
-          )
-        }
-      </Tabs>
+          )}
+        </div>
+      </div>
     </aside>
   );
 }

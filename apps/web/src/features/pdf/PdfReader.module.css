@@ -236,49 +236,32 @@
     box-shadow: inset 1px 0 0 var(--border-subtle);
   }
 }
-/* 关闭按钮固定在标签栏右侧；标签页沿用文档检查器的矩形样式。 */
+/* 关闭按钮固定在标签栏右侧；标签页沿用文档检查器的分段切换样式。 */
 .panelClose {
   position: absolute;
-  top: 6px;
+  top: 7px;
   right: 10px;
   z-index: 1;
 }
 .panelTabs {
   min-height: 0;
   flex: 1;
-}
-.panelTabs > [role='tablist'] {
-  flex: 0 0 auto;
-  gap: 2px;
-  padding: 6px 44px 10px 10px;
-  background: var(--panel-line) bottom / 100% 1px no-repeat;
-}
-.panelTabs [role='tab'] {
-  min-width: 0;
-  height: 30px;
-  flex: 1 1 0;
-  justify-content: center;
-  padding-inline: 6px;
-  margin: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 12.5px;
-}
-.panelTabs [role='tab'][data-selected] {
-  background: var(--surface-raised, var(--surface-hover));
-  color: var(--text-primary);
-  box-shadow: var(--shadow-control);
-  font-weight: 550;
-}
-.panelTabs > :global(.react-aria-TabPanels) {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
 }
-.panelTabs [role='tabpanel'] {
+.panelTabBar {
+  flex: 0 0 auto;
+  padding: 8px 44px 10px 10px;
+  background: var(--panel-line) bottom / 100% 1px no-repeat;
+}
+.panelSegmented {
+  width: 100%;
+}
+.panelSegment {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.panelBody {
   min-height: 0;
   flex: 1;
   overflow: auto;

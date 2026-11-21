@@ -18,6 +18,8 @@ export interface DatePickerProps {
   children?: ReactNode;
   placeholder?: string;
   icon?: ReactNode;
+  /** 仅图标模式（24px 正圆形触发器，对齐 IconButton size=24）。 */
+  iconOnly?: boolean;
   isDisabled?: boolean;
   /** 触发按钮的语义色：普通、提醒（如今日截止）、警示（如逾期）。 */
   tone?: 'default' | 'attention' | 'danger';
@@ -66,6 +68,7 @@ export function DatePicker({
   children,
   placeholder = '设置日期',
   icon,
+  iconOnly = false,
   isDisabled,
   tone = 'default',
   className,
@@ -94,7 +97,7 @@ export function DatePicker({
       }}
     >
       <RAButton
-        className={cx(styles.trigger, className)}
+        className={cx(styles.trigger, iconOnly && styles.iconOnly, className)}
         isDisabled={isDisabled}
         aria-label={value ? `${label}：${formatDateLabel(value, today)}` : `${label}：未设置`}
         data-empty={value ? undefined : true}
@@ -105,7 +108,9 @@ export function DatePicker({
             {icon}
           </span>
         ) : null}
-        <span className={styles.value}>{children ?? (value ? formatDateLabel(value, today) : placeholder)}</span>
+        {!iconOnly ? (
+          <span className={styles.value}>{children ?? (value ? formatDateLabel(value, today) : placeholder)}</span>
+        ) : null}
       </RAButton>
       <Popover placement="bottom start" className={styles.popover}>
         <PopoverDialog aria-label={label} className={styles.dialog}>

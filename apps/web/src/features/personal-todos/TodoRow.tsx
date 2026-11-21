@@ -193,8 +193,9 @@ export function TodoRow({
           {todayAction !== 'alreadyToday' ? (
             <Button
               size="mini"
-              shape="square"
-              variant="default"
+              shape="pill"
+              variant="ghost"
+              className={styles.todayButton}
               onPress={() => actions.addToToday(todo)}
               aria-label={todayAction === 'moveToToday' ? `把「${todo.title}」改到今天` : `把「${todo.title}」加入今天`}
             >
@@ -203,7 +204,7 @@ export function TodoRow({
           ) : null}
           <Button
             size="mini"
-            shape="square"
+            shape="pill"
             variant="ghost"
             onPress={() => actions.moveToTomorrow(todo)}
             aria-label={`把「${todo.title}」改到明天`}
@@ -218,8 +219,8 @@ export function TodoRow({
           todayAction !== 'alreadyToday' ? (
             <Button
               size="mini"
-              shape="square"
-              variant="default"
+              shape="pill"
+              variant="ghost"
               className={styles.todayButton}
               onPress={() => actions.addToToday(todo)}
               aria-label={todayAction === 'moveToToday' ? `把「${todo.title}」改到今天` : `把「${todo.title}」加入今天`}
@@ -229,9 +230,8 @@ export function TodoRow({
           ) : (
             <Button
               size="mini"
-              shape="square"
+              shape="pill"
               variant="ghost"
-              className={styles.todayButton}
               onPress={() => actions.moveToTomorrow(todo)}
               aria-label={`把「${todo.title}」改到明天`}
             >
@@ -246,11 +246,10 @@ export function TodoRow({
               value={todo.plannedDate}
               today={today}
               onChange={plannedDate => void actions.update(todo, { plannedDate })}
-              icon={<CalendarIcon size={13} />}
+              icon={<CalendarIcon size={14} />}
+              iconOnly
               isDisabled={done}
-            >
-              <span className={styles.srOnly}>改期</span>
-            </DatePicker>
+            />
           </span>
         ) : null}
         <TodoMenu todo={todo} onOpenChange={setMenuOpen} />

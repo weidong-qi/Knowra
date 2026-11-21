@@ -162,12 +162,7 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
   const openMainlines = useMemo(() => topLevelTodos(todos, 'mainline', 'open'), [todos]);
   const nothing = !view.today.length && !view.earlier.length && !view.doneToday.length && !view.dueAlerts.length;
   const quickAddNode = (
-    <QuickAdd
-      parentId={null}
-      plannedDate={today}
-      mainlines={openMainlines}
-      placeholder="添加今天要做的事（作为支线）"
-    />
+    <QuickAdd parentId={null} plannedDate={today} mainlines={openMainlines} placeholder="添加今天要做的事" />
   );
 
   return (

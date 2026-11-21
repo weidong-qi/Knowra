@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Todo } from '@study-accelerator/web-core';
-import { ClockIcon, PlusIcon, StarIcon } from '../../components/icons/knowra';
+import { ClockIcon, PlusIcon, StarIcon, TargetIcon } from '../../components/icons/knowra';
 import { Button, DatePicker, Select, TextField } from '../../components/ui';
 import { useTodoActions } from './TodoActions';
 import { addDaysToDate, relativeDateLabel } from './todoPresentation';
@@ -36,14 +36,26 @@ export function QuickAdd({
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [starred, setStarred] = useState(false);
   const [targetParentId, setTargetParentId] = useState<string>(parentId ?? '');
+  const wrapRef = useRef<HTMLDivElement>(null);
 
-  const showToolbar =
-    !compact && (expanded || Boolean(title.trim()) || Boolean(dueDate) || starred || Boolean(targetParentId));
+  const showToolbar = !compact && expanded;
+
+  useEffect(() => {
+    if (!expanded || compact) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (wrapRef.current?.contains(target)) return;
+      // DatePicker / Select 的弹出层通过 Portal 挂在 body 下，点击其中选项时不收起卡片。
+      if (target.closest('.react-aria-Popover, [role="listbox"], [role="dialog"]')) return;
+      setExpanded(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [compact, expanded]);
+
   const mainlineOptions = useMemo(
-    () => [
-      { id: '', label: '独立支线' },
-      ...(mainlines ?? []).map(item => ({ id: item.id, label: `主线：${item.title}` }))
-    ],
+    () => [{ id: '', label: '独立支线' }, ...(mainlines ?? []).map(item => ({ id: item.id, label: item.title }))],
     [mainlines]
   );
 
@@ -102,14 +114,19 @@ export function QuickAdd({
   }
 
   return (
-    <div className={styles.quickAddWrap} data-expanded={showToolbar || undefined} onFocus={() => setExpanded(true)}>
+    <div
+      ref={wrapRef}
+      className={styles.quickAddWrap}
+      data-expanded={showToolbar || undefined}
+      onFocus={() => setExpanded(true)}
+    >
       <div className={styles.quickAdd}>
         <PlusIcon size={16} className={styles.quickAddIcon} aria-hidden="true" />
         <TextField
           label={placeholder}
           hideLabel
           appearance="bare"
-          placeholder={showToolbar ? `${placeholder}，回车保存` : placeholder}
+          placeholder={showToolbar ? `${placeholder}...` : placeholder}
           value={title}
           onChange={setTitle}
           isDisabled={busy}
@@ -156,13 +173,14 @@ export function QuickAdd({
               >
                 明天
               </Button>
+              <span className={styles.quickAddDivider} aria-hidden="true" />
               <DatePicker
                 label="截止日期"
                 value={dueDate}
                 today={today}
                 placeholder="截止日期"
                 icon={<ClockIcon size={12} />}
-                className={styles.quickChipDate}
+                className={dueDate ? `${styles.quickChipDate} ${styles.quickChipDateActive}` : styles.quickChipDate}
                 onChange={setDueDate}
               >
                 {dueDate ? `截止 ${relativeDateLabel(dueDate, today)}` : undefined}
@@ -170,7 +188,9 @@ export function QuickAdd({
               {parentId === null && mainlines && mainlines.length > 0 ? (
                 <Select
                   label="归属"
-                  presentation="toolbar"
+                  presentation="chip"
+                  isActive={Boolean(targetParentId)}
+                  leadingIcon={<TargetIcon size={12} />}
                   options={mainlineOptions}
                   selectedKey={targetParentId}
                   onSelectionChange={key => setTargetParentId(String(key ?? ''))}

@@ -41,11 +41,7 @@ import {
   Tree,
   type TreeItemData
 } from '../index';
-import {
-  MoreHorizontalIcon,
-  PlusIcon,
-  SearchIcon
-} from '../../icons/knowra';
+import { MoreHorizontalIcon, PlusIcon, SearchIcon } from '../../icons/knowra';
 import collectionStyles from '../collection/Collection.module.css';
 import styles from './Showcase.module.css';
 
@@ -59,11 +55,46 @@ interface SampleRow {
 }
 
 const rows: SampleRow[] = [
-  { id: 'n-001', title: 'V4-04 转译边界与状态契约', status: 'accent', folder: '/重构/V4', updated: '08-19 11:00', favorite: true },
-  { id: 'n-002', title: '印格 demo 状态板（9 类）', status: 'success', folder: '/设计/印格', updated: '08-18 17:30', favorite: false },
-  { id: 'n-003', title: 'Vite 工程隔离门禁脚本', status: 'warning', folder: '/重构/V4', updated: '08-16 18:22', favorite: false },
-  { id: 'n-004', title: 'V4-03 共享 core 提取报告', status: 'success', folder: '/重构/V4', updated: '08-16 19:15', favorite: true },
-  { id: 'n-005', title: 'V3 class 查询门禁修复', status: 'danger', folder: '/重构/V4', updated: '08-16 14:02', favorite: false }
+  {
+    id: 'n-001',
+    title: 'V4-04 转译边界与状态契约',
+    status: 'accent',
+    folder: '/重构/V4',
+    updated: '08-19 11:00',
+    favorite: true
+  },
+  {
+    id: 'n-002',
+    title: '印格 demo 状态板（9 类）',
+    status: 'success',
+    folder: '/设计/印格',
+    updated: '08-18 17:30',
+    favorite: false
+  },
+  {
+    id: 'n-003',
+    title: 'Vite 工程隔离门禁脚本',
+    status: 'warning',
+    folder: '/重构/V4',
+    updated: '08-16 18:22',
+    favorite: false
+  },
+  {
+    id: 'n-004',
+    title: 'V4-03 共享 core 提取报告',
+    status: 'success',
+    folder: '/重构/V4',
+    updated: '08-16 19:15',
+    favorite: true
+  },
+  {
+    id: 'n-005',
+    title: 'V3 class 查询门禁修复',
+    status: 'danger',
+    folder: '/重构/V4',
+    updated: '08-16 14:02',
+    favorite: false
+  }
 ];
 
 const folderTree: TreeItemData[] = [
@@ -71,33 +102,48 @@ const folderTree: TreeItemData[] = [
     id: 'f-root',
     label: '工作区',
     children: [
-      { id: 'f-1', label: '设计', count: 12, children: [
-        { id: 'f-1-1', label: '印格' },
-        { id: 'f-1-2', label: '方册' }
-      ] },
-      { id: 'f-2', label: '重构', count: 28, children: [
-        { id: 'f-2-1', label: 'V4', count: 7 },
-        { id: 'f-2-2', label: 'V3' }
-      ] },
+      {
+        id: 'f-1',
+        label: '设计',
+        count: 12,
+        children: [
+          { id: 'f-1-1', label: '印格' },
+          { id: 'f-1-2', label: '方册' }
+        ]
+      },
+      {
+        id: 'f-2',
+        label: '重构',
+        count: 28,
+        children: [
+          { id: 'f-2-1', label: 'V4', count: 7 },
+          { id: 'f-2-2', label: 'V3' }
+        ]
+      },
       { id: 'f-3', label: '回收站', isDisabled: true }
     ]
   }
 ];
 
 const columns: GridListColumn<SampleRow>[] = [
-  { id: 'title', template: 'minmax(220px, 2fr)', title: true, cell: (r) => r.title },
-  { id: 'status', template: '0.6fr', cell: (r) => <Badge tone={r.status}>{labelForStatus(r.status)}</Badge> },
-  { id: 'folder', template: '0.8fr', cell: (r) => r.folder },
-  { id: 'updated', template: '0.6fr', cell: (r) => r.updated }
+  { id: 'title', template: 'minmax(220px, 2fr)', title: true, cell: r => r.title },
+  { id: 'status', template: '0.6fr', cell: r => <Badge tone={r.status}>{labelForStatus(r.status)}</Badge> },
+  { id: 'folder', template: '0.8fr', cell: r => r.folder },
+  { id: 'updated', template: '0.6fr', cell: r => r.updated }
 ];
 
 function labelForStatus(tone: StatusTone): string {
   switch (tone) {
-    case 'accent': return '编辑中';
-    case 'success': return '已完成';
-    case 'warning': return '待整理';
-    case 'danger': return '保存失败';
-    default: return '未读';
+    case 'accent':
+      return '编辑中';
+    case 'success':
+      return '已完成';
+    case 'warning':
+      return '待整理';
+    case 'danger':
+      return '保存失败';
+    default:
+      return '未读';
   }
 }
 
@@ -106,7 +152,9 @@ export function ComponentShowcase() {
     <main className={styles.showcase} aria-labelledby="v4-04-showcase-title">
       <header className={styles.hero}>
         <div>
-          <h1 id="v4-04-showcase-title" className={styles.heroTitle}>Knowra V4 组件展台</h1>
+          <h1 id="v4-04-showcase-title" className={styles.heroTitle}>
+            Knowra V4 组件展台
+          </h1>
           <p className={styles.heroSubtitle}>
             印格 V4-00.5 视觉冻结的 React + React Aria Components 转译结果。
             全部视觉签名（暖纸、墨线、点阵、零圆角、硬阴影）由 tokens.css 提供；本页为 V4-04 准出验收单一入口。
@@ -129,15 +177,13 @@ export function ComponentShowcase() {
 function ColorTokens() {
   return (
     <section className={styles.section} aria-labelledby="section-tokens">
-      <h2 id="section-tokens" className={styles.sectionTitle}>Canonical Tokens（颜色 1:1 转译）</h2>
+      <h2 id="section-tokens" className={styles.sectionTitle}>
+        Canonical Tokens（颜色 1:1 转译）
+      </h2>
       <div className={styles.colorList}>
-        {CANONICAL_COLOR_TOKENS.map((name) => (
+        {CANONICAL_COLOR_TOKENS.map(name => (
           <div key={name} className={styles.colorCard}>
-            <div
-              className={styles.colorSwatch}
-              style={{ backgroundColor: `var(--${name})` }}
-              aria-hidden="true"
-            />
+            <div className={styles.colorSwatch} style={{ backgroundColor: `var(--${name})` }} aria-hidden="true" />
             <div className={styles.colorMeta}>
               <span className={styles.colorName}>--{name}</span>
               <span>var(--{name})</span>
@@ -152,13 +198,14 @@ function ColorTokens() {
 function ButtonSection() {
   return (
     <section className={styles.section} aria-labelledby="section-buttons">
-      <h2 id="section-buttons" className={styles.sectionTitle}>Button</h2>
+      <h2 id="section-buttons" className={styles.sectionTitle}>
+        Button
+      </h2>
       <p className={styles.sectionLead}>
-        <strong>决策规则</strong>：① 危险 → <code>danger</code>；
-        ② 当前容器最关键的那一个动作（保存/发布/确定/完成）→ <code>primary</code>（黑）；
-        ③ 引导用户创建/引入/发现（新建/导入/添加/开始/搜索/邀请）→ <code>accent</code>（蓝）；
-        ④ 次要/取消/关闭/返回 → <code>ghost</code>；⑤ 其它 → <code>default</code>。
-        黑色与蓝色的边界：**层级 vs 语义**——一个容器最多 1 个 <code>primary</code>，<code>accent</code> 可重复。
+        <strong>决策规则</strong>：① 危险 → <code>danger</code>； ② 当前容器最关键的那一个动作（保存/发布/确定/完成）→{' '}
+        <code>primary</code>（黑）； ③ 引导用户创建/引入/发现（新建/导入/添加/开始/搜索/邀请）→ <code>accent</code>
+        （蓝）； ④ 次要/取消/关闭/返回 → <code>ghost</code>；⑤ 其它 → <code>default</code>。 黑色与蓝色的边界：**层级 vs
+        语义**——一个容器最多 1 个 <code>primary</code>，<code>accent</code> 可重复。
       </p>
       <div className={styles.grid}>
         <div className={styles.example}>
@@ -201,7 +248,9 @@ function ButtonSection() {
           <span className={styles.exampleLabel}>Disabled / Pending</span>
           <div className={styles.row}>
             <Button isDisabled>默认</Button>
-            <Button variant="primary" isDisabled>保存</Button>
+            <Button variant="primary" isDisabled>
+              保存
+            </Button>
             <Button isPending>提交中</Button>
           </div>
         </div>
@@ -213,17 +262,18 @@ function ButtonSection() {
 function IconSection() {
   return (
     <section className={styles.section} aria-labelledby="section-icons">
-      <h2 id="section-icons" className={styles.sectionTitle}>IconButton（tone: ghost / floating / primary）</h2>
-      <a className={styles.catalogLink} href="#/showcase/icons">浏览完整图标库 →</a>
+      <h2 id="section-icons" className={styles.sectionTitle}>
+        IconButton（tone: ghost / floating / primary）
+      </h2>
+      <a className={styles.catalogLink} href="#/showcase/icons">
+        浏览完整图标库 →
+      </a>
       <p className={styles.sectionLead}>
-        <strong>概念</strong>：纯图标无文字按钮（"ghost icon"），视觉与左轨 ModuleRail
-        图标一致——30×30 透明方块，内部 SVG 20×20，hover 沉底加深、
-        active translate(2px, 2px) 模拟按压、focus 接 --shadow-focus。
-        与 Button 的 ghost variant 是<strong>两件事</strong>：后者是
-        "弱化的有文字操作按钮"，本组件是"专门为纯图标操作入口"的薄封装。
+        <strong>概念</strong>：纯图标无文字按钮（"ghost icon"），视觉与左轨 ModuleRail 图标一致——30×30 透明方块，内部
+        SVG 20×20，hover 沉底加深、 active translate(2px, 2px) 模拟按压、focus 接 --shadow-focus。 与 Button 的 ghost
+        variant 是<strong>两件事</strong>：后者是 "弱化的有文字操作按钮"，本组件是"专门为纯图标操作入口"的薄封装。
         <br />
-        <strong>适用</strong>：侧栏头部"更多 / 新建"、Tab 端点、工具条尾部、
-        任何"只有图标、无文字"的次要操作入口。
+        <strong>适用</strong>：侧栏头部"更多 / 新建"、Tab 端点、工具条尾部、 任何"只有图标、无文字"的次要操作入口。
       </p>
       <div className={styles.grid}>
         <div className={styles.example}>
@@ -232,7 +282,7 @@ function IconSection() {
             <IconButton size={24} aria-label="搜索（紧凑）">
               <SearchIcon size={14} />
             </IconButton>
-            <IconButton size={30} aria-label="更多（侧栏头部默认）">
+            <IconButton size={28} aria-label="更多（侧栏头部默认）">
               <MoreHorizontalIcon size={20} />
             </IconButton>
             <IconButton size={40} aria-label="新建（与左轨 rail 一致）">
@@ -268,27 +318,43 @@ function IconSection() {
         <div className={styles.example}>
           <span className={styles.exampleLabel}>floating 通透玻璃：默认 / 悬停 / 按下 / 禁用</span>
           <div className={styles.row}>
-            <IconButton tone="floating" aria-label="玻璃新建"><PlusIcon size={16} /></IconButton>
-            <IconButton tone="floating" aria-label="玻璃新建悬停" data-force-hover><PlusIcon size={16} /></IconButton>
-            <IconButton tone="floating" aria-label="玻璃新建按下" data-force-active><PlusIcon size={16} /></IconButton>
-            <IconButton tone="floating" aria-label="玻璃新建禁用" disabled><PlusIcon size={16} /></IconButton>
+            <IconButton tone="floating" aria-label="玻璃新建">
+              <PlusIcon size={16} />
+            </IconButton>
+            <IconButton tone="floating" aria-label="玻璃新建悬停" data-force-hover>
+              <PlusIcon size={16} />
+            </IconButton>
+            <IconButton tone="floating" aria-label="玻璃新建按下" data-force-active>
+              <PlusIcon size={16} />
+            </IconButton>
+            <IconButton tone="floating" aria-label="玻璃新建禁用" disabled>
+              <PlusIcon size={16} />
+            </IconButton>
           </div>
         </div>
 
         <div className={styles.example}>
           <span className={styles.exampleLabel}>primary 柔橙实心：默认 / 悬停 / 按下 / 禁用</span>
           <div className={styles.row}>
-            <IconButton tone="primary" aria-label="柔橙新建"><PlusIcon size={16} /></IconButton>
-            <IconButton tone="primary" aria-label="柔橙新建悬停" data-force-hover><PlusIcon size={16} /></IconButton>
-            <IconButton tone="primary" aria-label="柔橙新建按下" data-force-active><PlusIcon size={16} /></IconButton>
-            <IconButton tone="primary" aria-label="柔橙新建禁用" disabled><PlusIcon size={16} /></IconButton>
+            <IconButton tone="primary" aria-label="柔橙新建">
+              <PlusIcon size={16} />
+            </IconButton>
+            <IconButton tone="primary" aria-label="柔橙新建悬停" data-force-hover>
+              <PlusIcon size={16} />
+            </IconButton>
+            <IconButton tone="primary" aria-label="柔橙新建按下" data-force-active>
+              <PlusIcon size={16} />
+            </IconButton>
+            <IconButton tone="primary" aria-label="柔橙新建禁用" disabled>
+              <PlusIcon size={16} />
+            </IconButton>
           </div>
         </div>
 
         <div className={styles.example}>
           <span className={styles.exampleLabel}>实际用法对照</span>
           <div className={styles.row}>
-            <IconButton aria-label="新建笔记（笔记侧栏头部默认 size=30）">
+            <IconButton aria-label="新建笔记（笔记侧栏头部默认 size=28）">
               <PlusIcon size={20} />
             </IconButton>
             <IconButton size={40} aria-label="新建笔记（与左轨 rail 等大 size=40）">
@@ -305,7 +371,9 @@ function InputSection() {
   const [query, setQuery] = useState('');
   return (
     <section className={styles.section} aria-labelledby="section-inputs">
-      <h2 id="section-inputs" className={styles.sectionTitle}>Input / SearchBox / Checkbox / Select</h2>
+      <h2 id="section-inputs" className={styles.sectionTitle}>
+        Input / SearchBox / Checkbox / Select
+      </h2>
       <div className={styles.grid}>
         <div className={styles.example}>
           <span className={styles.exampleLabel}>TextField 默认 / 必填 / 错误</span>
@@ -357,13 +425,17 @@ function InputSection() {
 function OverlaySection() {
   return (
     <section className={styles.section} aria-labelledby="section-overlay">
-      <h2 id="section-overlay" className={styles.sectionTitle}>Dialog / Menu / Popover / Tooltip / Tabs</h2>
+      <h2 id="section-overlay" className={styles.sectionTitle}>
+        Dialog / Menu / Popover / Tooltip / Tabs
+      </h2>
       <div className={styles.grid}>
         <div className={styles.example}>
           <span className={styles.exampleLabel}>Dialog（含焦点陷阱、Esc 关闭、inert 背景）</span>
           <div className={styles.row}>
             <DialogTrigger>
-              <Button variant="primary" data-testid="trigger-new">新建资料</Button>
+              <Button variant="primary" data-testid="trigger-new">
+                新建资料
+              </Button>
               <Dialog title="新建资料" description="所有字段必填。">
                 <DialogBody>
                   <TextField label="标题" isRequired autoFocus />
@@ -372,12 +444,16 @@ function OverlaySection() {
                 </DialogBody>
                 <DialogFooter>
                   <DialogClose variant="ghost">取消</DialogClose>
-                  <DialogClose variant="primary" isPending>保存</DialogClose>
+                  <DialogClose variant="primary" isPending>
+                    保存
+                  </DialogClose>
                 </DialogFooter>
               </Dialog>
             </DialogTrigger>
             <DialogTrigger>
-              <Button variant="danger" data-testid="trigger-delete">删除</Button>
+              <Button variant="danger" data-testid="trigger-delete">
+                删除
+              </Button>
               <Dialog title="确认删除？" isDismissable>
                 <DialogBody>
                   <p>此操作不可撤销。所有引用此资料的内容将变为孤立链接。</p>
@@ -397,10 +473,16 @@ function OverlaySection() {
               <Button data-testid="trigger-more">更多</Button>
               <MenuPopover>
                 <Menu ariaLabel="操作">
-                  <MenuItem id="copy" kbd="⌘D">复制为 Markdown</MenuItem>
-                  <MenuItem id="export" kbd="⌘E">导出</MenuItem>
+                  <MenuItem id="copy" kbd="⌘D">
+                    复制为 Markdown
+                  </MenuItem>
+                  <MenuItem id="export" kbd="⌘E">
+                    导出
+                  </MenuItem>
                   <MenuSeparator />
-                  <MenuItem id="trash" isDanger>移入回收站</MenuItem>
+                  <MenuItem id="trash" isDanger>
+                    移入回收站
+                  </MenuItem>
                 </Menu>
               </MenuPopover>
             </MenuTrigger>
@@ -431,7 +513,7 @@ function OverlaySection() {
               { id: 'settings', label: '设置', isDisabled: true }
             ]}
           >
-            {(item) => <Panel title={`${item.label} 视图`}>这是 {item.label} 的内容。</Panel>}
+            {item => <Panel title={`${item.label} 视图`}>这是 {item.label} 的内容。</Panel>}
           </Tabs>
         </div>
       </div>
@@ -450,7 +532,9 @@ function CollectionSection({
 }) {
   return (
     <section className={styles.section} aria-labelledby="section-collections">
-      <h2 id="section-collections" className={styles.sectionTitle}>Tree / GridList / TagGroup</h2>
+      <h2 id="section-collections" className={styles.sectionTitle}>
+        Tree / GridList / TagGroup
+      </h2>
       <div className={styles.grid}>
         <div className={styles.example}>
           <span className={styles.exampleLabel}>Tree</span>
@@ -458,13 +542,7 @@ function CollectionSection({
         </div>
         <div className={styles.example} style={{ gridColumn: 'span 2' }}>
           <span className={styles.exampleLabel}>GridList（资料行）</span>
-          <GridList
-            items={rows}
-            columns={columns}
-            getKey={(r) => r.id}
-            ariaLabel="资料"
-            selectionMode="multiple"
-          />
+          <GridList items={rows} columns={columns} getKey={r => r.id} ariaLabel="资料" selectionMode="multiple" />
         </div>
         <div className={styles.example}>
           <span className={styles.exampleLabel}>TagGroup（tone / count / 选中 / 禁用 / 移除）</span>
@@ -517,7 +595,9 @@ function CollectionSection({
 function StatusSection() {
   return (
     <section className={styles.section} aria-labelledby="section-status">
-      <h2 id="section-status" className={styles.sectionTitle}>Badge / EmptyState / LoadingState / Panel</h2>
+      <h2 id="section-status" className={styles.sectionTitle}>
+        Badge / EmptyState / LoadingState / Panel
+      </h2>
       <div className={styles.grid}>
         <div className={styles.example}>
           <span className={styles.exampleLabel}>Badge tone</span>

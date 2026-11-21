@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconButton } from '../../components/ui/button';
-import { Tabs, type TabsItem } from '../../components/ui/collection';
+import { IconButton, SegmentedButton, SegmentedControl } from '../../components/ui/button';
 import { CloseIcon } from '../../components/icons/knowra';
-import { extractInspectorOutline, getDocumentStats, resolveInspectorRelations, resolveNoteTags } from './editorInspectorModel';
+import {
+  extractInspectorOutline,
+  getDocumentStats,
+  resolveInspectorRelations,
+  resolveNoteTags
+} from './editorInspectorModel';
 import { ResponsivePanel } from '../../components/ui/overlay/ResponsivePanel';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { OrganizeNoteDialog } from './OrganizeNoteDialog';
@@ -14,23 +18,26 @@ import type { EditorInspectorProps } from './inspector/types';
 export type { EditorInspectorProps } from './inspector/types';
 import styles from './EditorInspector.module.css';
 
-const inspectorTabs: TabsItem[] = [
+const inspectorTabs = [
   { id: 'info', label: '信息' },
   { id: 'outline', label: '大纲' },
   { id: 'links', label: '链接' },
   { id: 'annotations', label: '标注' },
   { id: 'versions', label: '记录' },
   { id: 'ai', label: 'AI' }
-];
+] as const;
 
 export function EditorInspector(props: EditorInspectorProps) {
   const [selectedTab, setSelectedTab] = useState('info');
-  const [compact, setCompact] = useState(() => window.matchMedia?.('(max-width: 1100px), (any-pointer: coarse)').matches ?? false);
+  const [compact, setCompact] = useState(
+    () => window.matchMedia?.('(max-width: 1100px), (any-pointer: coarse)').matches ?? false
+  );
   useEffect(() => {
     const query = window.matchMedia?.('(max-width: 1100px), (any-pointer: coarse)');
     if (!query) return;
     const update = () => setCompact(query.matches);
-    update(); query.addEventListener('change', update);
+    update();
+    query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
   const modal = compact && !props.nativeTitlebar;
@@ -42,19 +49,19 @@ export function EditorInspector(props: EditorInspectorProps) {
   const relations = useMemo(() => {
     const local = resolveInspectorRelations(props.note, props.notes);
     const outgoing = props.linkedNotesLoading ? local.outgoing : props.linkedNotes;
-    const relatedIds = new Set([...outgoing, ...local.backlinks].map((item) => item.id));
+    const relatedIds = new Set([...outgoing, ...local.backlinks].map(item => item.id));
     return {
       ...local,
       outgoing,
-      related: props.notes.filter((item) => !item.deleted && item.id !== props.note.id && relatedIds.has(item.id))
+      related: props.notes.filter(item => !item.deleted && item.id !== props.note.id && relatedIds.has(item.id))
     };
   }, [props.linkedNotes, props.linkedNotesLoading, props.note, props.notes]);
   const outline = useMemo(
-    () => props.open ? extractInspectorOutline(props.markdown) : [],
+    () => (props.open ? extractInspectorOutline(props.markdown) : []),
     [props.markdown, props.open]
   );
   const stats = useMemo(
-    () => props.open ? getDocumentStats(props.markdown) : { characterCount: 0, readingMinutes: 0 },
+    () => (props.open ? getDocumentStats(props.markdown) : { characterCount: 0, readingMinutes: 0 }),
     [props.markdown, props.open]
   );
 
@@ -76,16 +83,25 @@ export function EditorInspector(props: EditorInspectorProps) {
           <CloseIcon size={18} />
         </IconButton>
       </header>
-      <Tabs
-        className={styles.tabs}
-        aria-label="检查器视图"
-        items={inspectorTabs}
-        selectedKey={selectedTab}
-        onSelectionChange={(key) => setSelectedTab(String(key))}
-      >
-        {(item) => (
-          <div className={styles.panel} data-panel={String(item.id)}>
-            {item.id === 'info' ? (
+      <div className={styles.tabs}>
+        <div className={styles.tabBar}>
+          <SegmentedControl role="tablist" aria-label="检查器视图" density="compact" className={styles.tabSegmented}>
+            {inspectorTabs.map(item => (
+              <SegmentedButton
+                key={item.id}
+                role="tab"
+                aria-selected={selectedTab === item.id}
+                className={styles.tabSegment}
+                onPress={() => setSelectedTab(item.id)}
+              >
+                {item.label}
+              </SegmentedButton>
+            ))}
+          </SegmentedControl>
+        </div>
+        <div className={styles.tabBody}>
+          <div role="tabpanel" className={styles.panel} data-panel={selectedTab}>
+            {selectedTab === 'info' ? (
               <InfoPanel
                 {...props}
                 assignedTags={tags}
@@ -96,18 +112,27 @@ export function EditorInspector(props: EditorInspectorProps) {
                 onOrganize={() => setOrganizeOpen(true)}
               />
             ) : null}
-            {item.id === 'outline' ? (
-              <OutlinePanel outline={outline} onNavigate={props.onNavigateHeading} />
+            {selectedTab === 'outline' ? <OutlinePanel outline={outline} onNavigate={props.onNavigateHeading} /> : null}
+            {selectedTab === 'links' ? (
+              <LinksPanel
+                relations={relations}
+                loading={props.linkedNotesLoading}
+                onOpenNote={props.onOpenNote}
+                noteLinks={props.noteLinkRelations}
+                linksLoading={props.noteLinkRelationsLoading}
+                error={props.noteLinkRelationsError}
+                onOpenOccurrence={props.onOpenLinkedOccurrence}
+                onOpenLinkedNote={props.onOpenLinkedNote}
+              />
             ) : null}
-            {item.id === 'links' ? (
-              <LinksPanel relations={relations} loading={props.linkedNotesLoading} onOpenNote={props.onOpenNote}
-                noteLinks={props.noteLinkRelations} linksLoading={props.noteLinkRelationsLoading} error={props.noteLinkRelationsError}
-                onOpenOccurrence={props.onOpenLinkedOccurrence} onOpenLinkedNote={props.onOpenLinkedNote} />
+            {selectedTab === 'annotations' ? (
+              <AnnotationPanel
+                key={props.note.id}
+                {...props}
+                canWrite={props.canWrite && props.extendedWritesEnabled !== false}
+              />
             ) : null}
-            {item.id === 'annotations' ? (
-              <AnnotationPanel key={props.note.id} {...props} canWrite={props.canWrite && props.extendedWritesEnabled !== false} />
-            ) : null}
-            {item.id === 'versions' ? (
+            {selectedTab === 'versions' ? (
               <VersionHistoryPanel
                 key={props.note.id}
                 note={props.note}
@@ -121,10 +146,17 @@ export function EditorInspector(props: EditorInspectorProps) {
                 onGetVersion={props.onGetVersion}
               />
             ) : null}
-            {item.id === 'ai' ? <AnnotationPanel key={`ai-${props.note.id}`} {...props} canWrite={props.canWrite && props.extendedWritesEnabled !== false} analysisOnly /> : null}
+            {selectedTab === 'ai' ? (
+              <AnnotationPanel
+                key={`ai-${props.note.id}`}
+                {...props}
+                canWrite={props.canWrite && props.extendedWritesEnabled !== false}
+                analysisOnly
+              />
+            ) : null}
           </div>
-        )}
-      </Tabs>
+        </div>
+      </div>
       {/* 标签草稿和异步操作归属当前笔记，切换笔记必须创建独立会话。 */}
       <TagPickerDialog
         key={props.note.id}
@@ -152,8 +184,15 @@ export function EditorInspector(props: EditorInspectorProps) {
       />
     </aside>
   );
-  return <ResponsivePanel title="文档检查器" modal={modal} className={styles.inspectorDialog}
-    isOpen={props.open} onClose={props.onClose}>
-    {inspector}
-  </ResponsivePanel>;
+  return (
+    <ResponsivePanel
+      title="文档检查器"
+      modal={modal}
+      className={styles.inspectorDialog}
+      isOpen={props.open}
+      onClose={props.onClose}
+    >
+      {inspector}
+    </ResponsivePanel>
+  );
 }
