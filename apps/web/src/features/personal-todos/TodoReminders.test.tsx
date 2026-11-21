@@ -40,15 +40,56 @@ function fakeServer(seed: TodoCommand[]) {
     commands.push(command);
     return { data: { changed: apply(command) } };
   });
-  return { store: createTodoStore(requestJson as never), commands, todos: () => todos };
+  return { store: createTodoStore(requestJson as never), commands, todos: () => todos, requestJson };
 }
 
-const withReminder = (at: string): TodoCommand[] => [
-  { type: 'create', id: 'r', parentId: null, title: '交实验报告' },
-  { type: 'setReminder', id: 'r', expectedRevision: 1, reminder: { kind: 'fixed', at } }
+const withReminder = (at: string, id = 'r'): TodoCommand[] => [
+  { type: 'create', id, parentId: null, title: '交实验报告' },
+  { type: 'setReminder', id, expectedRevision: 1, reminder: { kind: 'fixed', at } }
 ];
 
 describe('提醒投递', () => {
+  it('首次加载跨过轮询间隔且首条回写延迟时，每条到期提醒只投递一次', async () => {
+    vi.useFakeTimers();
+    try {
+      const at = '2026-11-09T02:00:00.000Z';
+      const server = fakeServer([...withReminder(at, 'a'), ...withReminder(at, 'b')]);
+      let finishLoad!: () => void;
+      const loading = new Promise<void>(resolve => {
+        finishLoad = resolve;
+      });
+      server.requestJson.mockImplementationOnce(async () => {
+        await loading;
+        return { data: { todos: server.todos() } };
+      });
+      const firstLoad = server.store.load();
+      let finishAck!: () => void;
+      const ack = new Promise<void>(resolve => {
+        finishAck = resolve;
+      });
+      const execute = server.store.execute;
+      vi.spyOn(server.store, 'execute').mockImplementationOnce(async command => {
+        await ack;
+        return execute(command);
+      });
+      const notify = vi.fn(async (_todo: Todo) => true);
+      render(<TodoReminderRunner store={server.store} notify={notify} now={() => at} />);
+      await act(() => vi.advanceTimersByTimeAsync(30_001));
+      await act(async () => {
+        finishLoad();
+        await firstLoad;
+      });
+      await act(async () => {
+        finishAck();
+      });
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
+      expect(notify.mock.calls.map(([todo]) => todo.id)).toEqual(['a', 'b']);
+      expect(server.commands.map(command => command.id)).toEqual(['a', 'b']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('到点交给系统通知并回写已提醒，同一设备不重复投递', async () => {
     const server = fakeServer(withReminder('2026-11-09T02:00:00.000Z'));
     const notify = vi.fn(async () => true);

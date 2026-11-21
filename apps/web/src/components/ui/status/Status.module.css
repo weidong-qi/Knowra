@@ -305,6 +305,7 @@
 
 /* 全站统一右上角通知栏（Toast）：B 款温润毛玻璃卡片。 */
 .toastViewport {
+  pointer-events: none;
   position: fixed;
   z-index: 70;
   top: calc(var(--topbar-size, 44px) + 14px);

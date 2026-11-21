@@ -610,9 +610,10 @@ test('待办详情预览可从顶栏切换场景', async ({ page }) => {
   }
 });
 
-test('短视口内提醒可滚动且限时撤销始终可用', async ({ page }) => {
+test('短视口内可透过提醒间隙点击、滚动提醒并使用限时撤销', async ({ page }) => {
   await mockEditorWorkspace(page, []);
   await page.setViewportSize({ width: 960, height: 480 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   let todos: Todo[] = [];
   const now = Date.now();
   const apply = (command: TodoCommand, time = Date.now()) => {
@@ -641,12 +642,35 @@ test('短视口内提醒可滚动且限时撤销始终可用', async ({ page }) 
   await page.goto('/#/learning/sidelines');
   const notifications = page.getByRole('region', { name: '通知', exact: true });
   await expect(notifications.getByRole('alert')).toHaveCount(12);
+  // 在通知下方放一个按钮，真实点击两张卡片之间的空白。
+  const gap = await notifications.evaluate(stack => {
+    const [first, second] = stack.querySelectorAll('[role="alert"]');
+    const upper = first!.getBoundingClientRect();
+    const lower = second!.getBoundingClientRect();
+    const x = upper.x + upper.width / 2;
+    const y = (upper.bottom + lower.top) / 2;
+    const button = document.createElement('button');
+    button.textContent = '通知下方的按钮';
+    Object.assign(button.style, {
+      position: 'fixed',
+      left: x - 15 + 'px',
+      top: y - 12 + 'px',
+      width: '30px',
+      height: '24px',
+      zIndex: String(Number(getComputedStyle(stack).zIndex) - 1)
+    });
+    stack.before(button);
+    return { x, y };
+  });
+  await page.mouse.click(gap.x, gap.y);
+  const underlying = page.getByRole('button', { name: '通知下方的按钮' });
+  await expect(underlying).toBeFocused();
+  await underlying.evaluate(button => button.remove());
   await page.getByRole('checkbox', { name: '完成「测试撤销」', exact: true }).click();
   const undo = notifications.getByRole('button', { name: '撤销', exact: true });
   await expect(undo).toBeInViewport();
-  await notifications.evaluate(el => {
-    el.scrollTop = el.scrollHeight;
-  });
+  await notifications.getByRole('alert').first().hover();
+  await page.mouse.wheel(0, 600);
   await expect.poll(() => notifications.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   await expect(undo).toBeInViewport();
   await undo.click();

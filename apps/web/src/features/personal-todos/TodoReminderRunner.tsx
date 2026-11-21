@@ -68,38 +68,38 @@ export function TodoReminderRunner({
 }) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<Todo[]>([]);
-  const busy = useRef(new Set<string>());
   const log = useRef(deliveredLog());
   // 回调放进 ref：父组件重渲染时不重建定时器。
   const deps = useRef({ notify, now });
   deps.current = { notify, now };
   useEffect(() => {
     let active = true;
+    let checking = false;
     const check = async () => {
-      const state = store.getState();
-      if (state.status === 'idle' || state.status === 'loading') await store.load();
-      if (!active || store.getState().status !== 'ready') return;
-      const plan = planReminders(store.getState().todos, deps.current.now(), log.current);
-      for (const todo of plan.missed) {
-        const key = reminderKey(todo);
-        if (busy.current.has(key)) continue;
-        busy.current.add(key);
-        await store
-          .execute({ type: 'ackReminder', id: todo.id, dueAt: todo.reminder!.dueAt, outcome: 'missed' })
-          .catch(() => undefined);
-        busy.current.delete(key);
-      }
-      for (const todo of plan.deliver) {
-        const key = reminderKey(todo);
-        if (busy.current.has(key)) continue;
-        busy.current.add(key);
-        log.current.add(key);
-        const shown = await deps.current.notify(todo);
-        if (!shown && active) setCards(list => [...list.filter(item => item.id !== todo.id), todo]);
-        await store
-          .execute({ type: 'ackReminder', id: todo.id, dueAt: todo.reminder!.dueAt, outcome: 'fired' })
-          .catch(() => undefined);
-        busy.current.delete(key);
+      if (checking) return;
+      checking = true;
+      try {
+        const state = store.getState();
+        if (state.status === 'idle' || state.status === 'loading') await store.load();
+        if (!active || store.getState().status !== 'ready') return;
+        const plan = planReminders(store.getState().todos, deps.current.now(), log.current);
+        for (const todo of plan.missed) {
+          if (!active) return;
+          await store
+            .execute({ type: 'ackReminder', id: todo.id, dueAt: todo.reminder!.dueAt, outcome: 'missed' })
+            .catch(() => undefined);
+        }
+        for (const todo of plan.deliver) {
+          if (!active) return;
+          log.current.add(reminderKey(todo));
+          const shown = await deps.current.notify(todo);
+          if (!shown && active) setCards(list => [...list.filter(item => item.id !== todo.id), todo]);
+          await store
+            .execute({ type: 'ackReminder', id: todo.id, dueAt: todo.reminder!.dueAt, outcome: 'fired' })
+            .catch(() => undefined);
+        }
+      } finally {
+        checking = false;
       }
     };
     void check();
