@@ -1,5 +1,6 @@
 import { test } from './fixtures/syntheticTest';
 import { expect, type Locator } from '@playwright/test';
+import { applyTodoCommand, mergeTodoChanges, type Todo, type TodoCommand } from '@study-accelerator/web-core';
 import { createNote, mockEditorWorkspace } from './fixtures/editorWorkspace';
 
 async function selectedControlContrast(locator: Locator, thumb = false) {
@@ -582,3 +583,61 @@ for (const mode of ['light', 'dark']) {
     await expect(page.getByRole('button', { name: '发布', exact: true })).not.toHaveCSS('box-shadow', 'none');
   });
 }
+
+test('待办详情预览可从顶栏切换场景', async ({ page }) => {
+  await mockEditorWorkspace(page, []);
+  await page.goto('/#/showcase/todo-detail');
+  const group = page.getByRole('group', { name: '预览场景' });
+  for (const [label, title] of [
+    ['主线任务', 'Knowra 待办侧栏视觉改版'],
+    ['暂停 / 逾期', '补充 API 权限集成测试']
+  ]) {
+    const button = group.getByRole('button', { name: label });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('complementary', { name: '待办详情预览：' + title })).toBeVisible();
+  }
+});
+
+test('短视口内提醒可滚动且限时撤销始终可用', async ({ page }) => {
+  await mockEditorWorkspace(page, []);
+  await page.setViewportSize({ width: 960, height: 480 });
+  let todos: Todo[] = [];
+  const now = Date.now();
+  const apply = (command: TodoCommand, time = Date.now()) => {
+    const { changed } = applyTodoCommand(todos, command, { now: new Date(time).toISOString() });
+    todos = mergeTodoChanges(todos, changed);
+    return changed;
+  };
+  apply({ type: 'create', id: 'target', parentId: null, title: '测试撤销' });
+  for (let i = 0; i < 12; i++) {
+    const id = 'notice-' + i;
+    const [created] = apply({ type: 'create', id, parentId: null, title: '提醒 ' + i }, now - 2000);
+    apply(
+      {
+        type: 'setReminder',
+        id,
+        expectedRevision: created!.revision,
+        reminder: { kind: 'fixed', at: new Date(now - 1000).toISOString() }
+      },
+      now - 2000
+    );
+  }
+  await page.route('**/api/todos', route => route.fulfill({ json: { data: { todos } } }));
+  await page.route('**/api/todos/commands', route =>
+    route.fulfill({ json: { data: { changed: apply(route.request().postDataJSON().command) } } })
+  );
+  await page.goto('/#/learning/sidelines');
+  const notifications = page.getByRole('region', { name: '通知', exact: true });
+  await expect(notifications.getByRole('alert')).toHaveCount(12);
+  await page.getByRole('checkbox', { name: '完成「测试撤销」', exact: true }).click();
+  const undo = notifications.getByRole('button', { name: '撤销', exact: true });
+  await expect(undo).toBeInViewport();
+  await notifications.evaluate(el => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await expect.poll(() => notifications.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await expect(undo).toBeInViewport();
+  await undo.click();
+  await expect(page.getByRole('checkbox', { name: '完成「测试撤销」', exact: true })).toBeVisible();
+});

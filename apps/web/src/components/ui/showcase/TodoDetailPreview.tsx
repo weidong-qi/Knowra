@@ -16,7 +16,12 @@ import { DatePicker, Select, Switch, TextAreaField, TextField } from '../input';
 import { formatDateLabel } from '../input/DatePicker';
 import styles from './TodoDetailPreview.module.css';
 
-type PreviewPresetId = 'branch' | 'mainline' | 'overdue';
+const presetOptions = [
+  { id: 'branch', label: '支线任务' },
+  { id: 'mainline', label: '主线任务' },
+  { id: 'overdue', label: '暂停 / 逾期' }
+] as const;
+type PreviewPresetId = (typeof presetOptions)[number]['id'];
 type ExpandableRowId = 'planned' | 'due' | 'reminder';
 
 interface PreviewState {
@@ -148,15 +153,12 @@ export function TodoDetailPreview() {
           </a>
           <h1 className={styles.toolbarTitle}>待办详情侧栏 · 视觉预览（Mac 提醒事项风格）</h1>
         </div>
-        <SegmentedControl
-          aria-label="预览场景"
-          size="compact"
-          selectedKey={preset}
-          onSelectionChange={key => selectPreset(String(key) as PreviewPresetId)}
-        >
-          <SegmentedButton id="branch">支线任务</SegmentedButton>
-          <SegmentedButton id="mainline">主线任务</SegmentedButton>
-          <SegmentedButton id="overdue">暂停 / 逾期</SegmentedButton>
+        <SegmentedControl aria-label="预览场景" density="compact">
+          {presetOptions.map(({ id, label }) => (
+            <SegmentedButton key={id} aria-pressed={preset === id} onPress={() => selectPreset(id)}>
+              {label}
+            </SegmentedButton>
+          ))}
         </SegmentedControl>
       </header>
 
@@ -168,7 +170,7 @@ export function TodoDetailPreview() {
               <span className={styles.listMockHint}>点击左侧切换示例，右侧日期行可点击展开调整</span>
             </div>
             <div className={styles.mockRows}>
-              {(['branch', 'mainline', 'overdue'] as PreviewPresetId[]).map(id => (
+              {presetOptions.map(({ id }) => (
                 <button
                   key={id}
                   type="button"

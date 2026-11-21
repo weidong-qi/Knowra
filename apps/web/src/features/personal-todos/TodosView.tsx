@@ -113,6 +113,7 @@ export function TodosView({ pathname, store = sharedTodoStore() }: { pathname: s
             {
               id: `todo-undo:${undo.id}`,
               title: undo.message,
+              pinned: Boolean(undo.command),
               tone: 'success',
               role: 'status',
               actions: undo.command

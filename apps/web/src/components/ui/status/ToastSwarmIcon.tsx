@@ -1,7 +1,7 @@
 // 全站 Toast 粒子汇聚→矢量图标动效：支持 success / warning / danger / accent / neutral 五种语义，
 // 统一使用无外圈纯矢量定格，并在 jsdom 与 prefers-reduced-motion 下回退为静态 SVG。
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { StatusTone } from '../tokens';
 
 interface Point {
@@ -43,7 +43,7 @@ interface ToneSpec {
     primary: string
   ): void;
   /** 静态回退 SVG 路径。 */
-  fallbackSvg(size: number): JSX.Element;
+  fallbackSvg(size: number): ReactElement;
 }
 
 const V0: Point = { x: -0.44, y: 0.04 };

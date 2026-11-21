@@ -140,7 +140,7 @@ export function QuickAdd({
         />
         {showToolbar ? (
           <div className={styles.quickAddSubmit}>
-            <Button size="compact" variant="ghost" onPress={resetDraft}>
+            <Button size="compact" variant="ghost" onPress={() => setExpanded(false)}>
               收起
             </Button>
             <Button size="compact" variant="primary" isDisabled={!title.trim() || busy} onPress={() => void submit()}>

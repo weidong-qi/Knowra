@@ -183,11 +183,13 @@ export function TodayPage({ todos, index, selectedId }: PageProps) {
         </Group>
       ) : null}
 
-      {!view.today.length || todayExpanded ? (
-        <div className={styles.standaloneQuickAdd} data-attached={view.today.length > 0 || undefined}>
-          {quickAddNode}
-        </div>
-      ) : null}
+      <div
+        className={styles.standaloneQuickAdd}
+        data-attached={view.today.length > 0 || undefined}
+        hidden={view.today.length > 0 && !todayExpanded}
+      >
+        {quickAddNode}
+      </div>
 
       {view.earlier.length ? (
         <Group

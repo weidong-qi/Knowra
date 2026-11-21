@@ -245,7 +245,7 @@ it('跨日更新快速添加的默认日期并保留显式选择', async () => {
   await user.type(input, '显式安排');
   await user.click(screen.getByRole('button', { name: '明天' }));
   view.rerender(quickAdd('2026-11-24'));
-  await user.click(screen.getByRole('button', { name: '添加', exact: true }));
+  await user.click(screen.getByRole('button', { name: '添加' }));
   expect(commands.at(-1)).toMatchObject({ plannedDate: '2026-11-23' });
 });
 
@@ -262,8 +262,32 @@ it('详情按层级展示组织操作，子步骤创建失败后可以原文重�
   expect(await screen.findByText('暂时离线')).toBeVisible();
   expect(input).toHaveValue('整理草稿');
   await user.keyboard('{Enter}');
-  await user.click(await panel.findByRole('button', { name: '整理草稿', exact: true }));
+  await user.click(await panel.findByRole('button', { name: '整理草稿' }));
   const child = within(screen.getByRole('complementary', { name: '待办详情：整理草稿' }));
-  expect(child.getByRole('button', { name: '移动', exact: true })).toBeVisible();
+  expect(child.getByRole('button', { name: '移动' })).toBeVisible();
   expect(child.queryByRole('button', { name: '升格' })).toBeNull();
+});
+
+it('收起输入框和折叠今日安排均保留快速添加的草稿', async () => {
+  const server = fakeServer([{ type: 'create', id: 'a', parentId: null, title: '已有安排', plannedDate: today }]);
+  const user = userEvent.setup();
+  render(<TodosView pathname="/learning" store={server.store} />);
+  const input = await screen.findByRole('textbox', { name: '添加今天要做的事' });
+  await user.type(input, '保存我的草稿');
+  await user.click(screen.getByRole('button', { name: '明天' }));
+  await user.click(screen.getByRole('button', { name: '星标' }));
+  await user.click(screen.getByRole('button', { name: '收起' }));
+  expect(input).toHaveValue('保存我的草稿');
+  const group = screen.getByRole('button', { name: /今日安排/ });
+  await user.click(group);
+  expect(input).not.toBeVisible();
+  await user.click(group);
+  await user.click(input);
+  expect(screen.getByRole('button', { name: '明天' })).toHaveAttribute('aria-pressed', 'true');
+  await user.click(screen.getByRole('button', { name: '添加' }));
+  expect(server.commands.at(-1)).toMatchObject({
+    title: '保存我的草稿',
+    plannedDate: addDaysToDate(today, 1),
+    starred: true
+  });
 });

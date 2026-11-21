@@ -22,6 +22,8 @@ export interface ToastItem {
   icon?: ReactNode;
   actions?: ToastAction[];
   onDismiss?(): void;
+  /** 限时操作置顶，滚动其他通知时仍可点击。 */
+  pinned?: boolean;
   role?: 'status' | 'alert';
   /** 仅命令式 toast.show 生效：毫秒数，0 表示不自动关闭；默认 4500。 */
   duration?: number;
@@ -48,7 +50,7 @@ function rebuildCache() {
     for (const item of items) merged.push(item);
   }
   for (const item of imperativeList) merged.push(item);
-  cachedAll = merged;
+  cachedAll = merged.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
 }
 
 function emitViewport() {
@@ -136,7 +138,7 @@ export interface ToastCardProps extends ToastItem {
 
 /** 温润毛玻璃通知卡：左侧状态圆标 + 标题/说明 + 右侧轻量操作与关闭按钮。 */
 export const ToastCard = forwardRef<HTMLDivElement, ToastCardProps>(function ToastCard(
-  { title, description, tone = 'neutral', icon, actions, onDismiss, role = 'status', className },
+  { title, description, tone = 'neutral', icon, actions, onDismiss, pinned, role = 'status', className },
   ref
 ) {
   const singleLine = !description;
@@ -144,6 +146,7 @@ export const ToastCard = forwardRef<HTMLDivElement, ToastCardProps>(function Toa
     <div
       ref={ref}
       role={role}
+      data-pinned={pinned || undefined}
       data-single={singleLine || undefined}
       className={cx(styles.toastCard, toneClass[tone], className)}
     >

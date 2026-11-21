@@ -314,10 +314,13 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
-  pointer-events: none;
+  max-height: calc(100dvh - var(--topbar-size, 44px) - 28px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .toastCard {
+  flex: none;
   pointer-events: auto;
   width: fit-content;
   min-width: 220px;
@@ -337,6 +340,12 @@
   color: var(--text-primary);
   font-family: var(--font-ui);
   animation: toastSlideIn 200ms var(--motion-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+.toastCard[data-pinned] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .toastCard[data-single] {
