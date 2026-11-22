@@ -19,10 +19,13 @@ async function assertAvailable(file) {
   throw new Error('所选位置已有文件，请换一个名称；原文件未改动。');
 }
 
-async function directoryIdentity(file) {
-  const info = await files.lstat(file);
-  if (!info.isDirectory()) throw new Error('所选目录已变化，未保存。');
-  return `${info.dev}:${info.ino}`;
+async function assertSameDirectory(parent, identity) {
+  const current = await files.lstat(parent, { bigint: true }).catch(error => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (!current?.isDirectory() || current.dev !== identity.dev || current.ino !== identity.ino)
+    throw new Error('所选目录已变化，未保存。');
 }
 
 function createArchiveDownload({ getWindow, getOrigin, isClosing, getDatasetStatus, dataDirectory, dialog }) {
@@ -46,6 +49,7 @@ function createArchiveDownload({ getWindow, getOrigin, isClosing, getDatasetStat
       throw new Error('本机资料标识不可用，请重新打开应用。');
     if (busy) throw new Error('已有 ZIP 导出正在进行。');
     busy = true;
+    let directory;
     let staged;
     try {
       const selection = await dialog.showSaveDialog(window, {
@@ -56,7 +60,14 @@ function createArchiveDownload({ getWindow, getOrigin, isClosing, getDatasetStat
       if (selection.canceled || !selection.filePath) return null;
       trusted(event);
       const parent = await files.realpath(path.dirname(selection.filePath));
-      const identity = await directoryIdentity(parent);
+      directory = await files.open(parent, fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW);
+      const identity = await directory.stat({ bigint: true });
+      // 固定所选目录，在目录改名后仍可通过同一目录身份清理暂存文件。
+      const stableParent =
+        process.platform === 'darwin' ? `/.vol/${identity.dev}/${identity.ino}` : `/proc/self/fd/${directory.fd}`;
+      const stableIdentity = await files.stat(stableParent, { bigint: true });
+      if (stableIdentity.dev !== identity.dev || stableIdentity.ino !== identity.ino)
+        throw new Error('无法定位所选目录，请更换导出位置。');
       const destination = path.join(parent, path.basename(selection.filePath));
       const managed = await files.realpath(dataDirectory);
       const relative = path.relative(managed, destination);
@@ -77,11 +88,12 @@ function createArchiveDownload({ getWindow, getOrigin, isClosing, getDatasetStat
         if (response.status === 409) throw new Error('资料库已变化或暂不能导出，请重新加载后重试。');
         throw new Error('无法生成可移植 ZIP。请检查本机资料和附件；较大的资料库请使用完整目录备份。');
       }
-      if ((await directoryIdentity(parent)) !== identity) {
+      try {
+        await assertSameDirectory(parent, identity);
+      } catch (error) {
         await response.body.cancel();
-        throw new Error('所选目录已变化，未保存。');
+        throw error;
       }
-      staged = path.join(parent, `.knowra-archive-${randomUUID()}.tmp`);
       let bytes = 0;
       let tail = Buffer.alloc(0);
       const validate = new Transform({
@@ -105,40 +117,42 @@ function createArchiveDownload({ getWindow, getOrigin, isClosing, getDatasetStat
           done();
         }
       });
-      await pipeline(
-        Readable.fromWeb(response.body),
-        validate,
-        fs.createWriteStream(staged, { flags: 'wx', mode: 0o600 }),
-        { signal }
-      );
-      const file = await files.open(staged, 'r+');
+      const temporary = path.join(stableParent, `.knowra-archive-${randomUUID()}.tmp`);
+      const file = await files.open(temporary, 'wx', 0o600);
+      staged = temporary;
+      const output = file.createWriteStream({ autoClose: false });
       try {
+        await pipeline(Readable.fromWeb(response.body), validate, output, { signal });
         await file.sync();
       } finally {
+        output.destroy();
         await file.close();
       }
       trusted(event);
       await getDatasetStatus(datasetId);
       trusted(event);
-      if ((await directoryIdentity(parent)) !== identity) throw new Error('所选目录已变化，未保存。');
+      await assertSameDirectory(parent, identity);
       try {
         // 同目录原子发布，若此时出现同名文件或链接，绝不覆盖。
-        await files.link(staged, destination);
+        await files.link(staged, path.join(stableParent, path.basename(destination)));
       } catch (error) {
-        if (error.code === 'EEXIST') throw new Error('所选位置已有文件，请换一个名称；原文件未改动。', { cause: error });
+        if (error.code === 'EEXIST')
+          throw new Error('所选位置已有文件，请换一个名称；原文件未改动。', { cause: error });
         if (['ENOTSUP', 'EOPNOTSUPP', 'EPERM', 'EXDEV'].includes(error.code))
           throw new Error('所选卷不支持安全保存，请先导出到本机其他位置再复制。', { cause: error });
         throw error;
       }
       return path.basename(destination);
     } finally {
-      if (staged) {
+      try {
+        if (staged) await files.unlink(staged);
+      } finally {
         try {
-          await files.rm(staged, { force: true });
+          await directory?.close();
         } finally {
           busy = false;
         }
-      } else busy = false;
+      }
     }
   };
 }

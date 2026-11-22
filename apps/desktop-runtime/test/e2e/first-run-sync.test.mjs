@@ -138,7 +138,8 @@ test('首次使用桌面：离线建笔记和附件，连接失败保留资料�
   await expect(status).toContainText(cloud);
   await expect(status).toContainText('上次同步');
   await expect(status.getByRole('button', { name: '立即同步', exact: true })).toBeEnabled();
-  await expect(status.getByRole('button', { name: '连接设置', exact: true })).toBeVisible();
+  const settings = status.getByRole('button', { name: '连接设置', exact: true });
+  await expect(settings).toHaveAttribute('aria-expanded', 'false');
   for (const field of [address, account, password]) await expect(field).toHaveCount(0);
   await expect(dialog.getByRole('alert')).toHaveCount(0);
   const synced = await getData(runtime.origin, '/api/local-runtime/sync');
@@ -147,10 +148,12 @@ test('首次使用桌面：离线建笔记和附件，连接失败保留资料�
   assert.equal(synced.pendingEntities, 0);
   assert.equal((await getData(cloud, notePath)).rawMarkdown, text);
   await verifyBytes(cloud);
-  await status.getByRole('button', { name: '连接设置', exact: true }).click();
+  await settings.click();
+  await expect(settings).toHaveAttribute('aria-expanded', 'true');
   await expect(account).toBeVisible();
   await expect(password).toHaveValue('');
-  await dialog.getByRole('button', { name: '取消', exact: true }).click();
+  await settings.click();
+  await expect(settings).toHaveAttribute('aria-expanded', 'false');
   await expect(password).toHaveCount(0);
   await closeLocalSync(page);
   await expect(page.getByRole('button', { name: '本地资料已同步', exact: true })).toBeVisible();

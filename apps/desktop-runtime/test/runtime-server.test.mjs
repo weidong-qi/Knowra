@@ -222,7 +222,9 @@ test('本地 HTTP 闭环：单实例、会话、跨源隔离、笔记保存及�
     403
   );
   assert.equal((await request('/api/storage/import', 'POST', {})).status, 409);
-  assert.equal((await request('/api/knowledge/analysis-scopes', 'POST', {})).status, 409);
+  const invalidScope = await request('/api/knowledge/analysis-scopes', 'POST', {});
+  assert.equal(invalidScope.status, 400);
+  assert.equal(invalidScope.body.error.code, 'ANALYSIS_SCOPE_SPACE_REQUIRED');
   const space = (await request('/api/knowledge/spaces/default', 'POST', {})).body.data;
   const created = await request('/api/knowledge/notes', 'POST', {
     spaceId: space.id,

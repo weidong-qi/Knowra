@@ -133,9 +133,30 @@ test('桌面自建空间原子排队，兼容云端同步；旧端和同名冲�
 
   const b = await desktop('b');
   const sameName = await b.call(spaces, { name: '等待同步' });
+  const heldNote = await b.call('/api/knowledge/notes', {
+    spaceId: sameName.data.id,
+    title: '冲突空间的笔记',
+    rawMarkdown: '保留在本机'
+  });
+  assert.equal(heldNote.status, 201);
   const conflicted = (await b.call(`${sync}/configure`, { serverUrl })).data;
   assert.equal(conflicted.error.code, 'KNOWLEDGE_SPACE_NAME_CONFLICT');
   assert.equal(conflicted.safetyPaused, false);
+  const defaultSpace = await b.call(`${spaces}/default`, {});
+  const independent = await b.call('/api/knowledge/notes', {
+    spaceId: defaultSpace.data.id,
+    title: '独立笔记',
+    rawMarkdown: '应同步'
+  });
+  assert.equal(independent.status, 201);
+  const retried = (await b.call(`${sync}/retry`, {})).data;
+  assert.equal(retried.error.code, 'KNOWLEDGE_SPACE_NAME_CONFLICT');
+  assert.equal(cloud.http.knowledge.getNote({ id: independent.data.id }).rawMarkdown, '应同步');
+  assert(b.runtime.store.state.notes.some(row => row.id === heldNote.data.id && row.spaceId === sameName.data.id));
+  assert(!cloud.dataStore.state.notes.some(row => row.id === heldNote.data.id));
+  const sentBatches = b.batchCount();
+  await b.call(`${sync}/retry`, {});
+  assert.equal(b.batchCount(), sentBatches);
   assert(b.runtime.store.state.spaces.some(space => space.id === sameName.data.id));
   assert.deepEqual(
     cloud.http.knowledge

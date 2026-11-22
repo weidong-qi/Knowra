@@ -69,6 +69,26 @@ import {
   planInlineAnnotations
 } from '../knowledge/application/inline-annotations.ts';
 
+type SpaceNameFields = { name?: unknown; userId?: unknown; defaultFlag?: unknown };
+
+export function hasSpaceNameConflict(
+  spaces: (SpaceNameFields & { id: string })[],
+  id: string,
+  value: SpaceNameFields,
+  old?: SpaceNameFields | null
+) {
+  const normalize = (name: unknown) =>
+    String(name ?? '')
+      .trim()
+      .toLocaleLowerCase();
+  const name = normalize(value.name);
+  return (
+    value.defaultFlag === false &&
+    (!old || normalize(old.name) !== name) &&
+    spaces.some(space => space.id !== id && space.userId === value.userId && normalize(space.name) === name)
+  );
+}
+
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
 const legacySourceFields = [
   'schemaVersion',
@@ -331,25 +351,7 @@ export function prepareBatchState(
     if (collection === 'spaces') {
       if (!value || value.userId !== ownerId || (old && old.userId !== ownerId))
         throw syncError('SYNC_OWNER_INVALID', '空间不属于当前资料库。', 422);
-      const name = String(value.name ?? '')
-        .trim()
-        .toLocaleLowerCase();
-      if (
-        value.defaultFlag === false &&
-        (!old ||
-          name !==
-            String(old.name ?? '')
-              .trim()
-              .toLocaleLowerCase()) &&
-        state.spaces.some(
-          space =>
-            space.id !== id &&
-            space.userId === ownerId &&
-            String(space.name ?? '')
-              .trim()
-              .toLocaleLowerCase() === name
-        )
-      )
+      if (hasSpaceNameConflict(state.spaces, id, value, old))
         throw syncError('KNOWLEDGE_SPACE_NAME_CONFLICT', '云端已有同名空间，未合并空间，本机资料已保留。', 409);
     }
     if (old && value)

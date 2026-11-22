@@ -130,3 +130,40 @@ test('旧资料、截断 ZIP、恢复切库及已有目标均不提交，不留�
   assert.equal(fs.readFileSync(f.destination, 'utf8'), '外部新内容');
   assert.deepEqual(fs.readdirSync(f.directory).sort(), ['offline', 'output.zip']);
 });
+
+test('写入期间目录改名后清理原目录暂存文件，保留替代目录里的同名文件', async t => {
+  const f = fixture(t);
+  const selected = path.join(f.directory, 'selected');
+  const moved = path.join(f.directory, 'moved');
+  fs.mkdirSync(selected);
+  f.select({ filePath: path.join(selected, '资料.zip') });
+  let name;
+  f.respond(
+    () =>
+      new Response(
+        new ReadableStream(
+          {
+            pull(controller) {
+              if (!name) {
+                [name] = fs.readdirSync(selected);
+                assert.match(name, /^\.knowra-archive-/);
+                controller.enqueue(zip.subarray(0, 8));
+                return;
+              }
+              fs.renameSync(selected, moved);
+              fs.mkdirSync(selected);
+              fs.writeFileSync(path.join(selected, name), '外部内容');
+              controller.enqueue(zip.subarray(8));
+              controller.close();
+            }
+          },
+          { highWaterMark: 0 }
+        ),
+        { headers: { 'content-type': 'application/zip' } }
+      )
+  );
+  await assert.rejects(f.download(f.event, 'current-dataset'), /所选目录已变化/);
+  assert.deepEqual(fs.readdirSync(moved), []);
+  assert.deepEqual(fs.readdirSync(selected), [name]);
+  assert.equal(fs.readFileSync(path.join(selected, name), 'utf8'), '外部内容');
+});

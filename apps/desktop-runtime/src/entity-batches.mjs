@@ -1,4 +1,5 @@
 import { KNOWLEDGE_CONCEPT_COLLECTIONS } from '../../api/src/modules/sync/entity-contract.ts';
+import { hasSpaceNameConflict } from '../../api/src/modules/sync/batch-domain.ts';
 import { todoComponents } from './personal-todo-sync.mjs';
 import { SYNC_CLIENT_BATCH_BODY_LIMIT_BYTES } from '@study-accelerator/shared/http-limits';
 import { calculateContentHash } from '../../api/src/modules/knowledge/domain/note-version.ts';
@@ -122,13 +123,29 @@ export function selectEntityBatch(
         const refKey = syncKey(ref.collection, ref.id);
         if (byKey.has(refKey) && root(refKey) !== key) group.dependencies.add(root(refKey));
       }
+  // 以持久化云端基线识别重名。整组暂缓后，依赖它的组也不会进入已完成集合。
+  const nameConflicts = new Set(
+    changes
+      .filter(
+        entry =>
+          entry.collection === 'spaces' &&
+          entry.value &&
+          hasSpaceNameConflict(before.spaces, entry.id, entry.value, base.get(syncKey('spaces', entry.id))?.value)
+      )
+      .map(entry => root(syncKey('spaces', entry.id)))
+  );
   const selected = [];
   const completed = new Set();
   let progress = true;
   while (progress) {
     progress = false;
     for (const [key, group] of groups) {
-      if (completed.has(key) || [...group.dependencies].some(dependency => !completed.has(dependency))) continue;
+      if (
+        nameConflicts.has(key) ||
+        completed.has(key) ||
+        [...group.dependencies].some(dependency => !completed.has(dependency))
+      )
+        continue;
       if (group.entries.length > maxEntries || measureBytes(group.entries) > maxBytes) {
         if (selected.length) return selected;
         const failure = new Error(
@@ -148,6 +165,10 @@ export function selectEntityBatch(
       progress = true;
     }
   }
+  if (!selected.length && nameConflicts.size)
+    throw Object.assign(new Error('云端已有同名空间，本机空间及关联资料已保留。'), {
+      code: 'KNOWLEDGE_SPACE_NAME_CONFLICT'
+    });
   if (!selected.length && changes.length) throw new Error('关联资料存在无法安全分批的依赖，请导出备份后核对。');
   return selected;
 }

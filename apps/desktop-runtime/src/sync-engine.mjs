@@ -302,7 +302,14 @@ export function createSyncEngine(
     await verifyDeviceSequence();
     for (let count = 0; count < 20; count++) {
       const knowledgeSupported = meta('capabilities')?.includes(KNOWLEDGE_SYNC_CAPABILITY) ?? false;
-      const operation = nextEntityUpload(store, { knowledgeSupported, customSpaceSupported: customSpaceCreation() });
+      let operation;
+      try {
+        operation = nextEntityUpload(store, { knowledgeSupported, customSpaceSupported: customSpaceCreation() });
+      } catch (failure) {
+        if (failure.code !== 'KNOWLEDGE_SPACE_NAME_CONFLICT') throw failure;
+        error = { code: failure.code, message: failure.message };
+        return sent;
+      }
       if (!operation) return sent;
       assertNotHistoryOperation(operation);
       if (
