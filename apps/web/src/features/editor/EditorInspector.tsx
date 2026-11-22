@@ -2,7 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { IconButton } from '../../components/ui/button';
 import { Tabs, type TabsItem } from '../../components/ui/collection';
 import { CloseIcon } from '../../components/icons/knowra';
-import { extractInspectorOutline, getDocumentStats, resolveInspectorRelations, resolveNoteTags } from './editorInspectorModel';
+import {
+  extractInspectorOutline,
+  getDocumentStats,
+  resolveInspectorRelations,
+  resolveNoteTags
+} from './editorInspectorModel';
 import { ResponsivePanel } from '../../components/ui/overlay/ResponsivePanel';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { OrganizeNoteDialog } from './OrganizeNoteDialog';
@@ -25,12 +30,15 @@ const inspectorTabs: TabsItem[] = [
 
 export function EditorInspector(props: EditorInspectorProps) {
   const [selectedTab, setSelectedTab] = useState('info');
-  const [compact, setCompact] = useState(() => window.matchMedia?.('(max-width: 1100px), (any-pointer: coarse)').matches ?? false);
+  const [compact, setCompact] = useState(
+    () => window.matchMedia?.('(max-width: 1100px), (any-pointer: coarse)').matches ?? false
+  );
   useEffect(() => {
     const query = window.matchMedia?.('(max-width: 1100px), (any-pointer: coarse)');
     if (!query) return;
     const update = () => setCompact(query.matches);
-    update(); query.addEventListener('change', update);
+    update();
+    query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
   const modal = compact && !props.nativeTitlebar;
@@ -42,19 +50,19 @@ export function EditorInspector(props: EditorInspectorProps) {
   const relations = useMemo(() => {
     const local = resolveInspectorRelations(props.note, props.notes);
     const outgoing = props.linkedNotesLoading ? local.outgoing : props.linkedNotes;
-    const relatedIds = new Set([...outgoing, ...local.backlinks].map((item) => item.id));
+    const relatedIds = new Set([...outgoing, ...local.backlinks].map(item => item.id));
     return {
       ...local,
       outgoing,
-      related: props.notes.filter((item) => !item.deleted && item.id !== props.note.id && relatedIds.has(item.id))
+      related: props.notes.filter(item => !item.deleted && item.id !== props.note.id && relatedIds.has(item.id))
     };
   }, [props.linkedNotes, props.linkedNotesLoading, props.note, props.notes]);
   const outline = useMemo(
-    () => props.open ? extractInspectorOutline(props.markdown) : [],
+    () => (props.open ? extractInspectorOutline(props.markdown) : []),
     [props.markdown, props.open]
   );
   const stats = useMemo(
-    () => props.open ? getDocumentStats(props.markdown) : { characterCount: 0, readingMinutes: 0 },
+    () => (props.open ? getDocumentStats(props.markdown) : { characterCount: 0, readingMinutes: 0 }),
     [props.markdown, props.open]
   );
 
@@ -77,13 +85,14 @@ export function EditorInspector(props: EditorInspectorProps) {
         </IconButton>
       </header>
       <Tabs
+        appearance="segmented"
         className={styles.tabs}
         aria-label="检查器视图"
         items={inspectorTabs}
         selectedKey={selectedTab}
-        onSelectionChange={(key) => setSelectedTab(String(key))}
+        onSelectionChange={key => setSelectedTab(String(key))}
       >
-        {(item) => (
+        {item => (
           <div className={styles.panel} data-panel={String(item.id)}>
             {item.id === 'info' ? (
               <InfoPanel
@@ -96,16 +105,25 @@ export function EditorInspector(props: EditorInspectorProps) {
                 onOrganize={() => setOrganizeOpen(true)}
               />
             ) : null}
-            {item.id === 'outline' ? (
-              <OutlinePanel outline={outline} onNavigate={props.onNavigateHeading} />
-            ) : null}
+            {item.id === 'outline' ? <OutlinePanel outline={outline} onNavigate={props.onNavigateHeading} /> : null}
             {item.id === 'links' ? (
-              <LinksPanel relations={relations} loading={props.linkedNotesLoading} onOpenNote={props.onOpenNote}
-                noteLinks={props.noteLinkRelations} linksLoading={props.noteLinkRelationsLoading} error={props.noteLinkRelationsError}
-                onOpenOccurrence={props.onOpenLinkedOccurrence} onOpenLinkedNote={props.onOpenLinkedNote} />
+              <LinksPanel
+                relations={relations}
+                loading={props.linkedNotesLoading}
+                onOpenNote={props.onOpenNote}
+                noteLinks={props.noteLinkRelations}
+                linksLoading={props.noteLinkRelationsLoading}
+                error={props.noteLinkRelationsError}
+                onOpenOccurrence={props.onOpenLinkedOccurrence}
+                onOpenLinkedNote={props.onOpenLinkedNote}
+              />
             ) : null}
             {item.id === 'annotations' ? (
-              <AnnotationPanel key={props.note.id} {...props} canWrite={props.canWrite && props.extendedWritesEnabled !== false} />
+              <AnnotationPanel
+                key={props.note.id}
+                {...props}
+                canWrite={props.canWrite && props.extendedWritesEnabled !== false}
+              />
             ) : null}
             {item.id === 'versions' ? (
               <VersionHistoryPanel
@@ -121,7 +139,14 @@ export function EditorInspector(props: EditorInspectorProps) {
                 onGetVersion={props.onGetVersion}
               />
             ) : null}
-            {item.id === 'ai' ? <AnnotationPanel key={`ai-${props.note.id}`} {...props} canWrite={props.canWrite && props.extendedWritesEnabled !== false} analysisOnly /> : null}
+            {item.id === 'ai' ? (
+              <AnnotationPanel
+                key={`ai-${props.note.id}`}
+                {...props}
+                canWrite={props.canWrite && props.extendedWritesEnabled !== false}
+                analysisOnly
+              />
+            ) : null}
           </div>
         )}
       </Tabs>
@@ -152,8 +177,15 @@ export function EditorInspector(props: EditorInspectorProps) {
       />
     </aside>
   );
-  return <ResponsivePanel title="文档检查器" modal={modal} className={styles.inspectorDialog}
-    isOpen={props.open} onClose={props.onClose}>
-    {inspector}
-  </ResponsivePanel>;
+  return (
+    <ResponsivePanel
+      title="文档检查器"
+      modal={modal}
+      className={styles.inspectorDialog}
+      isOpen={props.open}
+      onClose={props.onClose}
+    >
+      {inspector}
+    </ResponsivePanel>
+  );
 }

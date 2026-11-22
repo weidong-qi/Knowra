@@ -92,7 +92,7 @@ export function PdfAnnotationFilters({
           <IconButton
             aria-label={chips.length ? `筛选标注，已启用 ${chips.length} 项` : '筛选标注'}
             title="筛选标注"
-            tone="outline"
+            tone="floating"
             shape="square"
             count={chips.length}
           >
@@ -113,7 +113,7 @@ export function PdfAnnotationFilters({
               </header>
               <section className={styles.section} aria-label="标注分类">
                 <span className={styles.label}>标注分类</span>
-                <SegmentedControl variant="outline" density="compact" className={styles.choices} aria-label="标注分类">
+                <SegmentedControl density="compact" className={styles.choices} aria-label="标注分类">
                   {[{ id: 'all', label: '全部' }, ...KIND_OPTIONS].map(option => (
                     <SegmentedButton
                       key={option.id}
@@ -143,7 +143,7 @@ export function PdfAnnotationFilters({
               </div>
               <section className={styles.section} aria-label="批注状态">
                 <span className={styles.label}>批注</span>
-                <SegmentedControl variant="outline" density="compact" className={styles.choices} aria-label="批注状态">
+                <SegmentedControl density="compact" className={styles.choices} aria-label="批注状态">
                   {COMMENT_OPTIONS.map(option => (
                     <SegmentedButton
                       key={option.id}

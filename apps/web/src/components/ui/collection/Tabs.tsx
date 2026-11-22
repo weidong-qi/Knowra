@@ -10,14 +10,12 @@ import {
   TabPanel as RATabPanel,
   TabPanels as RATabPanels,
   Tabs as RATabs,
-  type TabListProps as RATabListProps,
-  type TabPanelProps as RATabPanelProps,
-  type TabProps as RATabProps,
   type TabsProps as RATabsProps,
   type Key
 } from 'react-aria-components';
 import { cx } from '../classnames';
 import styles from './Collection.module.css';
+import segmentedStyles from '../button/SegmentedControl.module.css';
 
 export interface TabsItem {
   id: Key;
@@ -28,6 +26,7 @@ export interface TabsItem {
 
 export interface TabsProps extends Omit<RATabsProps, 'className' | 'children'> {
   items: TabsItem[];
+  appearance?: 'default' | 'segmented';
   className?: string;
   /** 渲染每个 Tab 的内容；用于自定 badge / icon。 */
   renderTab?: (item: TabsItem) => ReactNode;
@@ -36,25 +35,35 @@ export interface TabsProps extends Omit<RATabsProps, 'className' | 'children'> {
 }
 
 export const Tabs = forwardRef<HTMLDivElement, TabsProps>(function Tabs(
-  { items, className, children, renderTab, 'aria-label': ariaLabel, ...rest },
+  { items, appearance = 'default', className, children, renderTab, 'aria-label': ariaLabel, ...rest },
   ref
 ) {
+  const segmented = appearance === 'segmented';
+  const listClass = segmented ? cx(segmentedStyles.group, segmentedStyles.compactGroup) : styles.tabList;
+  const tabClass = segmented ? segmentedStyles.segment : styles.tab;
   return (
     <RATabs ref={ref} className={cx(styles.tabs, className)} {...rest}>
-      <RATabList className={styles.tabList} aria-label={ariaLabel}>
-        {items.map((item) =>
-          renderTab ? (
-            <CustomTab key={String(item.id)} id={item.id} isDisabled={item.isDisabled} item={item} />
-          ) : (
-            <RATab key={String(item.id)} id={item.id} isDisabled={item.isDisabled} className={styles.tab}>
-              {item.label}
-              {item.badge !== undefined ? <span className={styles.tabBadge}>{item.badge}</span> : null}
-            </RATab>
-          )
-        )}
+      <RATabList className={listClass} aria-label={ariaLabel}>
+        {items.map(item => (
+          <RATab key={item.id} id={item.id} isDisabled={item.isDisabled} className={tabClass}>
+            {renderTab ? (
+              renderTab(item)
+            ) : (
+              <>
+                {item.label}
+                {item.badge !== undefined ? (
+                  <>
+                    {' '}
+                    <span className={segmented ? segmentedStyles.count : styles.tabBadge}>{item.badge}</span>
+                  </>
+                ) : null}
+              </>
+            )}
+          </RATab>
+        ))}
       </RATabList>
       <RATabPanels>
-        {items.map((item) => (
+        {items.map(item => (
           <RATabPanel key={String(item.id)} id={item.id} className={styles.tabPanel}>
             {children(item)}
           </RATabPanel>
@@ -63,20 +72,3 @@ export const Tabs = forwardRef<HTMLDivElement, TabsProps>(function Tabs(
     </RATabs>
   );
 });
-
-function CustomTab({
-  id,
-  isDisabled,
-  item
-}: {
-  id: Key;
-  isDisabled?: boolean;
-  item: TabsItem;
-}) {
-  return (
-    <RATab id={id} isDisabled={isDisabled} className={styles.tab}>
-      {item.label}
-      {item.badge !== undefined ? <span className={styles.tabBadge}>{item.badge}</span> : null}
-    </RATab>
-  );
-}

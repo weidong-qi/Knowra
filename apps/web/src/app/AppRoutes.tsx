@@ -48,6 +48,11 @@ const IconLibraryView = lazy(async () => {
   return { default: module.IconLibraryView };
 });
 
+const TodoDetailPreview = lazy(async () => {
+  const module = await import('../components/ui/showcase');
+  return { default: module.TodoDetailPreview };
+});
+
 export interface DomainDescriptor {
   title: string;
   description: string;
@@ -87,6 +92,13 @@ export interface AppRoutesProps {
 
 export function AppRoutes(props: AppRoutesProps) {
   const routePath = props.pathname.split('?')[0];
+  if (routePath === '/showcase/todo-detail') {
+    return (
+      <Suspense fallback={<LoadingState label="正在加载待办详情侧栏预览…" />}>
+        <TodoDetailPreview />
+      </Suspense>
+    );
+  }
   if (routePath === '/showcase/icons') {
     return (
       <Suspense fallback={<LoadingState label="正在加载图标库…" />}>

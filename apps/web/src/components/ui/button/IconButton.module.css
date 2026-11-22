@@ -26,20 +26,11 @@
   width: 28px;
   height: 28px;
 }
-.size30 {
-  width: 30px;
-  height: 30px;
-}
 .size40 {
   width: 40px;
   height: 40px;
 }
 
-.outline {
-  border: 1px solid var(--border-strong);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-control);
-}
 .square {
   border-radius: var(--radius-control);
 }

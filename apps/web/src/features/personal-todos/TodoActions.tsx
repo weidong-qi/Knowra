@@ -8,6 +8,7 @@ import {
 } from '@study-accelerator/web-core';
 import { randomId } from '../../browser/randomId';
 import { Button, Dialog, DialogBody, DialogFooter, Select, TextField } from '../../components/ui';
+import { addDaysToDate } from './todoPresentation';
 import type { TodoStore } from './todoStore';
 import styles from './PersonalTodos.module.css';
 
@@ -26,11 +27,14 @@ export interface TodoActions {
     title: string;
     kind?: 'mainline' | 'sideline';
     plannedDate?: string | null;
+    dueDate?: string | null;
+    starred?: boolean;
     afterId?: string | null;
   }): Promise<Todo | undefined>;
   update(todo: Todo, patch: Partial<TodoEditableFields>): Promise<void>;
   toggleDone(todo: Todo): void;
   addToToday(todo: Todo): void;
+  moveToTomorrow(todo: Todo): void;
   clearPlan(todo: Todo): void;
   setReminder(todo: Todo, reminder: ReminderInput | null): void;
   pause(todo: Todo): void;
@@ -86,7 +90,7 @@ export function TodoActionsProvider({
 
   const actions: TodoActions = {
     today,
-    async create({ parentId, title, kind, plannedDate = null, afterId }) {
+    async create({ parentId, title, kind, plannedDate = null, dueDate, starred, afterId }) {
       const id = randomId();
       const changed = await store
         .execute({
@@ -96,6 +100,8 @@ export function TodoActionsProvider({
           title,
           kind,
           plannedDate,
+          ...(dueDate !== undefined ? { dueDate } : {}),
+          ...(starred ? { starred } : {}),
           ...(afterId !== undefined ? { afterId } : {})
         })
         .catch(ignore);
@@ -115,6 +121,14 @@ export function TodoActionsProvider({
     },
     addToToday(todo) {
       void run({ type: 'update', id: todo.id, expectedRevision: todo.revision, patch: { plannedDate: today } });
+    },
+    moveToTomorrow(todo) {
+      void run({
+        type: 'update',
+        id: todo.id,
+        expectedRevision: todo.revision,
+        patch: { plannedDate: addDaysToDate(today, 1) }
+      });
     },
     clearPlan(todo) {
       void run({ type: 'update', id: todo.id, expectedRevision: todo.revision, patch: { plannedDate: null } });

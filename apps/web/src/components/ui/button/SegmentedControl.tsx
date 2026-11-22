@@ -10,8 +10,8 @@ export function SegmentedControl({
   density = 'regular',
   ...rest
 }: HTMLAttributes<HTMLDivElement> & {
-  variant?: 'default' | 'underline' | 'outline';
-  density?: 'regular' | 'compact' | 'comfortable';
+  variant?: 'default' | 'underline';
+  density?: 'regular' | 'compact';
 }) {
   return (
     <div
@@ -19,7 +19,6 @@ export function SegmentedControl({
         styles.group,
         variant !== 'default' && styles[variant],
         density === 'compact' && styles.compactGroup,
-        density === 'comfortable' && styles.comfortableGroup,
         className
       )}
       role="group"

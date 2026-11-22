@@ -1,5 +1,6 @@
 import { test } from './fixtures/syntheticTest';
 import { expect, type Locator } from '@playwright/test';
+import { applyTodoCommand, mergeTodoChanges, type Todo, type TodoCommand } from '@study-accelerator/web-core';
 import { createNote, mockEditorWorkspace } from './fixtures/editorWorkspace';
 
 async function selectedControlContrast(locator: Locator, thumb = false) {
@@ -115,10 +116,13 @@ for (const width of [1280, 390]) {
     await dialog.screenshot({ path: info.outputPath(`全局搜索-打开-${width}.png`) });
     const inputTop = (await input.boundingBox())!.y;
     await pickScope('资料');
+    // 让光标离开结果区，以第一项为键盘导航的起点。
+    await input.hover();
     await input.fill('验收');
     await expect(dialog.getByRole('option')).toHaveCount(2);
     await expect(dialog.locator('mark').first()).toHaveText('验收');
     await expect.poll(async () => Math.abs((await input.boundingBox())!.y - inputTop)).toBeLessThanOrEqual(1);
+    await expect(dialog.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
     await input.press('ArrowDown');
     await expect(dialog.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
     await expect.poll(() => dialog.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
@@ -453,7 +457,7 @@ test('侧栏内容独立滚动，桌面和窄屏新建入口保持尺寸及完�
   await expect(lastFolder).toBeInViewport();
   await page.screenshot({ path: info.outputPath('sidebar-scroll.png') });
   for (const { width, targetSize } of [
-    { width: 1440, targetSize: 30 },
+    { width: 1440, targetSize: 28 },
     { width: 390, targetSize: 44 }
   ]) {
     await page.setViewportSize({ width, height: 844 });
@@ -574,11 +578,204 @@ for (const mode of ['light', 'dark']) {
       });
       expect(colors.actual).toEqual(colors.expected);
     }
-    // 默认按钮是细线样式：透明底和 1px 描边，没有投影；主按钮仍保留纸感投影，防止用全局移除样式掩盖问题。
-    const outline = page.getByRole('button', { name: '默认胶囊', exact: true });
-    await expect(outline).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(outline).toHaveCSS('border-top-width', '1px');
-    await expect(outline).toHaveCSS('box-shadow', 'none');
+    // 默认按钮使用主题浮层底色、细边和轻投影；禁用态仍须清除投影。
+    const pill = page.getByRole('button', { name: '默认胶囊', exact: true });
+    const raisedColor = await pill.evaluate(element => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'var(--surface-raised)';
+      element.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    await expect(pill).toHaveCSS('background-color', raisedColor);
+    await expect(pill).toHaveCSS('border-top-width', '1px');
+    await expect(pill).not.toHaveCSS('box-shadow', 'none');
     await expect(page.getByRole('button', { name: '发布', exact: true })).not.toHaveCSS('box-shadow', 'none');
   });
 }
+
+test('待办详情预览可从顶栏切换场景', async ({ page }) => {
+  await mockEditorWorkspace(page, []);
+  await page.goto('/#/showcase/todo-detail');
+  const group = page.getByRole('group', { name: '预览场景' });
+  for (const [label, title] of [
+    ['主线任务', 'Knowra 待办侧栏视觉改版'],
+    ['暂停 / 逾期', '补充 API 权限集成测试']
+  ]) {
+    const button = group.getByRole('button', { name: label });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('complementary', { name: '待办详情预览：' + title })).toBeVisible();
+  }
+});
+
+test('待办行的今日快捷操作使用主题强调色，窄屏收起，键盘可加入今天', async ({ page }) => {
+  await mockEditorWorkspace(page, []);
+  const desktop = { width: 1280, height: 800 };
+  await page.setViewportSize(desktop);
+  let todos = applyTodoCommand(
+    [],
+    { type: 'create', id: 'carryover', parentId: null, title: '整理笔记', plannedDate: '2020-01-01' },
+    { now: new Date().toISOString() }
+  ).changed;
+  await page.route('**/api/todos', route => route.fulfill({ json: { data: { todos } } }));
+  await page.route('**/api/todos/commands', route => {
+    const { command } = route.request().postDataJSON() as { command: TodoCommand };
+    const { changed } = applyTodoCommand(todos, command, { now: new Date().toISOString() });
+    todos = mergeTodoChanges(todos, changed);
+    return route.fulfill({ json: { data: { changed } } });
+  });
+
+  await page.goto('/#/learning');
+  const action = page.getByRole('button', { name: '把「整理笔记」加入今天' });
+  await expect(action).toHaveText('今天继续');
+  const tint = await action.evaluate(button => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'var(--accent-soft)';
+    button.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+  await expect(action).toHaveCSS('background-color', tint);
+  await action.hover();
+  await expect(action).not.toHaveCSS('background-color', tint);
+  await page.setViewportSize({ ...desktop, width: 850 });
+  await expect(action).toBeHidden();
+  await expect(page.getByRole('button', { name: '把「整理笔记」改到明天' })).toBeVisible();
+
+  await page.mouse.move(0, 0);
+  await page.setViewportSize(desktop);
+  await page.goto('/#/learning/sidelines');
+  await expect(action).toHaveText('加入今天');
+  await expect(action).toHaveCSS('background-color', tint);
+  await action.press('Enter');
+  await expect(page.getByRole('button', { name: '把「整理笔记」改到明天' })).toBeVisible();
+});
+
+test('原窗口在系统通知返回前关闭后，第二个窗口展示提醒并回写', async ({ page, context }) => {
+  const first = await context.newPage();
+  const at = new Date(Date.now() - 1000).toISOString();
+  const title = '跨窗口提醒';
+  let todos = applyTodoCommand([], { type: 'create', id: 'cross-window', parentId: null, title }, { now: at }).changed;
+  todos = applyTodoCommand(
+    todos,
+    {
+      type: 'setReminder',
+      id: 'cross-window',
+      expectedRevision: todos[0]!.revision,
+      reminder: { kind: 'fixed', at }
+    },
+    { now: at }
+  ).changed;
+  const commands: TodoCommand[] = [];
+  for (const tab of [first, page]) {
+    await mockEditorWorkspace(tab, []);
+    await tab.route('**/api/todos', route => route.fulfill({ json: { data: { todos } } }));
+    await tab.route('**/api/todos/commands', route => {
+      const { command } = route.request().postDataJSON() as { command: TodoCommand };
+      commands.push(command);
+      const { changed } = applyTodoCommand(todos, command, { now: new Date().toISOString() });
+      todos = mergeTodoChanges(todos, changed);
+      return route.fulfill({ json: { data: { changed } } });
+    });
+  }
+  await first.addInitScript(() => {
+    window.knowraDesktop = {
+      onPrepareClose() {},
+      onCancelClose() {},
+      notify: () => {
+        document.documentElement.dataset.notificationPending = 'true';
+        return new Promise<boolean>(() => {});
+      }
+    };
+  });
+  await page.clock.install();
+  await first.goto('/#/learning/sidelines');
+  await expect(first.locator('html')).toHaveAttribute('data-notification-pending', 'true');
+  await page.goto('/#/learning/sidelines');
+  await expect(page.getByRole('checkbox', { name: '完成「跨窗口提醒」' })).toBeVisible();
+  await page.clock.fastForward(30_000);
+  await expect(page.getByRole('alert').filter({ hasText: title })).toHaveCount(0);
+  expect(commands).toEqual([]);
+  await first.close();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (await navigator.locks.query()).held?.filter(lock => lock.name?.includes('cross-window')).length ?? 0
+      )
+    )
+    .toBe(0);
+  await page.clock.fastForward(30_000);
+  await expect(page.getByRole('alert').filter({ hasText: title })).toBeVisible();
+  await expect.poll(() => commands).toEqual([{ type: 'ackReminder', id: 'cross-window', dueAt: at, outcome: 'fired' }]);
+});
+
+test('短视口内可透过提醒间隙点击、滚动提醒并使用限时撤销', async ({ page }) => {
+  await mockEditorWorkspace(page, []);
+  await page.setViewportSize({ width: 960, height: 480 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  let todos: Todo[] = [];
+  const now = Date.now();
+  const apply = (command: TodoCommand, time = Date.now()) => {
+    const { changed } = applyTodoCommand(todos, command, { now: new Date(time).toISOString() });
+    todos = mergeTodoChanges(todos, changed);
+    return changed;
+  };
+  apply({ type: 'create', id: 'target', parentId: null, title: '测试撤销' });
+  for (let i = 0; i < 12; i++) {
+    const id = 'notice-' + i;
+    const [created] = apply({ type: 'create', id, parentId: null, title: '提醒 ' + i }, now - 2000);
+    apply(
+      {
+        type: 'setReminder',
+        id,
+        expectedRevision: created!.revision,
+        reminder: { kind: 'fixed', at: new Date(now - 1000).toISOString() }
+      },
+      now - 2000
+    );
+  }
+  await page.route('**/api/todos', route => route.fulfill({ json: { data: { todos } } }));
+  await page.route('**/api/todos/commands', route =>
+    route.fulfill({ json: { data: { changed: apply(route.request().postDataJSON().command) } } })
+  );
+  await page.goto('/#/learning/sidelines');
+  const notifications = page.getByRole('region', { name: '通知', exact: true });
+  await expect(notifications.getByRole('alert')).toHaveCount(12);
+  // 在通知下方放一个按钮，真实点击两张卡片之间的空白。
+  const gap = await notifications.evaluate(stack => {
+    const [first, second] = stack.querySelectorAll('[role="alert"]');
+    const upper = first!.getBoundingClientRect();
+    const lower = second!.getBoundingClientRect();
+    const x = upper.x + upper.width / 2;
+    const y = (upper.bottom + lower.top) / 2;
+    const button = document.createElement('button');
+    button.textContent = '通知下方的按钮';
+    Object.assign(button.style, {
+      position: 'fixed',
+      left: x - 15 + 'px',
+      top: y - 12 + 'px',
+      width: '30px',
+      height: '24px',
+      zIndex: String(Number(getComputedStyle(stack).zIndex) - 1)
+    });
+    stack.before(button);
+    return { x, y };
+  });
+  await page.mouse.click(gap.x, gap.y);
+  const underlying = page.getByRole('button', { name: '通知下方的按钮' });
+  await expect(underlying).toBeFocused();
+  await underlying.evaluate(button => button.remove());
+  await page.getByRole('checkbox', { name: '完成「测试撤销」', exact: true }).click();
+  const undo = notifications.getByRole('button', { name: '撤销', exact: true });
+  await expect(undo).toBeInViewport();
+  await notifications.getByRole('alert').first().hover();
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => notifications.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await expect(undo).toBeInViewport();
+  await undo.click();
+  await expect(page.getByRole('checkbox', { name: '完成「测试撤销」', exact: true })).toBeVisible();
+});

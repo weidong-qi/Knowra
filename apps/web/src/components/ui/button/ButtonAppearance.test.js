@@ -12,9 +12,10 @@ describe('按钮外观的禁用反馈', () => {
   };
   for (const mode of ['light', 'dark']) {
     for (const [attribute, appearance, variant, hasShadow] of [
-      // 主按钮统一为纸感样式，默认按钮为细线样式（无投影，启用时透明底）。
+      // 主按钮、危险按钮与默认按钮均保留纸感微浮投影，禁用态统一清除投影。
       ['data-ni-mode', mode, 'primary', true],
-      ['data-ni-mode', mode, '', false]
+      ['data-ni-mode', mode, 'danger', true],
+      ['data-ni-mode', mode, '', true]
     ]) {
       for (const disabled of ['disabled', 'data-disabled']) {
         it(`${mode} ${appearance} 保留 ${disabled} 的中性反馈`, () => {
