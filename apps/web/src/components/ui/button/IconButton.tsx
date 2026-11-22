@@ -1,4 +1,4 @@
-// 图标按钮：ghost 透明、floating 通透玻璃、primary 柔橙实心、outline 细线轮廓。
+// 图标按钮：ghost 透明、floating 通透玻璃、primary 柔橙实心。
 // 默认圆形，square 为小圆角矩形；count 显示筛选等入口的已选条件数量。
 // 通过背景与光影反馈状态，不移动控件；保留键盘焦点与触屏点击区域。
 
@@ -17,14 +17,13 @@ export interface IconButtonProps extends Omit<RAButtonProps, 'children' | 'aria-
   children: ReactNode;
   /**
    * 容器尺寸（px），决定方块边长。常见值：
-   * - 30：侧栏头部、Tab 端点；
-   * - 28：顶部浏览历史；
-   * - 40：与左轨 ModuleRail 内部网格对齐；
-   * - 24：紧凑列表行内嵌。
-   * @default 30
+   * - 24：紧凑列表行内嵌；
+   * - 28：工具栏、侧栏头部、浏览历史（默认）；
+   * - 40：与左轨 ModuleRail 内部网格对齐。
+   * @default 28
    */
-  size?: 24 | 28 | 30 | 40;
-  tone?: 'ghost' | 'floating' | 'primary' | 'outline';
+  size?: 24 | 28 | 40;
+  tone?: 'ghost' | 'floating' | 'primary';
   shape?: 'round' | 'square';
   /** 筛选等入口的条件数量；无条件时不显示角标。 */
   count?: number;
@@ -40,7 +39,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   {
     'aria-label': ariaLabel,
     children,
-    size = 30,
+    size = 28,
     tone = 'ghost',
     shape = 'round',
     count,

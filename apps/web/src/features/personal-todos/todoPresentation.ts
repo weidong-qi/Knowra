@@ -73,3 +73,41 @@ export function pageCounts(todos: Todo[], today: string) {
     sidelines: topLevelTodos(todos, 'sideline', 'open').length
   };
 }
+
+const MAINLINE_PALETTE = ['#8b7ec8', '#5f9e79', '#5a8fd8', '#d48b45', '#c96f7b', '#5298a6'] as const;
+
+/** 为主线生成稳定的柔和点缀色，用于在列表和日历中快速辨识归属。 */
+export function mainlineAccentColor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return MAINLINE_PALETTE[hash % MAINLINE_PALETTE.length]!;
+}
+
+/** 所在自然周的周一（YYYY-MM-DD）。 */
+export function mondayOfWeek(date: string) {
+  const dt = new Date(`${date}T00:00:00Z`);
+  const day = dt.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return addDaysToDate(date, diff);
+}
+
+const WEEKDAY_SHORT = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const;
+
+/** 生成从周一算起连续 7 天的自然周格子，供计划页周历条使用。 */
+export function weekDaysFrom(monday: string, today: string) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = addDaysToDate(monday, i);
+    const dt = new Date(`${date}T00:00:00Z`);
+    const isToday = date === today;
+    return {
+      date,
+      month: dt.getUTCMonth() + 1,
+      day: dt.getUTCDate(),
+      week: isToday ? '今天' : WEEKDAY_SHORT[dt.getUTCDay()]!,
+      isToday,
+      isPast: date < today
+    };
+  });
+}

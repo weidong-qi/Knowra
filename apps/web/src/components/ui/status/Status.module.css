@@ -31,7 +31,9 @@
   --badge-edge-color: var(--accent-border);
 }
 
-.toneAccent .badgeDot { background: var(--accent); }
+.toneAccent .badgeDot {
+  background: var(--accent);
+}
 
 .toneSuccess {
   color: var(--ink-success);
@@ -39,7 +41,9 @@
   --badge-edge-color: color-mix(in srgb, var(--ink-success) 24%, transparent);
 }
 
-.toneSuccess .badgeDot { background: var(--ink-success); }
+.toneSuccess .badgeDot {
+  background: var(--ink-success);
+}
 
 .toneWarning {
   color: var(--ink-warning);
@@ -47,7 +51,9 @@
   --badge-edge-color: color-mix(in srgb, var(--ink-warning) 24%, transparent);
 }
 
-.toneWarning .badgeDot { background: var(--ink-warning); }
+.toneWarning .badgeDot {
+  background: var(--ink-warning);
+}
 
 .toneDanger {
   color: var(--ink-danger);
@@ -55,14 +61,18 @@
   --badge-edge-color: color-mix(in srgb, var(--ink-danger) 24%, transparent);
 }
 
-.toneDanger .badgeDot { background: var(--ink-danger); }
+.toneDanger .badgeDot {
+  background: var(--ink-danger);
+}
 
 .toneNeutral {
   color: var(--text-primary);
   background: var(--surface-page);
 }
 
-.toneNeutral .badgeDot { background: var(--text-primary); }
+.toneNeutral .badgeDot {
+  background: var(--text-primary);
+}
 
 /* EmptyState */
 .empty {
@@ -142,14 +152,27 @@
   animation: skeletonPulse 1.4s ease-in-out infinite;
 }
 
-.skeletonBar:nth-child(1) { width: 70%; }
-.skeletonBar:nth-child(2) { width: 90%; }
-.skeletonBar:nth-child(3) { width: 55%; }
-.skeletonBar:nth-child(4) { width: 80%; }
+.skeletonBar:nth-child(1) {
+  width: 70%;
+}
+.skeletonBar:nth-child(2) {
+  width: 90%;
+}
+.skeletonBar:nth-child(3) {
+  width: 55%;
+}
+.skeletonBar:nth-child(4) {
+  width: 80%;
+}
 
 @keyframes skeletonPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .loadingBar {
@@ -163,7 +186,7 @@
 }
 
 .loadingBar::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background: var(--accent);
@@ -171,8 +194,12 @@
 }
 
 @keyframes loadingSweep {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .loadingDots {
@@ -189,23 +216,32 @@
   animation: loadingPulse 1.4s var(--motion-ease) infinite;
 }
 
-.loadingDot:nth-child(2) { animation-delay: 0.18s; }
-.loadingDot:nth-child(3) { animation-delay: 0.36s; }
+.loadingDot:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.loadingDot:nth-child(3) {
+  animation-delay: 0.36s;
+}
 
 @keyframes loadingPulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .skeletonBar,
   .loadingBar::after,
   .loadingDot {
-  border-radius: 50%;
+    border-radius: 50%;
     animation: none !important;
   }
   .loadingDot {
-  border-radius: 50%;
+    border-radius: 50%;
     background: var(--accent);
     opacity: 0.65;
   }
@@ -265,4 +301,186 @@
 
 .flush .panelBody {
   padding: 0;
+}
+
+/* 全站统一右上角通知栏（Toast）：B 款温润毛玻璃卡片。 */
+.toastViewport {
+  pointer-events: none;
+  position: fixed;
+  z-index: 70;
+  top: calc(var(--topbar-size, 44px) + 14px);
+  right: 18px;
+  max-width: min(390px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  max-height: calc(100dvh - var(--topbar-size, 44px) - 28px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.toastCard {
+  flex: none;
+  pointer-events: auto;
+  width: fit-content;
+  min-width: 220px;
+  max-width: min(390px, calc(100vw - 32px));
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 10px 11px 13px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 55%, transparent);
+  background: color-mix(in srgb, var(--surface-page) 84%, transparent);
+  backdrop-filter: blur(20px) saturate(165%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent),
+    0 4px 12px -4px color-mix(in srgb, #000 10%, transparent),
+    0 16px 36px -14px color-mix(in srgb, #000 20%, transparent);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  animation: toastSlideIn 200ms var(--motion-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+
+.toastCard[data-pinned] {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.toastCard[data-single] {
+  align-items: center;
+  padding: 8px 8px 8px 12px;
+  border-radius: 13px;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.toastIcon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.toastCard:not([data-single]) .toastIcon {
+  margin-top: 1px;
+}
+
+.toastSuccess .toastIcon {
+  color: #16c765;
+}
+
+:global([data-ni-mode='dark']) .toastSuccess .toastIcon {
+  color: #34d399;
+}
+
+.toastWarning .toastIcon {
+  color: var(--ink-warning, #d97706);
+}
+
+.toastDanger .toastIcon {
+  color: var(--ink-danger, #dc2626);
+}
+
+.toastAccent .toastIcon {
+  color: var(--accent-on-tint, #e86c2c);
+}
+
+.toastBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toastTitle {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.toastDescription {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.toastActions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+
+.toastActionBtn {
+  min-height: 25px;
+  padding-inline: 10px;
+  border-radius: 8px;
+  border-color: transparent !important;
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.toastActionBtn[data-hovered],
+.toastActionBtn:hover {
+  background: color-mix(in srgb, var(--text-primary) 11%, transparent);
+}
+
+.toastActionDivider {
+  width: 1px;
+  height: 14px;
+  margin-inline: 2px;
+  background: var(--border-subtle);
+}
+
+.toastCloseBtn {
+  opacity: 0.55;
+  transition: opacity var(--motion-fast) var(--motion-ease);
+}
+
+.toastCloseBtn:hover,
+.toastCloseBtn:focus-visible {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .toastViewport {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    align-items: stretch;
+  }
+  .toastCard {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toastCard {
+    animation: none;
+  }
 }

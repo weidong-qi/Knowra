@@ -1,5 +1,12 @@
-import { render, screen } from '@testing-library/react';
-import { Badge, EmptyState, LoadingState, Panel } from './index';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Badge, EmptyState, LoadingState, Panel, ToastCard, ToastRegion, ToastViewport, toast } from './index';
+
+afterEach(() => {
+  toast.clear();
+  cleanup();
+});
 
 describe('V4-04 Badge', () => {
   it('renders tone-specific class names', () => {
@@ -52,5 +59,54 @@ describe('V4-04 Panel', () => {
     expect(screen.getByText('最近')).toBeInTheDocument();
     expect(screen.getByText('内容')).toBeInTheDocument();
     expect(screen.getByText('3 条')).toBeInTheDocument();
+  });
+});
+
+describe('Toast 统一通知组件', () => {
+  it('ToastCard 支持标题、说明、动作按钮与关闭回调', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    const onDismiss = vi.fn();
+    render(
+      <ToastCard
+        id="t1"
+        tone="success"
+        title="已完成「整理笔记」"
+        description="10 秒内可撤销"
+        actions={[{ label: '撤销', onPress: onAction }]}
+        onDismiss={onDismiss}
+      />
+    );
+    expect(screen.getByText('已完成「整理笔记」')).toBeInTheDocument();
+    expect(screen.getByText('10 秒内可撤销')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '撤销' }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: '关闭通知' }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('ToastViewport 与 ToastRegion 自动归并到全站右上角队列，不重复渲染', async () => {
+    const { rerender } = render(
+      <>
+        <ToastViewport />
+        <ToastRegion items={[{ id: 'r1', title: '局部待办提示', tone: 'warning', role: 'alert' }]} />
+      </>
+    );
+    expect(await screen.findAllByText('局部待办提示')).toHaveLength(1);
+
+    act(() => {
+      toast.success('全局操作成功', { duration: 0 });
+    });
+    expect(await screen.findByText('全局操作成功')).toBeInTheDocument();
+    expect(screen.getAllByRole('region', { name: '通知' })).toHaveLength(1);
+
+    rerender(
+      <>
+        <ToastViewport />
+        <ToastRegion items={[]} />
+      </>
+    );
+    expect(screen.queryByText('局部待办提示')).not.toBeInTheDocument();
+    expect(screen.getByText('全局操作成功')).toBeInTheDocument();
   });
 });

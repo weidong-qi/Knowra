@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from '../../app/router';
 import { notesIndexAppearanceProps } from '../notes/NotesIndexAppearance';
 import { useNotesIndexAppearance } from '../notes/notesIndexAppearanceModel';
 import { parseTodoRoute, todoRoutePath, useToday } from './TodosView';
-import { pageCounts } from './todoPresentation';
+import { mainlineAccentColor, pageCounts } from './todoPresentation';
 import { sharedTodoStore, useTodoState, type TodoStore } from './todoStore';
 import styles from './PersonalTodos.module.css';
 
@@ -68,7 +68,12 @@ export function TodosContextSidebar({ store = sharedTodoStore() }: { store?: Tod
                     icon={
                       <span
                         className={styles.sidebarRing}
-                        style={{ '--p': progress.total ? progress.done / progress.total : 0 } as React.CSSProperties}
+                        style={
+                          {
+                            '--p': progress.total ? progress.done / progress.total : 0,
+                            '--ring-color': mainlineAccentColor(mainline.id)
+                          } as React.CSSProperties
+                        }
                       />
                     }
                     label={mainline.title}

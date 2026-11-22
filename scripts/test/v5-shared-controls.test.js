@@ -195,8 +195,8 @@ describe('V5 shared control styles', () => {
     assert.ok(declarations(css.navigation, '.compact').includes('min-height: 34px'));
     const [regular, phone] = css.ghost.split('@media (max-width: 767px) {');
     assert.ok(phone, '44px ghost targets must use the phone-width media condition only');
-    assert.match(declarations(regular, '.size30'), /(?:^|;)\s*width:\s*30px(?:;|$)/);
-    assert.match(declarations(regular, '.size30'), /(?:^|;)\s*height:\s*30px(?:;|$)/);
+    assert.match(declarations(regular, '.size28'), /(?:^|;)\s*width:\s*28px(?:;|$)/);
+    assert.match(declarations(regular, '.size28'), /(?:^|;)\s*height:\s*28px(?:;|$)/);
     assert.doesNotMatch(declarations(regular, '.base'), /min-(?:width|height):\s*44px/);
     assert.match(declarations(phone, '.base'), /min-width:\s*44px/);
     assert.match(declarations(phone, '.base'), /min-height:\s*44px/);

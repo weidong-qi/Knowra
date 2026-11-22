@@ -21,7 +21,7 @@ describe('IconButton (ghost icon 纯图标按钮)', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('applies the size class so 24/30/40 container sizes are visually distinct', () => {
+  it('applies the size class so 24/28/40 container sizes are visually distinct', () => {
     const { rerender } = render(
       <IconButton size={24} aria-label="24">
         ×
@@ -31,12 +31,12 @@ describe('IconButton (ghost icon 纯图标按钮)', () => {
     expect(button.className).toMatch(/size24/);
 
     rerender(
-      <IconButton size={30} aria-label="30">
+      <IconButton size={28} aria-label="28">
         ×
       </IconButton>
     );
-    button = screen.getByRole('button', { name: '30' });
-    expect(button.className).toMatch(/size30/);
+    button = screen.getByRole('button', { name: '28' });
+    expect(button.className).toMatch(/size28/);
 
     rerender(
       <IconButton size={40} aria-label="40">
@@ -47,13 +47,13 @@ describe('IconButton (ghost icon 纯图标按钮)', () => {
     expect(button.className).toMatch(/size40/);
   });
 
-  it('defaults to size 30 when size prop is omitted', () => {
+  it('defaults to size 28 when size prop is omitted', () => {
     render(<IconButton aria-label="默认">×</IconButton>);
     const button = screen.getByRole('button', { name: '默认' });
-    expect(button.className).toMatch(/size30/);
+    expect(button.className).toMatch(/size28/);
   });
 
-  it.each(['ghost', 'floating', 'primary', 'outline'] as const)(
+  it.each(['ghost', 'floating', 'primary'] as const)(
     '%s forwards disabled state and does not fire onClick when disabled',
     tone => {
       const onClick = vi.fn();
@@ -102,7 +102,7 @@ describe('IconButton (ghost icon 纯图标按钮)', () => {
     const button = screen.getByRole('button', { name: '组合' });
     expect(button).toHaveAttribute('title', '提示');
     expect(button.className).toMatch(/base/);
-    expect(button.className).toMatch(/size30/);
+    expect(button.className).toMatch(/size28/);
     expect(button.className).toMatch(/extra-class/);
   });
 });

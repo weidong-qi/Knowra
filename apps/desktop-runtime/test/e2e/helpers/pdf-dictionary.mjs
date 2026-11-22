@@ -59,8 +59,9 @@ export async function exercisePdfDictionary(page) {
   await expect(page.getByText('标注已保存', { exact: true })).toBeAttached();
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   const wordPoint = async word => {
-    const text = page.locator('.textLayer span').filter({ hasText: word }).first();
-    await text.evaluate(span => span.scrollIntoView({ block: 'center', inline: 'nearest' }));
+    // PDF.js 缩放时会临时隐藏已有文字层，DOM 中已出现单词并不代表它已可点击。
+    const text = page.locator('.textLayer:not([hidden]) span[role="presentation"]').filter({ hasText: word }).first();
+    await text.scrollIntoViewIfNeeded({ timeout: 25000 });
     let point;
     // PDF.js 可在缩放后重排整行。按目标词的字形范围取点，确认连续采样仍命中目标文字。
     await expect
@@ -87,6 +88,9 @@ export async function exercisePdfDictionary(page) {
                   hit: hit?.outerHTML.slice(0, 220),
                   viewport: [innerWidth, innerHeight],
                   span: span.getBoundingClientRect().toJSON(),
+                  visibility: document.visibilityState,
+                  layerHidden: span.closest('.textLayer')?.hidden,
+                  fontSize: getComputedStyle(span).fontSize,
                   page: span.closest('.page')?.getBoundingClientRect().toJSON()
                 };
               }
@@ -102,7 +106,7 @@ export async function exercisePdfDictionary(page) {
           );
           return point;
         },
-        { message: `等待 PDF 单词可双击：${word}` }
+        { message: `等待 PDF 单词可双击：${word}`, timeout: 25000 }
       )
       .toMatchObject({ stable: true });
     return point;

@@ -48,7 +48,7 @@ export function PdfSidePanel({
   const shown = items.filter(item => visibleIds.has(item.id) || item.id === selected);
   const hiddenSelectedId = shown.find(item => !visibleIds.has(item.id))?.id;
   const tabs: TabsItem[] = [
-    { id: 'marks', label: items.length ? `标注 ${items.length}` : '标注' },
+    { id: 'marks', label: '标注', badge: items.length || undefined },
     { id: 'outline', label: '目录' }
   ];
   return (
@@ -57,6 +57,7 @@ export function PdfSidePanel({
         <CloseIcon size={18} />
       </IconButton>
       <Tabs
+        appearance="segmented"
         className={styles.panelTabs}
         aria-label="检查器视图"
         items={tabs}

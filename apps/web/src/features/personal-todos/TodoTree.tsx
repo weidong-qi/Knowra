@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Todo, TodoIndex } from '@study-accelerator/web-core';
-import { PressableButton } from '../../components/ui';
+import { Button } from '../../components/ui';
 import { TodoRow } from './TodoRow';
 import { QuickAdd } from './QuickAdd';
 import styles from './PersonalTodos.module.css';
@@ -24,7 +24,7 @@ export function TodoTree({
   const children = index.children(parent.id);
   const canAdd = allowAdd && !parent.archivedAt && depth < 4;
   return (
-    <div role="list" className={styles.tree}>
+    <div role="list" className={styles.tree} data-nested={depth > 0 || undefined}>
       {children.map(child => (
         <TreeNode key={child.id} todo={child} index={index} selectedId={selectedId} depth={depth} />
       ))}
@@ -59,7 +59,10 @@ function TreeNode({
         onToggleExpanded={hasChildren || adding ? () => setExpanded(value => !value) : undefined}
         trailing={
           !hasChildren && !adding && !todo.archivedAt && depth < 3 && todo.status !== 'done' ? (
-            <PressableButton
+            <Button
+              size="mini"
+              shape="square"
+              variant="ghost"
               className={styles.addChildButton}
               aria-label={`给「${todo.title}」添加步骤`}
               onPress={() => {
@@ -68,7 +71,7 @@ function TreeNode({
               }}
             >
               ＋步骤
-            </PressableButton>
+            </Button>
           ) : null
         }
       />
