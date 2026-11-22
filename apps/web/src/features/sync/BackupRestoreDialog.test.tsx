@@ -2,6 +2,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BackupRestoreDialog } from './BackupRestoreDialog';
 import { callBackup, transferBackup } from './backupApi';
+import { flushBeforeWorkspaceRestore } from '../../app/desktopLifecycle';
+
+vi.mock('../../app/desktopLifecycle', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../app/desktopLifecycle')>()),
+  flushBeforeWorkspaceRestore: vi.fn(async () => undefined)
+}));
 
 vi.mock('../../store/AppStoreProvider', () => ({
   useAppStore: (selector: (state: Record<string, unknown>) => unknown) => selector({
@@ -16,7 +22,7 @@ vi.mock('./backupApi', () => ({
   ] }))
 }));
 
-afterEach(() => { delete window.knowraDesktop; vi.clearAllMocks(); });
+afterEach(() => { delete window.knowraDesktop; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 it('备份列表显示合计占用与未自动清理状态，并识别历史备份', async () => {
   render(<BackupRestoreDialog isOpen onOpenChange={vi.fn()} />);
@@ -47,4 +53,26 @@ it('原生导入成功仅选中备份，仍需检查和明确确认恢复；取�
   await userEvent.click(screen.getByRole('button', { name: '导出所选完整备份' }));
   await screen.findByText(/已取消导出，当前资料和已有目标未改动/);
   expect(transferBackup).toHaveBeenCalledWith('export', '1-aaaaaaaa');
+});
+
+it('ZIP 与完整备份分开，先保存正文才调用原生导出，失败和取消均不会声称已落盘', async () => {
+  const downloadArchive = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce('Knowra-资料库.zip');
+  window.knowraDesktop = { onPrepareClose: vi.fn(), onCancelClose: vi.fn(), transferBackup: vi.fn(), downloadArchive };
+  vi.stubGlobal('knowraRuntime', { persistenceMode: 'desktop-local', datasetId: 'current-dataset' });
+  vi.mocked(flushBeforeWorkspaceRestore).mockRejectedValueOnce(new Error('请先保存当前草稿'));
+  render(<BackupRestoreDialog isOpen onOpenChange={vi.fn()} />);
+  await screen.findByText(/本机列出 2 份备份/);
+  const section = screen.getByRole('region', { name: '可移植资料 ZIP' });
+  expect(section).toHaveTextContent('不替代完整备份；当前 App 不支持导入 ZIP');
+  expect(section).toHaveTextContent('不含本机待同步记录和恢复草稿');
+  const exportButton = screen.getByRole('button', { name: '导出可移植 ZIP…' });
+  await userEvent.click(exportButton);
+  expect(await screen.findByRole('alert')).toHaveTextContent('请先保存当前草稿');
+  expect(downloadArchive).not.toHaveBeenCalled();
+  await userEvent.click(exportButton);
+  await screen.findByText('已取消 ZIP 导出，当前资料未改动。');
+  expect(downloadArchive).toHaveBeenCalledWith('current-dataset');
+  await userEvent.click(exportButton);
+  await screen.findByText('可移植 ZIP 已保存：Knowra-资料库.zip');
+  expect(transferBackup).not.toHaveBeenCalled();
 });

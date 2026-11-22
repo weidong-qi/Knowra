@@ -163,3 +163,75 @@
   overflow-wrap: anywhere;
   font-size: var(--font-size-meta);
 }
+
+.overview {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-popover);
+  background: var(--surface-raised);
+}
+.statusLine {
+  --sync-tone: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--text-primary);
+}
+.statusLine[data-tone='active'] {
+  --sync-tone: var(--accent-text);
+}
+.statusLine[data-tone='success'] {
+  --sync-tone: var(--color-success);
+}
+.statusLine[data-tone='warning'] {
+  --sync-tone: var(--color-warning);
+}
+.statusLine[data-tone='danger'] {
+  --sync-tone: var(--color-danger);
+}
+.statusLine .marker {
+  margin-top: 0.55em;
+}
+.statusDetail {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--font-size-meta);
+}
+.statusFacts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--font-size-meta);
+}
+.statusFacts div {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.statusFacts dt {
+  color: var(--text-secondary);
+}
+.statusFacts dd {
+  margin: 0;
+}
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-ui);
+}
+.utilities {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-2);
+}
+.utilities .diagnostics {
+  width: 100%;
+  background: transparent;
+}
+.diagnostics[open] > * + * {
+  margin-top: var(--space-2);
+}

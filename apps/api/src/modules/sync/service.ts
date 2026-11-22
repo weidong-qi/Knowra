@@ -46,6 +46,8 @@ export function createSyncService<Backend extends SyncBackend = 'local'>(
     ownerId,
     scope: 'notes',
     pushEnabled: process.env.KNOWRA_SYNC_PUSH_ENABLED !== 'false',
+    // 独立于同步协议的扩展字段：旧版客户端仍可使用原有同步能力。
+    customSpaceCreation: true,
     recovery: { version: 1, journalVersion: journal.version, deviceRetirementSupported: true },
     cursor: cursorFor(journal, ownerId)
   });

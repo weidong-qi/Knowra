@@ -69,6 +69,26 @@ import {
   planInlineAnnotations
 } from '../knowledge/application/inline-annotations.ts';
 
+type SpaceNameFields = { name?: unknown; userId?: unknown; defaultFlag?: unknown };
+
+export function hasSpaceNameConflict(
+  spaces: (SpaceNameFields & { id: string })[],
+  id: string,
+  value: SpaceNameFields,
+  old?: SpaceNameFields | null
+) {
+  const normalize = (name: unknown) =>
+    String(name ?? '')
+      .trim()
+      .toLocaleLowerCase();
+  const name = normalize(value.name);
+  return (
+    value.defaultFlag === false &&
+    (!old || normalize(old.name) !== name) &&
+    spaces.some(space => space.id !== id && space.userId === value.userId && normalize(space.name) === name)
+  );
+}
+
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
 const legacySourceFields = [
   'schemaVersion',
@@ -328,8 +348,12 @@ export function prepareBatchState(
         (collection === 'tags' && value.groupId !== old.groupId))
     )
       throw syncError('SYSTEM_TAG_PROTECTED', '系统标签和分组不能删除或改换归属。', 422);
-    if (collection === 'spaces' && (!value || value.userId !== ownerId || (old && old.userId !== ownerId)))
-      throw syncError('SYNC_OWNER_INVALID', '空间不属于当前资料库。', 422);
+    if (collection === 'spaces') {
+      if (!value || value.userId !== ownerId || (old && old.userId !== ownerId))
+        throw syncError('SYNC_OWNER_INVALID', '空间不属于当前资料库。', 422);
+      if (hasSpaceNameConflict(state.spaces, id, value, old))
+        throw syncError('KNOWLEDGE_SPACE_NAME_CONFLICT', '云端已有同名空间，未合并空间，本机资料已保留。', 409);
+    }
     if (old && value)
       for (const field of ['spaceId', 'noteId', 'annotationId', 'parentAnnotationId'] as const) {
         if (field in old && value[field] !== old[field])

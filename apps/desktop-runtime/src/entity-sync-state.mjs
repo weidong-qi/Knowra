@@ -17,7 +17,7 @@ import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
-import { selectEntityBatch } from './entity-batches.mjs';
+import { createsCustomSpace, selectEntityBatch, unsupportedCustomSpace } from './entity-batches.mjs';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { reconcileSyncedSourceStates } from '../../api/src/infrastructure/local-data-relations.ts';
 import { randomUUID } from 'node:crypto';
@@ -508,14 +508,17 @@ function settle(db, state) {
     acknowledgeOutbox(db);
 }
 
-export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
+export function nextEntityUpload(store, { knowledgeSupported = true, customSpaceSupported = true } = {}) {
   assertStoreSyncNotPaused(store);
   const frozen = store.readSync(db => {
     readKnowledgeLifecycleBoundaries(db);
     readExamFocusReviewBoundaries(db);
     return readMeta(db, 'entityUpload');
   });
-  if (frozen) return frozen;
+  if (frozen) {
+    if (!customSpaceSupported && frozen.changes.some(createsCustomSpace)) throw unsupportedCustomSpace();
+    return frozen;
+  }
   let cached = snapshot(store);
   // 权威基线已包含该边界时不用重复提交，但必须可靠消费后再选后继动作。
   while (true) {
@@ -759,6 +762,7 @@ export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
   };
   const changes = eligible.length
     ? selectEntityBatch(eligible, referenceState, base, {
+        customSpaceSupported,
         measureBytes: entries => Buffer.byteLength(JSON.stringify(makeOperation(entries)))
       })
     : [];

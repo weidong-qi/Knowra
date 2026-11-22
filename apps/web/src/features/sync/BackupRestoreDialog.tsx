@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Checkbox, Dialog, DialogBody, Select } from '../../components/ui';
-import { flushBeforeWorkspaceRestore, flushBeforeWorkspaceBackup } from '../../app/desktopLifecycle';
+import { flushBeforeWorkspaceRestore, flushBeforeWorkspaceBackup, trackDesktopTask } from '../../app/desktopLifecycle';
+import { readRuntimeConfig } from '../../app/runtimeConfig';
 import { downloadTextFile } from '../../browser/downloadFile';
 import { useAppStore } from '../../store/AppStoreProvider';
 import { captureBrowserBackupDrafts } from './backupDrafts';
@@ -12,6 +13,7 @@ const displaySize = (bytes: number) => bytes < 1024 * 1024 ? `${(bytes / 1024).t
 
 export function BackupRestoreDialog({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange(open: boolean): void }) {
   const supportsTransfer = Boolean(window.knowraDesktop?.transferBackup);
+  const downloadArchive = window.knowraDesktop?.downloadArchive;
   const hasDraft = useAppStore(state => state.editorHasLocalChanges || state.saveState === 'saving' || state.saveState === 'error' || Boolean(state.editorSaveError));
   const [backups, setBackups] = useState<RuntimeBackup[]>([]);
   const [selectedId, setSelectedId] = useState('');
@@ -90,6 +92,17 @@ export function BackupRestoreDialog({ isOpen, onOpenChange }: { isOpen: boolean;
             await flushBeforeWorkspaceRestore();
             setRestored(await callBackup<BackupRestoreResult>(`backups/${encodeURIComponent(selectedId)}/restore`, { confirmBackupId: selectedId, recoveryDrafts: captureBrowserBackupDrafts() }));
           }); }}>确认恢复所选备份</Button>
+        </section>}
+        {downloadArchive && <section className={styles.inspection} aria-labelledby="portable-archive-heading">
+          <h3 id="portable-archive-heading">可移植资料 ZIP</h3>
+          <p className={styles.hint}>导出已保存的资料、附件和标注，可在同一资料归属的网页版预检。ZIP 不含本机待同步记录和恢复草稿，不替代完整备份；当前 App 不支持导入 ZIP。</p>
+          <div className={styles.actions}><Button isDisabled={busy} onPress={() => { void action(async () => {
+            const { datasetId } = readRuntimeConfig();
+            if (!datasetId) throw new Error('本机资料标识不可用，请重新打开应用。');
+            await flushBeforeWorkspaceRestore();
+            const filename = await trackDesktopTask(() => downloadArchive(datasetId));
+            setNotice(filename ? `可移植 ZIP 已保存：${filename}` : '已取消 ZIP 导出，当前资料未改动。');
+          }); }}>导出可移植 ZIP…</Button></div>
         </section>}
       </>}
       {notice && <p role="status" className={styles.hint}>{notice}</p>}

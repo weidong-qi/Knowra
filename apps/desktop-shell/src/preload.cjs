@@ -4,6 +4,9 @@ contextBridge.exposeInMainWorld('knowraDesktop', {
   transferBackup(input) {
     return ipcRenderer.invoke('backup-transfer', input);
   },
+  downloadArchive(datasetId) {
+    return ipcRenderer.invoke('archive-download', datasetId);
+  },
   downloadAttachment(id) {
     return ipcRenderer.invoke('attachment-download', id);
   },
