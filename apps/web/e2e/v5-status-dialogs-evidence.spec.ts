@@ -92,7 +92,7 @@ for (const viewport of viewports)
       const sync = page.getByRole('dialog', { name: '云端同步', exact: true });
       await syncTrigger.click();
       await expect(sync).toBeVisible();
-      const password = sync.getByLabel('登录密码', { exact: true });
+      const password = sync.getByLabel('服务密码', { exact: true });
       await password.fill(syntheticPassword);
       await expect(password).toHaveAttribute('type', 'password');
       await expect(password).toHaveValue(syntheticPassword);
@@ -103,7 +103,7 @@ for (const viewport of viewports)
       await expect(sync).toBeHidden();
       await expect(syncTrigger).toBeFocused();
       focusChecks.push('同步表单 Tab/Shift+Tab 两次导航仍在弹窗；关闭按钮返回顶栏入口');
-      readonlyChecks.push('登录密码仅为明确标注的合成字符串，type=password，未提交连接');
+      readonlyChecks.push('服务密码仅为明确标注的合成字符串，type=password，未提交连接');
 
       network.showConflicts();
       await syncTrigger.click();

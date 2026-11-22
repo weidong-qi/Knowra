@@ -114,25 +114,24 @@ export function SyncRecoveryPanel({
   return (
     <section className={styles.recovery} aria-label="安全恢复云端同步">
       <p>
-        <strong>同步结果尚未确认，普通登录、立即同步和逐项冲突处理已锁定。</strong>
+        <strong>同步结果待核对</strong>
       </p>
-      <p>
-        先完整备份本机资料，永久作废旧同步编号，再取得固定云端快照供核对。本步骤不会覆盖当前资料；完成核对前会继续暂停同步。
-      </p>
-      <p className={styles.hint}>恢复使用独立的新同步发送编号，不改变本机全局设备编号。旧编号的退役不能撤销。</p>
+      <p>先备份本机，再核对云端资料。核对完成前，同步保持暂停。</p>
       {hasDraft && <p role="status">请先将当前编辑保存到本机，再进行恢复或刷新预览。</p>}
       {busy && <p role="status">正在处理同步操作，请等待完成后继续核对。</p>}
       {session ? (
         <div className={styles.form}>
           <p>恢复阶段：{stages[session.stage]}</p>
-          <p className={styles.hint}>
-            旧同步编号：{session.oldDeviceId}
-            <br />
-            新同步编号：{session.newDeviceId}
-            <br />
-            完整本机备份：{session.backupId}
-          </p>
-          <p className={styles.hint}>将继续同一个恢复会话并沿用此前确认，不会再生成新编号。</p>
+          <details>
+            <summary>恢复详情</summary>
+            <p className={styles.hint}>
+              旧同步编号：{session.oldDeviceId}
+              <br />
+              新同步编号：{session.newDeviceId}
+              <br />
+              完整本机备份：{session.backupId}
+            </p>
+          </details>
         </div>
       ) : (
         <div className={styles.form}>
@@ -140,12 +139,13 @@ export function SyncRecoveryPanel({
             我确认永久作废旧同步编号，同号旧备份或副本将不能继续同步；本机资料保留。
           </Checkbox>
           <Checkbox isSelected={acceptJournalUpgrade} onChange={setAcceptJournalUpgrade} isDisabled={disabled}>
-            我接受服务端 journal 格式升级：旧服务端将无法读取，不能直接回滚旧备份；这不是 SQLite v8 升级。
+            我同意升级云端同步记录格式。旧版服务将无法读取，不能直接回退。
           </Checkbox>
         </div>
       )}
       <div className={styles.actions}>
         <Button
+          variant="primary"
           isDisabled={disabled || (!session && (!confirmRetire || !acceptJournalUpgrade))}
           onPress={() => {
             void start();

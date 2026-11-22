@@ -35,6 +35,8 @@ export function describeLocalSyncStatus(
   if (!status?.serverUrl) {
     if (connectionError?.code === 'AUTH_REQUIRED')
       return { tone: 'danger', main: '本地资料待连接', detail: '请重新登录' };
+    if (connectionError?.code === 'SYNC_CUSTOM_SPACE_UNSUPPORTED')
+      return { tone: 'warning', main: '本地空间已保留', detail: '请升级云端并核对资料库归属' };
     if (connectionError) return { tone: 'warning', main: '本地资料待连接', detail: '连接失败' };
     return { tone: 'neutral', main: '本地资料', detail: '连接云端' };
   }
@@ -49,6 +51,12 @@ export function describeLocalSyncStatus(
   if (status.error?.code === 'SYNC_KNOWLEDGE_UNSUPPORTED') {
     return { tone: 'warning', main: '部分资料待同步', detail: '云端需要升级' };
   }
+  if (status.error?.code === 'SYNC_CUSTOM_SPACE_UNSUPPORTED')
+    return { tone: 'warning', main: '本地空间待同步', detail: '请升级云端并核对资料库归属' };
+  if (status.error?.code === 'KNOWLEDGE_SPACE_NAME_CONFLICT')
+    return { tone: 'danger', main: '出现同名空间', detail: '本机与云端均保留，未自动合并' };
+  if (status.error?.code === 'SYNC_PUSH_PAUSED')
+    return { tone: 'warning', main: '本地资料待同步', detail: '云端暂时停止接收修改' };
   if (status.error?.code === 'PROTOCOL_UNSUPPORTED') {
     return { tone: 'danger', main: '本地资料待同步', detail: '同步版本不兼容' };
   }

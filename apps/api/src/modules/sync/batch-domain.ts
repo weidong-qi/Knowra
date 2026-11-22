@@ -328,8 +328,30 @@ export function prepareBatchState(
         (collection === 'tags' && value.groupId !== old.groupId))
     )
       throw syncError('SYSTEM_TAG_PROTECTED', '系统标签和分组不能删除或改换归属。', 422);
-    if (collection === 'spaces' && (!value || value.userId !== ownerId || (old && old.userId !== ownerId)))
-      throw syncError('SYNC_OWNER_INVALID', '空间不属于当前资料库。', 422);
+    if (collection === 'spaces') {
+      if (!value || value.userId !== ownerId || (old && old.userId !== ownerId))
+        throw syncError('SYNC_OWNER_INVALID', '空间不属于当前资料库。', 422);
+      const name = String(value.name ?? '')
+        .trim()
+        .toLocaleLowerCase();
+      if (
+        value.defaultFlag === false &&
+        (!old ||
+          name !==
+            String(old.name ?? '')
+              .trim()
+              .toLocaleLowerCase()) &&
+        state.spaces.some(
+          space =>
+            space.id !== id &&
+            space.userId === ownerId &&
+            String(space.name ?? '')
+              .trim()
+              .toLocaleLowerCase() === name
+        )
+      )
+        throw syncError('KNOWLEDGE_SPACE_NAME_CONFLICT', '云端已有同名空间，未合并空间，本机资料已保留。', 409);
+    }
     if (old && value)
       for (const field of ['spaceId', 'noteId', 'annotationId', 'parentAnnotationId'] as const) {
         if (field in old && value[field] !== old[field])

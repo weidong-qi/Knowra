@@ -82,12 +82,12 @@ async function mount() {
   await click(/云端同步已暂停/);
 }
 function credentials() {
-  fireEvent.change(screen.getByLabelText('登录账号'), { target: { value: 'demo-user' } });
-  fireEvent.change(screen.getByLabelText('登录密码'), { target: { value: 'temporary-secret' } });
+  fireEvent.change(screen.getByLabelText('服务账号'), { target: { value: 'demo-user' } });
+  fireEvent.change(screen.getByLabelText('服务密码'), { target: { value: 'temporary-secret' } });
 }
 function confirmations() {
   fireEvent.click(screen.getByRole('checkbox', { name: /我确认永久作废旧同步编号/ }));
-  fireEvent.click(screen.getByRole('checkbox', { name: /我接受服务端 journal 格式升级/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /我同意升级云端同步记录格式/ }));
 }
 
 beforeEach(() => {
@@ -121,10 +121,10 @@ describe('桌面安全恢复入口', () => {
     expect(start).toBeDisabled();
     fireEvent.click(screen.getByRole('checkbox', { name: /我确认永久作废旧同步编号/ }));
     expect(start).toBeDisabled();
-    expect(screen.getByRole('button', { name: '更新登录并同步' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '验证并同步' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '立即同步' })).toBeDisabled();
     await act(async () => {
-      fireEvent.submit(screen.getByLabelText('登录账号').closest('form')!);
+      fireEvent.submit(screen.getByLabelText('服务账号').closest('form')!);
     });
     await click('立即同步');
     await click('先备份并核对恢复');
@@ -148,7 +148,7 @@ describe('桌面安全恢复入口', () => {
       confirmRetire: true,
       acceptJournalUpgrade: true
     });
-    expect(screen.getByLabelText('登录密码')).toHaveValue('');
+    expect(screen.getByLabelText('服务密码')).toHaveValue('');
     expect(calls('/configure')).toHaveLength(0);
     expect(calls('/retry')).toHaveLength(0);
     expect(calls('/recovery-preview?offset=0&limit=20')).toHaveLength(1);
@@ -193,7 +193,7 @@ describe('桌面安全恢复入口', () => {
     await act(async () => {
       release(failure());
     });
-    expect(screen.getByLabelText('登录密码')).toHaveValue('');
+    expect(screen.getByLabelText('服务密码')).toHaveValue('');
   });
 
   it.each(['prepared', 'retiring', 'downloading'] as const)(
@@ -347,7 +347,7 @@ describe('桌面安全恢复入口', () => {
     current = { ...current, error: null };
     await mount();
     expect(screen.getByRole('button', { name: '立即同步' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '更新登录并同步' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '验证并同步' })).toBeDisabled();
     expect(screen.getByLabelText('安全恢复云端同步')).toBeInTheDocument();
   });
 
@@ -358,7 +358,7 @@ describe('桌面安全恢复入口', () => {
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
     await click('继续核对既有恢复');
     expect(calls('/recover')).toHaveLength(1);
-    expect(screen.getByLabelText('登录密码')).toHaveValue('');
+    expect(screen.getByLabelText('服务密码')).toHaveValue('');
     expect(calls('/recovery-preview?offset=0&limit=20')).toHaveLength(2);
   });
 
@@ -399,7 +399,7 @@ describe('桌面安全恢复入口', () => {
     credentials();
     await click('关闭对话框');
     await click(/云端同步已暂停/);
-    expect(screen.getByLabelText('登录密码')).toHaveValue('');
+    expect(screen.getByLabelText('服务密码')).toHaveValue('');
     expect(screen.getByText(/新同步编号：/)).toHaveTextContent('new-sender');
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
   });

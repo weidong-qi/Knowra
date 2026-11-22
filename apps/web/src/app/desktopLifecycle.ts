@@ -18,6 +18,7 @@ interface DesktopBridge {
   /** PDF 会话接管非文本输入区域的撤销快捷键，卸载时归还原生编辑菜单。 */
   onPdfHistory?(callback: (redo: boolean) => void): () => void;
   downloadAttachment?(id: string): Promise<string | null>;
+  downloadArchive?(datasetId: string): Promise<string | null>;
   openSavedAttachment?(token: string): Promise<void>;
   transferBackup?(
     input: import('../features/sync/backupApi').BackupTransferRequest

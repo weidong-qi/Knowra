@@ -70,6 +70,24 @@ describe('桌面同步状态栏文案', () => {
       '附件等待重试'
     );
   });
+
+  it('自建空间的旧云端、同名冲突与停收都不会显示已同步', () => {
+    const unsupported = { code: 'SYNC_CUSTOM_SPACE_UNSUPPORTED', message: '本机空间已保留。' };
+    expect(describeLocalSyncStatus(null, unsupported).main).toBe('本地空间已保留');
+    expect(describeLocalSyncStatus({ ...connected, error: unsupported }).detail).toBe('请升级云端并核对资料库归属');
+    expect(
+      describeLocalSyncStatus({
+        ...connected,
+        error: { code: 'KNOWLEDGE_SPACE_NAME_CONFLICT', message: '同名空间。' }
+      }).detail
+    ).toBe('本机与云端均保留，未自动合并');
+    expect(
+      describeLocalSyncStatus({
+        ...connected,
+        error: { code: 'SYNC_PUSH_PAUSED', message: '暂停接收。' }
+      }).detail
+    ).toBe('云端暂时停止接收修改');
+  });
 });
 
 it('提交结果未知时明确提示人工核对，不显示等待自动重试', () => {

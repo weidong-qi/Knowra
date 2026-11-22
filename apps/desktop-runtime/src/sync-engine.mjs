@@ -15,7 +15,8 @@ import {
   nextEntityUpload,
   acknowledgeEntityUpload,
   getEntitySyncState,
-  resolveEntityConflict
+  resolveEntityConflict,
+  unsupportedCustomSpace
 } from './entity-sync-state.mjs';
 import {
   applyRemote,
@@ -74,6 +75,10 @@ export function createSyncEngine(
   let missingAttachments = { revision: -1, entries: [] };
   let sequenceVerified = false;
   const meta = key => store.readSync(db => readMeta(db, key));
+  const customSpaceCreation = () =>
+    full &&
+    !meta('safetyPause') &&
+    (!meta('serverUrl') || (meta('customSpaceCreation') === true && meta('ownerId') === 'demo'));
   function requireServer(info) {
     assertSyncContract(info);
     if (!full || info.protocolVersion !== 1 || info.scope !== 'notes') {
@@ -297,7 +302,7 @@ export function createSyncEngine(
     await verifyDeviceSequence();
     for (let count = 0; count < 20; count++) {
       const knowledgeSupported = meta('capabilities')?.includes(KNOWLEDGE_SYNC_CAPABILITY) ?? false;
-      const operation = nextEntityUpload(store, { knowledgeSupported });
+      const operation = nextEntityUpload(store, { knowledgeSupported, customSpaceSupported: customSpaceCreation() });
       if (!operation) return sent;
       assertNotHistoryOperation(operation);
       if (
@@ -377,7 +382,9 @@ export function createSyncEngine(
           store.metadataTransaction(db => writeMeta(db, 'sendingUpload', null));
         } else if (
           !uncertain &&
-          ['DEPENDENCY_MISSING', 'ENTITY_DELETED', 'SIBLING_NAME_CONFLICT'].includes(failure.code)
+          ['DEPENDENCY_MISSING', 'ENTITY_DELETED', 'SIBLING_NAME_CONFLICT', 'KNOWLEDGE_SPACE_NAME_CONFLICT'].includes(
+            failure.code
+          )
         ) {
           store.metadataTransaction(db => {
             writeMeta(db, 'entityUpload', null);
@@ -469,6 +476,7 @@ export function createSyncEngine(
       store.metadataTransaction(db => {
         writeMeta(db, 'ownerId', info.ownerId);
         writeMeta(db, 'capabilities', info.capabilities ?? []);
+        writeMeta(db, 'customSpaceCreation', info.customSpaceCreation === true);
         writeMeta(db, 'serverEpoch', info.datasetEpoch);
       });
       // 未知执行结果必须先读真实删除事实；不得先把旧主体上传或重发清理。
@@ -650,6 +658,7 @@ export function createSyncEngine(
       ...(full ? getEntitySyncState(store) : {}),
       lastCheckedAt,
       knowledgeSyncSupported: meta('capabilities')?.includes(KNOWLEDGE_SYNC_CAPABILITY) ?? null,
+      customSpaceCreation: customSpaceCreation(),
       attachmentPending: meta('attachmentPending'),
       deviceId: syncSenderDeviceId(store),
       localDeviceId: store.getStatus().deviceId,
@@ -661,6 +670,7 @@ export function createSyncEngine(
     }),
     purgePreview: purge.preview,
     purge: purge.execute,
+    customSpaceCreation,
     async configure({ serverUrl, username = '', password = '' }) {
       return exclusive(async () => {
         assertStoreSyncNotPaused(store);
@@ -688,6 +698,14 @@ export function createSyncEngine(
         }
         if (meta('ownerId') && info.ownerId !== meta('ownerId'))
           throw new Error('云端所属资料库已改变，请使用独立本地资料目录。');
+        if (
+          !meta('serverUrl') &&
+          (info.customSpaceCreation !== true || info.ownerId !== 'demo') &&
+          store.state.spaces.some(space => space.defaultFlag === false)
+        ) {
+          authorization = '';
+          throw unsupportedCustomSpace();
+        }
         store.metadataTransaction(db => {
           writeMeta(db, 'serverUrl', url.origin);
           writeMeta(db, 'clientPaused', false);

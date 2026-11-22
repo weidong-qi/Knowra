@@ -159,7 +159,9 @@ test('生产页面：知识撤回、回收站、SQLite重启、显式恢复与�
     .poll(() => f.runtime.store.state.knowledgeItems.find(row => row.id === item.id).reviewStatus)
     .toBe('confirmed');
   const sync = await f.openSync();
-  await sync.getByRole('button', { name: '更新登录并同步', exact: true }).click();
+  const settings = sync.getByRole('button', { name: '连接设置', exact: true });
+  if (await settings.isVisible()) await settings.click();
+  await sync.getByRole('button', { name: '验证并同步', exact: true }).click();
   await expect(sync.locator('p[role="status"]')).toContainText('云端已同步');
   assert.equal(f.dataStore.state.knowledgeItems.find(row => row.id === item.id).deletedAt, null);
   assert.equal(f.dataStore.state.knowledgeEvidence[0].applicabilityStatus, 'active');

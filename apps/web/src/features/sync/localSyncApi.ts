@@ -44,6 +44,7 @@ export interface SyncStatus {
   entityConflict?: EntityConflict | null;
   pendingKnowledgeEntities?: number;
   knowledgeSyncSupported?: boolean;
+  customSpaceCreation?: boolean;
   serverUrl: string | null;
   generation: number;
   phase: string;

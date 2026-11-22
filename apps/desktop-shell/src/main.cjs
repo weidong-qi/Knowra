@@ -12,6 +12,7 @@ const {
 const path = require('node:path');
 const { createReleaseUpdates } = require('./release-updates.cjs');
 const { createAttachmentDownloads } = require('./attachment-downloads.cjs');
+const { createArchiveDownload } = require('./archive-download.cjs');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { createDraftStore } = require('./draft-store.cjs');
@@ -147,6 +148,14 @@ else {
     shell
   });
   const backupRpc = createBackupRpc({ getChild: () => child });
+  const downloadArchive = createArchiveDownload({
+    getWindow: () => window,
+    getOrigin: () => origin,
+    isClosing: () => shuttingDown || finished,
+    getDatasetStatus: datasetId => backupRpc.request('status', { datasetId }),
+    dataDirectory,
+    dialog
+  });
   const backupTransfers = createBackupTransfers({
     getWindow: () => window,
     getOrigin: () => origin,
@@ -155,6 +164,7 @@ else {
     dialog
   });
   ipcMain.handle('backup-transfer', (event, input) => backupTransfers.transfer(event, input));
+  ipcMain.handle('archive-download', (event, datasetId) => downloadArchive(event, datasetId));
   ipcMain.handle('attachment-download', (event, id) => attachmentDownloads.download(event, id));
   ipcMain.handle('attachment-open-saved', (event, token) => attachmentDownloads.open(event, token));
   const trusted = event => event.sender === window?.webContents && event.senderFrame === window.webContents.mainFrame;

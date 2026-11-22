@@ -508,14 +508,33 @@ function settle(db, state) {
     acknowledgeOutbox(db);
 }
 
-export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
+export function unsupportedCustomSpace() {
+  return Object.assign(
+    new Error('云端不支持此资料库同步自建空间。请升级云端并核对资料库归属；本机空间和内容已保留。'),
+    { code: 'SYNC_CUSTOM_SPACE_UNSUPPORTED' }
+  );
+}
+
+export function nextEntityUpload(store, { knowledgeSupported = true, customSpaceSupported = true } = {}) {
   assertStoreSyncNotPaused(store);
+  const assertSpaceUpload = changes => {
+    if (
+      !customSpaceSupported &&
+      changes.some(
+        entry => entry.collection === 'spaces' && entry.value?.defaultFlag === false && entry.baseRevision === null
+      )
+    )
+      throw unsupportedCustomSpace();
+  };
   const frozen = store.readSync(db => {
     readKnowledgeLifecycleBoundaries(db);
     readExamFocusReviewBoundaries(db);
     return readMeta(db, 'entityUpload');
   });
-  if (frozen) return frozen;
+  if (frozen) {
+    assertSpaceUpload(frozen.changes);
+    return frozen;
+  }
   let cached = snapshot(store);
   // 权威基线已包含该边界时不用重复提交，但必须可靠消费后再选后继动作。
   while (true) {
@@ -766,6 +785,8 @@ export function nextEntityUpload(store, { knowledgeSupported = true } = {}) {
     if (!dirty.length && store.getStatus().pendingOperations) store.metadataTransaction(db => acknowledgeOutbox(db));
     return null;
   }
+  // 未确认云端能力时不分配序号或冻结上传。已冻结的旧操作仍必须保留，由原恢复机制核对。
+  assertSpaceUpload(changes);
   return store.metadataTransaction(db => {
     const operation = makeOperation(changes);
     writeMeta(db, 'entitySequence', operation.sequence);

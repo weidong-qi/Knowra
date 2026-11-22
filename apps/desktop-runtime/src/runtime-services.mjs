@@ -97,6 +97,16 @@ export function createRuntimeServices({
       createRecoveryBackup: () =>
         createRuntimeBackup(store, dataDirectory, { backupRoot, purpose: 'sync-safety-recovery' })
     });
+    const createKnowledgeSpace = context.http.knowledge.createKnowledgeSpace;
+    context.http.knowledge.createKnowledgeSpace = body => {
+      if (!sync.customSpaceCreation())
+        throw createAppError(
+          'LOCAL_CUSTOM_SPACE_UNAVAILABLE',
+          '当前资料库暂不能在桌面端新建空间。请在云端同步面板核对连接与资料库归属。',
+          409
+        );
+      return createKnowledgeSpace(body);
+    };
     // AI 功能开关保存在本机数据目录，与钥匙串里的模型凭据分开；每个提炼回合开始时读取当前值，切换无需重启。
     const aiFeatures = createAiFeatureSettings({ filePath: path.join(dataDirectory, 'ai-features.json') });
     context.http.aiFeatures = aiFeatures;

@@ -214,7 +214,7 @@ async function fixture(page: Page, delayed = false) {
       const start = panel.getByRole('button', { name: '先备份并核对恢复', exact: true });
       await expect(start).toBeDisabled();
       const retire = panel.getByRole('checkbox', { name: /我确认永久作废旧同步编号/ });
-      const upgrade = panel.getByRole('checkbox', { name: /我接受服务端 journal 格式升级/ });
+      const upgrade = panel.getByRole('checkbox', { name: /我同意升级云端同步记录格式/ });
       await keyboardReach(page, retire);
       await page.keyboard.press('Space');
       await expect(retire).toBeChecked();
@@ -223,8 +223,8 @@ async function fixture(page: Page, delayed = false) {
       await expect(upgrade).toBeFocused();
       await page.keyboard.press('Space');
       await expect(upgrade).toBeChecked();
-      await dialog.getByLabel('登录账号', { exact: true }).fill(username);
-      await dialog.getByLabel('登录密码', { exact: true }).fill(password);
+      await dialog.getByLabel('服务账号', { exact: true }).fill(username);
+      await dialog.getByLabel('服务密码', { exact: true }).fill(password);
       await start.click();
       await expect.poll(() => retirementEntered).toBe(true);
       await expect(panel.getByText('正在处理同步操作，请等待完成后继续核对。')).toBeVisible();
@@ -239,7 +239,7 @@ async function fixture(page: Page, delayed = false) {
       events.push('backup-verified-before-retirement');
       releaseRetirement();
       await expect(panel).toContainText('恢复阶段：等待核对并选择整组资料');
-      await expect(dialog.getByLabel('登录密码', { exact: true })).toHaveValue('');
+      await expect(dialog.getByLabel('服务密码', { exact: true })).toHaveValue('');
       await expect(panel.getByRole('button', { name: '保留本机这一组并继续同步', exact: true })).toBeEnabled();
       expect(authenticated).toBeGreaterThan(0);
       expect(events).toEqual(['retirement-entered', 'backup-verified-before-retirement', 'fixed-snapshot']);
@@ -299,7 +299,7 @@ for (const delayed of [false, true]) {
       const original = f.runtime.store.readSync(db => readMeta(db, 'entityUpload'));
       const before = structuredClone(f.runtime.store.readOutbox());
       const writesBefore = f.writes.length;
-      for (const name of ['更新登录并同步', '立即同步', '暂停云端同步'])
+      for (const name of ['验证并同步', '立即同步', '暂停云端同步'])
         await expect(f.dialog.getByRole('button', { name, exact: true })).toBeDisabled();
       for (const route of ['/retry', '/configure', '/resolve']) {
         const response = await page.request.post(`${f.runtime.origin}${syncPath}${route}`, {

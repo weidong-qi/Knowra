@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button, Dialog, DialogBody, TextField, PressableButton } from '../../components/ui';
 import { useAppStore, useAppStoreApi } from '../../store/AppStoreProvider';
 import styles from './LocalSyncControl.module.css';
@@ -18,6 +18,8 @@ export function LocalSyncControl({ compact = false }: { compact?: boolean }) {
   const [serverUrl, setServerUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [editingConnection, setEditingConnection] = useState(false);
+  const connectionFormId = useId();
   const [busy, setBusy] = useState(false);
   const actionPending = useRef(false);
   const statusRequestVersion = useRef(0);
@@ -177,6 +179,19 @@ export function LocalSyncControl({ compact = false }: { compact?: boolean }) {
     !status?.serverUrl || error?.code?.startsWith('LOCAL_RUNTIME_') ? error : null
   );
   const displayedError = error ?? status?.error;
+  const connected = Boolean(status?.serverUrl);
+  const manuallyPaused = status?.phase === 'disconnected';
+  const authRequired = status?.phase === 'auth-required' || displayedError?.code === 'AUTH_REQUIRED';
+  const editingHealthyConnection = connected && !manuallyPaused && !authRequired && !safetyPaused;
+  const showConnection = !connected || manuallyPaused || authRequired || safetyPaused || editingConnection;
+  const syncing = status?.phase === 'syncing';
+  const summaryTitle = presentation.tone === 'success' ? '云端已同步' : presentation.main;
+  const summaryDetail =
+    presentation.tone === 'success' || syncing
+      ? null
+      : !connected && presentation.tone === 'neutral'
+        ? '仍可离线编辑'
+        : presentation.detail;
   return (
     <>
       <PressableButton
@@ -191,6 +206,7 @@ export function LocalSyncControl({ compact = false }: { compact?: boolean }) {
         title={compact ? `${presentation.main} · ${presentation.detail}` : undefined}
         onPress={() => {
           setServerUrl(status?.serverUrl ?? serverUrl);
+          setEditingConnection(false);
           setOpen(true);
         }}
       >
@@ -210,88 +226,122 @@ export function LocalSyncControl({ compact = false }: { compact?: boolean }) {
       >
         <DialogBody>
           <div className={styles.body}>
-            <p>
-              笔记和知识先保存到本机，联网后同步。目录、标签、附件、标注与知识来源一起同步；双方修改同一内容时，会保留冲突供你核对。
-            </p>
-            <form
-              className={styles.form}
-              onSubmit={event => {
-                event.preventDefault();
-                void action('/configure', { serverUrl, username, password });
-              }}
-            >
-              <TextField
-                label="云端服务地址"
-                type="url"
-                isRequired
-                placeholder="https://你的服务地址"
-                value={serverUrl}
-                isReadOnly={Boolean(status?.serverUrl)}
-                onChange={setServerUrl}
-              />
-              <div className={styles.columns}>
-                <TextField label="登录账号" autoComplete="username" value={username} onChange={setUsername} />
-                <TextField
-                  label="登录密码"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={setPassword}
-                />
-              </div>
-              <p className={styles.hint}>凭据仅在本次运行中使用；重启后需要重新登录。</p>
-              <div className={styles.actions}>
-                <Button type="submit" isDisabled={busy || safetyPaused}>
-                  {status?.serverUrl ? '更新登录并同步' : '连接并比较资料'}
-                </Button>
-                {status?.serverUrl && (
-                  <>
+            <section className={styles.overview} aria-label="同步状态">
+              <p className={styles.statusLine} data-tone={presentation.tone} role="status">
+                <span className={styles.marker} aria-hidden="true" />
+                <span>
+                  <strong>{summaryTitle}</strong>
+                  {summaryDetail && <span className={styles.statusDetail}>{summaryDetail}</span>}
+                </span>
+              </p>
+              {(status?.serverUrl || status?.lastSyncedAt) && (
+                <dl className={styles.statusFacts}>
+                  {status.serverUrl && (
+                    <div>
+                      <dt>服务地址</dt>
+                      <dd>{status.serverUrl}</dd>
+                    </div>
+                  )}
+                  {status.lastSyncedAt && (
+                    <div>
+                      <dt>上次同步</dt>
+                      <dd>
+                        <time dateTime={status.lastSyncedAt}>
+                          {new Date(status.lastSyncedAt).toLocaleString('zh-CN')}
+                        </time>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              )}
+              {connected && !manuallyPaused && (
+                <div className={styles.actions} aria-label="同步操作">
+                  <Button
+                    variant={!showConnection ? 'primary' : 'default'}
+                    isDisabled={busy || syncing || safetyPaused || authRequired}
+                    onPress={() => {
+                      void action('/retry', {});
+                    }}
+                  >
+                    立即同步
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    isDisabled={busy || safetyPaused}
+                    onPress={() => {
+                      void action('/disconnect', {});
+                    }}
+                  >
+                    暂停云端同步
+                  </Button>
+                  {editingHealthyConnection && (
                     <Button
-                      isDisabled={busy || safetyPaused || status.phase === 'disconnected'}
+                      variant="ghost"
+                      isDisabled={busy}
+                      aria-expanded={editingConnection}
+                      aria-controls={editingConnection ? connectionFormId : undefined}
                       onPress={() => {
-                        void action('/retry', {});
+                        if (editingConnection) setPassword('');
+                        setEditingConnection(!editingConnection);
                       }}
                     >
-                      立即同步
+                      连接设置
                     </Button>
-                    <Button
-                      isDisabled={busy || safetyPaused || status.phase === 'disconnected'}
-                      onPress={() => {
-                        void action('/disconnect', {});
-                      }}
-                    >
-                      暂停云端同步
-                    </Button>
-                  </>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {displayedError && (
+              <p role="alert" className={styles.error}>
+                {displayedError.message}
+              </p>
+            )}
+            {showConnection && (
+              <form
+                id={connectionFormId}
+                className={styles.form}
+                aria-label={connected ? '服务凭据' : '连接自建服务'}
+                onSubmit={event => {
+                  event.preventDefault();
+                  if (safetyPaused) return;
+                  void action('/configure', { serverUrl: status?.serverUrl ?? serverUrl, username, password }).then(
+                    next => {
+                      if (next?.serverUrl && !isSafetyPaused(next) && next.phase !== 'auth-required')
+                        setEditingConnection(false);
+                    }
+                  );
+                }}
+              >
+                <h3 className={styles.sectionTitle}>{connected ? '服务凭据' : '连接自建服务'}</h3>
+                {!connected && (
+                  <TextField
+                    label="云端服务地址"
+                    type="url"
+                    isRequired
+                    placeholder="https://sync.example.com"
+                    value={serverUrl}
+                    onChange={setServerUrl}
+                  />
                 )}
-                <Button
-                  onPress={() => {
-                    setOpen(false);
-                    setPassword('');
-                    setBackupOpen(true);
-                  }}
-                >
-                  本机备份与恢复
-                </Button>
-                <Button
-                  onPress={() => {
-                    void callSync<unknown[]>('/recovery')
-                      .then(records =>
-                        downloadTextFile(
-                          'Knowra-冲突恢复记录.json',
-                          JSON.stringify(records, null, 2),
-                          'application/json'
-                        )
-                      )
-                      .catch(failure =>
-                        setError({ message: failure instanceof Error ? failure.message : '恢复记录导出失败' })
-                      );
-                  }}
-                >
-                  导出冲突恢复记录
-                </Button>
-              </div>
-            </form>
+                <div className={styles.columns}>
+                  <TextField label="服务账号" autoComplete="username" value={username} onChange={setUsername} />
+                  <TextField
+                    label="服务密码"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={setPassword}
+                  />
+                </div>
+                {!safetyPaused && <p className={styles.hint}>密码仅在本次运行中使用。</p>}
+                <div className={styles.actions}>
+                  <Button type="submit" variant="primary" isDisabled={busy || safetyPaused}>
+                    {manuallyPaused ? '恢复同步' : connected ? '验证并同步' : '连接并比较资料'}
+                  </Button>
+                </div>
+              </form>
+            )}
             {safetyPaused && status && (
               <SyncRecoveryPanel
                 status={status}
@@ -304,26 +354,8 @@ export function LocalSyncControl({ compact = false }: { compact?: boolean }) {
                 onRefreshStatus={() => requestRefresh.current()}
               />
             )}
-            {status?.deviceId && (
-              <details>
-                <summary>设备信息</summary>
-                <p className={styles.hint}>设备编号：{status.deviceId}</p>
-              </details>
-            )}
-            <p role="status">
-              {presentation.main} · {presentation.detail}
-              {status?.lastSyncedAt ? ` · 上次完成 ${new Date(status.lastSyncedAt).toLocaleString('zh-CN')}` : ''}
-            </p>
-            {Boolean(status?.pendingKnowledgeEntities) && (
-              <p className={styles.hint}>
-                知识及来源：{status?.pendingKnowledgeEntities} 项待同步。
-                {status?.knowledgeSyncSupported === false ? '云端需要升级后才能接收；本机已保存的知识会继续保留。' : ''}
-              </p>
-            )}
-            {displayedError && (
-              <p role="alert" className={styles.error}>
-                {displayedError.message}
-              </p>
+            {status?.knowledgeSyncSupported === false && Boolean(status.pendingKnowledgeEntities) && (
+              <p className={styles.hint}>云端需升级才能同步知识与来源；本机资料已保留。</p>
             )}
             {status?.blockedNotes.map(note => (
               <p key={note.noteId} className={styles.error}>
@@ -359,6 +391,42 @@ export function LocalSyncControl({ compact = false }: { compact?: boolean }) {
                 }}
               />
             ))}
+            <section className={styles.utilities} aria-label="备份与诊断">
+              <Button
+                variant="ghost"
+                onPress={() => {
+                  setOpen(false);
+                  setPassword('');
+                  setBackupOpen(true);
+                }}
+              >
+                本机备份与恢复
+              </Button>
+              <details className={styles.diagnostics}>
+                <summary>同步诊断</summary>
+                {status?.deviceId && <p className={styles.hint}>设备编号：{status.deviceId}</p>}
+                {Boolean(status?.pendingKnowledgeEntities) && (
+                  <p className={styles.hint}>知识与来源待同步：{status?.pendingKnowledgeEntities} 项</p>
+                )}
+                <Button
+                  variant="ghost"
+                  size="compact"
+                  onPress={() => {
+                    void callSync<unknown[]>('/recovery')
+                      .then(records =>
+                        downloadTextFile(
+                          'Knowra-冲突恢复记录.json',
+                          JSON.stringify(records, null, 2),
+                          'application/json'
+                        )
+                      )
+                      .catch(failure => setError(syncIssue(failure)));
+                  }}
+                >
+                  导出冲突恢复记录
+                </Button>
+              </details>
+            </section>
           </div>
         </DialogBody>
       </Dialog>

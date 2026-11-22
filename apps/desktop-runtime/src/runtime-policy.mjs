@@ -44,8 +44,10 @@ const MUTATIONS = [
     'POST',
     /^\/api\/ai\/assistant\/(?:budget-settings|balance\/refresh|usage\/resolve|alerts\/(?:mark|allow|pause|resume))$/
   ],
-  // 该 POST 只计算预览，不保存分析范围或触发 AI。
+  // 分析范围在本机预览、保存和进出回收站，不触发 AI。
   ['POST', /^\/api\/knowledge\/analysis-scopes\/preview$/],
+  ['POST', /^\/api\/knowledge\/analysis-scopes$/],
+  ['POST', /^\/api\/knowledge\/analysis-scopes\/[^/]+\/(?:trash|restore)$/],
   ['POST', /^\/api\/knowledge\/items$/],
   ['POST', /^\/api\/knowledge\/items\/[^/]+\/evidence(?:\/[^/]+\/(?:retire|readopt))?$/],
   ['PATCH', /^\/api\/knowledge\/items\/[^/]+$/],
@@ -58,7 +60,7 @@ const MUTATIONS = [
   ['POST', /^\/api\/knowledge\/annotations(?:\/[^/]+\/(?:restore|exclusions|confirm-range))?$/],
   ['PATCH', /^\/api\/knowledge\/annotations\/[^/]+(?:\/anchor)?$/],
   ['DELETE', /^\/api\/knowledge\/annotations\/[^/]+(?:\/exclusions\/[^/]+)?$/],
-  ['POST', /^\/api\/knowledge\/spaces\/default$/],
+  ['POST', /^\/api\/knowledge\/spaces(?:\/default)?$/],
   ['POST', /^\/api\/knowledge\/notes(?:\/import-markdown(?:-batch)?|\/batch\/(?:delete|tags))?$/],
   ['PATCH', /^\/api\/knowledge\/notes\/batch\/tags$/],
   ['PATCH', /^\/api\/knowledge\/notes\/[^/]+$/],
