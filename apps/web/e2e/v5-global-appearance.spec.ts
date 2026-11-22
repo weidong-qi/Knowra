@@ -610,6 +610,50 @@ test('待办详情预览可从顶栏切换场景', async ({ page }) => {
   }
 });
 
+test('待办行的今日快捷操作使用主题强调色，窄屏收起，键盘可加入今天', async ({ page }) => {
+  await mockEditorWorkspace(page, []);
+  const desktop = { width: 1280, height: 800 };
+  await page.setViewportSize(desktop);
+  let todos = applyTodoCommand(
+    [],
+    { type: 'create', id: 'carryover', parentId: null, title: '整理笔记', plannedDate: '2020-01-01' },
+    { now: new Date().toISOString() }
+  ).changed;
+  await page.route('**/api/todos', route => route.fulfill({ json: { data: { todos } } }));
+  await page.route('**/api/todos/commands', route => {
+    const { command } = route.request().postDataJSON() as { command: TodoCommand };
+    const { changed } = applyTodoCommand(todos, command, { now: new Date().toISOString() });
+    todos = mergeTodoChanges(todos, changed);
+    return route.fulfill({ json: { data: { changed } } });
+  });
+
+  await page.goto('/#/learning');
+  const action = page.getByRole('button', { name: '把「整理笔记」加入今天' });
+  await expect(action).toHaveText('今天继续');
+  const tint = await action.evaluate(button => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'var(--accent-soft)';
+    button.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+  await expect(action).toHaveCSS('background-color', tint);
+  await action.hover();
+  await expect(action).not.toHaveCSS('background-color', tint);
+  await page.setViewportSize({ ...desktop, width: 850 });
+  await expect(action).toBeHidden();
+  await expect(page.getByRole('button', { name: '把「整理笔记」改到明天' })).toBeVisible();
+
+  await page.mouse.move(0, 0);
+  await page.setViewportSize(desktop);
+  await page.goto('/#/learning/sidelines');
+  await expect(action).toHaveText('加入今天');
+  await expect(action).toHaveCSS('background-color', tint);
+  await action.press('Enter');
+  await expect(page.getByRole('button', { name: '把「整理笔记」改到明天' })).toBeVisible();
+});
+
 test('原窗口在系统通知返回前关闭后，第二个窗口展示提醒并回写', async ({ page, context }) => {
   const first = await context.newPage();
   const at = new Date(Date.now() - 1000).toISOString();

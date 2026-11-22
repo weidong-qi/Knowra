@@ -28,7 +28,7 @@ export interface ButtonProps extends Omit<RAButtonProps, 'className' | 'children
   size?: 'default' | 'workspace' | 'compact' | 'chip' | 'mini' | 'toolbar' | 'footer';
   /** 小型操作默认胶囊；square 为小圆角矩形，不随主题变为胶囊。 */
   shape?: 'square' | 'pill';
-  /** 低强调蓝色操作，用于卡片内的“查看”等入口。 */
+  /** soft 使用主题强调底色，与 ghost 组合时以底色深浅反馈交互。 */
   emphasis?: 'normal' | 'soft';
   /** 图标（仅 icon 模式时作为主内容；其它模式可与 label 并列）。 */
   icon?: ReactNode;

@@ -196,6 +196,17 @@
   color: var(--accent-on-tint);
 }
 
+.soft:where(.ghost) {
+  border-color: transparent;
+}
+.mini:where(.ghost.soft) {
+  padding-inline: 10px;
+}
+.soft:where(.ghost):is([data-hovered], [data-pressed]):not([data-disabled]):not([data-pending]) {
+  background: color-mix(in srgb, var(--accent-soft, var(--ink-accent-soft)) 72%, var(--accent) 18%);
+  border-color: transparent;
+}
+
 .workspace[aria-pressed='true'],
 .workspace[aria-current='page'],
 .workspace[aria-expanded='true'] {

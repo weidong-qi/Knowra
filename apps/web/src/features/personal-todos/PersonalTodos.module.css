@@ -581,18 +581,6 @@
 .row[data-menu-open] .rowActions {
   opacity: 1;
 }
-.todayButton {
-  white-space: nowrap;
-  padding-inline: 10px;
-  background: var(--ni-accent-soft);
-  color: var(--ni-accent-ink);
-  font-weight: 500;
-}
-.todayButton[data-hovered]:not([data-disabled]),
-.todayButton[data-pressed]:not([data-disabled]) {
-  background: color-mix(in srgb, var(--ni-accent-soft) 72%, var(--ni-accent) 18%);
-  color: var(--ni-accent-ink);
-}
 .addChildButton {
   white-space: nowrap;
 }
@@ -1447,7 +1435,7 @@
   .rowActions {
     opacity: 1;
   }
-  .todayButton,
+  .row .desktopTodayAction,
   .progressChip .progressTrack,
   .rowDate {
     display: none;

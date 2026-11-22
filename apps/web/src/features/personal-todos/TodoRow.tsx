@@ -195,7 +195,8 @@ export function TodoRow({
               size="mini"
               shape="pill"
               variant="ghost"
-              className={styles.todayButton}
+              emphasis="soft"
+              className={styles.desktopTodayAction}
               onPress={() => actions.addToToday(todo)}
               aria-label={todayAction === 'moveToToday' ? `把「${todo.title}」改到今天` : `把「${todo.title}」加入今天`}
             >
@@ -221,7 +222,8 @@ export function TodoRow({
               size="mini"
               shape="pill"
               variant="ghost"
-              className={styles.todayButton}
+              emphasis="soft"
+              className={styles.desktopTodayAction}
               onPress={() => actions.addToToday(todo)}
               aria-label={todayAction === 'moveToToday' ? `把「${todo.title}」改到今天` : `把「${todo.title}」加入今天`}
             >
