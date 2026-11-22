@@ -17,7 +17,7 @@ import { compactAcknowledgedOutbox } from './outbox-retention.mjs';
 import { cloneJsonData } from '../../api/src/infrastructure/json-clone.ts';
 import { observeRemoteDeletionFacts } from './sqlite-deletion-facts.mjs';
 import { assertNoKnowledgeArtifactProvenanceDowngrade } from '../../api/src/modules/knowledge/domain/knowledge-artifact-provenance-state.ts';
-import { selectEntityBatch } from './entity-batches.mjs';
+import { createsCustomSpace, selectEntityBatch, unsupportedCustomSpace } from './entity-batches.mjs';
 import { syncContract } from '../../api/src/modules/sync/protocol-contract.ts';
 import { reconcileSyncedSourceStates } from '../../api/src/infrastructure/local-data-relations.ts';
 import { randomUUID } from 'node:crypto';
@@ -508,31 +508,15 @@ function settle(db, state) {
     acknowledgeOutbox(db);
 }
 
-export function unsupportedCustomSpace() {
-  return Object.assign(
-    new Error('云端不支持此资料库同步自建空间。请升级云端并核对资料库归属；本机空间和内容已保留。'),
-    { code: 'SYNC_CUSTOM_SPACE_UNSUPPORTED' }
-  );
-}
-
 export function nextEntityUpload(store, { knowledgeSupported = true, customSpaceSupported = true } = {}) {
   assertStoreSyncNotPaused(store);
-  const assertSpaceUpload = changes => {
-    if (
-      !customSpaceSupported &&
-      changes.some(
-        entry => entry.collection === 'spaces' && entry.value?.defaultFlag === false && entry.baseRevision === null
-      )
-    )
-      throw unsupportedCustomSpace();
-  };
   const frozen = store.readSync(db => {
     readKnowledgeLifecycleBoundaries(db);
     readExamFocusReviewBoundaries(db);
     return readMeta(db, 'entityUpload');
   });
   if (frozen) {
-    assertSpaceUpload(frozen.changes);
+    if (!customSpaceSupported && frozen.changes.some(createsCustomSpace)) throw unsupportedCustomSpace();
     return frozen;
   }
   let cached = snapshot(store);
@@ -778,6 +762,7 @@ export function nextEntityUpload(store, { knowledgeSupported = true, customSpace
   };
   const changes = eligible.length
     ? selectEntityBatch(eligible, referenceState, base, {
+        customSpaceSupported,
         measureBytes: entries => Buffer.byteLength(JSON.stringify(makeOperation(entries)))
       })
     : [];
@@ -785,8 +770,6 @@ export function nextEntityUpload(store, { knowledgeSupported = true, customSpace
     if (!dirty.length && store.getStatus().pendingOperations) store.metadataTransaction(db => acknowledgeOutbox(db));
     return null;
   }
-  // 未确认云端能力时不分配序号或冻结上传。已冻结的旧操作仍必须保留，由原恢复机制核对。
-  assertSpaceUpload(changes);
   return store.metadataTransaction(db => {
     const operation = makeOperation(changes);
     writeMeta(db, 'entitySequence', operation.sequence);

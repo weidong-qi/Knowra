@@ -10,12 +10,24 @@ import {
   TRAINING_COLLECTIONS
 } from '../../api/src/modules/sync/entity-contract.ts';
 
+export function unsupportedCustomSpace() {
+  return Object.assign(
+    new Error('云端不支持此资料库同步自建空间。请升级云端并核对资料库归属；本机空间和内容已保留。'),
+    { code: 'SYNC_CUSTOM_SPACE_UNSUPPORTED' }
+  );
+}
+
+export function createsCustomSpace(entry) {
+  return entry.collection === 'spaces' && entry.value?.defaultFlag === false && entry.baseRevision === null;
+}
+
 /** 当前笔记及标注保持原子提交；不可变的旧版本、旧修订在所属对象之后分批交付。 */
 export function selectEntityBatch(
   changes,
   state,
   base,
   {
+    customSpaceSupported = true,
     maxEntries = 1000,
     maxBytes = SYNC_CLIENT_BATCH_BODY_LIMIT_BYTES,
     targetEntries = 250,
@@ -123,17 +135,21 @@ export function selectEntityBatch(
         const refKey = syncKey(ref.collection, ref.id);
         if (byKey.has(refKey) && root(refKey) !== key) group.dependencies.add(root(refKey));
       }
-  // 以持久化云端基线识别重名。整组暂缓后，依赖它的组也不会进入已完成集合。
-  const nameConflicts = new Set(
-    changes
-      .filter(
-        entry =>
-          entry.collection === 'spaces' &&
-          entry.value &&
-          hasSpaceNameConflict(before.spaces, entry.id, entry.value, base.get(syncKey('spaces', entry.id))?.value)
-      )
-      .map(entry => root(syncKey('spaces', entry.id)))
-  );
+  // 整组暂缓后，直接或间接依赖该空间的组都不会进入已完成集合。
+  const deferredSpaces = new Set();
+  let deferredError;
+  for (const entry of changes) {
+    if (entry.collection !== 'spaces' || !entry.value) continue;
+    const key = syncKey('spaces', entry.id);
+    if (!customSpaceSupported && createsCustomSpace(entry)) {
+      deferredError = unsupportedCustomSpace();
+    } else if (hasSpaceNameConflict(before.spaces, entry.id, entry.value, base.get(key)?.value)) {
+      deferredError ??= Object.assign(new Error('云端已有同名空间，本机空间及关联资料已保留。'), {
+        code: 'KNOWLEDGE_SPACE_NAME_CONFLICT'
+      });
+    } else continue;
+    deferredSpaces.add(root(key));
+  }
   const selected = [];
   const completed = new Set();
   let progress = true;
@@ -141,7 +157,7 @@ export function selectEntityBatch(
     progress = false;
     for (const [key, group] of groups) {
       if (
-        nameConflicts.has(key) ||
+        deferredSpaces.has(key) ||
         completed.has(key) ||
         [...group.dependencies].some(dependency => !completed.has(dependency))
       )
@@ -165,10 +181,7 @@ export function selectEntityBatch(
       progress = true;
     }
   }
-  if (!selected.length && nameConflicts.size)
-    throw Object.assign(new Error('云端已有同名空间，本机空间及关联资料已保留。'), {
-      code: 'KNOWLEDGE_SPACE_NAME_CONFLICT'
-    });
+  if (!selected.length && deferredError) throw deferredError;
   if (!selected.length && changes.length) throw new Error('关联资料存在无法安全分批的依赖，请导出备份后核对。');
   return selected;
 }

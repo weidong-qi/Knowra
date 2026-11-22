@@ -68,7 +68,7 @@ test('桌面自建空间原子排队，兼容云端同步；旧端和同名冲�
     if (cloudDowngraded) omitCapability(status);
   });
   assert.equal((await a.call(sync)).data.customSpaceCreation, true);
-  await a.call(`${spaces}/default`, {});
+  const primary = (await a.call(`${spaces}/default`, {})).data;
   const added = await a.call(spaces, { name: '等待同步', userId: 'ignored' });
   assert.equal(added.status, 201);
   assert.equal(added.data.defaultFlag, false);
@@ -100,11 +100,29 @@ test('桌面自建空间原子排队，兼容云端同步；旧端和同名冲�
 
   const later = await a.call(spaces, { name: '后续云端升级' });
   assert.equal(later.status, 201);
+  const held = await a.call('/api/knowledge/notes', {
+    spaceId: later.data.id,
+    title: '随空间暂缓',
+    rawMarkdown: '留在本机'
+  });
+  const independentNote = await a.call('/api/knowledge/notes', {
+    spaceId: primary.id,
+    title: '默认空间',
+    rawMarkdown: '先上传'
+  });
+  assert.equal(held.status, 201);
+  assert.equal(independentNote.status, 201);
   cloudDowngraded = true;
   const beforeDowngrade = a.batchCount();
   const unavailable = (await a.call(`${sync}/retry`, {})).data;
   assert.equal(unavailable.error.code, 'SYNC_CUSTOM_SPACE_UNSUPPORTED');
-  assert.equal(a.batchCount(), beforeDowngrade);
+  assert(a.batchCount() > beforeDowngrade);
+  assert.equal(cloud.http.knowledge.getNote({ id: independentNote.data.id }).rawMarkdown, '先上传');
+  assert(!cloud.dataStore.state.spaces.some(row => row.id === later.data.id));
+  assert(!cloud.dataStore.state.notes.some(row => row.id === held.data.id));
+  const afterIndependent = a.batchCount();
+  await a.call(`${sync}/retry`, {});
+  assert.equal(a.batchCount(), afterIndependent);
   assert.equal(
     a.runtime.store.readSync(db => readMeta(db, 'entityUpload')),
     null
@@ -112,6 +130,8 @@ test('桌面自建空间原子排队，兼容云端同步；旧端和同名冲�
   cloudDowngraded = false;
   assert.equal((await a.call(`${sync}/retry`, {})).data.phase, 'synced');
   assert(cloud.http.knowledge.listKnowledgeSpaces().some(space => space.id === later.data.id));
+
+  assert.equal(cloud.http.knowledge.getNote({ id: held.data.id }).rawMarkdown, '留在本机');
 
   const old = await desktop('old', omitCapability);
   await old.call(spaces, { name: '仅本机留存' });

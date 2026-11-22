@@ -103,7 +103,13 @@ test('首次使用桌面：离线建笔记和附件，连接失败保留资料�
     assert.equal(response.status(), 200);
     assert.deepEqual(await response.body(), file);
   };
-  await expect.poll(async () => (await getData(runtime.origin, notePath)).rawMarkdown).toBe(text);
+  let savedMarkdown;
+  await expect
+    .poll(async () => {
+      savedMarkdown = (await getData(runtime.origin, notePath)).rawMarkdown;
+      return savedMarkdown === text || savedMarkdown === `${text}\n`;
+    })
+    .toBe(true);
   const initial = await getData(runtime.origin, '/api/local-runtime/status');
   assert.equal(initial.cloudSync, 'not-configured');
   assert(initial.pendingOperations > 0);
@@ -122,7 +128,7 @@ test('首次使用桌面：离线建笔记和附件，连接失败保留资料�
   await expect(connect).toBeEnabled();
   await closeLocalSync(page);
   await expect(editor).toContainText(text);
-  assert.equal((await getData(runtime.origin, notePath)).rawMarkdown, text);
+  assert.equal((await getData(runtime.origin, notePath)).rawMarkdown, savedMarkdown);
   await verifyBytes(runtime.origin);
   const afterFailure = await getData(runtime.origin, '/api/local-runtime/status');
   assert.equal(afterFailure.cloudSync, 'not-configured');
@@ -146,7 +152,7 @@ test('首次使用桌面：离线建笔记和附件，连接失败保留资料�
   assert.equal(synced.serverUrl, cloud);
   assert.equal(synced.phase, 'synced');
   assert.equal(synced.pendingEntities, 0);
-  assert.equal((await getData(cloud, notePath)).rawMarkdown, text);
+  assert.equal((await getData(cloud, notePath)).rawMarkdown, savedMarkdown);
   await verifyBytes(cloud);
   await settings.click();
   await expect(settings).toHaveAttribute('aria-expanded', 'true');

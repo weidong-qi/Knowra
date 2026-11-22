@@ -15,8 +15,7 @@ import {
   nextEntityUpload,
   acknowledgeEntityUpload,
   getEntitySyncState,
-  resolveEntityConflict,
-  unsupportedCustomSpace
+  resolveEntityConflict
 } from './entity-sync-state.mjs';
 import {
   applyRemote,
@@ -27,6 +26,7 @@ import {
   readMeta,
   writeMeta
 } from './sync-state.mjs';
+import { unsupportedCustomSpace } from './entity-batches.mjs';
 import { createSyncScheduler } from './sync-scheduler.mjs';
 import { clearKnowledgeLifecycleUpload } from './knowledge-lifecycle-boundaries.mjs';
 import { clearExamFocusReviewUpload } from './exam-focus-review-boundaries.mjs';
@@ -306,7 +306,11 @@ export function createSyncEngine(
       try {
         operation = nextEntityUpload(store, { knowledgeSupported, customSpaceSupported: customSpaceCreation() });
       } catch (failure) {
-        if (failure.code !== 'KNOWLEDGE_SPACE_NAME_CONFLICT') throw failure;
+        if (
+          !['KNOWLEDGE_SPACE_NAME_CONFLICT', 'SYNC_CUSTOM_SPACE_UNSUPPORTED'].includes(failure.code) ||
+          meta('entityUpload')
+        )
+          throw failure;
         error = { code: failure.code, message: failure.message };
         return sent;
       }
