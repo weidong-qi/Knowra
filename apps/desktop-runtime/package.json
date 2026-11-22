@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node src/main.mjs",
     "test": "node --test --test-concurrency=1 test/*.test.mjs",
-    "test:e2e": "node --test --test-concurrency=1 test/e2e/*.test.mjs"
+    "test:e2e": "node --test --test-concurrency=1 test/e2e/*.test.mjs",
+    "test:e2e:shard-1": "node --test --test-concurrency=1 --test-shard=1/2 test/e2e/*.test.mjs",
+    "test:e2e:shard-2": "node --test --test-concurrency=1 --test-shard=2/2 test/e2e/*.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",

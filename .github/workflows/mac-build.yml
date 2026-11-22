@@ -32,6 +32,8 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -60,6 +62,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: 保存候选产物（ad-hoc 签名，未公证；不是稳定 Release）
+        id: candidate
         uses: actions/upload-artifact@v4
         with:
           name: knowra-mac-arm64-candidate-${{ github.sha }}
@@ -68,3 +71,9 @@ jobs:
             dist/mac/知境·Knowra-Mac-arm64.zip.build-info.json
           if-no-files-found: error
           retention-days: 14
+          # APP 分发 ZIP 已压缩，不再对外层 artifact 重复压缩。
+          compression-level: 0
+      - name: 汇总候选身份与下载入口
+        env:
+          ARTIFACT_URL: ${{ steps.candidate.outputs.artifact-url }}
+        run: node scripts/mac-candidate-summary.mjs
